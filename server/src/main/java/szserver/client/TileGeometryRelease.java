@@ -1,0 +1,9 @@
+package szserver.client;
+import java.nio.file.*;
+import java.security.*;
+import java.util.*;
+/** Pin the native release which produced numeric tile collision geometry. Bootstrap only. */
+final class TileGeometryRelease {
+ private static final Map<String,String> HASHES=Map.ofEntries(Map.entry("1114175220","5631e6a6d81c8e5c3c97ecb8d73360a3aa4a0d6190bd16c61aeb9992a094b677"),Map.entry("1522862280","c08b0fe09fc05c8261ac7f42e1e93b99c7b8b20c7f6eee227e117dbb9f9376f5"),Map.entry("670692306","b7a8c28f58f878f581c4cfc63039ffa4ec322c649448da2c2d64777fa4a0461f"),Map.entry("1101736112","2d5648cbc57d11335d39e186eb2235eeacaf2131953238124a2b59ce3c9d14e2"),Map.entry("693573727","e78eaf90982f05b707872d1c0dc8b821afc452bd8cd64a8f8277e3c4d52cd9eb"),Map.entry("1218866699","30b1a3799fb5ee5147a38e8f85d69ef73468042e80e566428842fbda795ced89"),Map.entry("237758042","6ad0d59a1941a12e1e6800b788e1478ee39e5ae0aa27b0edd35daa0b6c461218"),Map.entry("1959919792","3864d45f6a01e66ede43d160d0fb65a93e3c67dc3265e22a4c6ecd46a45c1e2c"),Map.entry("242639986","0ae4cd7b52cb476c7a7245dea8aa5e62250bb15544e5f3c220f15cfc293a22b3"),Map.entry("1994198637","8d0b9df7407ff5412dc02f515e474f1029067752edd7cddb84c92a92c419b6b8"),Map.entry("1612910413","eb4762e734f16995354d311a4ad063b128bc89fdfc2ab0bd7d42c8728fef5788"),Map.entry("132153080","c5c150fd7ac85142c030bbe456f525a266bcf5b4a3163d12b42f28e2ccc15b21"),Map.entry("43845667","ab40a5b6f7268ab432503b3a79b34de70c8a3b35fb69d7e9fa9b9430f1c71b60"),Map.entry("683052146","bd36d5c01ba15a4f65512064e82f3debd6c19596d6188cab3887d2f866787238"));
+ static void verify(Path runtime)throws Exception{for(var entry:HASHES.entrySet()){byte[] bytes=Files.readAllBytes(runtime.resolve("classes").resolve(entry.getKey()+".class"));if(!HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes)).equals(entry.getValue()))throw new IllegalStateException("native_tile_release_mismatch:"+entry.getKey());}}
+}

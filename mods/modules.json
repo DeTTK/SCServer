@@ -1,0 +1,42 @@
+{
+  "sc-vehicles": {
+    "status": "source-only; not in independent CI",
+    "assetsIncluded": false
+  },
+  "fpv-drones": {
+    "status": "source-only; not in independent CI",
+    "assetsIncluded": false
+  },
+  "network-replay": {
+    "status": "source-only; not in independent CI",
+    "assetsIncluded": false
+  },
+  "weapon-workbench": {
+    "status": "source-only; not in independent CI",
+    "assetsIncluded": false
+  },
+  "npc-director": {
+    "status": "source-only; not in independent CI",
+    "assetsIncluded": false
+  },
+  "world-environment": {
+    "status": "source-only; not in independent CI",
+    "assetsIncluded": false
+  },
+  "better-third-face": {
+    "status": "source-only; not in independent CI",
+    "assetsIncluded": false
+  },
+  "arc-hud-prototype": {
+    "status": "source-only; not in independent CI",
+    "assetsIncluded": false
+  },
+  "cinematic-camera": {
+    "status": "source-only; not in independent CI",
+    "assetsIncluded": false
+  },
+  "command-completion": {
+    "status": "source-only; not in independent CI",
+    "assetsIncluded": false
+  }
+}

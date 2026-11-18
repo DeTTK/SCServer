@@ -1,0 +1,102 @@
+"""Source-only developer build. Never reads installed game files or deploys a server."""
+from pathlib import Path
+import argparse,hashlib,json,os,shutil,subprocess,tempfile,urllib.request,zipfile
+
+ROOT=Path(__file__).resolve().parents[1]
+B=ROOT/'build'
+
+def sha(path):
+    h=hashlib.sha256()
+    with path.open('rb') as source:
+        for chunk in iter(lambda:source.read(1048576),b''):h.update(chunk)
+    return h.hexdigest()
+
+def tool(name):
+    home=os.environ.get('JAVA_HOME')
+    path=Path(home)/'bin'/(name+('.exe' if os.name=='nt' else '')) if home else shutil.which(name)
+    if not path or not Path(path).is_file():raise SystemExit('Install JDK 17 and configure JAVA_HOME/PATH; missing '+name)
+    return str(path)
+
+def dependencies():
+    directory=ROOT/'.local/deps';directory.mkdir(parents=True,exist_ok=True);result=[]
+    for row in json.loads((ROOT/'dependencies.lock.json').read_text('utf8')).values():
+        path=directory/row['file']
+        if not path.exists():
+            print('Fetching '+row['file'],flush=True)
+            with urllib.request.urlopen(row['url'],timeout=60) as source:
+                raw=source.read(32*1024*1024+1)
+            if len(raw)>32*1024*1024 or hashlib.sha256(raw).hexdigest()!=row['sha256']:raise SystemExit('Dependency checksum mismatch: '+row['file'])
+            path.write_bytes(raw)
+        if sha(path)!=row['sha256']:raise SystemExit('Cached dependency differs: '+str(path))
+        result.append(path)
+    return result
+
+def compile_java(name,sources,classpath=()):
+    output=B/(name+'-classes')
+    if output.exists():
+        if not output.resolve().is_relative_to(ROOT/'build'):raise SystemExit('Refuse build output outside checkout')
+        shutil.rmtree(output)
+    output.mkdir(parents=True)
+    args=['--release','17','-encoding','UTF-8','-proc:none','-d',str(output)]
+    if classpath:args+=['-cp',os.pathsep.join(map(str,classpath))]
+    args+=list(map(str,sorted(sources)))
+    argfile=B/(name+'-javac.args')
+    argfile.write_text('\n'.join('"'+arg.replace('\\','/').replace('"','\\"')+'"' for arg in args),'utf8')
+    subprocess.run([tool('javac'),'-J-Dfile.encoding=UTF-8','@'+str(argfile)],check=True,cwd=ROOT)
+    return output
+
+def jar(name,classes,extra=()):
+    target=B/(name+'.jar')
+    with zipfile.ZipFile(target,'w',zipfile.ZIP_DEFLATED) as out:
+        for p in sorted(classes.rglob('*.class')):
+            entry=zipfile.ZipInfo(p.relative_to(classes).as_posix(),(2020,1,1,0,0,0));entry.compress_type=zipfile.ZIP_DEFLATED;out.writestr(entry,p.read_bytes())
+        for path,dest in extra:
+            entry=zipfile.ZipInfo(dest,(2020,1,1,0,0,0));entry.compress_type=zipfile.ZIP_DEFLATED;out.writestr(entry,path.read_bytes())
+    return target
+
+def server(private_resources=False):
+    deps=dependencies();classes=compile_java('server',(ROOT/'server/src/main/java').rglob('*.java'),deps)
+    extra=[]
+    if private_resources:
+        for name,digest in json.loads((ROOT/'config/private-resources.lock.json').read_text('utf8')).items():
+            path=ROOT/'.local/server-resources'/name
+            if not path.is_file() or sha(path)!=digest:raise SystemExit('Missing or changed private resource: '+name+'; run scripts/import_private_resources.py')
+            extra.append((path,name))
+    jar('server',classes,extra);return classes,deps
+
+def sdk():
+    classes=compile_java('sdk',(ROOT/'sdk/api').rglob('*.java'));api=jar('mod-api',classes)
+    example=compile_java('hello',(ROOT/'sdk/example/src').rglob('*.java'),[api])
+    jar('hello-mod',example,[(ROOT/'sdk/example/stalcraft-mod.properties','stalcraft-mod.properties')])
+
+def tests():
+    classes,deps=server();sdk()
+    test_classes=compile_java('tests',(ROOT/'server/src/test/java').rglob('*.java'),[classes]+deps)
+    cp=os.pathsep.join(map(str,[test_classes,classes]+deps));results=[]
+    subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.world.RegionRecordBoundsTests'],check=True)
+    subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.client.NativeMethodsTests'],check=True)
+    results.append('native return descriptor, bridge, parameters and static exclusion: 5 PASS')
+    results.append('region slot/overflow/truncation/CRC/healthy-neighbour bounds')
+    # These are wholly owned synthetic files, not game data or user saves.
+    scratch=B/'scratch';scratch.mkdir(exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix='journal-',dir=scratch) as directory:
+        root=Path(directory);(root/'var').mkdir();(root/'results').mkdir()
+        subprocess.run([tool('java'),'-Xmx64m','-cp',cp,'szserver.JournalStreamingTests',str(root)],check=True)
+        report=json.loads((root/'results/test-journal-streaming.json').read_text('utf8'))
+        results.append({'journalAssertions':report['assertions'],'records':report['records']})
+    (B/'verification.json').write_text(json.dumps({'result':'PASS','checks':results,'gameFilesUsed':False,'networkSessionTested':False},indent=2),'utf8')
+
+def desktop():
+    if os.name!='nt':raise SystemExit('Desktop build requires Windows and .NET Framework C# compiler')
+    compiler=Path(os.environ.get('WINDIR','C:/Windows'))/'Microsoft.NET/Framework64/v4.0.30319/csc.exe'
+    if not compiler.exists():raise SystemExit('Missing .NET Framework C# compiler')
+    destination=B/'desktop';destination.mkdir(parents=True,exist_ok=True)
+    for symbol,name in [('CLIENT','Launcher'),('SERVER','ServerManager')]:
+        subprocess.run([str(compiler),'/nologo','/target:winexe','/platform:x64','/optimize+','/define:'+symbol,'/out:'+str(destination/(name+'.exe')),'/reference:System.dll,System.Core.dll,System.Windows.Forms.dll,System.Drawing.dll,System.Web.Extensions.dll',str(ROOT/'desktop/src/Portable.cs')],check=True)
+
+if __name__=='__main__':
+    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('target',choices=['server','sdk','test','desktop']);parser.add_argument('--private-resources',action='store_true',help='Package pinned local game resources; never upload this JAR');args=parser.parse_args()
+    if args.private_resources and args.target!='server':parser.error('--private-resources requires target server')
+    B.mkdir(exist_ok=True)
+    if args.target=='server':server(args.private_resources)
+    else:{'sdk':sdk,'test':tests,'desktop':desktop}[args.target]()

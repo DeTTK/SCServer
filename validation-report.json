@@ -1,0 +1,55 @@
+{
+  "snapshot": "2026-11-18",
+  "publicationState": "VERIFIED_SOURCE_SNAPSHOT",
+  "licenseChosen": false,
+  "originReviewComplete": false,
+  "sourceFilesExported": 839,
+  "cleanCheckout": {
+    "result": "PASS",
+    "trackedFiles": 842,
+    "privateGameInputsUsed": false,
+    "serverAndSdkTest": {
+      "result": "PASS",
+      "checks": [
+        "native return descriptor, bridge, parameters and static exclusion: 5 PASS",
+        "region slot/overflow/truncation/CRC/healthy-neighbour bounds",
+        {
+          "journalAssertions": 12047,
+          "records": 12032
+        }
+      ],
+      "gameFilesUsed": false,
+      "networkSessionTested": false
+    },
+    "desktopCompiled": true,
+    "remoteCIExecuted": false
+  },
+  "independentAssertions": {
+    "regionBounds": 10,
+    "journalStreaming": 12047,
+    "nativeDescriptors": 5
+  },
+  "allModsBuilt": false,
+  "fullGameFromPublicCheckoutVerified": false,
+  "remoteGitHubActionsExecuted": false,
+  "auditRejectsBinaryPayload": true,
+  "project": "SCServer",
+  "sourceServerSmoke": {
+    "result": "PASS",
+    "sourceJarSha256": "76c5acf3b417de7d3856144334911579b12f6e2da1036316a0dc7d4ac43e268c",
+    "healthy": true,
+    "ready": true,
+    "nativeSessionIssued": true,
+    "gracefulExitCode": 0,
+    "clientGameplayTested": false,
+    "productionModified": false
+  },
+  "sourceLauncherSmoke": {
+    "duplicateRejected": true,
+    "healthy": true,
+    "ready": true,
+    "exitCode": 0,
+    "result": "PASS"
+  },
+  "ownedQATestDataRemoved": true
+}

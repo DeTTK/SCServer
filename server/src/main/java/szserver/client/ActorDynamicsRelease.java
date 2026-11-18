@@ -1,0 +1,9 @@
+package szserver.client;
+import java.nio.file.*;
+import java.security.*;
+import java.util.*;
+/** Native velocity/configuration/contact release guard before actor warmup. */
+final class ActorDynamicsRelease {
+ private static final Map<String,String> HASHES=Map.ofEntries(Map.entry("154883352","d452c9944a64fdc73f971e704bc5307f7b8d70d0256befbe76988cda0c03c801"),Map.entry("568168347","609c6fb30af9800260de8e0556d3c930a51cf409bf0832189de6adfdd1602fe0"),Map.entry("58127775","5256397958e39c3d6a28b1ef3d6a29650bfabb6248ccaee4d6a754e057b3895c"),Map.entry("1276542651","5bf31ad5a76a33cec8a80aef6762d5185d99ba02da7659fcd00b46ea8b254acb"),Map.entry("198485650","3144095338073dd88f9b76af1bc5c97f6de915c1af82238c219a7931989f1f72"),Map.entry("89824967","9aa127ed497ad51875fcfe63e5e4152ddeb6b85132c599d5b83a8ff5474f20b4"),Map.entry("1943200621","80a6fd6f1168a15e542ce87c64cfc410ccb5a73b2144c145720f09a94d105736"),Map.entry("632909433","93efd09ffb41825b4c200c51232aa7f10c2acb1348267b943fb68bc44f08a186"),Map.entry("872804211","844e25a0a89dbaf43bc0234b2605acdba7fe3f505d040743534fc30a3e8a20d6"),Map.entry("1429083604","db9d8a4a68ab753a7da1c9aaba5abd78ca8c791aafbed7bb636a2f6cd8609da0"),Map.entry("1785380642","b2c57a9c1bd105b1d3056e89493f311e340b58b7f457a6209f4c2939e15d1444"),Map.entry("469311495","568b08409e96c0fe6a28d9344ddaa7107adf5e10c83ce5716bf66d5f3173a301"),Map.entry("1129678847","c198570615420899e720bf6def47b369e6e67bddce8218fa8ade2cf8d25f19a3"),Map.entry("1775200393","26b7d3cf9ed714733038c980bf361aaf379cf5b0482f6534962418855d425afc"),Map.entry("1704556748","45db02249b76fc459139305fa8b06649d3be2ac3119bf9fc2ba153ba49904d58"));
+ static void verify(Path runtime)throws Exception{for(var e:HASHES.entrySet())if(!HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(runtime.resolve("classes").resolve(e.getKey()+".class")))).equals(e.getValue()))throw new IllegalStateException("actor_dynamics_release_mismatch:"+e.getKey());}
+}
