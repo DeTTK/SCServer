@@ -397,7 +397,7 @@
       "path": "docs/STATUS.md",
       "source": "tools/publication/template/docs/STATUS.md",
       "adjusted": false,
-      "sha256": "a2beb50f00ca349b8bbe23ae3d32638e5bd36b2384c575fcb7432654d7b9de0b"
+      "sha256": "9dd83f2f32f2c7f498f856f4a7e1087f7f4aae582e339cdb8d76c793e8d98e10"
     },
     {
       "path": "mods/arc-hud-prototype/src/ArcHudMod.java",

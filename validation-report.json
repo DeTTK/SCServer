@@ -31,7 +31,7 @@
   },
   "allModsBuilt": false,
   "fullGameFromPublicCheckoutVerified": false,
-  "remoteGitHubActionsExecuted": false,
+  "remoteGitHubActionsExecuted": true,
   "auditRejectsBinaryPayload": true,
   "project": "SCServer",
   "sourceServerSmoke": {
@@ -51,5 +51,11 @@
     "exitCode": 0,
     "result": "PASS"
   },
-  "ownedQATestDataRemoved": true
+  "ownedQATestDataRemoved": true,
+  "remoteCI": {
+    "url": "https://github.com/DeTTK/SCServer/actions/runs/44363287299",
+    "codeCommit": "b65e3af67b2ef33bafc6d7e2f9396b706651f1b3",
+    "ubuntu-24.04": "success",
+    "windows-2022": "success"
+  }
 }
