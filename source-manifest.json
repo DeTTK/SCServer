@@ -48,8 +48,8 @@
     {
       "path": "README.md",
       "source": "tools/publication/template/README.md",
-      "adjusted": true,
-      "sha256": "0934a28e1b0cbe3d459a5de5030265b8d6ff3a755b7be2c3a98956781009285f"
+      "adjusted": false,
+      "sha256": "6ce59159d1c80f7b397cd8f9377c04b1f7111f52a33a1cafcfdaeba0b4e01398"
     },
     {
       "path": "SECURITY.md",
