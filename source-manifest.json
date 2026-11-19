@@ -49,7 +49,7 @@
       "path": "README.md",
       "source": "tools/publication/template/README.md",
       "adjusted": false,
-      "sha256": "6ce59159d1c80f7b397cd8f9377c04b1f7111f52a33a1cafcfdaeba0b4e01398"
+      "sha256": "89adea866694f879b37a4f179dc6b089e577e9d65f03a37343cc769d5734bf08"
     },
     {
       "path": "SECURITY.md",
@@ -294,7 +294,7 @@
     {
       "path": "client/resource-compat/src/gamecompat/ClientResourceSchema.java",
       "source": "tools/game-resource-compat/src/gamecompat/ClientResourceSchema.java",
-      "sha256": "3cdc87b60f105695c787d4f3d82a55a4105c1b0b0a8cae00a69c23ba76c1cf7d",
+      "sha256": "babc89751f7e792962e085a9492df93254c9a1c0e8019cefc686f6869f32be60",
       "adjusted": false
     },
     {
@@ -320,6 +320,12 @@
       "source": "tools/game-resource-compat/src/gamecompat/SceneHashWire.java",
       "sha256": "1d37a90b3579c755f2e343aee7786de7aff3e03baffc5de81874d9772cb3d707",
       "adjusted": false
+    },
+    {
+      "path": "client/resource-compat/tests/ClientResourceSchemaProbe.java",
+      "source": "tools/game-resource-compat/ClientResourceSchemaProbe.java",
+      "adjusted": false,
+      "sha256": "e0dc5df920a55a02b97d2f18eeae24c320ef7415d3f849a834b0453cc859d25c"
     },
     {
       "path": "client/startup/StartupTextureAgent.java",
@@ -358,9 +364,15 @@
       "adjusted": false
     },
     {
+      "path": "desktop/src/LocalLauncher.cs",
+      "source": "tools/easy-local-20261119/LocalLauncher.cs",
+      "adjusted": false,
+      "sha256": "29714bd5f12bf9155de22c4e67497ebcee3ec637358c82902362486545877ff3"
+    },
+    {
       "path": "desktop/src/Portable.cs",
       "source": "tools/portable-20261118/Portable.cs",
-      "sha256": "1e72bcbdfa7ce6e352bba8691a7fcd16f9008de6fcc887f48cfa8dc5e0b7c0f3",
+      "sha256": "5e4fb151606e695896e742bb43d5a501b07633a7f52c37881cd3154ad231cd13",
       "adjusted": true
     },
     {
@@ -368,6 +380,12 @@
       "source": "tools/publication/template/docs/ARCHITECTURE.md",
       "adjusted": false,
       "sha256": "173bbeb8feaaf055bcc62dbf3fb257e25dd683bce71fbe03666d9d5d751cb5de"
+    },
+    {
+      "path": "docs/COMPATIBILITY_NAMES.md",
+      "source": "tools/publication/template/docs/COMPATIBILITY_NAMES.md",
+      "sha256": "b4c333531e8fc2640fdeff9e0d929dcab2623d3d778b03dd6a9b8689a5597e99",
+      "adjusted": false
     },
     {
       "path": "docs/PRIVATE_INPUTS.md",
@@ -385,7 +403,7 @@
       "path": "docs/QUICKSTART.md",
       "source": "tools/publication/template/docs/QUICKSTART.md",
       "adjusted": true,
-      "sha256": "14634c3dcbbae3555745dee0295b147f9680cbd9ea41afb0fae9c1433bf8126d"
+      "sha256": "c33d649b4603b679c7a554f7d4b4b95835c0f7648d1d2806db81583c718baef1"
     },
     {
       "path": "docs/ROADMAP.md",
@@ -397,7 +415,7 @@
       "path": "docs/STATUS.md",
       "source": "tools/publication/template/docs/STATUS.md",
       "adjusted": false,
-      "sha256": "9dd83f2f32f2c7f498f856f4a7e1087f7f4aae582e339cdb8d76c793e8d98e10"
+      "sha256": "e15a82cca2e10dd15b0c4a1b1684521fecf55e35cadb14fbbbee468528c3f578"
     },
     {
       "path": "mods/arc-hud-prototype/src/ArcHudMod.java",
@@ -2137,7 +2155,7 @@
       "path": "scripts/build.py",
       "source": "tools/publication/template/scripts/build.py",
       "adjusted": false,
-      "sha256": "75eae8b210ecf4701022d66a9215ca7284c99ff019e053d6fc39f0479b6b743a"
+      "sha256": "009d10e82ed81de1bd1446f12d58aba562b3c8658c091cda4baa91a87286c05c"
     },
     {
       "path": "scripts/import_private_resources.py",
@@ -5035,12 +5053,6 @@
       "path": "server/src/test/java/szserver/world/RegionRecordBoundsTests.java",
       "source": "server-java/src/test/java/szserver/world/RegionRecordBoundsTests.java",
       "sha256": "a710c2171bc95e2ed060945f7060645da892ccbdf277dd0304f8e92fd2e2d9d6",
-      "adjusted": false
-    },
-    {
-      "path": "docs/COMPATIBILITY_NAMES.md",
-      "source": "tools/publication/template/docs/COMPATIBILITY_NAMES.md",
-      "sha256": "b4c333531e8fc2640fdeff9e0d929dcab2623d3d778b03dd6a9b8689a5597e99",
       "adjusted": false
     }
   ],

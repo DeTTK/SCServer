@@ -3,7 +3,7 @@
   "publicationState": "VERIFIED_SOURCE_SNAPSHOT",
   "licenseChosen": false,
   "originReviewComplete": false,
-  "sourceFilesExported": 840,
+  "sourceFilesExported": 842,
   "cleanCheckout": {
     "result": "PASS",
     "trackedFiles": 842,
@@ -67,6 +67,23 @@
     "nativeAndPersistenceIdentifiersPreserved": true,
     "independentTests": "PASS",
     "desktopBuild": "PASS",
+    "fullGraphicalClientTested": false
+  },
+  "localLauncher20261119": {
+    "completeBundlePreflight": true,
+    "serverReady": true,
+    "serverHealthy": true,
+    "nativeLogin": true,
+    "gracefulStop": true,
+    "serverSmoke": true,
+    "gameClientLaunched": false
+  },
+  "optionalConfig20261119": {
+    "nativeSchemaProbe": "PASS",
+    "oldAndCurrentRewardContracts": "PASS",
+    "unknownOptionalIconShapes": "PASS",
+    "requiredFieldRejection": "PASS",
+    "inputJsonUnchanged": true,
     "fullGraphicalClientTested": false
   }
 }

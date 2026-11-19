@@ -7,6 +7,13 @@ import kotlin.jvm.functions.Function1;
 
 /** Readers for the current resource schema. The source tree and bundle bytes are never changed. */
 public final class ClientResourceSchema {
+    private static final Set<String> compatibilityWarnings=Collections.synchronizedSet(new HashSet<>());
+    private static void optionalDefault(String field){
+        synchronized(compatibilityWarnings){
+            if(compatibilityWarnings.size()<64&&compatibilityWarnings.add(field))
+                System.err.println("[Config compatibility] Optional presentation field uses its default: "+field);
+        }
+    }
     private static volatile JsonObject arena;
     private static final Map<String,List<Map<String,String>>> tables=new HashMap<>();
     public static JsonObject arenaData(){return arena;}
@@ -27,11 +34,11 @@ public final class ClientResourceSchema {
         catch(ReflectiveOperationException error){throw new IllegalStateException(error);}
     }
     public static int arenaInt(JsonObject object,String key){
-        if(!object.has(key)&&((key.equals("pvpWinnerReward")&&object.has("pvpWinnerShopExp"))||(key.equals("pvpLoserReward")&&object.has("pvpLoserShopExp"))))return 0; // Currency rewards were removed; shop XP is a separate quantity.
+        if(!object.has(key)&&(key.equals("pvpWinnerReward")||key.equals("pvpLoserReward"))){optionalDefault("arena."+key);return 0;} // Removed currency rewards stay zero; never reinterpret shop XP.
         return (Integer)nativeRead("new",int.class,new Class<?>[]{JsonObject.class,String.class},object,key);
     }
     public static List<?> arenaList(JsonObject object,String key,Function1<?,?> reader){
-        if(key.equals("backpackUpgradeIds")&&!object.has(key)&&object.has("shopLevels"))return List.of();
+        if(key.equals("backpackUpgradeIds")&&!object.has(key)){optionalDefault("arena."+key);return List.of();}
         return (List<?>)nativeRead("float",List.class,new Class<?>[]{JsonObject.class,String.class,Function1.class},object,key,reader);
     }
     public static float arenaFloat(JsonObject object,String key){
@@ -88,11 +95,19 @@ public final class ClientResourceSchema {
     }
     public static String modifierIcon(JsonObject object,String key,String fallback){
         JsonElement icons=object.get(key);
+        if(icons==null||icons.isJsonNull())return fallback;
         if(icons!=null&&icons.isJsonArray()){
             JsonArray list=icons.getAsJsonArray();if(list.size()==0)return fallback;
-            for(JsonElement icon:list)if(!icon.isJsonPrimitive()||!icon.getAsJsonPrimitive().isString())throw new IllegalArgumentException("Modifier icons must be resource strings");
-            return list.get(0).getAsString();
+            String primary=null;boolean unknown=false;
+            for(JsonElement icon:list){
+                if(icon.isJsonPrimitive()&&icon.getAsJsonPrimitive().isString()){
+                    String value=icon.getAsString();if(primary==null&&!value.isBlank())primary=value;
+                }else unknown=true;
+            }
+            if(unknown)optionalDefault("modifier."+key);
+            return primary==null?fallback:primary;
         }
+        if(!icons.isJsonPrimitive()||!icons.getAsJsonPrimitive().isString()){optionalDefault("modifier."+key);return fallback;}
         return (String)nativeRead("continue",String.class,new Class<?>[]{JsonObject.class,String.class,String.class},object,key,fallback);
     }
     private ClientResourceSchema(){}

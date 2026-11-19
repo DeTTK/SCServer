@@ -11,7 +11,7 @@ using System.Windows.Forms;
 using System.Web.Script.Serialization;
 
 static class Portable {
-    public static readonly string Root=AppDomain.CurrentDomain.BaseDirectory.TrimEnd('\\');
+    public static string Root=AppDomain.CurrentDomain.BaseDirectory.TrimEnd('\\');
     public static string P(params string[] parts){return Path.Combine(new[]{Root}.Concat(parts).ToArray());}
     public static string Q(string s){return "\""+s.Replace("\"","\\\"")+"\"";}
     public static void Need(string p){if(!File.Exists(p)&&!Directory.Exists(p))throw new IOException("Не найден файл или каталог: "+p);}
@@ -38,12 +38,12 @@ static class Program {
             try{ClientForm.Check(args[1],args[2]);Portable.Json(Portable.P("preflight.json"),new{ok=true,gameplayTested=false});}
             catch(Exception e){Portable.Json(Portable.P("preflight.json"),new{ok=false,error=e.Message});Environment.ExitCode=1;}return;
         }
-        Application.EnableVisualStyles();Application.SetCompatibleTextRenderingDefault(false);Application.Run(new ClientForm());
+        Application.EnableVisualStyles();Application.SetCompatibleTextRenderingDefault(false);Application.Run(new ClientForm(args));
     }
 }
 sealed class ClientForm:Form {
     TextBox server=new TextBox(),login=new TextBox(),game=new TextBox();Label status=new Label();Button launch=new Button();Process activeClient;
-    public ClientForm(){
+    public ClientForm(string[] args=null){
         Text="Бскпкрафт — локальный клиент";ClientSize=new Size(620,355);FormBorderStyle=FormBorderStyle.FixedDialog;MaximizeBox=false;StartPosition=FormStartPosition.CenterScreen;Font=new Font("Segoe UI",10);
         Add("Адрес сервера (IP:29545)",server,20);server.Text="127.0.0.1:29545";
         Add("Логин",login,90);login.Text="Player";Add("Папка установленной игры",game,160);game.Width=450;
@@ -53,7 +53,11 @@ sealed class ClientForm:Form {
         launch.Click+=async(s,e)=>{launch.Enabled=false;try{if(activeClient!=null&&!activeClient.HasExited)throw new IOException("Клиент уже запущен");Check(game.Text,server.Text);if(String.IsNullOrWhiteSpace(login.Text)||login.Text.Any(char.IsControl))throw new IOException("Введите логин");status.Text="Проверка сервера…";
             string endpoint=Portable.Endpoint(server.Text);await Task.Run(()=>Portable.Http(endpoint+"/health",null,null));
             Portable.Json(Portable.P("settings.json"),new{server=server.Text,login=login.Text.Trim(),game=game.Text});StartGame(Path.GetFullPath(game.Text),endpoint,login.Text.Trim());status.Text="Клиент запущен. Журнал — в папке logs.";
-        }catch(Exception error){status.Text=error.Message;MessageBox.Show(this,error.Message,"Не удалось запустить игру",MessageBoxButtons.OK,MessageBoxIcon.Error);}finally{launch.Enabled=true;}};
+        }catch(Exception error){if(!Visible)Show();status.Text=error.Message;MessageBox.Show(this,error.Message,"Не удалось запустить игру",MessageBoxButtons.OK,MessageBoxIcon.Error);}finally{launch.Enabled=true;}};
+        if(args!=null&&args.Length==4&&args[0]=="--play"){
+            game.Text=args[1];server.Text=args[2];login.Text=args[3];
+            Shown+=(s,e)=>{Hide();launch.PerformClick();};
+        }
     }
     void Add(string text,TextBox box,int y){Controls.Add(new Label{Text=text,Left=20,Top=y,Width=560,Height=24});box.SetBounds(20,y+25,570,28);Controls.Add(box);}
     public static void Check(string game,string endpoint){
