@@ -48,8 +48,8 @@
     {
       "path": "README.md",
       "source": "tools/publication/template/README.md",
-      "adjusted": false,
-      "sha256": "60197220def057c35b495c7e93f71b013163d53abf187501a6f08f3ee29bb715"
+      "adjusted": true,
+      "sha256": "0934a28e1b0cbe3d459a5de5030265b8d6ff3a755b7be2c3a98956781009285f"
     },
     {
       "path": "SECURITY.md",
@@ -66,8 +66,8 @@
     {
       "path": "client/bootstrap/StandardJvmBootstrap.java",
       "source": "tools/StandardJvmBootstrap.java",
-      "sha256": "7f5a01f11993c034364a144f6d453d6f0f415b5092817ba34288faf33713acdb",
-      "adjusted": false
+      "sha256": "5029573213d1f96ba1db8c0af214974606a7627dccb521c3fb148ca3bc4ecfac",
+      "adjusted": true
     },
     {
       "path": "client/mod-runtime/src/szmods/api/ClientContext.java",
@@ -210,8 +210,8 @@
     {
       "path": "client/mod-runtime/src/szmods/runtime/ModRegistries.java",
       "source": "tools/mods/src/szmods/runtime/ModRegistries.java",
-      "sha256": "749a1a2bf3785404ace203245f6a0d8fb4406aa6dca460c74a4fab2d4812ea6a",
-      "adjusted": false
+      "sha256": "d45c089a0e0086327fe3aec926a1cd5db3de4c6ebeee78272c70edc7a5ce7016",
+      "adjusted": true
     },
     {
       "path": "client/mod-runtime/src/szmods/runtime/ModUiHooks.java",
@@ -330,8 +330,8 @@
     {
       "path": "config/local-paths.example.json",
       "source": "tools/publication/template/config/local-paths.example.json",
-      "adjusted": false,
-      "sha256": "080fc08821f1f70b7596a16376589306ea756a647ae5d8bc68580ecbe110f5be"
+      "adjusted": true,
+      "sha256": "3d3c010af9eb17bd36399ae73c9202cb7e0343fd20d9380e471f694dec53d1d2"
     },
     {
       "path": "config/private-resources.lock.json",
@@ -360,8 +360,8 @@
     {
       "path": "desktop/src/Portable.cs",
       "source": "tools/portable-20261118/Portable.cs",
-      "sha256": "45d6adaa4e1c1c910a7bc636dd62dd4a00b0d23faff9cd9f4448fa82c2f93fc6",
-      "adjusted": false
+      "sha256": "1e72bcbdfa7ce6e352bba8691a7fcd16f9008de6fcc887f48cfa8dc5e0b7c0f3",
+      "adjusted": true
     },
     {
       "path": "docs/ARCHITECTURE.md",
@@ -384,8 +384,8 @@
     {
       "path": "docs/QUICKSTART.md",
       "source": "tools/publication/template/docs/QUICKSTART.md",
-      "adjusted": false,
-      "sha256": "07d2a316d10faa97077f8c0d6d43f485c9fe79d22a6a62185cc77a1e1c3fb534"
+      "adjusted": true,
+      "sha256": "14634c3dcbbae3555745dee0295b147f9680cbd9ea41afb0fae9c1433bf8126d"
     },
     {
       "path": "docs/ROADMAP.md",
@@ -3300,8 +3300,8 @@
     {
       "path": "server/src/main/java/szserver/http/AdminHttpServer.java",
       "source": "server-java/src/main/java/szserver/http/AdminHttpServer.java",
-      "sha256": "ce942ee63ce4cb6a07322831114ccacd65be6c18716c3faa90037bbb5af41c2d",
-      "adjusted": false
+      "sha256": "41cde4051ce7df14e531bb09c2c740e14335c237d5db02e5942a9fca6803120a",
+      "adjusted": true
     },
     {
       "path": "server/src/main/java/szserver/inventory/AdminGive.java",
@@ -3534,8 +3534,8 @@
     {
       "path": "server/src/main/java/szserver/migration/LegacyPlayerImport.java",
       "source": "server-java/src/main/java/szserver/migration/LegacyPlayerImport.java",
-      "sha256": "c7bfad4803120fe70c8ef8dc76094f5812c17cb484f2ed07b87b1ac46e079055",
-      "adjusted": false
+      "sha256": "1e38a148413d89a663bac97a429284d4c15feaa852d9ad2a9dba7c61ad418c36",
+      "adjusted": true
     },
     {
       "path": "server/src/main/java/szserver/migration/LegacyPlayerPlan.java",
@@ -4182,8 +4182,8 @@
     {
       "path": "server/src/main/java/szserver/persistence/CharacterLocations.java",
       "source": "server-java/src/main/java/szserver/persistence/CharacterLocations.java",
-      "sha256": "d0a4c78364930ea0f3ffee59796ab4919bb17739a570a586364e7e0353d6cfe6",
-      "adjusted": false
+      "sha256": "00d864c9975fe585dee92525f2a8c95ab3ad8504080abf90d842f8e3b1099760",
+      "adjusted": true
     },
     {
       "path": "server/src/main/java/szserver/persistence/CheckpointDataRows.java",
@@ -5035,6 +5035,12 @@
       "path": "server/src/test/java/szserver/world/RegionRecordBoundsTests.java",
       "source": "server-java/src/test/java/szserver/world/RegionRecordBoundsTests.java",
       "sha256": "a710c2171bc95e2ed060945f7060645da892ccbdf277dd0304f8e92fd2e2d9d6",
+      "adjusted": false
+    },
+    {
+      "path": "docs/COMPATIBILITY_NAMES.md",
+      "source": "tools/publication/template/docs/COMPATIBILITY_NAMES.md",
+      "sha256": "b4c333531e8fc2640fdeff9e0d929dcab2623d3d778b03dd6a9b8689a5597e99",
       "adjusted": false
     }
   ],

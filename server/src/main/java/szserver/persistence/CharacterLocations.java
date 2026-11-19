@@ -10,7 +10,7 @@ import java.util.concurrent.*;
 
 /** Coalesced movement, durable spawn commands. Journal IO has a separate owner. */
 public final class CharacterLocations implements AutoCloseable {
-    /** Native Stalcraft units; Minecraft compatibility health/slot fields are stored separately. */
+    /** Native BSCPCRAFT units; Minecraft compatibility health/slot fields are stored separately. */
     public record PlayerState(float yaw,float pitch,float health,int hand,boolean holstered,long damagedAt,float stamina,szserver.net.SicknessState sickness){
         public PlayerState(float yaw,float pitch,float health,int hand,boolean holstered,long damagedAt,float stamina){this(yaw,pitch,health,hand,holstered,damagedAt,stamina,szserver.net.SicknessState.EMPTY);}
         public PlayerState(float yaw,float pitch,float health,int hand,boolean holstered,long damagedAt){this(yaw,pitch,health,hand,holstered,damagedAt,1);}

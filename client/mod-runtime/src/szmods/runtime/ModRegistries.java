@@ -36,7 +36,7 @@ public final class ModRegistries {
             try {
                 Files.createDirectories(file.getParent());
                 Path temp = file.resolveSibling(file.getFileName() + ".tmp");
-                try (Writer writer = Files.newBufferedWriter(temp, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) { out.store(writer, "STALCRAFT external mod settings"); }
+                try (Writer writer = Files.newBufferedWriter(temp, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) { out.store(writer, "BSCPCRAFT external mod settings"); }
                 try { Files.move(temp, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE); }
                 catch (AtomicMoveNotSupportedException e) { Files.move(temp, file, StandardCopyOption.REPLACE_EXISTING); }
             } catch (IOException ignored) {}

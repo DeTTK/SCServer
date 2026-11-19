@@ -1055,7 +1055,7 @@ public final class StandardJvmBootstrap {
     public static void compatibilityImguiItemSize(
             float minimumX, float minimumY, float maximumX, float maximumY,
             float textBaselineY) {
-        // EXBO's fork exposes the bounding-box form of ItemSize. Public
+        // BSCP integration targets the native fork, which exposes the bounding-box form of ItemSize. Public
         // imgui-java 1.82.2 exposes no equivalent JNI symbol, but SameLine()
         // relies on the cursor advancing. Reserve the exact box through the
         // stable public dummy primitive instead of dropping layout state.
@@ -1070,7 +1070,7 @@ public final class StandardJvmBootstrap {
     }
 
     public static void compatibilityImguiSetHoveredId(int id) {
-        // EXBO's 1.82.2 fork exposes ImGui::SetHoveredID, while the matching
+        // BSCP integration targets the native 1.82.2 fork, which exposes ImGui::SetHoveredID, while the matching
         // public 1.82.2 JNI library does not. The caller has already submitted
         // and hover-tested the item, so omitting the redundant internal ID
         // assignment preserves interaction without mixing in the incompatible
@@ -1300,7 +1300,7 @@ public final class StandardJvmBootstrap {
     }
 
     /**
-     * STALCRAFT keeps its synchronized wall clock separately from Minecraft's
+     * BSCPCRAFT keeps its synchronized wall clock separately from Minecraft's
      * WorldInfo time.  The sky/daytime renderer reads the latter, so a native
      * 637620157 (decoded 149362) clock packet otherwise updates UI clocks while
      * leaving the sun and lighting at the value loaded with the world.

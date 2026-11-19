@@ -6,7 +6,7 @@ import szserver.util.Json;
 import szserver.world.World.Vec;
 import java.util.*;
 
-/** Preserve NativeAuthority's compatibility snapshot. Its HP/creative slot are not Stalcraft HP/hand. */
+/** Preserve NativeAuthority's compatibility snapshot. Its HP/creative slot are not BSCPCRAFT HP/hand. */
 public final class LegacyPlayerImport {
     private LegacyPlayerImport(){}
     private static void finite(JsonObject row,String key){JsonElement value=row.get(key);if(value==null||!value.isJsonPrimitive()||!value.getAsJsonPrimitive().isNumber()||!Double.isFinite(value.getAsDouble()))throw new IllegalArgumentException("legacy_player_number");}

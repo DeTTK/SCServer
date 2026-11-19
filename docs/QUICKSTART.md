@@ -31,7 +31,7 @@ Callbacks API v1 описаны в `sdk/api/szmods/api/ClientMod.java`.
 Это тот же формат папок `Client`, `Server`, `Map`, который используется в текущей локалке.
 
 ```sh
-python scripts/local.py configure --client-bundle "C:/LocalGame/Client" --server-bundle "C:/LocalGame/Server" --game "C:/Games/STALCRAFT" --map "C:/LocalGame/Map"
+python scripts/local.py configure --client-bundle "C:/LocalGame/Client" --server-bundle "C:/LocalGame/Server" --game "C:/Games/BSCPCRAFT" --map "C:/LocalGame/Map"
 python scripts/local.py doctor
 python scripts/local.py open-server
 python scripts/local.py open-client

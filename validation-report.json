@@ -3,7 +3,7 @@
   "publicationState": "VERIFIED_SOURCE_SNAPSHOT",
   "licenseChosen": false,
   "originReviewComplete": false,
-  "sourceFilesExported": 839,
+  "sourceFilesExported": 840,
   "cleanCheckout": {
     "result": "PASS",
     "trackedFiles": 842,
@@ -57,5 +57,16 @@
     "codeCommit": "b65e3af67b2ef33bafc6d7e2f9396b706651f1b3",
     "ubuntu-24.04": "success",
     "windows-2022": "success"
+  },
+  "brandingUpdate": {
+    "date": "2026-11-19",
+    "displayName": "\u0411\u0441\u043a\u043f\u043a\u0440\u0430\u0444\u0442",
+    "projectName": "BSCPCRAFT",
+    "integrationName": "BSCP",
+    "codeTokenCompatibilityChecks": 6,
+    "nativeAndPersistenceIdentifiersPreserved": true,
+    "independentTests": "PASS",
+    "desktopBuild": "PASS",
+    "fullGraphicalClientTested": false
   }
 }

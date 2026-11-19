@@ -44,7 +44,7 @@ static class Program {
 sealed class ClientForm:Form {
     TextBox server=new TextBox(),login=new TextBox(),game=new TextBox();Label status=new Label();Button launch=new Button();Process activeClient;
     public ClientForm(){
-        Text="STALCRAFT — локальный клиент";ClientSize=new Size(620,355);FormBorderStyle=FormBorderStyle.FixedDialog;MaximizeBox=false;StartPosition=FormStartPosition.CenterScreen;Font=new Font("Segoe UI",10);
+        Text="Бскпкрафт — локальный клиент";ClientSize=new Size(620,355);FormBorderStyle=FormBorderStyle.FixedDialog;MaximizeBox=false;StartPosition=FormStartPosition.CenterScreen;Font=new Font("Segoe UI",10);
         Add("Адрес сервера (IP:29545)",server,20);server.Text="127.0.0.1:29545";
         Add("Логин",login,90);login.Text="Player";Add("Папка установленной игры",game,160);game.Width=450;
         var browse=new Button{Text="Обзор…",Left=485,Top=185,Width=105,Height=30};browse.Click+=(s,e)=>{using(var d=new FolderBrowserDialog())if(d.ShowDialog()==DialogResult.OK)game.Text=d.SelectedPath;};Controls.Add(browse);
@@ -111,7 +111,7 @@ sealed class ServerHost {
 }
 sealed class ManagerForm:Form {
     ServerHost host=new ServerHost();TextBox map=new TextBox(),address=new TextBox(),logs=new TextBox(),stats=new TextBox();Label state=new Label();Button start=new Button(),stop=new Button();bool busy;Timer timer=new Timer();
-    public ManagerForm(){Text="STALCRAFT — сервер";ClientSize=new Size(940,730);MinimumSize=new Size(850,700);Font=new Font("Segoe UI",10);StartPosition=FormStartPosition.CenterScreen;
+    public ManagerForm(){Text="Бскпкрафт — сервер";ClientSize=new Size(940,730);MinimumSize=new Size(850,700);Font=new Font("Segoe UI",10);StartPosition=FormStartPosition.CenterScreen;
         Controls.Add(new Label{Text="Исходная карта — папка Map",Left=20,Top=18,Width=700});map.SetBounds(20,43,770,28);map.Text=Path.GetFullPath(Portable.P("..","Map"));Controls.Add(map);var browse=new Button{Text="Обзор…",Left=800,Top=42,Width=110};Controls.Add(browse);browse.Click+=(s,e)=>{using(var d=new FolderBrowserDialog())if(d.ShowDialog()==DialogResult.OK)map.Text=d.SelectedPath;};
         Controls.Add(new Label{Text="Адрес этого компьютера для игроков (IP / домен)",Left=20,Top=87,Width=800});address.SetBounds(20,112,890,28);address.Text="127.0.0.1";Controls.Add(address);
         start.Text="Запустить";stop.Text="Сохранить и остановить";start.SetBounds(20,160,180,34);stop.SetBounds(215,160,250,34);Controls.Add(start);Controls.Add(stop);state.SetBounds(485,168,425,30);Controls.Add(state);

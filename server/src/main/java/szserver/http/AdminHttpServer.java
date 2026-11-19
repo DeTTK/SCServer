@@ -15,7 +15,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
-/** Admin/research API, explicitly distinct from STALCRAFT's native transport. */
+/** Admin/research API, explicitly distinct from BSCPCRAFT's native transport. */
 public final class AdminHttpServer implements AutoCloseable {
     private static final Gson SCENE_JSON=new GsonBuilder().disableHtmlEscaping().serializeNulls().create();
     private final HttpServer http;
