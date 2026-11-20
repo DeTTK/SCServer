@@ -49,7 +49,7 @@
       "path": "README.md",
       "source": "tools/publication/template/README.md",
       "adjusted": false,
-      "sha256": "3b3c58b52327dc378919834d75d91d1d1120d6b4aa7f72cef6cb9c0185c580a9"
+      "sha256": "fe8b35ad5142c3097d8815417b7679a25b1ed53391fbf33d4c1d3b984d491384"
     },
     {
       "path": "SECURITY.md",
@@ -286,6 +286,12 @@
       "adjusted": false
     },
     {
+      "path": "client/resource-compat/ASM-LICENSE.txt",
+      "source": "tools/game-resource-compat/ASM-LICENSE.txt",
+      "adjusted": false,
+      "sha256": "fb3daf928baa48a9cde6e206001c49e2a12d85d08114248521fd5d9eeba3f6bf"
+    },
+    {
       "path": "client/resource-compat/src/gamecompat/AttributeWireIds.java",
       "source": "tools/game-resource-compat/src/gamecompat/AttributeWireIds.java",
       "sha256": "91affe2d54d2274f101966642791a60191862a0e3dfc5c92ebc5cfa88b76d0e4",
@@ -298,9 +304,21 @@
       "adjusted": false
     },
     {
+      "path": "client/resource-compat/src/gamecompat/OptionalResourceTransformer.java",
+      "source": "tools/game-resource-compat/src/gamecompat/OptionalResourceTransformer.java",
+      "adjusted": false,
+      "sha256": "339dae4219a2d8b8362cc51ded052d4af56dfac3b2f23e4aec6a24394e4d1603"
+    },
+    {
+      "path": "client/resource-compat/src/gamecompat/OptionalResources.java",
+      "source": "tools/game-resource-compat/src/gamecompat/OptionalResources.java",
+      "adjusted": false,
+      "sha256": "2b1b5ed11affa2a2a552ebd6992c6cbbb579b04f2f81f043bc4268783dedd15c"
+    },
+    {
       "path": "client/resource-compat/src/gamecompat/ResourceCompatibilityAgent.java",
       "source": "tools/game-resource-compat/src/gamecompat/ResourceCompatibilityAgent.java",
-      "sha256": "33d9e0536a320e27e65f71b3851586ac9e2f24cdd766da35839eae47463aaff2",
+      "sha256": "b051a390f1645fe586dd1d308f7f44aa766fe5b5bdd638c19ffafa7dbea70667",
       "adjusted": false
     },
     {
@@ -326,6 +344,12 @@
       "source": "tools/game-resource-compat/ClientResourceSchemaProbe.java",
       "adjusted": false,
       "sha256": "e0dc5df920a55a02b97d2f18eeae24c320ef7415d3f849a834b0453cc859d25c"
+    },
+    {
+      "path": "client/resource-compat/tests/OptionalResourcesProbe.java",
+      "source": "tools/resource-resilience-20261120/OptionalResourcesProbe.java",
+      "adjusted": false,
+      "sha256": "f973955cd34d9e5fda03e6081b5a18fa603f24789bdfb3e8116302832a3a7d0c"
     },
     {
       "path": "client/startup/StartupTextureAgent.java",
@@ -379,7 +403,7 @@
       "path": "desktop/src/Setup.cs",
       "source": "tools/setup-20261120/Setup.cs",
       "adjusted": false,
-      "sha256": "6128d6383427cb05a701f41a2a116d71f1a2c076a4deefc3fb0c2aa36c4c8207"
+      "sha256": "71d0b6e76e31e34678ef83ac7be4d0f9c673372e4d55e6032976f9bf560d50de"
     },
     {
       "path": "desktop/tests/SetupSafetyTests.cs",
@@ -427,7 +451,7 @@
       "path": "docs/STATUS.md",
       "source": "tools/publication/template/docs/STATUS.md",
       "adjusted": false,
-      "sha256": "9d0936bda29f6ab3e651aeb72faf2f6a1907f0ce26e55db2c4e6cfcae9580d7e"
+      "sha256": "5932bb77466dc3ad6cae0898b0c217874d7b3a15ae2b46b7b33a5f6f5b4a2bb2"
     },
     {
       "path": "mods/arc-hud-prototype/src/ArcHudMod.java",

@@ -104,5 +104,36 @@
     "payloadCacheRemoved": true,
     "repeatInstallReusesPackage": true,
     "existingSavePreservedOnRepeat": true
+  },
+  "optionalResourceRecovery": {
+    "nativeRegressionChecks": 24,
+    "stockMaskErrorReproduced": true,
+    "maskLineIsolation": "PASS",
+    "missingBoxNativeFallback": "PASS",
+    "cullingUsesMainBounds": "PASS",
+    "validAndEmptyBoundsPreserved": "PASS",
+    "unknownShaderDoesNotInsertNull": "PASS",
+    "criticalErrorsPreserved": "PASS",
+    "guardValidated": true,
+    "hiddenGraphicsContext": true,
+    "fullGraphicalClientTested": false,
+    "agentSha256": "20f6fb821b85c51ca359d9a08f8d18ed4e3708c3085b353cda418ad011bd6454",
+    "agentBytes": 219010,
+    "brokenShaderOwnerDisabledBeforeRender": true
+  },
+  "resourceUpdater": {
+    "result": "PASS",
+    "liveGameBlocksUpdate": true,
+    "noActiveAgentModified": true,
+    "agentDownloadedFromPublicRelease": true,
+    "agentSha256": "20f6fb821b85c51ca359d9a08f8d18ed4e3708c3085b353cda418ad011bd6454",
+    "existingWorldPreserved": true,
+    "fullBundleRedownloaded": false,
+    "rollbackRetained": true,
+    "fileManifestUpdated": true,
+    "repeatUpdateIsNoOp": true,
+    "installerSha256": "4d04da0f9d3b8ba651569c66e8fca170323734dfae928690eae76ce826e20547",
+    "manualZipLayoutUpdatedInPlace": true,
+    "finalR2OwnedAndManualUpdates": "PASS"
   }
 }

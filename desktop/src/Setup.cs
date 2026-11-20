@@ -23,6 +23,9 @@ static class SetupPackage {
     internal const string Url="https://github.com/DeTTK/SCServer/releases/download/local-ready-2026.11.20/BSCPCRAFT-local-20261119.zip";
     internal const string Hash="644af9116bf0931884e778455179137e70e088f9e1fa77c66c00aad6d505752a";
     internal const long Bytes=1312415473;
+    internal const string AgentUrl="https://github.com/DeTTK/SCServer/releases/download/resource-recovery-2026.11.20-r2/game-resource-compat-agent-20261120-r2.jar";
+    internal const string AgentHash="20f6fb821b85c51ca359d9a08f8d18ed4e3708c3085b353cda418ad011bd6454";
+    internal const int AgentBytes=219010;
     static readonly string[] Required={"Играть.exe","Client/Launcher.exe","Client/jre/bin/javaw.exe","Server/server.jar","Server/jre/bin/java.exe","Map/registry.json","Map/region"};
     static readonly string[] ToolNames={"BootLocal","BootClient","BootServer"};
     static readonly string[] ToolPaths={"Играть.exe","Client/Launcher.exe","Server/ServerManager.exe"};
@@ -33,7 +36,43 @@ static class SetupPackage {
         }
     }
     static string ToolDigest(byte[] raw){using(var sha=SHA256.Create())return BitConverter.ToString(sha.ComputeHash(raw)).Replace("-","").ToLowerInvariant();}
-    static string PackageMarker(){return Hash+":"+String.Join(":",ToolNames.Select(name=>ToolDigest(Tool(name))));}
+    static string PackageMarker(){return Hash+":"+String.Join(":",ToolNames.Select(name=>ToolDigest(Tool(name))))+":"+AgentHash;}
+    static byte[] DownloadAgent(string cache,Action<string,int> progress,CancellationToken cancel) {
+        string path=Path.Combine(cache,"resource-agent-"+AgentHash+".jar");NoLinks(path);
+        if(File.Exists(path)&&new FileInfo(path).Length==AgentBytes&&Digest(path,cancel)==AgentHash)return File.ReadAllBytes(path);
+        progress("Скачивается обновление загрузки ресурсов…",1);ServicePointManager.SecurityProtocol=SecurityProtocolType.Tls12;
+        var request=(HttpWebRequest)WebRequest.Create(AgentUrl);request.UserAgent="BSCPCRAFT-Setup/2";request.Timeout=30000;request.ReadWriteTimeout=30000;
+        using(cancel.Register(()=>request.Abort()))using(var response=request.GetResponse())using(var input=response.GetResponseStream())using(var memory=new MemoryStream()) {
+            byte[] buffer=new byte[16384];int n;
+            while((n=input.Read(buffer,0,buffer.Length))>0){cancel.ThrowIfCancellationRequested();if(memory.Length+n>AgentBytes)throw new IOException("Обновление ресурсов больше ожидаемого");memory.Write(buffer,0,n);}
+            byte[] raw=memory.ToArray();if(raw.Length!=AgentBytes||ToolDigest(raw)!=AgentHash)throw new IOException("Не прошла проверка обновления ресурсов. Повторите установку.");
+            File.WriteAllBytes(path,raw);return raw;
+        }
+    }
+    static void NoRunningClients(string root) {
+        string prefix=Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar)+Path.DirectorySeparatorChar;
+        int self=Process.GetCurrentProcess().Id;
+        foreach(var process in Process.GetProcesses())using(process) {
+            if(process.Id==self)continue;string file=null;
+            try{var module=process.MainModule;if(module!=null)file=module.FileName;}catch(System.ComponentModel.Win32Exception){}catch(InvalidOperationException){}catch(NotSupportedException){}
+            if(file!=null&&file.StartsWith(prefix,StringComparison.OrdinalIgnoreCase))throw new IOException("Закройте игру, Играть.exe и окно сервера из этой локалки, затем повторите обновление. Сохранения не меняются.");
+        }
+    }
+    static void InstallAgent(string target,string cache,byte[] raw,bool updating) {
+        string file=Path.Combine(target,"Client/compat/game-resource-compat.jar");NoLinks(file);
+        if(File.Exists(file)&&Digest(file,CancellationToken.None)==AgentHash)return;
+        if(updating&&File.Exists(file)){string backup=Path.Combine(cache,"previous-resource-agent.jar");NoLinks(backup);File.Copy(file,backup,true);}
+        string temporary=file+".incoming-"+Guid.NewGuid().ToString("N");
+        try{File.WriteAllBytes(Extended(temporary),raw);if(File.Exists(file))File.Replace(Extended(temporary),Extended(file),null);else File.Move(Extended(temporary),Extended(file));}
+        finally{if(File.Exists(Extended(temporary)))File.Delete(Extended(temporary));}
+        string manifest=Path.Combine(target,"Client/FILES.sha256.json");
+        if(File.Exists(manifest)) {
+            var serializer=new System.Web.Script.Serialization.JavaScriptSerializer{MaxJsonLength=64*1024*1024};
+            var rows=serializer.Deserialize<System.Collections.Generic.List<System.Collections.Generic.Dictionary<string,object>>>(File.ReadAllText(manifest));
+            foreach(var row in rows)if((string)row["path"]=="compat/game-resource-compat.jar"){row["size"]=raw.Length;row["sha256"]=AgentHash;}
+            File.WriteAllText(manifest,serializer.Serialize(rows));
+        }
+    }
     static void ApplyTools(string stage) {
         for(int i=0;i<ToolNames.Length;i++)File.WriteAllBytes(Path.Combine(stage,ToolPaths[i]),Tool(ToolNames[i]));
         var serializer=new System.Web.Script.Serialization.JavaScriptSerializer{MaxJsonLength=64*1024*1024};
@@ -67,6 +106,11 @@ static class SetupPackage {
         }
     }
     static bool Complete(string root) {return Required.All(p=>File.Exists(Path.Combine(root,p))||Directory.Exists(Path.Combine(root,p)));}
+    static bool KnownManualPackage(string root,CancellationToken cancel) {
+        string file=Path.Combine(root,"Client/compat/game-resource-compat.jar");NoLinks(file);
+        if(!File.Exists(file))return false;string hash=Digest(file,cancel);
+        return hash==AgentHash||hash=="a289ba5229a24d45294199bcd020ed33bd6dccaa305f9740f07ea341eb2e34b0"||hash=="602f6e72b6d1843e79004add6a3c133415b1d07ff4d01360037870e112a9798d"||hash=="7d717f201ced1f2c32bbfdfa8177e5452e6bd9c1331e7720ad40d7905c3792be";
+    }
     static void Download(string file,Action<string,int> progress,CancellationToken cancel) {
         ServicePointManager.SecurityProtocol=SecurityProtocolType.Tls12;
         long existing=File.Exists(file)?new FileInfo(file).Length:0;
@@ -120,23 +164,36 @@ static class SetupPackage {
     }
     internal static string Install(string folder,Action<string,int> progress,CancellationToken cancel) {
         folder=Path.GetFullPath(folder);NoLinks(folder);Directory.CreateDirectory(folder);
-        string cache=Path.Combine(folder,".setup"),target=Path.Combine(folder,"Local"),marker=Path.Combine(target,".installed-package.sha256"),identity=PackageMarker();
+        bool manual=Complete(folder);
+        string cache=Path.Combine(folder,".setup"),target=manual?folder:Path.Combine(folder,"Local"),marker=Path.Combine(target,".installed-package.sha256"),identity=PackageMarker();
         NoLinks(cache);NoLinks(target);Directory.CreateDirectory(cache);
         using(var lease=new FileStream(Path.Combine(cache,"setup.lock"),FileMode.OpenOrCreate,FileAccess.ReadWrite,FileShare.None)) {
             if(Directory.Exists(target)) {
-                if(File.Exists(marker)&&File.ReadAllText(marker).Trim()==identity&&Complete(target)){progress("Комплект уже установлен",100);return target;}
+                string installed=File.Exists(marker)?File.ReadAllText(marker).Trim():"";
+                bool owned=installed==Hash||installed.StartsWith(Hash+":",StringComparison.Ordinal);
+                if(Complete(target)&&(owned||(manual&&KnownManualPackage(target,cancel)))){
+                    string agent=Path.Combine(target,"Client/compat/game-resource-compat.jar");NoLinks(agent);
+                    if(!File.Exists(agent)||Digest(agent,cancel)!=AgentHash){
+                        NoRunningClients(target);byte[] update=DownloadAgent(cache,progress,cancel);cancel.ThrowIfCancellationRequested();
+                        NoRunningClients(target);InstallAgent(target,cache,update,true);
+                        if(owned&&!installed.Contains(AgentHash))File.WriteAllText(marker,installed+":"+AgentHash);
+                        progress("Обновление установлено. Мир и персонажи сохранены.",100);
+                    }else progress("Комплект уже установлен",100);
+                    return target;
+                }
                 throw new IOException("В выбранной папке уже есть Local без отметки этой установки. Чтобы сохранить ваши файлы, выберите другую папку.");
             }
             string partial=Path.Combine(cache,"package-"+Hash+".partial");
             long cached=File.Exists(partial)?new FileInfo(partial).Length:0;
             if(new DriveInfo(Path.GetPathRoot(folder)).AvailableFreeSpace<5L*1024*1024*1024-Math.Min(cached,Bytes))throw new IOException("Для установки нужно около 5 ГБ свободного места. Выберите другой диск.");
+            byte[] compatibleAgent=DownloadAgent(cache,progress,cancel);
             Download(partial,progress,cancel);progress("Проверяется скачанный архив…",76);
             if(Digest(partial,cancel)!=Hash){File.Delete(partial);throw new IOException("Архив скачался с ошибкой. Он удалён; нажмите установить ещё раз.");}
             string stage=Path.Combine(cache,"unpack-"+Guid.NewGuid().ToString("N"));
             try {
                 Extract(partial,stage,progress,cancel);
                 if(!Complete(stage))throw new InvalidDataException("В архиве не хватает файлов клиента, сервера или карты");
-                ApplyTools(stage);File.WriteAllText(Path.Combine(stage,".installed-package.sha256"),identity);cancel.ThrowIfCancellationRequested();Directory.Move(stage,target);
+                ApplyTools(stage);InstallAgent(stage,cache,compatibleAgent,false);File.WriteAllText(Path.Combine(stage,".installed-package.sha256"),identity);cancel.ThrowIfCancellationRequested();Directory.Move(stage,target);
             }finally{RemoveStage(cache,stage);}
             File.Delete(partial);progress("Всё готово",100);return target;
         }

@@ -1,6 +1,6 @@
 # SCServer / Бскпкрафт
 
-**[Скачать установщик локалки](https://github.com/DeTTK/SCServer/releases/download/local-ready-2026.11.20/BSCPCRAFT-Setup.exe)** · [полный ZIP](https://github.com/DeTTK/SCServer/releases/download/local-ready-2026.11.20/BSCPCRAFT-local-20261119.zip)
+**[Скачать установщик локалки](https://github.com/DeTTK/SCServer/releases/download/resource-recovery-2026.11.20-r2/BSCPCRAFT-Setup.exe)** · [полный ZIP](https://github.com/DeTTK/SCServer/releases/download/local-ready-2026.11.20/BSCPCRAFT-local-20261119.zip)
 
 Локальный запуск сервера БСКПКрафт (stalzone.gay) сервер + клиент
 
@@ -29,7 +29,7 @@
 
 ## Скачать и запустить
 
-**[Скачать установщик BSCPCRAFT-Setup.exe](https://github.com/DeTTK/SCServer/releases/download/local-ready-2026.11.20/BSCPCRAFT-Setup.exe)**
+**[Скачать установщик BSCPCRAFT-Setup.exe](https://github.com/DeTTK/SCServer/releases/download/resource-recovery-2026.11.20-r2/BSCPCRAFT-Setup.exe)**
 
 1. Откройте установщик.
 2. Выберите, куда поставить локалку. Папку по умолчанию можно оставить.
@@ -44,6 +44,12 @@
 После установки запускайте **`Local/Играть.exe`** в выбранной папке. В первый раз установщик сам передаст ему ник и путь к игре. Оставьте это окно открытым, пока играете: в нём работает сервер. Когда закончите — **«Сохранить и остановить»**.
 
 Сохранения лежат в **`Local/Server/data`**. Не удаляйте эту папку, если хотите сохранить персонажей и постройки.
+
+### Обновить установленную локалку
+
+Закройте игру и окно сервера. Откройте свежий установщик и выберите ту же папку. Он скачает только небольшой патч ресурсов, без повторной загрузки клиента и карты. Сохранения остаются на месте. Если распаковывали ZIP вручную, выберите папку с `Client`, `Server`, `Map` и `Играть.exe`.
+
+Можно вручную: [маленький ZIP-патч](https://github.com/DeTTK/SCServer/releases/download/resource-recovery-2026.11.20-r2/BSCPCRAFT-resource-fix-20261120-r2.zip). Распакуйте с заменой в папку с `Client`, предварительно закрыв игру.
 
 ### Если хочется распаковать вручную
 
