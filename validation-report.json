@@ -132,7 +132,7 @@
     "rollbackRetained": true,
     "fileManifestUpdated": true,
     "repeatUpdateIsNoOp": true,
-    "installerSha256": "4d04da0f9d3b8ba651569c66e8fca170323734dfae928690eae76ce826e20547",
+    "installerSha256": "dafde7c8b3c4ab3a70e381a90430d37deda2f25b23f16378f919c848d4854306",
     "manualZipLayoutUpdatedInPlace": true,
     "finalR2OwnedAndManualUpdates": "PASS"
   }
