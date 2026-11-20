@@ -1,5 +1,11 @@
 # Быстрый старт
 
+## Скачать исходную карту
+
+[Map-20261118.zip — 254 МБ](https://github.com/DeTTK/SCServer/releases/download/original-map-2026.11.20/Map-20261118.zip).
+Это исходная карта без изменений с сервера. Распакуйте рядом с Client и Server.
+Нужная структура: `Map/region` и `Map/registry.json`.
+
 ## Готовый комплект: без сборки и настройки Java
 
 Распакуйте полный архив с `Client`, `Server`, `Map` и `Играть.exe` в одну папку.

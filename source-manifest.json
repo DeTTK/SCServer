@@ -49,7 +49,7 @@
       "path": "README.md",
       "source": "tools/publication/template/README.md",
       "adjusted": false,
-      "sha256": "89adea866694f879b37a4f179dc6b089e577e9d65f03a37343cc769d5734bf08"
+      "sha256": "d763a70db4c184db2105536fb1c20cb730b9ccc51a8ea24780f42928b6cdd265"
     },
     {
       "path": "SECURITY.md",
@@ -403,7 +403,7 @@
       "path": "docs/QUICKSTART.md",
       "source": "tools/publication/template/docs/QUICKSTART.md",
       "adjusted": true,
-      "sha256": "c33d649b4603b679c7a554f7d4b4b95835c0f7648d1d2806db81583c718baef1"
+      "sha256": "7a653b48afc611cbe44625ba6fd6694caddfde5d19ae059904192d7d19cd9fbe"
     },
     {
       "path": "docs/ROADMAP.md",
