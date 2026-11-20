@@ -94,6 +94,14 @@ def desktop():
     for symbol,name in [('CLIENT','Launcher'),('SERVER','ServerManager')]:
         subprocess.run([str(compiler),'/nologo','/target:winexe','/platform:x64','/optimize+','/define:'+symbol,'/out:'+str(destination/(name+'.exe')),'/reference:System.dll,System.Core.dll,System.Windows.Forms.dll,System.Drawing.dll,System.Web.Extensions.dll',str(ROOT/'desktop/src/Portable.cs')],check=True)
     subprocess.run([str(compiler),'/nologo','/target:winexe','/platform:x64','/optimize+','/define:SERVER','/main:LocalProgram','/out:'+str(destination/'Играть.exe'),'/reference:System.dll,System.Core.dll,System.Windows.Forms.dll,System.Drawing.dll,System.Web.Extensions.dll',str(ROOT/'desktop/src/Portable.cs'),str(ROOT/'desktop/src/LocalLauncher.cs')],check=True)
+    subprocess.run([str(compiler),'/nologo','/target:winexe','/platform:x64','/optimize+','/main:SetupProgram','/out:'+str(destination/'BSCPCRAFT-Setup.exe'),'/reference:System.dll,System.Core.dll,System.Windows.Forms.dll,System.Drawing.dll,System.Web.Extensions.dll,System.IO.Compression.dll,System.IO.Compression.FileSystem.dll',
+                   '/resource:'+str(destination/'Играть.exe')+',BootLocal','/resource:'+str(destination/'Launcher.exe')+',BootClient','/resource:'+str(destination/'ServerManager.exe')+',BootServer',str(ROOT/'desktop/src/Setup.cs')],check=True)
+    test=destination/'SetupSafetyTests.exe'
+    subprocess.run([str(compiler),'/nologo','/target:exe','/platform:x64','/define:SERVER','/main:SetupSafetyTests','/out:'+str(test),'/reference:System.dll,System.Core.dll,System.Windows.Forms.dll,System.Drawing.dll,System.Web.Extensions.dll,System.IO.Compression.dll,System.IO.Compression.FileSystem.dll',
+                   '/resource:'+str(destination/'Играть.exe')+',BootLocal','/resource:'+str(destination/'Launcher.exe')+',BootClient','/resource:'+str(destination/'ServerManager.exe')+',BootServer',str(ROOT/'desktop/src/Setup.cs'),str(ROOT/'desktop/src/Portable.cs'),str(ROOT/'desktop/tests/SetupSafetyTests.cs')],check=True)
+    scratch=B/'scratch';scratch.mkdir(exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix='setup-safety-',dir=scratch) as directory:
+        subprocess.run([str(test),directory],check=True)
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('target',choices=['server','sdk','test','desktop']);parser.add_argument('--private-resources',action='store_true',help='Package pinned local game resources; never upload this JAR');args=parser.parse_args()

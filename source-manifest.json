@@ -49,7 +49,7 @@
       "path": "README.md",
       "source": "tools/publication/template/README.md",
       "adjusted": false,
-      "sha256": "d763a70db4c184db2105536fb1c20cb730b9ccc51a8ea24780f42928b6cdd265"
+      "sha256": "3b3c58b52327dc378919834d75d91d1d1120d6b4aa7f72cef6cb9c0185c580a9"
     },
     {
       "path": "SECURITY.md",
@@ -367,13 +367,25 @@
       "path": "desktop/src/LocalLauncher.cs",
       "source": "tools/easy-local-20261119/LocalLauncher.cs",
       "adjusted": false,
-      "sha256": "29714bd5f12bf9155de22c4e67497ebcee3ec637358c82902362486545877ff3"
+      "sha256": "2803ec826bb143715b7a90a9e8f3f9cf7e75a29764f4d49da7ab248e0376edda"
     },
     {
       "path": "desktop/src/Portable.cs",
       "source": "tools/portable-20261118/Portable.cs",
-      "sha256": "5e4fb151606e695896e742bb43d5a501b07633a7f52c37881cd3154ad231cd13",
+      "sha256": "3bff688444f01b4417522a4ac9316019db7e7a5d1a894781150e38c50ceb9877",
       "adjusted": true
+    },
+    {
+      "path": "desktop/src/Setup.cs",
+      "source": "tools/setup-20261120/Setup.cs",
+      "adjusted": false,
+      "sha256": "6128d6383427cb05a701f41a2a116d71f1a2c076a4deefc3fb0c2aa36c4c8207"
+    },
+    {
+      "path": "desktop/tests/SetupSafetyTests.cs",
+      "source": "tools/setup-20261120/SetupSafetyTests.cs",
+      "adjusted": false,
+      "sha256": "05fabd0d0b7bcd35261f5a250711efa982876812043548b45420dab3034ff1aa"
     },
     {
       "path": "docs/ARCHITECTURE.md",
@@ -397,13 +409,13 @@
       "path": "docs/PUBLISHING.md",
       "source": "tools/publication/template/docs/PUBLISHING.md",
       "adjusted": false,
-      "sha256": "66455426e3553dc42949bdfdbbebb25df0448ef126e2f7c4bc97cce59051d437"
+      "sha256": "3a874fdb6934314c63d4d2afcfccca0e6018ccf4a9b7bccc84247b568804dcc6"
     },
     {
       "path": "docs/QUICKSTART.md",
       "source": "tools/publication/template/docs/QUICKSTART.md",
       "adjusted": true,
-      "sha256": "7a653b48afc611cbe44625ba6fd6694caddfde5d19ae059904192d7d19cd9fbe"
+      "sha256": "c1c728044029359c5503a3bd2b5dd121c16d9813f20d88e221db25cc88f22ecb"
     },
     {
       "path": "docs/ROADMAP.md",
@@ -415,7 +427,7 @@
       "path": "docs/STATUS.md",
       "source": "tools/publication/template/docs/STATUS.md",
       "adjusted": false,
-      "sha256": "e15a82cca2e10dd15b0c4a1b1684521fecf55e35cadb14fbbbee468528c3f578"
+      "sha256": "9d0936bda29f6ab3e651aeb72faf2f6a1907f0ce26e55db2c4e6cfcae9580d7e"
     },
     {
       "path": "mods/arc-hud-prototype/src/ArcHudMod.java",
@@ -2155,7 +2167,7 @@
       "path": "scripts/build.py",
       "source": "tools/publication/template/scripts/build.py",
       "adjusted": false,
-      "sha256": "009d10e82ed81de1bd1446f12d58aba562b3c8658c091cda4baa91a87286c05c"
+      "sha256": "7f48098715d89b589a9706690253b2e4e40e849d28d3b0e78ccbcae52a77b093"
     },
     {
       "path": "scripts/import_private_resources.py",

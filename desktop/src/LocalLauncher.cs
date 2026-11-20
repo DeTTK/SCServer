@@ -28,7 +28,7 @@ static class LocalProgram {
             catch(Exception e){Console.Error.WriteLine(e.Message);Environment.ExitCode=1;}return;
         }
         Application.EnableVisualStyles();Application.SetCompatibleTextRenderingDefault(false);
-        Application.Run(new LocalForm());
+        Application.Run(new LocalForm(args));
     }
 }
 sealed class LocalForm:Form {
@@ -36,7 +36,7 @@ sealed class LocalForm:Form {
     readonly TextBox game=new TextBox(),login=new TextBox(),log=new TextBox();
     readonly Button play=new Button(),stop=new Button();readonly Label status=new Label();
     readonly ServerHost host=new ServerHost();bool busy;Process client;
-    public LocalForm() {
+    public LocalForm(string[] args=null) {
         Portable.Root=Path.Combine(Root,"Server");
         Text="Бскпкрафт — локальная игра";ClientSize=new Size(660,450);MinimumSize=new Size(660,450);
         Font=new Font("Segoe UI",10);StartPosition=FormStartPosition.CenterScreen;
@@ -54,6 +54,9 @@ sealed class LocalForm:Form {
         host.Line+=line=>{if(!IsDisposed&&IsHandleCreated)BeginInvoke(new Action(()=>{if(log.TextLength>60000)log.Text=log.Text.Substring(log.TextLength-30000);log.AppendText(line+Environment.NewLine);}));};
         play.Click+=async(s,e)=>await Play();stop.Click+=async(s,e)=>await Stop();
         FormClosing+=async(s,e)=>{if(!host.Exited){e.Cancel=true;if(!busy){await Stop();if(host.Exited)Close();}}};
+        if(args!=null&&args.Length==3&&args[0]=="--auto"){
+            game.Text=args[1];login.Text=args[2];Shown+=async(s,e)=>await Play();
+        }
     }
     static bool ValidGame(string path){return File.Exists(Path.Combine(path,"classes.jar"))&&File.Exists(Path.Combine(path,"modassets/assets/bundle/configs.xeon"))&&Directory.Exists(Path.Combine(path,"assets"));}
     static string FindGame(string root){foreach(string child in new[]{"","game","client","contents"}){string p=Path.Combine(root,child);if(ValidGame(p))return p;}return root;}

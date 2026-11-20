@@ -13,7 +13,11 @@ using System.Web.Script.Serialization;
 static class Portable {
     public static string Root=AppDomain.CurrentDomain.BaseDirectory.TrimEnd('\\');
     public static string P(params string[] parts){return Path.Combine(new[]{Root}.Concat(parts).ToArray());}
-    public static string Q(string s){return "\""+s.Replace("\"","\\\"")+"\"";}
+    public static string Q(string s){
+        var result=new StringBuilder("\"");int slashes=0;
+        foreach(char c in s){if(c=='\\'){slashes++;continue;}result.Append('\\',c=='"'?slashes*2+1:slashes);result.Append(c);slashes=0;}
+        return result.Append('\\',slashes*2).Append('"').ToString();
+    }
     public static void Need(string p){if(!File.Exists(p)&&!Directory.Exists(p))throw new IOException("Не найден файл или каталог: "+p);}
     public static string Http(string url,string token,string body){
         var request=(HttpWebRequest)WebRequest.Create(url);request.Timeout=5000;request.ReadWriteTimeout=5000;

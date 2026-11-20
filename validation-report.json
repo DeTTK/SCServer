@@ -85,5 +85,24 @@
     "requiredFieldRejection": "PASS",
     "inputJsonUnchanged": true,
     "fullGraphicalClientTested": false
+  },
+  "setup20261120": {
+    "installerSha256": "099ea425688d99c311abf570f26715acaacb4b7e888919649cdb46aa4a44015a",
+    "downloadedFromPublicGithub": true,
+    "archiveHashVerified": true,
+    "cachedDownloadReusedOnRetry": true,
+    "longWindowsPathsHandledWithoutRegistryChange": true,
+    "installerExitCode": 0,
+    "installedBundlePreflight": true,
+    "serverReady": true,
+    "serverHealthy": true,
+    "nativeSessionIssued": true,
+    "gracefullyStopped": true,
+    "serverSmokeExit": 0,
+    "graphicalGameClientLaunched": false,
+    "safetyChecks": 26,
+    "payloadCacheRemoved": true,
+    "repeatInstallReusesPackage": true,
+    "existingSavePreservedOnRepeat": true
   }
 }
