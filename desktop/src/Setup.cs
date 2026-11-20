@@ -26,6 +26,22 @@ static class SetupPackage {
     internal const string AgentUrl="https://github.com/DeTTK/SCServer/releases/download/resource-recovery-2026.11.20-r2/game-resource-compat-agent-20261120-r2.jar";
     internal const string AgentHash="20f6fb821b85c51ca359d9a08f8d18ed4e3708c3085b353cda418ad011bd6454";
     internal const int AgentBytes=219010;
+    internal const string NativeUrl="https://github.com/DeTTK/SCServer/releases/download/native-startup-2026.11.21/BSCPCRAFT-native-libraries-20261121.zip";
+    internal const string NativeHash="e92212cf14279f7615c0f2c00ad3d51c798532fa735a8d0b9d6b46be3959d8fc";
+    internal const int NativeBytes=15812300;
+    internal static readonly System.Collections.Generic.Dictionary<string,string> NativeFiles=new System.Collections.Generic.Dictionary<string,string> {
+        {"fmod/x64/fmod.dll","dad8b479225db203c7d6750f7817421680c09dfb5ff8e93f45d49499487bab28"},
+        {"fmod/x64/fmodstudio.dll","fb99c94e3d51231e32923c69123dbbae4385c199411ce697318526aa8aadf032"},
+        {"eos/x64/EOSSDK-Win64-Shipping.dll","4ee17bb5cb3ebb580bba995cb384d30fe24ad6a1a50074e340045dcdb3280ced"},
+        {"eos/x64/xaudio2_9redist.dll","0e01f400baa09694cacfd2cfbff0d721c17b56785d2d6e29b6fdd117f70ccc1e"},
+        {"stove/BaseSDK.dll","7826c5fc75aa8b0cf9b450251fcb566adc7da34142f735be146a083252b5ca89"},
+        {"stove/GameSupportSDK.dll","65a23d7b9b073ecc2ffced5844d4eead588606bc3648d9843674abcae807076a"},
+        {"stove/IAPSDK.dll","82a34ff749a60719b9359a2666605af29ae9c34984ca8e959975c2fda0959039"},
+        {"stove/LogSDK.dll","70bd612686bfc07aa74d14f0c1dfe218ec2c4ffc481530294e4b96a030c2644c"},
+        {"stove/OwnershipSDK.dll","01c524cc0c7dcdadf7d44a85d1188a8be7b0a3546fa366b8008655509f316aa4"},
+        {"stove/PCBangSDK.dll","bbe4c14a321a1c78dc89a091ab73fce9743e5adcc9ef7ac85eff18095723ddbb"},
+        {"stove/WebView2Loader.dll","74f16550da608ec233a3e54871ec72657dff34cdef068193c1a7b554b670a1a3"},
+    };
     static readonly string[] Required={"Играть.exe","Client/Launcher.exe","Client/jre/bin/javaw.exe","Server/server.jar","Server/jre/bin/java.exe","Map/registry.json","Map/region"};
     static readonly string[] ToolNames={"BootLocal","BootClient","BootServer"};
     static readonly string[] ToolPaths={"Играть.exe","Client/Launcher.exe","Server/ServerManager.exe"};
@@ -36,7 +52,7 @@ static class SetupPackage {
         }
     }
     static string ToolDigest(byte[] raw){using(var sha=SHA256.Create())return BitConverter.ToString(sha.ComputeHash(raw)).Replace("-","").ToLowerInvariant();}
-    static string PackageMarker(){return Hash+":"+String.Join(":",ToolNames.Select(name=>ToolDigest(Tool(name))))+":"+AgentHash;}
+    static string PackageMarker(){return Hash+":"+String.Join(":",ToolNames.Select(name=>ToolDigest(Tool(name))))+":"+AgentHash+":"+NativeHash;}
     static byte[] DownloadAgent(string cache,Action<string,int> progress,CancellationToken cancel) {
         string path=Path.Combine(cache,"resource-agent-"+AgentHash+".jar");NoLinks(path);
         if(File.Exists(path)&&new FileInfo(path).Length==AgentBytes&&Digest(path,cancel)==AgentHash)return File.ReadAllBytes(path);
@@ -70,6 +86,47 @@ static class SetupPackage {
             var serializer=new System.Web.Script.Serialization.JavaScriptSerializer{MaxJsonLength=64*1024*1024};
             var rows=serializer.Deserialize<System.Collections.Generic.List<System.Collections.Generic.Dictionary<string,object>>>(File.ReadAllText(manifest));
             foreach(var row in rows)if((string)row["path"]=="compat/game-resource-compat.jar"){row["size"]=raw.Length;row["sha256"]=AgentHash;}
+            File.WriteAllText(manifest,serializer.Serialize(rows));
+        }
+    }
+    internal static bool NativesCurrent(string target) {
+        foreach(var row in NativeFiles){string path=Path.Combine(target,"Client/runtime/natives",row.Key);NoLinks(path);if(!File.Exists(path)||Digest(path,CancellationToken.None)!=row.Value)return false;}return true;
+    }
+    static bool ToolsCurrent(string target) {
+        for(int i=0;i<ToolNames.Length;i++){string path=Path.Combine(target,ToolPaths[i]);NoLinks(path);if(!File.Exists(path)||Digest(path,CancellationToken.None)!=ToolDigest(Tool(ToolNames[i])))return false;}return true;
+    }
+    static string DownloadNatives(string cache,Action<string,int> progress,CancellationToken cancel) {
+        string path=Path.Combine(cache,"native-"+NativeHash+".zip");NoLinks(path);
+        if(File.Exists(path)&&new FileInfo(path).Length==NativeBytes&&Digest(path,cancel)==NativeHash)return path;
+        progress("Скачиваются недостающие библиотеки клиента (16 МБ)…",5);ServicePointManager.SecurityProtocol=SecurityProtocolType.Tls12;
+        var request=(HttpWebRequest)WebRequest.Create(NativeUrl);request.UserAgent="BSCPCRAFT-Setup/3";request.Timeout=30000;request.ReadWriteTimeout=30000;
+        try {
+            using(cancel.Register(()=>request.Abort()))using(var response=request.GetResponse())using(var input=response.GetResponseStream())using(var output=new FileStream(path,FileMode.Create,FileAccess.Write,FileShare.None)) {
+                byte[] buffer=new byte[65536];int n;long total=0;while((n=input.Read(buffer,0,buffer.Length))>0){cancel.ThrowIfCancellationRequested();total+=n;if(total>NativeBytes)throw new InvalidDataException("Неверный размер библиотек клиента");output.Write(buffer,0,n);}
+            }
+            if(new FileInfo(path).Length!=NativeBytes||Digest(path,cancel)!=NativeHash)throw new InvalidDataException("Не прошла проверка библиотек клиента. Повторите обновление.");return path;
+        }catch{if(File.Exists(path))File.Delete(path);throw;}
+    }
+    internal static void InstallNatives(string target,string cache,string archive,bool updating,CancellationToken cancel) {
+        // Verify the complete allowlisted payload before changing any installed file.
+        if(Digest(archive,cancel)!=NativeHash)throw new InvalidDataException("Неверная подпись архива библиотек");
+        var payload=new System.Collections.Generic.Dictionary<string,byte[]>();
+        using(var zip=ZipFile.OpenRead(archive))foreach(var entry in zip.Entries){
+            string expected;if(!NativeFiles.TryGetValue(entry.FullName,out expected)||payload.ContainsKey(entry.FullName)||entry.Length>25*1024*1024)throw new InvalidDataException("Неожиданный файл в архиве библиотек");
+            using(var input=entry.Open())using(var output=new MemoryStream()){input.CopyTo(output);byte[] raw=output.ToArray();if(ToolDigest(raw)!=expected)throw new InvalidDataException("Повреждена библиотека "+entry.FullName);payload.Add(entry.FullName,raw);}
+        }
+        if(payload.Count!=NativeFiles.Count)throw new InvalidDataException("В архиве не хватает библиотек");
+        foreach(var row in payload){
+            cancel.ThrowIfCancellationRequested();string path=Path.Combine(target,"Client/runtime/natives",row.Key);NoLinks(path);if(File.Exists(path)&&Digest(path,cancel)==NativeFiles[row.Key])continue;
+            if(updating&&File.Exists(path)){string backup=Path.Combine(cache,"previous-natives",row.Key);NoLinks(backup);Directory.CreateDirectory(Path.GetDirectoryName(backup));File.Copy(path,backup,true);}
+            Directory.CreateDirectory(Path.GetDirectoryName(path));string temporary=path+".incoming-"+Guid.NewGuid().ToString("N");
+            try{File.WriteAllBytes(Extended(temporary),row.Value);if(File.Exists(path))File.Replace(Extended(temporary),Extended(path),null);else File.Move(Extended(temporary),Extended(path));}
+            finally{if(File.Exists(Extended(temporary)))File.Delete(Extended(temporary));}
+        }
+        string manifest=Path.Combine(target,"Client/FILES.sha256.json");NoLinks(manifest);
+        if(File.Exists(manifest)){
+            var serializer=new System.Web.Script.Serialization.JavaScriptSerializer{MaxJsonLength=64*1024*1024};var rows=serializer.Deserialize<System.Collections.Generic.List<System.Collections.Generic.Dictionary<string,object>>>(File.ReadAllText(manifest));
+            foreach(var row in payload){string path="runtime/natives/"+row.Key;var existing=rows.FirstOrDefault(x=>(string)x["path"]==path);if(existing==null){existing=new System.Collections.Generic.Dictionary<string,object>{{"path",path}};rows.Add(existing);}existing["size"]=row.Value.Length;existing["sha256"]=NativeFiles[row.Key];}
             File.WriteAllText(manifest,serializer.Serialize(rows));
         }
     }
@@ -173,9 +230,10 @@ static class SetupPackage {
                 bool owned=installed==Hash||installed.StartsWith(Hash+":",StringComparison.Ordinal);
                 if(Complete(target)&&(owned||(manual&&KnownManualPackage(target,cancel)))){
                     string agent=Path.Combine(target,"Client/compat/game-resource-compat.jar");NoLinks(agent);
-                    if(!File.Exists(agent)||Digest(agent,cancel)!=AgentHash){
+                    if(!File.Exists(agent)||Digest(agent,cancel)!=AgentHash||!NativesCurrent(target)||!ToolsCurrent(target)){
                         NoRunningClients(target);byte[] update=DownloadAgent(cache,progress,cancel);cancel.ThrowIfCancellationRequested();
-                        NoRunningClients(target);InstallAgent(target,cache,update,true);
+                        string nativeArchive=NativesCurrent(target)?null:DownloadNatives(cache,progress,cancel);
+                        NoRunningClients(target);InstallAgent(target,cache,update,true);if(nativeArchive!=null)InstallNatives(target,cache,nativeArchive,true,cancel);if(!ToolsCurrent(target)){for(int i=0;i<ToolPaths.Length;i++){string previous=Path.Combine(cache,"previous-launcher-tools",ToolPaths[i]);NoLinks(previous);Directory.CreateDirectory(Path.GetDirectoryName(previous));File.Copy(Path.Combine(target,ToolPaths[i]),previous,true);}ApplyTools(target);}
                         if(owned&&!installed.Contains(AgentHash))File.WriteAllText(marker,installed+":"+AgentHash);
                         progress("Обновление установлено. Мир и персонажи сохранены.",100);
                     }else progress("Комплект уже установлен",100);
@@ -186,14 +244,14 @@ static class SetupPackage {
             string partial=Path.Combine(cache,"package-"+Hash+".partial");
             long cached=File.Exists(partial)?new FileInfo(partial).Length:0;
             if(new DriveInfo(Path.GetPathRoot(folder)).AvailableFreeSpace<5L*1024*1024*1024-Math.Min(cached,Bytes))throw new IOException("Для установки нужно около 5 ГБ свободного места. Выберите другой диск.");
-            byte[] compatibleAgent=DownloadAgent(cache,progress,cancel);
+            byte[] compatibleAgent=DownloadAgent(cache,progress,cancel);string nativePackage=DownloadNatives(cache,progress,cancel);
             Download(partial,progress,cancel);progress("Проверяется скачанный архив…",76);
             if(Digest(partial,cancel)!=Hash){File.Delete(partial);throw new IOException("Архив скачался с ошибкой. Он удалён; нажмите установить ещё раз.");}
             string stage=Path.Combine(cache,"unpack-"+Guid.NewGuid().ToString("N"));
             try {
                 Extract(partial,stage,progress,cancel);
                 if(!Complete(stage))throw new InvalidDataException("В архиве не хватает файлов клиента, сервера или карты");
-                ApplyTools(stage);InstallAgent(stage,cache,compatibleAgent,false);File.WriteAllText(Path.Combine(stage,".installed-package.sha256"),identity);cancel.ThrowIfCancellationRequested();Directory.Move(stage,target);
+                ApplyTools(stage);InstallAgent(stage,cache,compatibleAgent,false);InstallNatives(stage,cache,nativePackage,false,cancel);File.WriteAllText(Path.Combine(stage,".installed-package.sha256"),identity);cancel.ThrowIfCancellationRequested();Directory.Move(stage,target);
             }finally{RemoveStage(cache,stage);}
             File.Delete(partial);progress("Всё готово",100);return target;
         }

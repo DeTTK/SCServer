@@ -27,6 +27,8 @@ static class SetupSafetyTests {
   Rejected(()=>SetupPackage.Extract(symbolic,Path.Combine(root,"unpack-symlink"),(s,p)=>{},CancellationToken.None),"Symbolic ZIP entry");
   string foreign=Path.Combine(root,"existing"),save=Path.Combine(foreign,"Local/Server/data/player.json");Directory.CreateDirectory(Path.GetDirectoryName(save));File.WriteAllText(save,"preserve me");
   try{SetupPackage.Install(foreign,(s,p)=>{},CancellationToken.None);throw new Exception("Foreign install replaced");}catch(IOException){Require(File.ReadAllText(save)=="preserve me","Existing saves preserved");}
+  Require(!SetupPackage.NativesCurrent(root),"Missing nested native DLLs need repair");
+  Rejected(()=>SetupPackage.InstallNatives(root,root,zip,false,CancellationToken.None),"Unverified native archive rejected before installation");
   Console.WriteLine("PASS "+checks+" installer safety and Windows argument checks");
  }
 }

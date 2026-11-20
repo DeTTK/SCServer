@@ -135,5 +135,44 @@
     "installerSha256": "dafde7c8b3c4ab3a70e381a90430d37deda2f25b23f16378f919c848d4854306",
     "manualZipLayoutUpdatedInPlace": true,
     "finalR2OwnedAndManualUpdates": "PASS"
+  },
+  "nativeStartupRecovery": {
+    "nativeLoader": {
+      "baselineReproducesMissingFmod": true,
+      "fixedAll11NestedNativesLoaded": true,
+      "nativeLoaderCallsRealGameCode": true,
+      "gameWindowStarted": false,
+      "audioDeviceOpened": false,
+      "fullUserCrashReproduced": false,
+      "stockCoreNativeUnavailableInBothCases": true
+    },
+    "installer": {
+      "result": "PASS",
+      "installerSha256": "459fe89a897b212c41a17a4d9b3cc92010a8bd4df1385a88b0efd2cf73497a0b",
+      "desktopSafetyChecks": 28,
+      "cases": [
+        {
+          "manualLayout": false,
+          "all11Restored": true,
+          "corruptDllRepaired": true,
+          "launcherUpdated": true,
+          "manifestUpdated": true,
+          "worldPreserved": true,
+          "rollbackRetained": true,
+          "fullBundleRedownloaded": false
+        },
+        {
+          "manualLayout": true,
+          "all11Restored": true,
+          "corruptDllRepaired": true,
+          "launcherUpdated": true,
+          "manifestUpdated": true,
+          "worldPreserved": true,
+          "rollbackRetained": true,
+          "fullBundleRedownloaded": false
+        }
+      ]
+    },
+    "nativePayloadSha256": "e92212cf14279f7615c0f2c00ad3d51c798532fa735a8d0b9d6b46be3959d8fc"
   }
 }

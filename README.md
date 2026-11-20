@@ -1,6 +1,6 @@
 # SCServer / Бскпкрафт
 
-**[Скачать установщик локалки](https://github.com/DeTTK/SCServer/releases/download/resource-recovery-2026.11.20-r2/BSCPCRAFT-Setup.exe)** · [полный ZIP](https://github.com/DeTTK/SCServer/releases/download/local-ready-2026.11.20/BSCPCRAFT-local-20261119.zip)
+**[Скачать установщик локалки](https://github.com/DeTTK/SCServer/releases/download/native-startup-2026.11.21/BSCPCRAFT-Setup.exe)** · [полный ZIP](https://github.com/DeTTK/SCServer/releases/download/local-ready-2026.11.20/BSCPCRAFT-local-20261119.zip)
 
 Локальный запуск сервера БСКПКрафт (stalzone.gay) сервер + клиент
 
@@ -29,7 +29,7 @@
 
 ## Скачать и запустить
 
-**[Скачать установщик BSCPCRAFT-Setup.exe](https://github.com/DeTTK/SCServer/releases/download/resource-recovery-2026.11.20-r2/BSCPCRAFT-Setup.exe)**
+**[Скачать установщик BSCPCRAFT-Setup.exe](https://github.com/DeTTK/SCServer/releases/download/native-startup-2026.11.21/BSCPCRAFT-Setup.exe)**
 
 1. Откройте установщик.
 2. Выберите, куда поставить локалку. Папку по умолчанию можно оставить.
@@ -47,15 +47,17 @@
 
 ### Обновить установленную локалку
 
-Закройте игру и окно сервера. Откройте свежий установщик и выберите ту же папку. Он скачает только небольшой патч ресурсов, без повторной загрузки клиента и карты. Сохранения остаются на месте. Если распаковывали ZIP вручную, выберите папку с `Client`, `Server`, `Map` и `Играть.exe`.
+Закройте игру и окно сервера. Откройте свежий установщик и выберите ту же папку. Он скачает только необходимые исправления (до 16 МБ), без повторной загрузки клиента и карты. Сохранения остаются на месте. Если распаковывали ZIP вручную, выберите папку с `Client`, `Server`, `Map` и `Играть.exe`.
 
-Можно вручную: [маленький ZIP-патч](https://github.com/DeTTK/SCServer/releases/download/resource-recovery-2026.11.20-r2/BSCPCRAFT-resource-fix-20261120-r2.zip). Распакуйте с заменой в папку с `Client`, предварительно закрыв игру.
+Можно вручную: [маленький ZIP-патч](https://github.com/DeTTK/SCServer/releases/download/native-startup-2026.11.21/BSCPCRAFT-startup-fix-20261121.zip). Распакуйте с заменой в папку с `Client`, предварительно закрыв игру и сервер.
 
 ### Если хочется распаковать вручную
 
 [Полный архив локалки — 1,3 ГБ](https://github.com/DeTTK/SCServer/releases/download/local-ready-2026.11.20/BSCPCRAFT-local-20261119.zip). Распакуйте целиком в отдельную папку и откройте `Играть.exe`. Выберите установленную игру, введите ник и нажмите запуск.
 
 Внутри уже есть `Client`, `Server`, `Map` и Java. `Client/Launcher.exe` и `Server/ServerManager.exe` оставлены для ручного запуска и подключения к другому компьютеру.
+
+При вылете пришлите последний `client-*.log` из `Local/Client/logs`. При ручной распаковке — из `Client/logs`. Если в этой же папке есть `hs_err_pid*.log`, приложите его тоже. Код `-1` сам по себе причину не объясняет.
 
 Кнопка Code → Download ZIP на GitHub скачивает **исходники**. Для игры используйте установщик или полный архив по ссылкам выше.
 
