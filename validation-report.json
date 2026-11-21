@@ -174,5 +174,34 @@
       ]
     },
     "nativePayloadSha256": "e92212cf14279f7615c0f2c00ad3d51c798532fa735a8d0b9d6b46be3959d8fc"
+  },
+  "loadingScreenRecovery": {
+    "result": "PASS",
+    "startupAgentSha256": "e58ef38fb32af6d025adbf71ab3e8892fd9c6faac61a5fbb356fb38ee59b4fd0",
+    "installerSha256": "67c1160e52eec7f2b4a8e76cbf74af45d69ba1de5f0fde624a564368391411fe",
+    "checks": [
+      {
+        "manualLayout": false,
+        "startupUpdated": true,
+        "previousJarRetained": true,
+        "savesPreserved": true,
+        "fullBundleRedownloaded": false,
+        "manifestUpdated": true,
+        "repeatUpdatePass": true
+      },
+      {
+        "manualLayout": true,
+        "startupUpdated": true,
+        "previousJarRetained": true,
+        "savesPreserved": true,
+        "fullBundleRedownloaded": false,
+        "manifestUpdated": true,
+        "repeatUpdatePass": true
+      }
+    ],
+    "renderedFrames": 115,
+    "renderChecks": 9,
+    "desktopChecks": 28,
+    "fullGameSessionTested": false
   }
 }

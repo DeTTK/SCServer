@@ -34,6 +34,42 @@ public final class StartupTextureAgent {
             throw new IllegalStateException("native backpack resource alias",error);
         }
     }
+    private static final java.util.concurrent.atomic.AtomicLong splashFrames=new java.util.concurrent.atomic.AtomicLong();
+    private static volatile SplashBridge splash;
+    private static final class SplashBridge {
+        final java.lang.reflect.Method prepare,draw,viewport;
+        final java.lang.reflect.Field width,height;
+        SplashBridge(ClassLoader loader)throws ReflectiveOperationException {
+            Class<?> screen=Class.forName("CustomLoadingScreen",true,loader),state=Class.forName("263463091",false,loader);
+            prepare=screen.getMethod("prepare");draw=screen.getMethod("drawStartup",Object.class,float.class);
+            width=state.getField("extends");height=state.getField("if");
+            viewport=Class.forName("org.lwjgl.opengl.GL11",false,loader).getMethod("glViewport",int.class,int.class,int.class,int.class);
+        }
+    }
+    private static SplashBridge splash(Object state) {
+        try {SplashBridge bridge=splash;if(bridge==null){bridge=new SplashBridge(state.getClass().getClassLoader());splash=bridge;}return bridge;}
+        catch(ReflectiveOperationException error){throw new IllegalStateException("Loading screen compatibility",error);}
+    }
+    private static RuntimeException splashFailure(ReflectiveOperationException error) {
+        Throwable cause=error instanceof java.lang.reflect.InvocationTargetException?error.getCause():error;
+        if(cause instanceof Error fatal)throw fatal;
+        return new IllegalStateException("Loading screen rendering",cause);
+    }
+    public static void prepareStartup(Object state) {
+        try {
+            // The main startup context owns native texture capability initialization.
+            Class.forName("398782077",true,state.getClass().getClassLoader());splash(state).prepare.invoke(null);
+        }catch(ReflectiveOperationException error){throw splashFailure(error);}
+    }
+    public static void resizeStartup(Object state,int width,int height) {
+        try {SplashBridge bridge=splash(state);bridge.width.setInt(state,width);bridge.height.setInt(state,height);bridge.viewport.invoke(null,0,0,width,height);}
+        catch(ReflectiveOperationException error){throw splashFailure(error);}
+    }
+    public static void drawStartup(Object state,float delta) {
+        try {if(Boolean.TRUE.equals(splash(state).draw.invoke(null,state,delta)))splashFrames.incrementAndGet();}
+        catch(ReflectiveOperationException error){throw splashFailure(error);}
+    }
+    public static long renderedStartupFrames(){return splashFrames.get();}
     public static void premain(String arguments, Instrumentation instrumentation) {
         instrumentationActive=true;
         System.err.println("[Java play launch] Startup texture guard loaded");
@@ -97,22 +133,17 @@ public final class StartupTextureAgent {
                         return new MethodVisitor(Opcodes.ASM9,original) {
                             @Override public void visitMethodInsn(int opcode,String owner,String method,String descriptor,boolean isInterface) {
                                 if(owner.equals("1413333341") && method.equals("enum") && descriptor.equals("(L263463091;)V")) {
-                                    super.visitInsn(Opcodes.POP);
-                                    // Native texture capabilities query GL in <clinit>; preload on
-                                    // this current context before asynchronous fonts can touch it.
-                                    super.visitLdcInsn("398782077");
-                                    super.visitMethodInsn(Opcodes.INVOKESTATIC,"java/lang/Class","forName","(Ljava/lang/String;)Ljava/lang/Class;",false);
-                                    super.visitInsn(Opcodes.POP);
+                                    super.visitMethodInsn(Opcodes.INVOKESTATIC,"StartupTextureAgent","prepareStartup","(Ljava/lang/Object;)V",false);
                                     return;
                                 }
-                                if(owner.equals("1413333341") && method.equals("strictfp") && descriptor.equals("(L263463091;F)V")) { super.visitInsn(Opcodes.POP2); return; }
-                                if(owner.equals("263463091") && method.equals("byte") && descriptor.equals("(II)V")) { super.visitInsn(Opcodes.POP2); super.visitInsn(Opcodes.POP); return; }
+                                if(owner.equals("1413333341") && method.equals("strictfp") && descriptor.equals("(L263463091;F)V")) { super.visitMethodInsn(Opcodes.INVOKESTATIC,"StartupTextureAgent","drawStartup","(Ljava/lang/Object;F)V",false); return; }
+                                if(owner.equals("263463091") && method.equals("byte") && descriptor.equals("(II)V")) { super.visitMethodInsn(Opcodes.INVOKESTATIC,"StartupTextureAgent","resizeStartup","(Ljava/lang/Object;II)V",false); return; }
                                 super.visitMethodInsn(opcode,owner,method,descriptor,isInterface);
                             }
                         };
                     }
                 },0);
-                System.err.println("[Java play launch] Legacy splash skipped; native world renderer and startup lifecycle retained");
+                System.err.println("[Java play launch] Loading screen restored; native progress and startup lifecycle retained");
                 return writer.toByteArray();
                 } catch(Throwable error) {
                     System.err.println("[Java play launch] Startup guard transform failed: "+error);

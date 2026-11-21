@@ -49,7 +49,7 @@
       "path": "README.md",
       "source": "tools/publication/template/README.md",
       "adjusted": false,
-      "sha256": "ebb150a0ad1c204aca62486bd01c1c1955d56cc5db1ea5ad9cac9cc89a9c8529"
+      "sha256": "bd1e1bcdad312fa6c09157fc0014509ccdbd47fbf1d715dc9fd91a71c7570251"
     },
     {
       "path": "SECURITY.md",
@@ -62,6 +62,12 @@
       "source": "tools/publication/template/THIRD_PARTY.md",
       "adjusted": false,
       "sha256": "9505422190d936447c2d42c4f92109a9ae6f4c5d35708f4afe0e1e88cebeb899"
+    },
+    {
+      "path": "client/bootstrap/CustomLoadingScreen.java",
+      "source": "tools/CustomLoadingScreen.java",
+      "adjusted": false,
+      "sha256": "088c0f33cecdc6238594b5c34d2210a3097432ef07d2be3b0901ae9e5498e853"
     },
     {
       "path": "client/bootstrap/StandardJvmBootstrap.java",
@@ -358,9 +364,15 @@
       "sha256": "f973955cd34d9e5fda03e6081b5a18fa603f24789bdfb3e8116302832a3a7d0c"
     },
     {
+      "path": "client/startup/LoadingScreenProbe.java",
+      "source": "tools/loading-screen-20261121/LoadingScreenProbe.java",
+      "adjusted": false,
+      "sha256": "b5ae18d8433083579cd35400beb34ca6f74971ca05be5ad3f95ba8c899f4814b"
+    },
+    {
       "path": "client/startup/StartupTextureAgent.java",
       "source": "server-java/tools/StartupTextureAgent.java",
-      "sha256": "b3beb2e50f42ec83bd3c65d0c893b7a0ca06801b77c0ffff7c0d973dadf2cd4f",
+      "sha256": "5c74a936b94e6c66c68bd7486f928b7abde80e921358b2cdf3f397c1700ff9f7",
       "adjusted": false
     },
     {
@@ -402,20 +414,20 @@
     {
       "path": "desktop/src/Portable.cs",
       "source": "tools/portable-20261118/Portable.cs",
-      "sha256": "b5f95ccc47847ebd7f7b0d7ed890bf42d806c5b00c8437770f13c4d34be56baf",
+      "sha256": "965c4992d01f087631c686e3000a62517431d3346ca46e72588a6d7a9ab0770e",
       "adjusted": true
     },
     {
       "path": "desktop/src/Setup.cs",
       "source": "tools/setup-20261120/Setup.cs",
       "adjusted": false,
-      "sha256": "a3716c61532f9e833191da28283674460a06db4ec26c822fb68c12cdd16ff63d"
+      "sha256": "de11ef103da81ce6d670c239c402e40fb11f1112915343c7f52948494934907f"
     },
     {
       "path": "desktop/tests/SetupSafetyTests.cs",
       "source": "tools/setup-20261120/SetupSafetyTests.cs",
       "adjusted": false,
-      "sha256": "233a2e2f624f531f83695b9fb80ee732f721292a8c6e37327d5903d10bac0b19"
+      "sha256": "ebe46233d28296642991d8668b306f10044f89bbbba9e0e40e3cc31449234250"
     },
     {
       "path": "docs/ARCHITECTURE.md",
@@ -457,7 +469,7 @@
       "path": "docs/STATUS.md",
       "source": "tools/publication/template/docs/STATUS.md",
       "adjusted": false,
-      "sha256": "90e35d5cfc70c803160eea8cf0e33ef954311f537a0e5f9c359cde1573d689f8"
+      "sha256": "86f1111e71b80297dc93aa508b1c58e9b97fdc9379e0b342227b84d4b338dee7"
     },
     {
       "path": "mods/arc-hud-prototype/src/ArcHudMod.java",
