@@ -84,6 +84,9 @@ def tests():
         subprocess.run([tool('java'),'-Xmx64m','-cp',cp,'szserver.JournalStreamingTests',str(root)],check=True)
         report=json.loads((root/'results/test-journal-streaming.json').read_text('utf8'))
         results.append({'journalAssertions':report['assertions'],'records':report['records']})
+    with tempfile.TemporaryDirectory(prefix='gateway-',dir=scratch) as directory:
+        subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.net.GatewayRetryTests',directory],check=True)
+    results.append('gateway same/fresh-token retry, invalid identity/session, single-use world claim')
     (B/'verification.json').write_text(json.dumps({'result':'PASS','checks':results,'gameFilesUsed':False,'networkSessionTested':False},indent=2),'utf8')
 
 def desktop():

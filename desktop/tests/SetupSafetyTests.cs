@@ -29,6 +29,17 @@ static class SetupSafetyTests {
   try{SetupPackage.Install(foreign,(s,p)=>{},CancellationToken.None);throw new Exception("Foreign install replaced");}catch(IOException){Require(File.ReadAllText(save)=="preserve me","Existing saves preserved");}
   Require(!SetupPackage.NativesCurrent(root),"Missing nested native DLLs need repair");
   Rejected(()=>SetupPackage.InstallNatives(root,root,zip,false,CancellationToken.None),"Unverified native archive rejected before installation");
+  string serverRoot=Path.Combine(root,"server-update"),serverCache=Path.Combine(root,"server-cache"),serverFile=Path.Combine(serverRoot,"Server/server.jar");
+  Directory.CreateDirectory(Path.GetDirectoryName(serverFile));Directory.CreateDirectory(serverCache);File.WriteAllText(serverFile,"old server");
+  Require(!SetupPackage.ServerCurrent(serverRoot),"Old server needs update");
+  Rejected(()=>SetupPackage.InstallServer(serverRoot,serverCache,new byte[]{1,2,3},true),"Unverified server rejected");
+  Require(File.ReadAllText(serverFile)=="old server","Invalid update leaves server intact");
+  if(args.Length>1){
+   string player=Path.Combine(serverRoot,"Server/data/player.json"),manifest=Path.Combine(serverRoot,"Server/FILES.sha256.json");Directory.CreateDirectory(Path.GetDirectoryName(player));File.WriteAllText(player,"keep character");File.WriteAllText(manifest,"[]");
+   byte[] payload=File.ReadAllBytes(args[1]);SetupPackage.InstallServer(serverRoot,serverCache,payload,true);
+   Require(SetupPackage.ServerCurrent(serverRoot),"Pinned server installed");Require(File.ReadAllText(Path.Combine(serverCache,"previous-server.jar"))=="old server","Rollback preserved");Require(File.ReadAllText(player)=="keep character","Characters preserved");Require(File.ReadAllText(manifest).Contains(SetupPackage.ServerHash),"Server manifest refreshed");
+   SetupPackage.InstallServer(serverRoot,serverCache,payload,true);Require(File.ReadAllText(Path.Combine(serverCache,"previous-server.jar"))=="old server","Repeat update preserves rollback");
+  }
   Console.WriteLine("PASS "+checks+" installer safety and Windows argument checks");
  }
 }

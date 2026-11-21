@@ -291,12 +291,15 @@ public final class LocalAccounts implements AutoCloseable {
             if(existing!=null&&existing.tokenDigest!=null){
                 if(!existing.login.equals(login)||!existing.grant.name.equals(name)||profile==null||!existing.grant.characterId.equals(profileAccount(profile).characters.get(name)))throw new IllegalArgumentException("gateway_identity_mismatch");
                 if(!profile.session.equals(session))throw new IllegalArgumentException("gateway_game_session_mismatch");
-                if(!java.security.MessageDigest.isEqual(HexFormat.of().parseHex(existing.tokenDigest),HexFormat.of().parseHex(tokenDigest(token))))throw new IllegalArgumentException("gateway_token_mismatch");
-                return new GatewaySave(existing.grant,pendingTickets.getOrDefault(key,CompletableFuture.completedFuture(null)),true);
+                if(java.security.MessageDigest.isEqual(HexFormat.of().parseHex(existing.tokenDigest),HexFormat.of().parseHex(tokenDigest(token))))
+                    return new GatewaySave(existing.grant,pendingTickets.getOrDefault(key,CompletableFuture.completedFuture(null)),true);
+                // A failed redirect can leave a receipt while the menu issues a new
+                // token. Only a fresh, independently validated token may replace it.
+                if(t==null)throw new IllegalArgumentException("gateway_token_mismatch");
             }
             if(t==null)throw new IllegalArgumentException("gateway_token_unknown");if(t.expires<=now)throw new IllegalArgumentException("gateway_token_expired");
             if(!t.login.equals(login)||!t.name.equals(name)||profile==null||!profileAccount(profile).characters.containsKey(name))throw new IllegalArgumentException("gateway_identity_mismatch");
-            if(!profile.session.equals(session))throw new IllegalArgumentException("gateway_game_session_mismatch");if(tickets.size()>=128)throw new IllegalStateException("ticket_limit");if(existing!=null||pendingTickets.containsKey(key))throw new IllegalArgumentException("duplicate_ticket");
+            if(!profile.session.equals(session))throw new IllegalArgumentException("gateway_game_session_mismatch");if(existing==null&&tickets.size()>=128)throw new IllegalStateException("ticket_limit");if(existing!=null&&existing.tokenDigest==null||existing==null&&pendingTickets.containsKey(key))throw new IllegalArgumentException("duplicate_ticket");
             Grant grant=new Grant(protocol,profileAccount(profile).characters.get(name),name,t.worldHost);tokens.remove(token);tickets.put(key,new Ticket(grant,session,now+120_000,login,tokenDigest(token)));CompletableFuture<Void> saved=saveProfiles();pendingTickets.put(key,saved);publishCounts();
             saved.whenComplete((v,e)->stateWork(()->{pendingTickets.remove(key,saved);publishCounts();return null;}));return new GatewaySave(grant,saved,false);
         });
