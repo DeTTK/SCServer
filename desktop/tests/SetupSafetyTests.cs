@@ -40,6 +40,18 @@ static class SetupSafetyTests {
    Require(SetupPackage.ServerCurrent(serverRoot),"Pinned server installed");Require(File.ReadAllText(Path.Combine(serverCache,"previous-server.jar"))=="old server","Rollback preserved");Require(File.ReadAllText(player)=="keep character","Characters preserved");Require(File.ReadAllText(manifest).Contains(SetupPackage.ServerHash),"Server manifest refreshed");
    SetupPackage.InstallServer(serverRoot,serverCache,payload,true);Require(File.ReadAllText(Path.Combine(serverCache,"previous-server.jar"))=="old server","Repeat update preserves rollback");
   }
+  string scaleRoot=Path.Combine(root,"scale-update"),scaleCache=Path.Combine(root,"scale-cache"),scaleFile=Path.Combine(scaleRoot,"Client/compat/character-scale.jar");
+  Directory.CreateDirectory(Path.GetDirectoryName(scaleFile));Directory.CreateDirectory(scaleCache);File.WriteAllText(scaleFile,"old scale");
+  Require(!SetupPackage.ScaleCurrent(scaleRoot),"Missing or outdated character scale needs update");
+  Rejected(()=>SetupPackage.InstallScale(scaleRoot,scaleCache,new byte[]{1,2,3},true),"Invalid scale payload rejected");
+  Require(File.ReadAllText(scaleFile)=="old scale","Invalid scale update preserves component");
+  if(args.Length>2){
+   string manifest=Path.Combine(scaleRoot,"Client/FILES.sha256.json");File.WriteAllText(manifest,"[]");byte[] payload=File.ReadAllBytes(args[2]);
+   SetupPackage.InstallScale(scaleRoot,scaleCache,payload,true);Require(SetupPackage.ScaleCurrent(scaleRoot),"Scale component installed");
+   Require(File.ReadAllText(Path.Combine(scaleCache,"previous-character-scale.jar"))=="old scale","Previous scale component kept");
+   Require(File.ReadAllText(manifest).Contains(SetupPackage.ScaleHash),"New scale component added to manifest");
+   SetupPackage.InstallScale(scaleRoot,scaleCache,payload,true);Require(File.ReadAllText(Path.Combine(scaleCache,"previous-character-scale.jar"))=="old scale","Repeat scale update preserves rollback");
+  }
   Console.WriteLine("PASS "+checks+" installer safety and Windows argument checks");
  }
 }

@@ -1,0 +1,44 @@
+{
+  "result": "PASS",
+  "date": "2026-11-22",
+  "serverScaleAssertions": 1035,
+  "sharedScaleAssertions": 5042,
+  "installerSafetyAssertionsWithPayloads": 43,
+  "nativeAdapters": 7,
+  "portableNativeHashesMatch": true,
+  "gameplay": {
+    "twoClients": true,
+    "movementCases": 20,
+    "animationGraphCases": 14,
+    "firstPersonBody": true,
+    "legacyClientFallback": true,
+    "persistenceAndReconnect": true
+  },
+  "installer": [
+    {
+      "manual": false,
+      "serverAndClientUpdated": true,
+      "launcherUpdated": true,
+      "scaleManifestAdded": true,
+      "worldAndCharactersPreserved": true,
+      "serverRollbackPreserved": true,
+      "repeatNoOp": true,
+      "fullBundleRedownloaded": false
+    },
+    {
+      "manual": true,
+      "serverAndClientUpdated": true,
+      "launcherUpdated": true,
+      "scaleManifestAdded": true,
+      "worldAndCharactersPreserved": true,
+      "serverRollbackPreserved": true,
+      "repeatNoOp": true,
+      "fullBundleRedownloaded": false
+    }
+  ],
+  "limitations": [
+    "Ragdoll collision stress tests across sizes not performed",
+    "Firearm damage against scaled players not separately confirmed",
+    "Vehicle seats not adapted for giants; scaling during rides rejected"
+  ]
+}

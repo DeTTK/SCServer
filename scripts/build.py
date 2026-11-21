@@ -55,7 +55,7 @@ def jar(name,classes,extra=()):
     return target
 
 def server(private_resources=False):
-    deps=dependencies();classes=compile_java('server',(ROOT/'server/src/main/java').rglob('*.java'),deps)
+    deps=dependencies();classes=compile_java('server',[*(ROOT/'server/src/main/java').rglob('*.java'),*(ROOT/'shared/player-scale/src').rglob('*.java')],deps)
     extra=[]
     if private_resources:
         for name,digest in json.loads((ROOT/'config/private-resources.lock.json').read_text('utf8')).items():
@@ -85,6 +85,9 @@ def tests():
     scratch=B/'scratch';scratch.mkdir(exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='native-grid-',dir=scratch) as directory:
         subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.inventory.NativeGridMigrationTests',directory],check=True)
+    with tempfile.TemporaryDirectory(prefix='character-scale-',dir=scratch) as directory:
+        subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.net.CharacterScaleTests',directory],check=True)
+    results.append('character scale native dimensions, bounded commands, optional-save recovery, native ready bounds and ceiling admission')
     results.append('native grid migration preserves complete items; full bag overflow and interrupted-marker retry')
     with tempfile.TemporaryDirectory(prefix='journal-',dir=scratch) as directory:
         root=Path(directory);(root/'var').mkdir();(root/'results').mkdir()

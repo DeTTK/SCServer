@@ -19,4 +19,11 @@ public final class PlayerMovementConfiguration {
         return result;
     }
     static void validate(byte[] value){if(value==null||value.length!=BYTES)throw new IllegalArgumentException("player_movement_configuration");}
+    /** Native 1704556748.void multiplies (base speed + sprint bonus) by this final coefficient. */
+    public static byte[] withCharacterScale(byte[] configuration,float scale){
+        validate(configuration);new playerscale.ScaleValue(scale);if(scale==1)return configuration;
+        float base=ByteBuffer.wrap(configuration).getFloat(28),scaled=base*scale;
+        if(!Float.isFinite(base)||base<0||!Float.isFinite(scaled))throw new IllegalArgumentException("player_movement_scale");
+        byte[] result=configuration.clone();ByteBuffer.wrap(result).putFloat(28,scaled);return result;
+    }
 }

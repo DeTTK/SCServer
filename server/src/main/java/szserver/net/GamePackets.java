@@ -27,6 +27,11 @@ public final class GamePackets {
         catch(java.io.IOException error){throw new IllegalArgumentException("world_ready_frame",error);}
     }
     public byte[] respawn(double[] pos){return Wire.dynamic("895652713",Wire.bytes(o->{o.writeInt(1);o.writeBoolean(false);o.writeInt(0);o.writeInt(0);o.writeInt(0);o.writeInt(3);o.write(new byte[3]);}));}
+    public byte[] ready(double[] pos,int serverTick,float yaw,float pitch,byte[] configuration,float scale){
+        new playerscale.ScaleValue(scale);byte[] frame=ready(pos,serverTick,yaw,pitch,configuration);if(scale==1)return frame;
+        ByteBuffer in=ByteBuffer.wrap(frame);try{Wire.varint(in);Wire.varint(in);int name=in.getShort()&65535;in.position(in.position()+name);int body=in.position();double[] box=new playerscale.ScaleValue(scale).body(pos,.6,1.8);for(int i=0;i<6;i++)in.putDouble(body+68+i*8,box[i]);return frame;}
+        catch(java.io.IOException error){throw new IllegalArgumentException("scaled_world_ready_frame",error);}
+    }
     public static byte[] respawnOptions(){return Wire.dynamic("1367061301",Wire.bytes(o->{o.writeByte(1);o.writeUTF("spawn");o.writeByte(0);o.writeByte(255);o.writeUTF("Точка возрождения");o.writeBoolean(true);}));}
     private static void instant(java.io.DataOutput o,long millis)throws java.io.IOException{o.writeByte(0);o.writeLong(millis/1000);o.writeInt((int)(millis%1000)*1000000);}
     public static byte[] death(String killer,double[] pos){long now=System.currentTimeMillis();return death(killer,pos,now,now+5000);}
@@ -41,10 +46,14 @@ public final class GamePackets {
         return corpse(entity,source,name,position,yaw,velocity,impact,impulse,armor,null);
     }
     public static byte[] corpse(int entity,int source,String name,double[] position,float yaw,double[] velocity,double[] impact,double[] impulse,szserver.inventory.ItemStack armor,String npcSkin){
+        return corpse(entity,source,name,position,yaw,velocity,impact,impulse,armor,npcSkin,1);
+    }
+    public static byte[] corpse(int entity,int source,String name,double[] position,float yaw,double[] velocity,double[] impact,double[] impulse,szserver.inventory.ItemStack armor,String npcSkin,float scale){
+        new playerscale.ScaleValue(scale);
         if(entity<=0||source<0||!Float.isFinite(yaw))throw new IllegalArgumentException("corpse_identity");
         // 1688394027.static multiplies native inherited velocity by 20 before Bullet.
         double[] nativeVelocity=corpseVelocity(velocity);
-        byte[] subtype=Wire.bytes(out->{out.writeBoolean(false);out.writeInt(source);out.writeByte(0);out.writeByte(255);out.writeUTF(name);out.writeBoolean(false);out.writeBoolean(false);vector(out,position);out.writeFloat(yaw);out.writeFloat(1);out.writeBoolean(true);out.writeBoolean(true);vector(out,nativeVelocity);vector(out,impulse);vector(out,new double[3]);vector(out,impact==null?position:impact);out.writeBoolean(false);out.writeByte(0);out.writeUTF("");out.write(InventoryPackets.stack(armor==null?null:armor.count(1)));if(npcSkin!=null)out.writeUTF(npcSkin);});
+        byte[] subtype=Wire.bytes(out->{out.writeBoolean(false);out.writeInt(source);out.writeByte(0);out.writeByte(255);out.writeUTF(name);out.writeBoolean(false);out.writeBoolean(false);vector(out,position);out.writeFloat(yaw);out.writeFloat(scale);out.writeBoolean(true);out.writeBoolean(true);vector(out,nativeVelocity);vector(out,impulse);vector(out,new double[3]);vector(out,impact==null?position:impact);out.writeBoolean(false);out.writeByte(0);out.writeUTF("");out.write(InventoryPackets.stack(armor==null?null:armor.count(1)));if(npcSkin!=null)out.writeUTF(npcSkin);});
         for(double value:position)if(Math.abs(value)>30_000_001)throw new IllegalArgumentException("corpse_position");
         return Wire.dynamic("1510484702",Wire.bytes(out->{out.writeByte(npcSkin==null?30:31);out.writeByte(angle(yaw)^26);out.writeInt(coord(position[1])-(int)2315843772L);out.writeInt((coord(position[2])+716018694)^0xc7a787d8);out.writeInt(Integer.rotateRight(coord(position[0]),15)-1385050365);out.writeInt(entity-1630978953);out.writeByte(ror8(0,3)+211);Wire.varint(out,subtype.length);out.write(subtype);out.write(new byte[2]);}));
     }

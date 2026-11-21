@@ -1,6 +1,6 @@
 # SCServer / Бскпкрафт
 
-**[Скачать установщик локалки](https://github.com/DeTTK/SCServer/releases/download/inventory-fixes-2026.11.21/BSCPCRAFT-Setup.exe)** · [полный ZIP](https://github.com/DeTTK/SCServer/releases/download/local-ready-2026.11.20/BSCPCRAFT-local-20261119.zip)
+**[Скачать установщик локалки](https://github.com/DeTTK/SCServer/releases/download/character-scale-2026.11.22/BSCPCRAFT-Setup.exe)** · [полный ZIP](https://github.com/DeTTK/SCServer/releases/download/local-ready-2026.11.20/BSCPCRAFT-local-20261119.zip)
 
 Локальный запуск сервера БСКПКрафт (stalzone.gay) сервер + клиент
 
@@ -28,7 +28,7 @@
 
 ## Скачать и запустить
 
-**[Скачать установщик BSCPCRAFT-Setup.exe](https://github.com/DeTTK/SCServer/releases/download/inventory-fixes-2026.11.21/BSCPCRAFT-Setup.exe)**
+**[Скачать установщик BSCPCRAFT-Setup.exe](https://github.com/DeTTK/SCServer/releases/download/character-scale-2026.11.22/BSCPCRAFT-Setup.exe)**
 
 1. Откройте установщик.
 2. Выберите, куда поставить локалку. Папку по умолчанию можно оставить.
@@ -50,7 +50,7 @@
 
 Исправлены повторный вход с `gateway_token_mismatch`, вход с бронёй Дио/Джотаро и админской гаусс-пушкой, размеры предметов и слот ПНВ. Старые пересекающиеся предметы сервер разложит заново без удаления; если рюкзак заполнен, перенесёт их на личный склад. Обновление сервера входит в свежий установщик; прежний `server.jar` сохраняется в `.setup/previous-server.jar`.
 
-Можно вручную: [маленький ZIP-патч](https://github.com/DeTTK/SCServer/releases/download/loading-screen-2026.11.21/BSCPCRAFT-client-fixes-20261121.zip). Распакуйте с заменой в папку с `Client`, предварительно закрыв игру и сервер.
+Можно вручную: [маленький ZIP-патч](https://github.com/DeTTK/SCServer/releases/download/character-scale-2026.11.22/BSCPCRAFT-character-scale-20261122.zip). Распакуйте с заменой в папку с `Client`, `Server` и `Map`, предварительно закрыв игру и сервер.
 
 ### Если хочется распаковать вручную
 
@@ -89,6 +89,14 @@ python scripts/run_server.py --bundle "C:/LocalGame/Server" --map "C:/LocalGame/
 После `build.py test` перед игрой снова выполните `build.py server --private-resources`: тестовая сборка не содержит игровых ресурсов.
 
 Лаунчер и окно сервера собираются на Windows командой `python scripts/build.py desktop`. `BSCPCRAFT-Setup.exe`, `Играть.exe`, `Launcher.exe` и `ServerManager.exe` появятся в `build/desktop/`. Одних этих EXE для запуска мало — им нужны остальные файлы готового комплекта.
+
+## Размер персонажа
+
+В свежую сборку встроено изменение размера: `/scale 0.5` — уменьшить себя, `/scale 2` — увеличить, `/scale reset` — вернуть как было. Для другого игрока: `/scale "Ник" 2`. Нужны права админа. Размер от `0.25` до `4`, сохраняется после выхода.
+
+Меняются тело, хитбоксы, высота камеры и скорость движения. Видно от первого лица и другим игрокам. Анимации учитывают размер: гигант делает обычные шаги, просто длиннее. В транспорте менять размер нельзя, под низким потолком сервер не даст вырасти.
+
+Чтобы заработало у всех, обновите и сервер, и клиент через свежий установщик. Карта и персонажи сохранятся. В `mods` ничего добавлять не нужно. [Подробности и сборка](docs/character-scale.md).
 
 ## Админки и кнопки
 

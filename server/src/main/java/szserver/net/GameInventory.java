@@ -96,6 +96,8 @@ public final class GameInventory implements AutoCloseable {
     public void repairAdminReceipts(AdminGiveReceipts receipts)throws Exception{journal.repairAdminReceipts(receipts);}
     public List<JsonObject> durableInventory(UUID id){Inventory snapshot=journal.load(id);return snapshot.items().entrySet().stream().map(entry->{JsonObject r=entry.getValue().json();r.addProperty("itemId",entry.getValue().id());r.addProperty("aggregate",entry.getKey().aggregate());r.addProperty("container",entry.getKey().container());r.addProperty("slot",entry.getKey().slot());r.addProperty("revision",snapshot.revision());return r;}).toList();}
     public String faction(UUID id){JsonObject state=journal.gameplay(id);return state.has("faction")?Factions.normalize(state.get("faction").getAsString()):"stalker";}
+    public playerscale.ScaleValue scale(UUID id){return CharacterScale.saved(journal.gameplay(id));}
+    public void scale(UUID id,playerscale.ScaleValue size,Runnable success,Consumer<String> failure){mutate(id,before->before.replace(Map.of(),0),CharacterScale.progress(size),plan->success.run(),failure);}
     /** HTTP reads only the immutable durable journal view, never transport-owned Characters. */
     public Map<String,Object> lobbyPreview(UUID id){Inventory durable=journal.load(id);Map<String,Object> preview=new LinkedHashMap<>();String[] names={"armor","skin","backpack","melee","weapon","weaponSecondary"};int[] slots={1,2,3,5,6,7};for(int i=0;i<slots.length;i++){ItemStack stack=durable.at(new Inventory.Address(0,slots[i],0));preview.put(names[i],stack==null?null:Map.of("id",stack.id(),"stackSize",1,"tag",Map.of()));}return Collections.unmodifiableMap(preview);}
     /** Thread-safe admission. Native creation and fsync never run on HTTP or transport. */

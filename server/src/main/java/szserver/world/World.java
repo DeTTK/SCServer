@@ -517,12 +517,25 @@ public final class World implements BlockShapes.Voxels {
     public int placement(Vec p){valid(p);if(p.y()>254)return 2;if(!ready(p))return 0;return collides(p.x,p.y,p.z)?2:1;}
     /** Native players own their flight/vertical motion; scenes and saved positions are 3D.
      * Keep bounded voxel occupancy and terrain readiness without the simulation's floor/ceiling. */
-    public int nativePlacement(Vec p){
+    public int nativePlacement(Vec p){return nativePlacement(p,WIDTH,HEIGHT);}
+    /** One-off resize admission uses the existing bounded native object collision worker. */
+    public CompletableFuture<Integer> characterResize(Vec p,double radius,double height){
+        int voxels=nativePlacement(p,radius,height);if(voxels!=1)return CompletableFuture.completedFuture(voxels);
+        var result=new CompletableFuture<Integer>();var body=new SceneCollision.Box(p.x()-radius,p.y(),p.z()-radius,p.x()+radius,p.y()+height,p.z()+radius);
+        actorSceneRequest(p).whenComplete((scene,error)->{
+            try{if(error!=null)result.completeExceptionally(error);else if(!result.isDone())result.complete(scene!=null&&scene.overlaps(body,new ActorScene.Budget(16384))?2:1);}
+            catch(Throwable failure){result.completeExceptionally(failure);}finally{if(scene!=null)scene.close();}
+        });return result;
+    }
+    public int nativePlacement(Vec p,double radius,double height){
+        if(!Double.isFinite(radius)||!Double.isFinite(height)||radius<=0||radius>1.2||height<=0||height>7.2)throw new IllegalArgumentException("placement_dimensions");
         szserver.persistence.CharacterLocations.validPosition(p);if(!ready(p))return 0;
-        var body=ActorScene.body(p.x(),p.y(),p.z());
-        for(int bx=(int)Math.floor(p.x()-WIDTH+1e-8);bx<=(int)Math.floor(p.x()+WIDTH-1e-8);bx++)
-            for(int by=(int)Math.floor(p.y()+1e-8)-BlockShapes.LOWER_HALO;by<=(int)Math.floor(p.y()+HEIGHT-1e-8);by++)
-                for(int bz=(int)Math.floor(p.z()-WIDTH+1e-8);bz<=(int)Math.floor(p.z()+WIDTH-1e-8);bz++)
+        if(p.y()<1||p.y()+height>255)return 2;
+        var body=new SceneCollision.Box(p.x()-radius,p.y(),p.z()-radius,p.x()+radius,p.y()+height,p.z()+radius);
+        if(activeScene!=null&&activeScene.overlaps(body,actorBudget))return 2;
+        for(int bx=(int)Math.floor(p.x()-radius+1e-8);bx<=(int)Math.floor(p.x()+radius-1e-8);bx++)
+            for(int by=(int)Math.floor(p.y()+1e-8)-BlockShapes.LOWER_HALO;by<=(int)Math.floor(p.y()+height-1e-8);by++)
+                for(int bz=(int)Math.floor(p.z()-radius+1e-8);bz<=(int)Math.floor(p.z()+radius-1e-8);bz++)
                     if(by>=0&&by<=255){var cell=new Block(bx,by,bz);int packed;try{packed=voxel(cell);}catch(IllegalArgumentException missing){if(!"terrain_voxel_unavailable".equals(missing.getMessage()))throw missing;packed=solid(bx,by,bz)?16:0;}if(BlockShapes.overlaps(actorCells(packed,cell),bx,by,bz,body))return 2;}
         return 1;
     }

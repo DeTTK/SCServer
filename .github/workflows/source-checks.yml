@@ -18,5 +18,6 @@ jobs:
           java-version: '17'
       - run: python scripts/audit_public.py
       - run: python scripts/build.py test
+      - run: python client-compat/character-scale/build.py
       - if: runner.os == 'Windows'
         run: python scripts/build.py desktop
