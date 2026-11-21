@@ -1,6 +1,6 @@
 """Source-only developer build. Never reads installed game files or deploys a server."""
 from pathlib import Path
-import argparse,hashlib,json,os,shutil,subprocess,tempfile,urllib.request,zipfile
+import argparse,hashlib,json,os,shutil,subprocess,tempfile,time,urllib.error,urllib.request,zipfile
 
 ROOT=Path(__file__).resolve().parents[1]
 B=ROOT/'build'
@@ -17,16 +17,35 @@ def tool(name):
     if not path or not Path(path).is_file():raise SystemExit('Install JDK 17 and configure JAVA_HOME/PATH; missing '+name)
     return str(path)
 
+def dependency_bytes(row):
+    urls=[row['url']]
+    prefix='https://repo.maven.apache.org/maven2/'
+    if row['url'].startswith(prefix):
+        suffix=row['url'][len(prefix):]
+        urls+=['https://repo1.maven.org/maven2/'+suffix,
+               'https://maven-central.storage-download.googleapis.com/maven2/'+suffix]
+    last=None
+    for attempt in range(3):
+        for url in urls:
+            try:
+                request=urllib.request.Request(url,headers={'User-Agent':'SCServer-source-build/1'})
+                with urllib.request.urlopen(request,timeout=30) as source:raw=source.read(32*1024*1024+1)
+            except (urllib.error.URLError,TimeoutError) as error:
+                last=error;continue
+            if len(raw)>32*1024*1024 or hashlib.sha256(raw).hexdigest()!=row['sha256']:
+                raise SystemExit('Dependency checksum mismatch: '+row['file'])
+            return raw
+        if attempt<2:time.sleep(1+attempt*2)
+    raise SystemExit('Cannot download '+row['file']+': '+str(last))
+
+
 def dependencies():
     directory=ROOT/'.local/deps';directory.mkdir(parents=True,exist_ok=True);result=[]
     for row in json.loads((ROOT/'dependencies.lock.json').read_text('utf8')).values():
         path=directory/row['file']
         if not path.exists():
             print('Fetching '+row['file'],flush=True)
-            with urllib.request.urlopen(row['url'],timeout=60) as source:
-                raw=source.read(32*1024*1024+1)
-            if len(raw)>32*1024*1024 or hashlib.sha256(raw).hexdigest()!=row['sha256']:raise SystemExit('Dependency checksum mismatch: '+row['file'])
-            path.write_bytes(raw)
+            path.write_bytes(dependency_bytes(row))
         if sha(path)!=row['sha256']:raise SystemExit('Cached dependency differs: '+str(path))
         result.append(path)
     return result

@@ -6,7 +6,7 @@ from game_layout import resolve_game
 class GameLayoutTests(unittest.TestCase):
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup)
-        self.root=Path(self.temp.name)/'Steam game with spaces'
+        self.root=Path(self.temp.name).resolve()/'Steam game with spaces'
         (self.root/'assets').mkdir(parents=True);(self.root/'modassets').mkdir()
     def touch(self,path):
         f=self.root/path;f.parent.mkdir(parents=True,exist_ok=True);f.write_text('fixture')
