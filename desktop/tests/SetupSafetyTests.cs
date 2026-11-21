@@ -52,6 +52,21 @@ static class SetupSafetyTests {
    Require(File.ReadAllText(manifest).Contains(SetupPackage.ScaleHash),"New scale component added to manifest");
    SetupPackage.InstallScale(scaleRoot,scaleCache,payload,true);Require(File.ReadAllText(Path.Combine(scaleCache,"previous-character-scale.jar"))=="old scale","Repeat scale update preserves rollback");
   }
+  string gameRoot=Path.Combine(root,"game-layout");Directory.CreateDirectory(Path.Combine(gameRoot,"assets"));Directory.CreateDirectory(Path.Combine(gameRoot,"modassets"));
+  InstalledGame layout;Require(!InstalledGame.TryResolve(gameRoot,out layout),"Incomplete installed game rejected");
+  Action<string> touch=relative=>{string file=Path.Combine(gameRoot,relative);Directory.CreateDirectory(Path.GetDirectoryName(file));File.WriteAllText(file,"fixture");};
+  touch("bin_global/classes.jar");touch("bin_global/patchassets/assets/bundle/configs.xeon");
+  layout=InstalledGame.Resolve(gameRoot);Require(layout.Variant=="bin_global"&&layout.Root==gameRoot,"Steam global detected at game root");
+  Require(Path.GetFullPath(layout.PatchAssets)==Path.GetFullPath(Path.Combine(gameRoot,"bin_global/patchassets")),"Steam patch assets stay in selected variant");
+  Require(layout.NativeBin==null,"Game Java not required: portable runtime owns native libraries");
+  touch("bin_ru/classes.jar");Require(InstalledGame.Resolve(gameRoot).Variant=="bin_global","Incomplete RU does not mix with global configs");
+  touch("bin_ru/patchassets/assets/bundle/configs.xeon");Require(InstalledGame.Resolve(gameRoot).Variant=="bin_ru","Complete RU preferred at Steam root");
+  Require(InstalledGame.Resolve(Path.Combine(gameRoot,"bin_global")).Variant=="bin_global","Explicit global selection preserved");
+  Require(InstalledGame.Resolve(Path.Combine(gameRoot,"bin_global")+Path.DirectorySeparatorChar).Variant=="bin_global","Trailing separator handled");
+  Require(InstalledGame.Resolve(Path.Combine(gameRoot,"bin_global/classes.jar")).Variant=="bin_global","Selected game file handled");
+  string selected=InstalledGame.Resolve(Path.Combine(gameRoot,"bin_global")).SelectedPath;Require(InstalledGame.Resolve(selected).Variant=="bin_global","Saved selection retains realm");
+  touch("classes.jar");touch("modassets/assets/bundle/configs.xeon");Require(InstalledGame.Resolve(gameRoot).Variant=="launcher","Classic layout preserved");
+  Require(File.ReadAllText(Path.Combine(gameRoot,"bin_ru/patchassets/assets/bundle/configs.xeon"))=="fixture","Resolution does not modify installed game");
   Console.WriteLine("PASS "+checks+" installer safety and Windows argument checks");
  }
 }

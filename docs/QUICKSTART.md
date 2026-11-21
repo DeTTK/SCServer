@@ -8,7 +8,7 @@
 
 ## Установщик: без сборки и настройки Java
 
-1. [Скачайте BSCPCRAFT-Setup.exe](https://github.com/DeTTK/SCServer/releases/download/inventory-fixes-2026.11.21/BSCPCRAFT-Setup.exe).
+1. [Скачайте BSCPCRAFT-Setup.exe](https://github.com/DeTTK/SCServer/releases/download/steam-compat-2026.11.22/BSCPCRAFT-Setup.exe).
 2. Выберите папку установки, укажите установленную игру и свой ник.
 3. Нажмите «Скачать, установить и играть». Дождитесь распаковки: в комплекте много маленьких файлов.
 
@@ -22,8 +22,13 @@ Java включена. JDK, Python и PATH не нужны. Свободного
 
 ### Какую версию игры выбирать
 
-Свою копию игры указывайте целиком: в одной папке должны лежать `classes.jar`, `assets`
-и `modassets/assets/bundle/configs.xeon`. Не собирайте эту папку из файлов разных обновлений.
+Выберите корень установленной игры. Поддерживаются две структуры:
+
+- Из лаунчера: `classes.jar`, `assets`, `modassets/assets/bundle/configs.xeon`.
+- Из Steam: `assets`, `modassets` и `bin_ru` или `bin_global`. В выбранном `bin_*` должны быть `classes.jar` и `patchassets/assets/bundle/configs.xeon`.
+
+Не переносите `classes.jar` и конфиги вручную. При выборе корня Steam лаунчер берёт целый `bin_ru`, а если его нет — целый `bin_global`. Можно явно выбрать папку `bin_global`, если нужна она. Файлы разных вариантов не смешиваются.
+
 Клиентские классы и Java уже входят в локальный комплект, из установленной игры берутся ресурсы.
 Поддержка любых будущих ресурсов не гарантируется; точный номер совместимой версии пока не указан.
 
@@ -34,6 +39,18 @@ Java включена. JDK, Python и PATH не нужны. Свободного
 
 Для ручной распаковки есть [полный ZIP](https://github.com/DeTTK/SCServer/releases/download/local-ready-2026.11.20/BSCPCRAFT-local-20261119.zip).
 В таком случае откройте `Играть.exe` в корне распакованной папки.
+
+## Linux и Steam через Wine
+
+Если видите ошибку «нужна папка с classes.jar, assets и modassets», хотя выбрали игру из Steam, обновите установщик. В старом не было поддержки структуры Steam.
+
+Откройте свежий `BSCPCRAFT-Setup.exe` в том же Wine, где уже открывался старый установщик. Выберите прежнюю папку локалки — карту и персонажей он сохранит. Папку игры можно открыть в Steam через «Управление → Просмотреть локальные файлы».
+
+В окне Wine Linux-путь `/home/имя/.local/share/Steam/steamapps/common/…` обычно выглядит как `Z:\home\имя\.local\share\Steam\steamapps\common\…`. Выберите корень игры с `assets`, `modassets`, `bin_ru`, `bin_global`. В Flatpak Steam путь может быть внутри `~/.var/app/com.valvesoftware.Steam/` — важны файлы внутри, а не название папки.
+
+Следующие запуски — через `Local/Играть.exe` в том же Wine. Не подменяйте комплектную Windows Java системной Linux Java: в этой поставке клиент использует Windows DLL. Нативного Linux-клиента в комплекте нет.
+
+Структура Steam и загрузка её ресурсов проверены на Windows. Полный игровой запуск этой сборки под Linux/Wine ещё требует проверки на Linux. Если упадёт, приложите свежие `Client/logs/client-*.log`, `Server/logs/*` и версию Wine/Proton.
 
 ## Разработка без игровых файлов
 

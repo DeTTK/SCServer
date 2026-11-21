@@ -49,6 +49,16 @@ public final class GatewayRetryTests {
             rejected(()->accounts.gateway(protocol,"Tester","Driver","wrong-session",wrongSession),"gateway_game_session_mismatch");
             rejected(()->accounts.gateway(protocol,"Tester","Other",session,wrongSession),"gateway_identity_mismatch");
             accounts.gateway(protocol,"Tester","Driver",session,wrongSession);checks++;
+            // A failed connection followed by selecting another character reuses
+            // the native protocol/session pair, but has a fresh per-character token.
+            String passenger=post(accounts,"/security/issue_auth_token","login=Tester&username=Passenger").get("token").getAsString();
+            var next=accounts.gateway(protocol,"Tester","Passenger",session,passenger);
+            if(!next.name().equals("Passenger")||next.characterId().equals(grant.characterId()))throw new AssertionError("selected character ticket replacement");checks++;
+            if(!next.equals(accounts.gateway(protocol,"Tester","Passenger",session,passenger)))throw new AssertionError("selected character retry");checks++;
+            rejected(()->accounts.gateway(protocol,"Tester","Driver",session,wrongSession),"gateway_token_mismatch");
+            rejected(()->accounts.gateway(protocol,"OtherAccount","Passenger",session,passenger),"gateway_identity_mismatch");
+            if(!next.equals(accounts.claim(protocol,session)))throw new AssertionError("selected character world claim");checks++;
+            rejected(()->accounts.claim(protocol,session),"world_auth_failed");
         }
         System.out.println("Gateway retry: "+checks+" PASS");
     }

@@ -1,0 +1,51 @@
+{
+  "result": "PASS",
+  "date": "2026-11-22",
+  "steamLayouts": [
+    "bin_ru",
+    "bin_global"
+  ],
+  "classicLayoutPreserved": true,
+  "explicitRealmSelectionPreserved": true,
+  "mixedIncompleteVariantsRejected": true,
+  "portableJvmNativeLookup": true,
+  "desktopAssertions": 55,
+  "pythonLayoutTests": 5,
+  "gatewayAssertions": 19,
+  "serverSuite": "PASS",
+  "canonicalServerBuild": "PASS",
+  "gameplay": {
+    "nativeClientJoined": true,
+    "fixture": "Known compatible game resources rearranged to Steam bin_ru layout",
+    "configOnlyInPatchAssets": true,
+    "distinctAccountAndCharacter": true,
+    "inputAndAudioIsolated": true,
+    "os": "Windows"
+  },
+  "installer": [
+    {
+      "manual": false,
+      "serverAndClientUpdated": true,
+      "launcherUpdated": true,
+      "scaleManifestAdded": true,
+      "worldAndCharactersPreserved": true,
+      "serverRollbackPreserved": true,
+      "repeatNoOp": true,
+      "fullBundleRedownloaded": false
+    },
+    {
+      "manual": true,
+      "serverAndClientUpdated": true,
+      "launcherUpdated": true,
+      "scaleManifestAdded": true,
+      "worldAndCharactersPreserved": true,
+      "serverRollbackPreserved": true,
+      "repeatNoOp": true,
+      "fullBundleRedownloaded": false
+    }
+  ],
+  "limitations": [
+    "Full game session under Linux/Wine not tested: no Linux environment available",
+    "Issue #5 login_id needs fresh client and server logs; ticket replacement fix covers character switching after failed redirects"
+  ]
+}

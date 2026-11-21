@@ -43,7 +43,7 @@ sealed class LocalForm:Form {
         Controls.Add(new Label{Text="Папка установленной игры",Left=20,Top=18,Width=610});
         game.SetBounds(20,46,510,28);Controls.Add(game);
         var browse=new Button{Text="Выбрать…",Left=540,Top=45,Width=100,Height=30};Controls.Add(browse);
-        browse.Click+=(s,e)=>{using(var d=new FolderBrowserDialog{Description="Выберите установленную игру. Внутри должны быть assets, modassets и classes.jar."})if(d.ShowDialog()==DialogResult.OK)game.Text=FindGame(d.SelectedPath);};
+        browse.Click+=(s,e)=>{using(var d=new FolderBrowserDialog{Description="Выберите установленную игру. Можно выбрать корень игры из Steam или лаунчера."})if(d.ShowDialog()==DialogResult.OK)game.Text=FindGame(d.SelectedPath);};
         Controls.Add(new Label{Text="Ваш ник",Left=20,Top=90,Width=610});login.SetBounds(20,117,620,28);login.Text="Player";Controls.Add(login);
         play.Text="Играть в локалку";play.SetBounds(20,163,405,40);Controls.Add(play);
         stop.Text="Сохранить и остановить";stop.SetBounds(435,163,205,40);stop.Enabled=false;Controls.Add(stop);
@@ -58,12 +58,12 @@ sealed class LocalForm:Form {
             game.Text=args[1];login.Text=args[2];Shown+=async(s,e)=>await Play();
         }
     }
-    static bool ValidGame(string path){return File.Exists(Path.Combine(path,"classes.jar"))&&File.Exists(Path.Combine(path,"modassets/assets/bundle/configs.xeon"))&&Directory.Exists(Path.Combine(path,"assets"));}
-    static string FindGame(string root){foreach(string child in new[]{"","game","client","contents"}){string p=Path.Combine(root,child);if(ValidGame(p))return p;}return root;}
+    static bool ValidGame(string path){InstalledGame layout;return InstalledGame.TryResolve(path,out layout);}
+    static string FindGame(string root){InstalledGame layout;return InstalledGame.TryResolve(root,out layout)?layout.SelectedPath:root;}
     internal static void Check(string game) {
         foreach(string name in new[]{"Client/Launcher.exe","Client/jre/bin/javaw.exe","Client/compat/game-resource-compat.jar","Server/server.jar","Server/jre/bin/java.exe","Server/server.template.properties","Map/registry.json","Map/region"})
             if(!File.Exists(Path.Combine(Root,name))&&!Directory.Exists(Path.Combine(Root,name)))throw new IOException("Комплект распакован не полностью: нет "+name+". Распакуйте весь архив локалки в одну папку и запускайте Играть.exe оттуда. ZIP с исходниками с GitHub для этого не подходит.");
-        if(!ValidGame(game))throw new IOException("Выбрана не папка установленной игры. Нужна папка с classes.jar, assets и modassets. Нажмите «Выбрать…».");
+        InstalledGame.Resolve(game);
     }
     async Task Play() {
         if(busy)return;busy=true;play.Enabled=false;

@@ -289,12 +289,14 @@ public final class LocalAccounts implements AutoCloseable {
             if(storageFailed||closed)throw new IllegalArgumentException("account_storage_failed");
             Token t=tokens.get(token);Profile profile=profiles.get(login);long now=System.currentTimeMillis();tickets.values().removeIf(v->v.expires<=now);Ticket existing=tickets.get(key);
             if(existing!=null&&existing.tokenDigest!=null){
-                if(!existing.login.equals(login)||!existing.grant.name.equals(name)||profile==null||!existing.grant.characterId.equals(profileAccount(profile).characters.get(name)))throw new IllegalArgumentException("gateway_identity_mismatch");
+                if(!existing.login.equals(login)||profile==null)throw new IllegalArgumentException("gateway_identity_mismatch");
+                boolean sameCharacter=existing.grant.name.equals(name)&&existing.grant.characterId.equals(profileAccount(profile).characters.get(name));
                 if(!profile.session.equals(session))throw new IllegalArgumentException("gateway_game_session_mismatch");
-                if(java.security.MessageDigest.isEqual(HexFormat.of().parseHex(existing.tokenDigest),HexFormat.of().parseHex(tokenDigest(token))))
+                if(sameCharacter&&java.security.MessageDigest.isEqual(HexFormat.of().parseHex(existing.tokenDigest),HexFormat.of().parseHex(tokenDigest(token))))
                     return new GatewaySave(existing.grant,pendingTickets.getOrDefault(key,CompletableFuture.completedFuture(null)),true);
                 // A failed redirect can leave a receipt while the menu issues a new
-                // token. Only a fresh, independently validated token may replace it.
+                // token or selects another character. Only a fresh, independently
+                // validated token for this account and selected character may replace it.
                 if(t==null)throw new IllegalArgumentException("gateway_token_mismatch");
             }
             if(t==null)throw new IllegalArgumentException("gateway_token_unknown");if(t.expires<=now)throw new IllegalArgumentException("gateway_token_expired");

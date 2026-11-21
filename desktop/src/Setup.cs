@@ -29,9 +29,9 @@ static class SetupPackage {
     internal const string StartupUrl="https://github.com/DeTTK/SCServer/releases/download/loading-screen-2026.11.21/startup-guard-20261121.jar";
     internal const string StartupHash="e58ef38fb32af6d025adbf71ab3e8892fd9c6faac61a5fbb356fb38ee59b4fd0";
     internal const int StartupBytes=136518;
-    internal const string ServerUrl="https://github.com/DeTTK/SCServer/releases/download/character-scale-2026.11.22/server-20261122.jar";
-    internal const string ServerHash="7832eacf8faafbe44148568e7b43033d8a58181ce319000edc7a5bf9e3e1e5ce";
-    internal const int ServerBytes=3551843;
+    internal const string ServerUrl="https://github.com/DeTTK/SCServer/releases/download/steam-compat-2026.11.22/server-20261122.jar";
+    internal const string ServerHash="cc75cfd374ffd920d8d8e2932a611a6c0d354714bee8e956c860d80852960506";
+    internal const int ServerBytes=3551867;
     internal const string ScaleUrl="https://github.com/DeTTK/SCServer/releases/download/character-scale-2026.11.22/character-scale.jar";
     internal const string ScaleHash="952b4a4423aa140bd2223d68335eedb58acf276bcaaea585ab6057f801f1aaeb";
     internal const int ScaleBytes=24131;
@@ -331,9 +331,9 @@ sealed class SetupForm:Form {
     }
     async Task Start() {
         if(cancellation!=null)return;
-        if(!File.Exists(Path.Combine(game.Text,"classes.jar"))||!File.Exists(Path.Combine(game.Text,"modassets/assets/bundle/configs.xeon"))||!Directory.Exists(Path.Combine(game.Text,"assets"))){MessageBox.Show(this,"Выберите папку установленной игры. Внутри должны быть classes.jar, assets и modassets.");return;}
+        InstalledGame layout;try{layout=InstalledGame.Resolve(game.Text);}catch(Exception error){MessageBox.Show(this,error.Message);return;}
         if(String.IsNullOrWhiteSpace(login.Text)||login.Text.Any(char.IsControl)){MessageBox.Show(this,"Введите ник.");return;}
-        string path=folder.Text,installedGame=Path.GetFullPath(game.Text),name=login.Text.Trim();cancellation=new CancellationTokenSource();var token=cancellation.Token;install.Enabled=false;cancel.Enabled=true;
+        string path=folder.Text,installedGame=layout.SelectedPath,name=login.Text.Trim();cancellation=new CancellationTokenSource();var token=cancellation.Token;install.Enabled=false;cancel.Enabled=true;
         try {
             Action<string,int> update=(text,percent)=>{if(!IsDisposed)BeginInvoke(new Action(()=>{status.Text=text;progress.Value=Math.Max(0,Math.Min(100,percent));}));};
             string target=await Task.Run(()=>SetupPackage.Install(path,update,token));
