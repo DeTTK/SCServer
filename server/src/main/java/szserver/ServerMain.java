@@ -32,6 +32,7 @@ public final class ServerMain {
         Runtime.getRuntime().addShutdownHook(hook);
         try(var dataLease=szserver.util.ServerDataLease.acquire(data,configPath);var storage=szserver.util.StorageHealth.configured(data,p)){
         storage.requireReady();
+        szserver.inventory.NativeGridMigration.repair(data,root.resolve("fixtures/item-definitions.json"),runtime,registry);
         var launcherSettings=szserver.net.LauncherBackend.Settings.configured(p,root,data);
         if(launcherSettings.enabled()&&!Boolean.parseBoolean(p.getProperty("game.enabled","false")))throw new IllegalArgumentException("launcher_requires_native_backend");
         Path importMarker=data.resolve("legacy-import.json");com.google.gson.JsonObject imported=null;

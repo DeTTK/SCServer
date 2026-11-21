@@ -20,9 +20,9 @@ public final class Inventory {
     public int capacity(Address a){return a.aggregate==1?StorageLayout.BAG:a.aggregate==2?StorageLayout.capacity(a.container):1;}
     private void check(Address a){if(!StorageLayout.validAddress(a))throw new IllegalArgumentException("invalid_inventory_address");}
     private static void deposit(Address a){if(a.aggregate==2&&!StorageLayout.canDeposit(a.container))throw new IllegalArgumentException("storage_purchases_deposit_denied");}
-    private BitSet cells(Address a,ItemStack item){int capacity=capacity(a);ItemCatalog.Definition d=catalog.get(item.id());int x=a.slot%8;
-        if(x+d.width()>8||a.slot/8+d.height()>(capacity+7)/8)throw new IllegalArgumentException("item_out_of_grid");
-        BitSet cells=new BitSet(capacity);for(int y=0;y<d.height();y++)for(int dx=0;dx<d.width();dx++){int slot=a.slot+y*8+dx;if(slot>=capacity)throw new IllegalArgumentException("item_out_of_grid");cells.set(slot);}return cells;
+    private BitSet cells(Address a,ItemStack item){int capacity=capacity(a),width=catalog.width(item),height=catalog.height(item),x=a.slot%8;
+        if(x+width>8||a.slot/8+height>(capacity+7)/8)throw new IllegalArgumentException("item_out_of_grid");
+        BitSet cells=new BitSet(capacity);for(int y=0;y<height;y++)for(int dx=0;dx<width;dx++){int slot=a.slot+y*8+dx;if(slot>=capacity)throw new IllegalArgumentException("item_out_of_grid");cells.set(slot);}return cells;
     }
     private int limit(Address a,ItemStack item){int normal=catalog.get(item.id()).stackLimit();return a.aggregate==2&&normal>1?100000:normal;}
     private void validate(Map<Address,ItemStack> state){Map<String,BitSet> occupied=new HashMap<>();

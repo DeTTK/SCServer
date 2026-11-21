@@ -8,8 +8,11 @@ public record WeaponProfile(int capacity,List<Integer> ammunition,double damage,
     public static WeaponProfile from(JsonObject p){
         if(!p.has("clip_size")||!p.has("bullets_id"))return null;JsonElement bullets=p.get("bullets_id");List<Integer> ammo=new ArrayList<>();if(bullets.isJsonArray())for(JsonElement id:bullets.getAsJsonArray())ammo.add(id.getAsInt());else if(bullets.isJsonPrimitive())ammo.add(bullets.getAsInt());if(ammo.isEmpty())return null;
         int capacity=p.get("clip_size").getAsInt();double damage=value(p,"damage",0),range=value(p,"max_distance",120),rpm=value(p,"rate_of_fire",0),reload=value(p,"reload_time",3);
-        if(capacity<1||capacity>1000||damage<=0||damage>=10000||rpm<=0||rpm>6000||range<=0||range>1024)throw new IllegalArgumentException("invalid_weapon_profile");
-        return new WeaponProfile(capacity,List.copyOf(ammo),damage,value(p,"damage_distant",damage),range,value(p,"damage_decrease_start",0),value(p,"damage_decrease_end",range),rpm,reload,value(p,"reload_time_tactical",reload),value(p,"head_damage_modifier",1));
+        double distant=value(p,"damage_distant",damage),start=value(p,"damage_decrease_start",0),end=value(p,"damage_decrease_end",range),tactical=value(p,"reload_time_tactical",reload),head=value(p,"head_damage_modifier",1);
+        // The authored admin Gauss deals 30000 damage. Keep bounded finite
+        // resource validation without rejecting a legitimate equipped weapon.
+        if(java.util.stream.DoubleStream.of(damage,distant,range,start,end,rpm,reload,tactical,head).anyMatch(v->!Double.isFinite(v))||capacity<1||capacity>1000||damage<=0||damage>1_000_000||distant<0||distant>1_000_000||rpm<=0||rpm>6000||range<=0||range>1024||reload<0||tactical<0||head<0)throw new IllegalArgumentException("invalid_weapon_profile");
+        return new WeaponProfile(capacity,List.copyOf(ammo),damage,distant,range,start,end,rpm,reload,tactical,head);
     }
     public double damageAt(double distance){double fraction=Math.max(0,Math.min(1,(distance-falloffStart)/Math.max(.001,falloffEnd-falloffStart)));return damage+fraction*(distantDamage-damage);}
     public WeaponProfile withMagazine(JsonObject p){if(!p.has("type")||!p.get("type").getAsString().equals("magazine"))return this;int size=(int)value(p,"clip_size",capacity);if(p.has("additive_clip")&&p.get("additive_clip").getAsBoolean())size+=capacity;if(size<1||size>1000)throw new IllegalArgumentException("invalid_magazine_capacity");return new WeaponProfile(size,ammunition,damage,distantDamage,range,falloffStart,falloffEnd,rpm,value(p,"reload_time",reload),value(p,"reload_time_tactical",tacticalReload),headMultiplier);}

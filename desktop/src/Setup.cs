@@ -29,9 +29,9 @@ static class SetupPackage {
     internal const string StartupUrl="https://github.com/DeTTK/SCServer/releases/download/loading-screen-2026.11.21/startup-guard-20261121.jar";
     internal const string StartupHash="e58ef38fb32af6d025adbf71ab3e8892fd9c6faac61a5fbb356fb38ee59b4fd0";
     internal const int StartupBytes=136518;
-    internal const string ServerUrl="https://github.com/DeTTK/SCServer/releases/download/gateway-retry-2026.11.21/server-20261121.jar";
-    internal const string ServerHash="686336adc03a1bb09dbd892e4e2fd3c51139ffda25b831554f67c944310c1dc2";
-    internal const int ServerBytes=3527796;
+    internal const string ServerUrl="https://github.com/DeTTK/SCServer/releases/download/inventory-fixes-2026.11.21/server-20261121-inventory.jar";
+    internal const string ServerHash="3d274b3d128f2e70aebe82ce7e9442c8a440628217c2661612101f3ae1b7f9c1";
+    internal const int ServerBytes=3536944;
     internal const string NativeUrl="https://github.com/DeTTK/SCServer/releases/download/native-startup-2026.11.21/BSCPCRAFT-native-libraries-20261121.zip";
     internal const string NativeHash="e92212cf14279f7615c0f2c00ad3d51c798532fa735a8d0b9d6b46be3959d8fc";
     internal const int NativeBytes=15812300;

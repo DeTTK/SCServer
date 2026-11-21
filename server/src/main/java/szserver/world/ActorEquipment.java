@@ -21,7 +21,7 @@ public record ActorEquipment(ActorLocomotion.Profile movement,float energyCapaci
     }
     public static Map<String,Float> checkedStats(Map<String,Float> stats){
         Objects.requireNonNull(stats);if(stats.size()>512)throw new IllegalArgumentException("actor_equipment_stats");
-        for(var e:stats.entrySet())if(e.getKey()==null||!e.getKey().matches("[a-z][a-z0-9_]{0,95}")||e.getValue()==null||!Float.isFinite(e.getValue())||Math.abs(e.getValue())>100000)throw new IllegalArgumentException("actor_equipment_stat");
+        for(var e:stats.entrySet())if(e.getKey()==null||!e.getKey().matches("[a-z][a-z0-9_]{0,95}")||e.getValue()==null||!Float.isFinite(e.getValue())||Math.abs(e.getValue())>100000&&!szserver.inventory.StatValues.unlimitedProtection(e.getKey(),e.getValue()))throw new IllegalArgumentException("actor_equipment_stat");
         return Map.copyOf(stats);
     }
 }

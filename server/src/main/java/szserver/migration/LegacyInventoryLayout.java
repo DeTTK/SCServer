@@ -20,10 +20,10 @@ public final class LegacyInventoryLayout {
     private BitSet cells(Inventory.Address a,ItemStack item){
         if(!StorageLayout.validAddress(a))return null;
         if(a.aggregate()==0)return catalog.fits(item,a.container())?BitSet.valueOf(new long[]{1}):null;
-        var d=catalog.get(item.id());int cap=capacity(a),x=a.slot()%8;
-        if(x+d.width()>8||a.slot()/8+d.height()>(cap+7)/8)return null;
+        int width=catalog.width(item),height=catalog.height(item),cap=capacity(a),x=a.slot()%8;
+        if(x+width>8||a.slot()/8+height>(cap+7)/8)return null;
         BitSet b=new BitSet(cap);
-        for(int y=0;y<d.height();y++)for(int dx=0;dx<d.width();dx++){
+        for(int y=0;y<height;y++)for(int dx=0;dx<width;dx++){
             int at=a.slot()+y*8+dx;if(at>=cap)return null;b.set(at);
         }return b;
     }

@@ -23,6 +23,7 @@ public final class ClientStateAdapter implements AutoCloseable {
     private final Map<String,Constructor<?>> factories=new HashMap<>();
     private final Class<?> compound;
     private final Map<String, Codec> codecs = new ConcurrentHashMap<>();
+    public void resources(Path root)throws IOException{loader.resources(root);}
 
     public ClientStateAdapter(Path runtime) throws Exception {
         runtime = runtime.toRealPath();
@@ -194,8 +195,9 @@ public final class ClientStateAdapter implements AutoCloseable {
         Class<?> type=Class.forName("964863275",true,loader),effect=Class.forName("1924679062",true,loader);
         Method export=Arrays.stream(type.getMethods()).filter(m->m.getName().equals("float")&&m.getParameterCount()==0&&Map.class.isAssignableFrom(m.getReturnType())).findFirst().orElseThrow();
         Map<String,Float> result=new TreeMap<>();for(var entry:((Map<?,?>)export.invoke(stats)).entrySet()){
-            float value=((Number)entry.getValue()).floatValue();if(!Float.isFinite(value))throw new IOException("native_stat_nonfinite");
-            result.put((String)effect.getField("for").get(entry.getKey()),value);
+            String key=(String)effect.getField("for").get(entry.getKey());
+            float value=szserver.inventory.StatValues.fromNative(key,((Number)entry.getValue()).floatValue());
+            result.put(key,value);
         }return Map.copyOf(result);
     }
     public Map<String,Float> artifactStats(byte[] raw)throws Exception{
@@ -495,6 +497,13 @@ public final class ClientStateAdapter implements AutoCloseable {
         // an item name; apply the same omission as the original resource merge.
         com.google.gson.JsonObject normalized=com.google.gson.JsonParser.parseString(definition).getAsJsonObject();
         for(String key:new ArrayList<>(normalized.keySet())){var value=normalized.get(key);if(value.isJsonPrimitive()&&value.getAsJsonPrimitive().isString()&&value.getAsString().equalsIgnoreCase("<default>"))normalized.remove(key);}
+        // The resource loader normally registers fractional slot_size before
+        // constructing a factory. Reproduce that step in this headless loader.
+        if(normalized.has("slot_size")){
+            String[] dimensions=normalized.get("slot_size").getAsString().split("x");if(dimensions.length!=2)throw new IOException("native_module_geometry");
+            float width=Float.parseFloat(dimensions[0]),height=Float.parseFloat(dimensions[1]);if(!Float.isFinite(width)||!Float.isFinite(height)||width<=0||height<=0||width>256||height>256)throw new IOException("native_module_geometry");
+            Class<?> size=Class.forName("1824362651",true,loader);size.getMethod("catch",int.class,size).invoke(null,id,size.getConstructor(float.class,float.class).newInstance(width,height));
+        }
         try{Object descriptor=resource.getConstructor(String.class,json,int.class,String.class,Integer.class,String.class).newInstance("server_module_"+id,nativeJson(normalized.toString()),id,null,null,null);
             Object factory=type.getConstructor(resource).newInstance(descriptor);nativeModuleFactories.put(id,factory);return factory;
         }finally{registry[id]=prior;}
@@ -516,6 +525,11 @@ public final class ClientStateAdapter implements AutoCloseable {
         int id=new DataInputStream(new ByteArrayInputStream(raw)).readUnsignedShort();Object factory=moduleFactory(id),stack=moduleStack(raw);
         for(Object child:moduleMap(stack).values())ModuleCosmeticCompatibility.childFactory(this,moduleId(child));
         return stack;
+    }
+    /** Original inventory footprint, including the currently installed modules. Worker only. */
+    public int[] weaponGeometry(byte[] raw)throws Exception{
+        Object stack=prepareModuleGun(raw);
+        return withModuleFactories(()->{Object size=Class.forName("1824362651",true,loader).getMethod("while",stack.getClass()).invoke(null,stack);return new int[]{size.getClass().getField("try").getInt(size),size.getClass().getField("enum").getInt(size)};});
     }
     /** Actual native gun initializer populates resource inbuilt_* slots; caller gives this only to a new item. */
     public byte[] initialModules(int id,String kind,byte[] state)throws Exception{

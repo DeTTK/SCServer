@@ -77,8 +77,15 @@ def tests():
     subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.client.NativeMethodsTests'],check=True)
     results.append('native return descriptor, bridge, parameters and static exclusion: 5 PASS')
     results.append('region slot/overflow/truncation/CRC/healthy-neighbour bounds')
+    subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.inventory.StatValuesTests'],check=True)
+    results.append('native unlimited protection remains finite; unrelated invalid stats rejected')
+    subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.inventory.WeaponResourceTests'],check=True)
+    results.append('authored admin Gauss accepted; nonfinite weapon parameters rejected')
     # These are wholly owned synthetic files, not game data or user saves.
     scratch=B/'scratch';scratch.mkdir(exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix='native-grid-',dir=scratch) as directory:
+        subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.inventory.NativeGridMigrationTests',directory],check=True)
+    results.append('native grid migration preserves complete items; full bag overflow and interrupted-marker retry')
     with tempfile.TemporaryDirectory(prefix='journal-',dir=scratch) as directory:
         root=Path(directory);(root/'var').mkdir();(root/'results').mkdir()
         subprocess.run([tool('java'),'-Xmx64m','-cp',cp,'szserver.JournalStreamingTests',str(root)],check=True)

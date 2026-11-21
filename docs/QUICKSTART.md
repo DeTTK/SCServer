@@ -8,7 +8,7 @@
 
 ## Установщик: без сборки и настройки Java
 
-1. [Скачайте BSCPCRAFT-Setup.exe](https://github.com/DeTTK/SCServer/releases/download/gateway-retry-2026.11.21/BSCPCRAFT-Setup.exe).
+1. [Скачайте BSCPCRAFT-Setup.exe](https://github.com/DeTTK/SCServer/releases/download/inventory-fixes-2026.11.21/BSCPCRAFT-Setup.exe).
 2. Выберите папку установки, укажите установленную игру и свой ник.
 3. Нажмите «Скачать, установить и играть». Дождитесь распаковки: в комплекте много маленьких файлов.
 

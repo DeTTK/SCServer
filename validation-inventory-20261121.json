@@ -1,0 +1,142 @@
+{
+  "date": "2026-11-21",
+  "result": "PASS",
+  "fixes": [
+    "Positive infinite protection of Dio/Jotaro becomes finite Float.MAX_VALUE for reviewed protection stats only; invalid unrelated stats remain rejected.",
+    "Authored admin Gauss damage 30000 is accepted; nonfinite weapon parameters remain rejected.",
+    "Native body-armor defaults, inherited game-object footprints and module-dependent weapon footprints match the client.",
+    "Native headgear uses the head slot, independently of body armor.",
+    "One-time durable inventory repair preserves original stacks and identities, placing bag overflow into personal storage; safe retry tested.",
+    "Headless native gun factories receive the shipped config and collision-box resource roots."
+  ],
+  "geometry": {
+    "compared": 8744,
+    "mismatches": [],
+    "method": "Actual loaded client inventory getter 1824362651.while(stack); inventory size, not baked preview size."
+  },
+  "cosmetics": {
+    "tested": 1235,
+    "withoutCompatibleTarget": 1,
+    "failures": []
+  },
+  "limits": [
+    "Catalog roundtrips, equipment stats and cosmetic apply/remove use native headless methods; this does not assert GPU rendering of every item.",
+    "One service-only bureau_progress item 16969 has no verified empty default state and is refused without mutation or disconnect; no fabricated state was added.",
+    "Two rendered clients validate joining and armor changes with a second connected player; this is not a large-player load test.",
+    "Existing user characters and the deployed production server were not modified. The blocked character recovery was reproduced on an isolated character.",
+    "No guarantee of absence of all future crashes; coverage is limited to the recorded scenarios and catalog snapshot."
+  ],
+  "catalog": {
+    "definitions": 8788,
+    "created": 8787,
+    "roundtripped": 8787,
+    "equipmentStats": 550,
+    "actorStats": 550,
+    "weapons": 576,
+    "appearances": 1312,
+    "failures": [
+      {
+        "id": 16969,
+        "type": "bureau_progress",
+        "phase": "create",
+        "error": "java.lang.IllegalArgumentException: state_codec_not_verified:1803901393"
+      }
+    ]
+  },
+  "serverSuites": [
+    {
+      "name": "InventoryTests",
+      "result": "PASS"
+    },
+    {
+      "name": "InventoryScreenTests",
+      "result": "PASS"
+    },
+    {
+      "name": "AdminInventoryTests",
+      "result": "PASS"
+    },
+    {
+      "name": "DefaultEquipmentTests",
+      "result": "PASS"
+    },
+    {
+      "name": "ColdInventoryTests",
+      "result": "PASS"
+    },
+    {
+      "name": "MedicineLifecycleTests",
+      "result": "PASS"
+    },
+    {
+      "name": "PhysicalReloadTests",
+      "result": "PASS"
+    },
+    {
+      "name": "WeaponJammingTests",
+      "result": "PASS"
+    },
+    {
+      "name": "NativeBuiltinInventoryTests",
+      "result": "PASS"
+    },
+    {
+      "name": "LegacyInventoryLayoutTests",
+      "result": "PASS"
+    },
+    {
+      "name": "InventoryDropTests",
+      "result": "PASS"
+    }
+  ],
+  "renderedClientCases": [
+    {
+      "name": "original-Dio-character-recovered",
+      "result": "PASS"
+    },
+    {
+      "name": "Dio-Jotaro-equip-swap-reconnect",
+      "result": "PASS"
+    },
+    {
+      "name": "inventory-split-merge-incompatible-equip",
+      "result": "PASS"
+    },
+    {
+      "name": "storage-pages-and-inventory-conservation",
+      "result": "PASS"
+    },
+    {
+      "name": "service-item-invalid-default-refusal",
+      "result": "PASS"
+    },
+    {
+      "name": "admin-Gauss-equip-reconnect",
+      "result": "PASS"
+    },
+    {
+      "name": "native-first-person-fire-and-reload",
+      "result": "PASS"
+    },
+    {
+      "name": "headgear-independent-from-body-armor",
+      "result": "PASS"
+    },
+    {
+      "name": "stationary-session-remains-connected",
+      "result": "PASS"
+    },
+    {
+      "name": "full-server-and-client-restart",
+      "result": "PASS"
+    },
+    {
+      "name": "two-rendered-clients-armor-replication",
+      "result": "PASS"
+    }
+  ],
+  "artifact": {
+    "sha256": "3d274b3d128f2e70aebe82ce7e9442c8a440628217c2661612101f3ae1b7f9c1",
+    "bytes": 3536944
+  }
+}
