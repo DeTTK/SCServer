@@ -49,7 +49,7 @@
       "path": "README.md",
       "source": "publication/SCServer/README.md",
       "adjusted": true,
-      "sha256": "b9a8f00213a2b1bcfa10d3c12ba1271612f5f4d351f8066567e44bd737cadc4f"
+      "sha256": "3da400f90a50e058f65e01840752381d96cfe9cd2197b3edb0579159356dbeec"
     },
     {
       "path": "SECURITY.md",
@@ -74,6 +74,18 @@
       "source": "tools/StandardJvmBootstrap.java",
       "sha256": "5029573213d1f96ba1db8c0af214974606a7627dccb521c3fb148ca3bc4ecfac",
       "adjusted": true
+    },
+    {
+      "path": "client/command-completion/src/completion/Completion.java",
+      "source": "publication/SCServer/client/command-completion/src/completion/Completion.java",
+      "adjusted": true,
+      "sha256": "dc0df813c9ce4c157d9a7536e02c166bc9dcb1f91b5217137008635753a30b99"
+    },
+    {
+      "path": "client/command-completion/tests/CompletionTest.java",
+      "source": "publication/SCServer/client/command-completion/tests/CompletionTest.java",
+      "adjusted": true,
+      "sha256": "0a836c8312b59fbf26fe37d16fdd62a816c9c5e56652f16e97345235c5faefa9"
     },
     {
       "path": "client/mod-runtime/src/szmods/api/ClientContext.java",
@@ -421,13 +433,19 @@
       "path": "desktop/src/Setup.cs",
       "source": "publication/SCServer/desktop/src/Setup.cs",
       "adjusted": true,
-      "sha256": "e33746a3ac1a2d49bff6abcbc8ca58cf56e872c9ca9c78010537a762beb93aac"
+      "sha256": "9fabb3e2e9c3f1ddcae67fdfb5ef9249e6638b33457ff3e2be722bb351fdae8a"
     },
     {
       "path": "desktop/tests/SetupSafetyTests.cs",
       "source": "publication/SCServer/desktop/tests/SetupSafetyTests.cs",
       "adjusted": true,
       "sha256": "ef6190cd1c3a1ac3877cb63fe81557fa054bca89028b838bd661df98a6c2e41d"
+    },
+    {
+      "path": "docs/ALLIANCES.md",
+      "source": "publication/SCServer/docs/ALLIANCES.md",
+      "adjusted": true,
+      "sha256": "377b009b6fc81dd1032cf4d07744fc475c31af4c905e98066028f41d4ca8fbda"
     },
     {
       "path": "docs/ARCHITECTURE.md",
@@ -469,7 +487,7 @@
       "path": "docs/STATUS.md",
       "source": "publication/SCServer/docs/STATUS.md",
       "adjusted": true,
-      "sha256": "1e5cd70cd87bfffc4dd12252ea0537fbeb9891d33c3eaa6c41b32915720a490a"
+      "sha256": "0b3c141a7cf5afbc85e6dda78dfe3fe5dab5b56ad1c8b56bcb96ae07f5050d93"
     },
     {
       "path": "mods/arc-hud-prototype/src/ArcHudMod.java",
@@ -701,9 +719,9 @@
     },
     {
       "path": "mods/command-completion/src/completion/Completion.java",
-      "source": "mod-sdk/command-completion/src/completion/Completion.java",
-      "sha256": "9cab48868ea912039b2ba4439e79cc07c198acb2bdf70b8c81c4f323f4105ca6",
-      "adjusted": false
+      "source": "publication/SCServer/mods/command-completion/src/completion/Completion.java",
+      "adjusted": true,
+      "sha256": "dc0df813c9ce4c157d9a7536e02c166bc9dcb1f91b5217137008635753a30b99"
     },
     {
       "path": "mods/command-completion/src/completion/Native.java",
@@ -2209,7 +2227,7 @@
       "path": "scripts/build.py",
       "source": "publication/SCServer/scripts/build.py",
       "adjusted": true,
-      "sha256": "2798ed681c4f4819526e0b56ea5987f665c7a968df8ffc8de54fd68b17a57f4e"
+      "sha256": "5b9d9be15a5358f72959f21138296fe5d51e9d8913b4d144f828fc78c0a77506"
     },
     {
       "path": "scripts/import_private_resources.py",
@@ -3730,6 +3748,18 @@
       "adjusted": false
     },
     {
+      "path": "server/src/main/java/szserver/net/AllianceCommands.java",
+      "source": "server-java/src/main/java/szserver/net/AllianceCommands.java",
+      "adjusted": true,
+      "sha256": "fe145730768a0f51c210239762c0485d415b4422c36b2bf03ef593a2dd4ea8a2"
+    },
+    {
+      "path": "server/src/main/java/szserver/net/AllianceState.java",
+      "source": "server-java/src/main/java/szserver/net/AllianceState.java",
+      "adjusted": true,
+      "sha256": "3f792f4474badba3eaa870500736b779125a0ae8e4a6980be6f2a5bc618a3df8"
+    },
+    {
       "path": "server/src/main/java/szserver/net/AreaEffects.java",
       "source": "server-java/src/main/java/szserver/net/AreaEffects.java",
       "sha256": "cb5977ce07f4883c201fac7d5b09d08777d219e8859475eb21a35786a0a5d33b",
@@ -3870,8 +3900,8 @@
     {
       "path": "server/src/main/java/szserver/net/CommandSupport.java",
       "source": "server-java/src/main/java/szserver/net/CommandSupport.java",
-      "sha256": "8bbd66af03b3a024612a348b0503d9cb35656fddf879bd971e873256f192bc0d",
-      "adjusted": false
+      "adjusted": true,
+      "sha256": "74d13c65ab986ec6bfdcec06795a534394f4bd05f9a617b386457e1726a235e1"
     },
     {
       "path": "server/src/main/java/szserver/net/ConnectionRoutes.java",
@@ -3979,7 +4009,7 @@
       "path": "server/src/main/java/szserver/net/GameServer.java",
       "source": "server-java/src/main/java/szserver/net/GameServer.java",
       "adjusted": true,
-      "sha256": "4a3e74a3057af47d20536958c74b81a341b386f3204facaa7d6bfbc905015c8d"
+      "sha256": "9706274b1b2c44d981b71f44b5895b026b4b17a7f2afb643a69cf916cf16af98"
     },
     {
       "path": "server/src/main/java/szserver/net/GiveCommand.java",
@@ -5146,6 +5176,12 @@
       "sha256": "f7bec97d2bce8cb9895c4e217a6adf8521235f1e2d2f49b58fe886556678baf5"
     },
     {
+      "path": "server/src/test/java/szserver/client/AlliancePacketOracleTests.java",
+      "source": "server-java/src/test/java/szserver/client/AlliancePacketOracleTests.java",
+      "adjusted": true,
+      "sha256": "48e2da54d4f0298d4dbe1de50afc2cde52cfa0d4a98ae6d58edab1ac5d2366cd"
+    },
+    {
       "path": "server/src/test/java/szserver/client/NativeLibraryProbe.java",
       "source": "server-java/src/test/java/szserver/client/NativeLibraryProbe.java",
       "adjusted": true,
@@ -5170,6 +5206,12 @@
       "sha256": "e4138535bcfda64027f18b62615d8d939c7d8c200a7a04b43a3c7a8b3552c317"
     },
     {
+      "path": "server/src/test/java/szserver/net/AllianceStateTests.java",
+      "source": "server-java/src/test/java/szserver/net/AllianceStateTests.java",
+      "adjusted": true,
+      "sha256": "9650bc0e934acd851b481cc8e3df87b993ad3ebc240fff97eb0890a2bbd432ce"
+    },
+    {
       "path": "server/src/test/java/szserver/world/CollisionCaseTests.java",
       "source": "server-java/src/test/java/szserver/world/CollisionCaseTests.java",
       "adjusted": true,
@@ -5180,6 +5222,12 @@
       "source": "server-java/src/test/java/szserver/world/RegionRecordBoundsTests.java",
       "sha256": "a710c2171bc95e2ed060945f7060645da892ccbdf277dd0304f8e92fd2e2d9d6",
       "adjusted": false
+    },
+    {
+      "path": "validation-alliance-settings-20261122.json",
+      "source": "publication/SCServer/validation-alliance-settings-20261122.json",
+      "adjusted": true,
+      "sha256": "a017b71f656d5d9008b4b7511a179ac56f2f4b57d5a24278c9994b1ca8255b95"
     },
     {
       "path": "validation-linux-native-20261122.json",

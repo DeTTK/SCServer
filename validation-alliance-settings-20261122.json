@@ -1,0 +1,28 @@
+{
+  "result": "PASS",
+  "pullRequest": 10,
+  "contributor": "ReversalReside",
+  "allianceAssertions": 122,
+  "nativePacketOracleAssertions": 22,
+  "nativePacketClass": "957640561",
+  "wireId": 1667,
+  "nativeRecruitmentFlags": false,
+  "nativeSuspensionSemantics": "true is LOCKED; original false preserved",
+  "boundedWorker": "one writer, 32 waiting tasks, owner admission without IO wait",
+  "validation": [
+    "overflow before int conversion",
+    "negative/fractional fee",
+    "NaN and Infinity",
+    "JSON type and size",
+    "native and legacy faction aliases"
+  ],
+  "persistence": [
+    "force and atomic replacement",
+    "publish only after success",
+    "failed write/reload keeps old snapshot",
+    "FIFO/backpressure",
+    "restart"
+  ],
+  "scope": "native menu configuration; economy, resource bonuses and paid transfers are not added",
+  "graphicalSessionTested": false
+}

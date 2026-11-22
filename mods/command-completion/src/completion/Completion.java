@@ -49,6 +49,12 @@ public final class Completion {
     else if(arg==3&&before.get(1).text.equalsIgnoreCase("clone")){add(values,"clear");for(String s:animations)values.add(new Suggestion(s,"анимация"));}
    }
    case "/fraction" -> {if(arg==1)add(values,"stalker","bandit","merc","freedom","duty","covenant");}
+   case "/alliance", "/фракции" -> {
+    if(arg==1){add(values,"reload","list","help","stalker","stalkers","bandit","bandits","duty","freedom","merc","covenant");}
+    else if(arg==2){values.add(new Suggestion("add","добавить бонус"));values.add(new Suggestion("remove","убрать бонус"));values.add(new Suggestion("fee","стоимость перехода"));add(values,"list","farm","delivery","quest","discount","buyer","ffa");}
+    else if(arg==3&&(before.get(2).text.equalsIgnoreCase("add")||before.get(2).text.equalsIgnoreCase("remove")))add(values,"farm","delivery","quest","discount","buyer","ffa");
+    else if(arg==3&&!Set.of("add","remove").contains(before.get(2).text.toLowerCase(Locale.ROOT))||arg==4&&before.get(2).text.equalsIgnoreCase("add")){boolean fee=before.get(2).text.equalsIgnoreCase("fee");for(String v:fee?new String[]{"0","1000","100000","250000"}:new String[]{"0","5","10","15","20","25","50","100"})values.add(new Suggestion(v,fee?"₽":"%"));}
+   }
    case "/spawn" -> {if(arg==1)add(values,"global");}
    case "/warp" -> {if(arg==1)add(values,"set","delete","poligon","cinema","shelter");}
    case "/inv" -> {if(arg==1)add(values,"delete","remove","drop");}
