@@ -7,6 +7,7 @@ import java.util.Map;
  * permissions, inventory admission and durable acknowledgements. */
 public final class GameplayPacketAliases {
     private static final Map<String,Integer> IDS=Map.ofEntries(
+        Map.entry(WorldItemPackets.DROP,WorldItemPackets.DROP_ID),
         Map.entry("23110596",212),Map.entry("1932940545",1527),
         Map.entry("1859052360",1449),Map.entry("953021737",366),
         Map.entry("446599111",598),Map.entry("1950979903",1138),

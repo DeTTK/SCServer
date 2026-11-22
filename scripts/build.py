@@ -102,6 +102,8 @@ def tests():
     cp=os.pathsep.join(map(str,[test_classes,classes]+deps));results=[]
     subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.world.RegionRecordBoundsTests'],check=True)
     subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.LootboxTests'],check=True)
+    subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.WorldItemTests'],check=True)
+    subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.world.WorldItemPhysicsTests'],check=True)
     subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.client.NativeMethodsTests'],check=True)
     subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.AnomalyTests'],check=True)
     subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.world.AnomalyIndexTests'],check=True)
@@ -148,6 +150,10 @@ def desktop():
     scratch=B/'scratch';scratch.mkdir(exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='setup-safety-',dir=scratch) as directory:
         subprocess.run([str(test),directory],check=True)
+    client_test=destination/'ClientPreflightTests.exe'
+    subprocess.run([str(compiler),'/nologo','/target:exe','/platform:x64','/define:CLIENT','/main:ClientPreflightTests','/out:'+str(client_test),'/reference:System.dll,System.Core.dll,System.Windows.Forms.dll,System.Drawing.dll,System.Web.Extensions.dll',str(ROOT/'desktop/src/GameLayout.cs'),str(ROOT/'desktop/src/Portable.cs'),str(ROOT/'desktop/tests/ClientPreflightTests.cs')],check=True)
+    with tempfile.TemporaryDirectory(prefix='client-preflight-',dir=scratch) as directory:
+        subprocess.run([str(client_test),directory,str(ROOT/'desktop/src/Portable.cs')],check=True)
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('target',choices=['server','sdk','command-completion','test','desktop']);parser.add_argument('--private-resources',action='store_true',help='Package pinned local game resources; never upload this JAR');args=parser.parse_args()

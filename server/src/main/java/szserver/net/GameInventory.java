@@ -273,9 +273,10 @@ public final class GameInventory implements AutoCloseable {
     private void persist(UUID id,Character c,Inventory.Plan plan,JsonObject progress,Consumer<Inventory.Plan> success,Consumer<String> failure){
         persist(id,c,plan,progress,null,success,failure);
     }
-    private void persist(UUID id,Character c,Inventory.Plan plan,JsonObject progress,WorldDrop drop,Consumer<Inventory.Plan> success,Consumer<String> failure){
+    private void persist(UUID id,Character c,Inventory.Plan plan,JsonObject progress,WorldDrop drop,Consumer<Inventory.Plan> success,Consumer<String> failure){persist(id,c,plan,progress,drop,null,null,success,failure);}
+    private void persist(UUID id,Character c,Inventory.Plan plan,JsonObject progress,WorldDrop drop,WorldItem spawn,UUID claim,Consumer<Inventory.Plan> success,Consumer<String> failure){
         JsonObject merged=null;if(progress!=null){merged=journal.gameplay(id);for(var entry:progress.entrySet())merged.add(entry.getKey(),entry.getValue().deepCopy());}
-        try{journal.commit(id,plan,merged,drop).whenComplete((ignored,error)->completion(()->{
+        try{(spawn!=null||claim!=null?journal.commitWorldItem(id,plan,spawn,claim):journal.commit(id,plan,merged,drop)).whenComplete((ignored,error)->completion(()->{
             c.busy=false;if(error!=null){Throwable cause=error;while(cause instanceof CompletionException&&cause.getCause()!=null)cause=cause.getCause();denied++;if(cause instanceof IllegalArgumentException){failure.accept(cause.getMessage());return;}c.failed=true;failure.accept("inventory_save_failed");return;}
             c.inventory=plan.after();c.applications=null;c.pulseEffects=null;accepted++;success.accept(plan);
         }));}catch(IllegalArgumentException invalid){c.busy=false;denied++;failure.accept(invalid.getMessage());}
@@ -398,6 +399,27 @@ public final class GameInventory implements AutoCloseable {
             Map<Inventory.Address,ItemStack> delta=new LinkedHashMap<>();delta.put(address,item.count(item.count()-1));Inventory.Plan plan=c.inventory.replace(delta,1);
             FpvReceipt receipt=new FpvReceipt(id,admission.drone(),admission.slot(),admission.position(),c.inventory.revision(),plan.after().revision());persist(id,c,plan,receipt.progress(),committed->success.accept(receipt),failure);
         }catch(RuntimeException invalid){c.busy=false;denied++;failure.accept(invalid.getMessage());}
+    }
+    public Map<UUID,WorldItem> worldItems(){return journal.physicalItems();}
+    public CompletableFuture<Void> settleWorldItem(UUID id,double x,double y,double z){return journal.settleWorldItem(id,x,y,z);}
+    public CompletableFuture<Void> expireWorldItem(UUID id,long now){return journal.expireWorldItem(id,now);}
+    public boolean canCollect(UUID id,ItemStack item){Character c=character(id);if(c.busy||c.failed||c.deathClear)return false;try{c.inventory.give(item);return true;}catch(IllegalArgumentException full){return false;}}
+    public void collectWorldItem(UUID id,UUID itemId,String world,Consumer<Inventory.Plan> success,Consumer<String> failure){
+        Character c=character(id);if(c.busy||c.failed||c.deathClear){failure.accept("inventory_busy");return;}
+        WorldItem item=journal.physicalItems().get(itemId);if(item==null||!item.world().equals(world)){failure.accept("world_item_already_claimed");return;}
+        try{Inventory.Plan plan=c.inventory.give(item.stack());c.busy=true;persist(id,c,plan,null,null,null,itemId,success,failure);}catch(IllegalArgumentException invalid){failure.accept(invalid.getMessage());}
+    }
+    public void dropWorldItem(UUID id,Inventory.Address address,String world,double[] position,double[] velocity,Consumer<Inventory.Plan> success,Consumer<String> failure){
+        Character c=character(id);if(c.busy||c.failed||c.deathClear){failure.accept("inventory_busy");return;}
+        Inventory before=c.inventory;ItemStack item=before.at(address);if(item==null||address.aggregate()>1||address.aggregate()==1&&address.container()!=0){failure.accept("world_item_source");return;}
+        if(journal.physicalItems().size()>=2048){failure.accept("world_item_capacity");return;}
+        double[] origin=position.clone(),motion=velocity.clone();c.busy=true;
+        try{factories.execute(()->{try{
+            var policy=items.dropPolicy(item);if(!policy.allowed())throw new IllegalArgumentException("item_cannot_be_dropped");long now=System.currentTimeMillis();
+            WorldItem drop=new WorldItem(UUID.randomUUID(),id,world,item,origin[0],origin[1],origin[2],motion[0],motion[1],motion[2],now,now+300_000,policy.pickupOwner());
+            Inventory.Plan plan=before.replace(Collections.singletonMap(address,null),item.count());
+            completion(()->{if(c.deathClear||!admissionAllowed(id)){c.busy=false;failure.accept("world_item_owner_changed");return;}persist(id,c,plan,null,null,drop,null,success,failure);});
+        }catch(Exception|LinkageError error){completion(()->{c.busy=false;failure.accept(Objects.toString(error.getMessage(),"world_item_drop_failed"));});}});}catch(RejectedExecutionException full){c.busy=false;failure.accept("inventory_factory_queue_full");}
     }
     public List<WorldDrop> drops(UUID id){return journal.drops(id);}
     public void remove(UUID id,InventoryCommand command,double[] position,Consumer<Inventory.Plan> success,Consumer<String> failure){

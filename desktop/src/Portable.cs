@@ -67,7 +67,7 @@ sealed class ClientForm:Form {
     public static void Check(string game,string endpoint){
         Portable.Endpoint(endpoint);InstalledGame.Resolve(game);
         foreach(string part in new[]{"jre/bin/javaw.exe","runtime/bootstrap/StandardJvmBootstrap.class","runtime/classes","runtime/libs","runtime/imgui-compat","runtime/dependencies","runtime/natives","compat/game-resource-compat.jar","compat/startup-guard.jar","compat/weapon-events.jar","runtime/natives/fmod/x64/fmod.dll","runtime/natives/fmod/x64/fmodstudio.dll","runtime/natives/eos/x64/EOSSDK-Win64-Shipping.dll","runtime/natives/eos/x64/xaudio2_9redist.dll","runtime/natives/stove/BaseSDK.dll","runtime/natives/stove/GameSupportSDK.dll","runtime/natives/stove/IAPSDK.dll","runtime/natives/stove/LogSDK.dll","runtime/natives/stove/OwnershipSDK.dll","runtime/natives/stove/PCBangSDK.dll","runtime/natives/stove/WebView2Loader.dll"})Portable.Need(Portable.P(part));
-        if(Directory.GetFiles(Portable.P("mods"),"*.jar").Length!=0)throw new IOException("Комплект должен запускаться без модов. Очистите папку mods.");
+        Directory.CreateDirectory(Portable.P("mods"));
     }
     void StartGame(string game,string endpoint,string login){
         Directory.CreateDirectory(Portable.P("logs"));Directory.CreateDirectory(Portable.P("temp"));

@@ -59,6 +59,23 @@ public final class MapObstructionAccess implements AutoCloseable,ActorMaps,Proje
     @Override public CompletableFuture<ActorScene> projectileScene(World.Vec p){
         return localSource(new SceneCollision.Box(p.x()-14,p.y()-14,p.z()-14,p.x()+14,p.y()+14,p.z()+14),false).thenApply(ActorSource::scene);
     }
+    @Override public CompletableFuture<ItemCollisionScene> itemScene(World.Vec p){
+        var area=new SceneCollision.Box(p.x()-7,p.y()-7,p.z()-7,p.x()+7,p.y()+7,p.z()+7);
+        CompletableFuture<ItemCollisionScene> result=new CompletableFuture<>();
+        localSource(area,false).whenComplete((source,captureError)->{
+            if(captureError!=null){result.completeExceptionally(captureError);return;}
+            try{worker.execute(()->{ActorScene terrainScene=null;
+            try{
+                List<World.Block> positions=new ArrayList<>();for(int y=Math.max(0,(int)Math.floor(area.y())-BlockShapes.LOWER_HALO);y<Math.min(256,(int)Math.ceil(area.yy()));y++)for(int z=(int)Math.floor(area.z());z<(int)Math.ceil(area.zz());z++)for(int x=(int)Math.floor(area.x());x<(int)Math.ceil(area.xx());x++)positions.add(new World.Block(x,y,z));
+                var values=source.blocks().read(positions);List<ActorGeometry> cells=new ArrayList<>();double[] identity={1,0,0,0,1,0,0,0,1};
+                for(int n=0;n<positions.size();n++){var at=positions.get(n);for(double[] cell:BlockShapes.cells(values.voxels()[n],values.tiles()[n])){if(cells.size()>=ActorScene.MAX_CELLS)throw new IllegalArgumentException("world_item_collision_capacity");cells.add(new ActorGeometry(new SceneCollision.Box(cell[0],cell[1],cell[2],cell[3],cell[4],cell[5]),identity,new World.Vec(at.x(),at.y(),at.z())));}}
+                source.blocks().checkCurrent();terrainScene=new ActorScene(area,cells,source.blocks()::checkCurrent);long bytes=terrainScene.retainedBytes();
+                if(projectileBytes.addAndGet(bytes)>actorByteLimit){projectileBytes.addAndGet(-bytes);throw new IllegalArgumentException("world_item_geometry_memory_limit");}
+                terrainScene.releaseWith(()->projectileBytes.addAndGet(-bytes));var view=new ItemCollisionScene(source.scene(),terrainScene);if(!result.complete(view))view.close();
+            }catch(Exception error){source.scene().close();if(terrainScene!=null)terrainScene.close();result.completeExceptionally(error);}
+            });}catch(RejectedExecutionException full){source.scene().close();result.completeExceptionally(full);}
+        });return result;
+    }
     @Override public CompletableFuture<ActorNavigation.Path> actorPath(World.Vec from,World.Vec to){
         return actorPath(from,to,false,ActorPose.STAND);
     }

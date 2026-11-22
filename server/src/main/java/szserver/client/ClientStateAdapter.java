@@ -12,6 +12,21 @@ import java.util.concurrent.ConcurrentHashMap;
  * Server calls are confined to one command worker; concurrent native use is unverified.
  */
 public final class ClientStateAdapter implements AutoCloseable {
+    public record DropPolicy(boolean allowed,String pickupOwner){}
+    /** Read the native binding rules on the factory worker, without a client-side replacement. */
+    public DropPolicy dropPolicy(byte[] raw)throws Exception{
+        Class<?> type=Class.forName("211097523",true,loader),bindings=Class.forName("1391289645",true,loader);
+        Object stack=type.getConstructor(DataInput.class).newInstance(new BoundedNativeInput(raw));
+        String owner=(String)bindings.getMethod("implements",type).invoke(null,stack);
+        // The active server implements physical drops. The last native rule is
+        // the original realm-wide "drops disabled" switch, not an item's binding.
+        // Keep the native per-item binding rules and their priority unchanged.
+        Object binding=null;Class<?> rule=Class.forName("298994518",true,loader);
+        Method resolve=rule.getMethod("goto",type,Class.forName("200241649",true,loader),Class.forName("949164803",true,loader),boolean.class);
+        for(Object candidate:(List<?>)bindings.getField("finally").get(null)){if(candidate.getClass().getName().equals("555438324"))continue;binding=resolve.invoke(candidate,stack,null,null,false);if(binding!=null)break;}
+        String kind=binding==null?"NONE":((Enum<?>)binding).name();boolean allowed=owner==null&&!Set.of("NON_DROP","PERSONAL_UNTIL").contains(kind);
+        return new DropPolicy(allowed,owner);
+    }
     private record Codec(Constructor<?> constructor, Method read, Method write,
                          Method exportNbt, Method importNbt) {}
     private static final class NativeLoader extends URLClassLoader {
