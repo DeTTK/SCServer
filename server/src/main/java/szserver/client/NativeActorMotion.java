@@ -20,12 +20,15 @@ public final class NativeActorMotion implements ActorMotion,ActorDynamics,ActorJ
             if(!name.equals("zstd-jni-1.5.0-5"))return null;
             try{
                 if(nativeNbt==null){
-                    nativeNbt=Files.createTempFile("sz-actor-zstd-"+ProcessHandle.current().pid()+"-",".dll");nativeNbt.toFile().deleteOnExit();
-                    try(var input=getResourceAsStream("win/amd64/libzstd-jni-1.5.0-5.dll")){
-                        if(input==null)throw new java.io.IOException("bundled_actor_jni_missing");Files.copy(input,nativeNbt,StandardCopyOption.REPLACE_EXISTING);
+                    // The pinned zstd-jni JAR carries one JNI per platform. The host decides which
+                    // one is loadable: a Windows DLL on Linux fails with "not an ELF header".
+                    String resource=NativePlatform.resource(),ext=NativePlatform.extension();
+                    nativeNbt=Files.createTempFile("sz-actor-zstd-"+ProcessHandle.current().pid()+"-",ext);nativeNbt.toFile().deleteOnExit();
+                    try(var input=getResourceAsStream(resource)){
+                        if(input==null)throw new java.io.IOException("bundled_actor_jni_missing:"+resource);Files.copy(input,nativeNbt,StandardCopyOption.REPLACE_EXISTING);
                     }
                     String hash=HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(nativeNbt)));
-                    if(!hash.equals("cd5142c5d80c839fb54e778d73178424e7900ec189eeb4fe7ef49573555050c9"))throw new java.io.IOException("bundled_actor_jni_mismatch");
+                    if(!hash.equals(NativePlatform.sha256()))throw new java.io.IOException("bundled_actor_jni_mismatch");
                 }
                 return nativeNbt.toAbsolutePath().toString();
             }catch(java.io.IOException|java.security.NoSuchAlgorithmException failure){throw new IllegalStateException("native_actor_nbt_library",failure);}

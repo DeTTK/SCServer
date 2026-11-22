@@ -186,8 +186,9 @@ static class SetupPackage {
         string full=Path.GetFullPath(path);
         if(full.StartsWith(@"\\?\UNC\",StringComparison.Ordinal))full=@"\\"+full.Substring(8);
         else if(full.StartsWith(@"\\?\",StringComparison.Ordinal))full=full.Substring(4);
-        return full.TrimEnd(Path.DirectorySeparatorChar,Path.AltDirectorySeparatorChar);
+        return plainEnding(full);
     }
+    static string plainEnding(string path){return path.TrimEnd(Path.DirectorySeparatorChar,Path.AltDirectorySeparatorChar);}
     /** Only links below the chosen folder matter: /home on Linux/Wine and redirected Windows profiles are the user's own layout. */
     internal static void NoLinks(string path,string root) {
         string current=Plain(path),boundary=Plain(root);
@@ -248,6 +249,9 @@ static class SetupPackage {
     }
     internal static void Extract(string archive,string stage,Action<string,int> progress,CancellationToken cancel) {
         NoLinks(stage,stage);Directory.CreateDirectory(stage);
+        // Checked once per archive: EntryPath already proves every extracted path stays inside the stage,
+        // so walking ancestors for 388k entries only repeats the same few directories.
+        var opened=new System.Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase){Plain(stage)};
         using(var zip=ZipFile.OpenRead(archive)) {
             if(zip.Entries.Count>500000)throw new InvalidDataException("Слишком много файлов в архиве");
             long sum=0;int done=0;var clock=Stopwatch.StartNew();
@@ -256,10 +260,15 @@ static class SetupPackage {
                 if(sum>5L*1024*1024*1024)throw new InvalidDataException("Слишком большой распакованный архив");
                 int mode=(entry.ExternalAttributes>>16)&0xF000;
                 if(mode!=0&&mode!=0x8000&&mode!=0x4000)throw new InvalidDataException("Ссылки в архиве не поддерживаются");
-                string path=EntryPath(stage,entry.FullName);NoLinks(path,stage);
-                if(String.IsNullOrEmpty(entry.Name))Directory.CreateDirectory(Extended(path));
+                string path=EntryPath(stage,entry.FullName);
+                string parent=Path.GetDirectoryName(path);if(parent!=null&&opened.Add(Plain(parent))){
+                    Directory.CreateDirectory(Extended(parent));
+                    if(Linked(parent))throw new IOException("В пути есть ссылка на другую папку. Выберите обычную папку установки.");
+                }
+                if(String.IsNullOrEmpty(entry.Name)){if(opened.Add(Plain(path)))Directory.CreateDirectory(Extended(path));}
                 else {
                     Directory.CreateDirectory(Extended(Path.GetDirectoryName(path)));
+                    if(Linked(path))throw new IOException("В пути есть ссылка на другую папку. Выберите обычную папку установки.");
                     using(var input=entry.Open())using(var output=new FileStream(Extended(path),FileMode.CreateNew,FileAccess.Write,FileShare.None))input.CopyTo(output,1024*1024);
                 }
                 done++;if(clock.ElapsedMilliseconds>250){progress("Распаковывается: "+done+" / "+zip.Entries.Count+" файлов",80+(done*18/zip.Entries.Count));clock.Restart();}

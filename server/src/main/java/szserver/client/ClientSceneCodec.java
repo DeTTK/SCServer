@@ -73,7 +73,14 @@ public final class ClientSceneCodec implements AutoCloseable {
             if(!name.equals("zstd-jni-1.5.0-5"))return null;
             // Native NBT's reviewed initializer calls loadLibrary directly. Resolve the same
             // bundled JNI for this isolated classloader, without changing the installed runtime.
-            try{if(dll==null){dll=Files.createTempFile("sz-scene-zstd-",".dll");try(InputStream in=getResourceAsStream("win/amd64/libzstd-jni-1.5.0-5.dll")){if(in==null)throw new IOException("bundled_scene_jni_missing");Files.copy(in,dll,StandardCopyOption.REPLACE_EXISTING);}dll.toFile().deleteOnExit();}return dll.toAbsolutePath().toString();}catch(IOException error){throw new IllegalStateException(error);}
+            try{if(dll==null){
+                String resource=NativePlatform.resource(),ext=NativePlatform.extension();
+                dll=Files.createTempFile("sz-scene-zstd-",ext);
+                try(InputStream in=getResourceAsStream(resource)){if(in==null)throw new IOException("bundled_scene_jni_missing:"+resource);Files.copy(in,dll,StandardCopyOption.REPLACE_EXISTING);}
+                String hash=java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(dll)));
+                if(!hash.equals(NativePlatform.sha256()))throw new IOException("bundled_scene_jni_mismatch");
+                dll.toFile().deleteOnExit();
+            }return dll.toAbsolutePath().toString();}catch(IOException|java.security.NoSuchAlgorithmException error){throw new IllegalStateException(error);}
         }
     }
     private final Loader loader;private final Class<?> factoryType,worldType,json,descriptor;private final Method read,write;private final Object context;

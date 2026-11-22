@@ -28,6 +28,16 @@ static class SetupSafetyTests {
   Rejected(()=>SetupPackage.Extract(bad,Path.Combine(root,"unpack-bad"),(s,p)=>{},CancellationToken.None),"Traversal archive");
   string symbolic=Path.Combine(root,"symbolic.zip");using(var z=ZipFile.Open(symbolic,ZipArchiveMode.Create)){var e=z.CreateEntry("Client/link");e.ExternalAttributes=unchecked((int)0xA1FF0000);}
   Rejected(()=>SetupPackage.Extract(symbolic,Path.Combine(root,"unpack-symlink"),(s,p)=>{},CancellationToken.None),"Symbolic ZIP entry");
+  // Deep trees share few directories. Creating and link-checking each one once must still
+  // produce every file, including entries whose parent comes from an earlier entry.
+  string deepZip=Path.Combine(root,"deep.zip"),deepStage=Path.Combine(root,"unpack-deep");
+  using(var z=ZipFile.Open(deepZip,ZipArchiveMode.Create))
+   for(int i=0;i<200;i++)using(var w=new StreamWriter(z.CreateEntry("Client/assets/g"+i%7+"/s"+i%11+"/f"+i+".json").Open()))w.Write("{\"i\":"+i+"}");
+  SetupPackage.Extract(deepZip,deepStage,(s,p)=>{},CancellationToken.None);
+  int written=0;foreach(string file in Directory.GetFiles(deepStage,"*.json",SearchOption.AllDirectories)){written++;if(!File.ReadAllText(file).StartsWith("{\"i\":"))throw new Exception("Deep extraction content");}
+  Require(written==200,"Deep extraction wrote every entry: "+written);
+  Require(Directory.GetDirectories(deepStage,"s0",SearchOption.AllDirectories).Length>=1,"Deep extraction created intermediate directories");
+  SetupPackage.RemoveStage(root,deepStage);Require(!Directory.Exists(deepStage),"Deep stage cleanup");
   string foreign=Path.Combine(root,"existing"),save=Path.Combine(foreign,"Local/Server/data/player.json");Directory.CreateDirectory(Path.GetDirectoryName(save));File.WriteAllText(save,"preserve me");
   try{SetupPackage.Install(foreign,(s,p)=>{},CancellationToken.None);throw new Exception("Foreign install replaced");}catch(IOException){Require(File.ReadAllText(save)=="preserve me","Existing saves preserved");}
   // Linux/Wine keeps /home, /var/home and redirected profiles behind a link above the chosen folder.
