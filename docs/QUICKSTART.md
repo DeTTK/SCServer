@@ -74,7 +74,7 @@ CRC/повреждения и потоковое восстановление ж
 3. Выполните `python scripts/build.py sdk`.
 4. Для проверки в совместимом частном клиенте положите `build/hello-mod.jar` в его папку `mods`.
 
-Callbacks API v1 описаны в `sdk/api/szmods/api/ClientMod.java`.
+Callbacks API v1 описаны в `sdk/api/szmods/api/ClientMod.java`, справочник с манифестом, порядком вызовов и хуками — в [SDK.md](SDK.md).
 `game` в контексте — внутренний объект конкретного билда, его ABI нестабилен.
 
 ## Игровой запуск через существующую проверенную поставку
