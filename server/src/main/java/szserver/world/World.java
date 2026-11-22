@@ -33,7 +33,7 @@ public final class World implements BlockShapes.Voxels {
         ActorContacts.State contacts=ActorContacts.State.EMPTY;
         ActorVitals vitals;
         List<Optional<ActorZipline.Route>> pathActions=List.of();int ziplinePathAt=-1;
-        ActorControllerEngine.Session controller;ActorControllerEngine.Input controllerInput;long controllerExpires;float controllerYaw;boolean aiming;ActorTraversal traversal=ActorTraversal.EMPTY;List<SceneCollision.Box> bodyParts=List.of();
+        float anomalySlow=1;long anomalySlowUntil;ActorControllerEngine.Session controller;ActorControllerEngine.Input controllerInput;long controllerExpires;float controllerYaw;boolean aiming;ActorTraversal traversal=ActorTraversal.EMPTY;List<SceneCollision.Box> bodyParts=List.of();
         boolean transientActor;Vec directSample;long directSampleTick,directRetry;boolean followingDetour;
         ActorScene scene;CompletableFuture<ActorScene> scenePending;CompletableFuture<ActorNavigation.Path> pathPending;long sceneRetry,pathVersion,pendingVersion;
         Entity(String id,String kind,Vec p,long incarnation){this.id=id;this.kind=kind;this.incarnation=incarnation;x=p.x;y=p.y;z=p.z;}
@@ -383,6 +383,12 @@ public final class World implements BlockShapes.Voxels {
         for(var row:rows){if(!row.patrol().isEmpty())validatePatrol(row.patrol());if((row.goal()!=null?1:0)+(row.patrol().isEmpty()?0:1)+(row.follow()!=null?1:0)>1)throw new IllegalArgumentException("checkpoint_actor_multiple_behaviors");}
         for(var row:rows){entities.put(row.id(),new Entity(row.id(),row.kind(),row.spawn(),row.incarnation()));if(row.follow()!=null)follow(row.id(),row.follow());else if(!row.patrol().isEmpty())patrol(row.id(),row.patrol());else if(row.goal()!=null)goal(row.id(),row.goal());}nextIncarnation=counter;
     }
+    public boolean anomalySlow(String id,long incarnation,float coefficient){if(!Float.isFinite(coefficient)||coefficient<0||coefficient>1)throw new IllegalArgumentException("actor_anomaly_slow");var e=entities.get(id);if(e==null||e.incarnation!=incarnation||e.health<=0)return false;e.anomalySlow=coefficient;e.anomalySlowUntil=tick+4;return true;}
+    public boolean impulse(String id,long incarnation,Vec velocity,boolean replace){
+        if(!Double.isFinite(velocity.x())||!Double.isFinite(velocity.y())||!Double.isFinite(velocity.z())||Math.max(Math.abs(velocity.x()),Math.max(Math.abs(velocity.y()),Math.abs(velocity.z())))>100)throw new IllegalArgumentException("actor_impulse_range");
+        var e=entities.get(id);if(e==null||e.incarnation!=incarnation||e.health<=0||actorControllers==null)return false;
+        controller(e);e.controller.impulse(velocity,replace);return true;
+    }
     public Damage damage(String id,long incarnation,float amount){
         if(!Float.isFinite(amount)||amount<0||amount>10000)throw new IllegalArgumentException("invalid_world_damage");
         Entity entity=entities.get(id);if(entity==null||entity.incarnation!=incarnation||entity.health<=0)return new Damage(0,entity==null?0:entity.health,false);
@@ -664,7 +670,7 @@ public final class World implements BlockShapes.Voxels {
         if(e.controller!=null)e.vitals=e.controller.vitals();
     }
     private void controllerStep(Entity e,boolean dead,double oldX,double oldZ){
-        controller(e);ActorControllerEngine.Input input;Boolean routeProneRequest=null;
+        controller(e);e.controller.anomalySlow(tick<e.anomalySlowUntil?e.anomalySlow:1);ActorControllerEngine.Input input;Boolean routeProneRequest=null;
         if(!dead&&e.controllerInput!=null&&(pendingControl(e)||tick<e.controllerExpires)){input=e.controllerInput;e.routePronePending=null;e.navigation="controlled";}
         else{
             e.controllerInput=null;e.jumpIntent=!dead&&e.kind.equals("BOT")&&tick<e.inputExpires&&e.goal==null&&e.follow==null&&e.patrol.isEmpty()&&e.inputJump;
@@ -952,7 +958,7 @@ public final class World implements BlockShapes.Voxels {
             if(actorControllers!=null&&!e.ladder)e.jumpIntent=true;
             e.navigation="climbing";return;
         }}
-        
+
         // A distant higher cell can be reached by native stepping along a slope.
         // Jump only after the actual resolver failed to advance in this direction.
         if(routePose(e,e.pathAt)!=ActorPose.PRONE&&target.y>e.y+ActorPose.STEP+1e-4&&d<1.15&&d>1e-8&&e.grounded&&(dx*e.blockedX+dz*e.blockedZ)/d>.8){if(actorControllers!=null||actorMotion instanceof ActorJump)e.jumpIntent=true;else{e.vy=jumpSpeed();e.grounded=false;}}

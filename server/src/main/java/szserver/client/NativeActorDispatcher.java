@@ -92,6 +92,8 @@ final class NativeActorDispatcher {
     final class Session {
         private final Object controller,actor,input;
         private boolean crouchHeld,legacyLadder;
+        private float anomalySlow=1;
+        void anomalySlow(float value){owner();if(!Float.isFinite(value)||value<0||value>1)throw new IllegalArgumentException("actor_anomaly_slow");anomalySlow=value;}
         boolean storedLife=true;
         private Session(Object controller,Object actor)throws Exception {this.controller=controller;this.actor=actor;input=inputConstructor.newInstance();}
         private Object state()throws IllegalAccessException{return stateField.get(controller);}
@@ -99,6 +101,7 @@ final class NativeActorDispatcher {
         Object actor(){owner();return actor;}
         boolean aiming()throws Exception{owner();return equipment.aiming(actor);}
         void health(float value)throws Exception{owner();life.health(actor,value);if(value==0)equipment.buffs.death(actor,controller);}
+        void impulse(World.Vec value,boolean replace)throws Exception{owner();Object s=state();stateType.getMethod("native",double.class,double.class,double.class,boolean.class).invoke(s,value.x()+(replace?0:number(s,"av")),value.y()+(replace?0:number(s,"aw")),value.z()+(replace?0:number(s,"ax")),true);}
         szserver.world.ActorVitals vitals()throws Exception{owner();return life.vitals(actor);}
         Map<String,Float> stats()throws Exception{owner();return NativeActorLife.stats(actor);}
         void legacyStats(Map<String,Float> values)throws Exception{owner();life.stats(actor,values);equipment.buffs.legacy(actor,controller);}
@@ -194,9 +197,10 @@ final class NativeActorDispatcher {
             }
             Object actions=seatAction!=null?inputEvents.newInstance(List.of(seatAction)):intent.zipline()==null||!boardAllowed?noInputEvents:inputEvents.newInstance(List.of((intent.zipline().detach()?detachZipline:boardZipline).newInstance(intent.zipline().object())));
             inputEventField.set(input,actions);
+            Object config=controllerType.getField("abstract").get(controller);Field coefficient=config.getClass().getField("while");float originalCoefficient=coefficient.getFloat(config);coefficient.setFloat(config,originalCoefficient*anomalySlow);
             try(var clock=effects.clock(number(state(),"return")+seconds)){conditions.apply(controller,actor,intent.condition());effects.step(actor);advance.invoke(controller,input,seconds);publish.invoke(state(),actor);crouchHeld=intent.crouchHeld();return frame();}
             catch(InvocationTargetException e){if(e.getCause() instanceof RuntimeException r)throw r;throw new IllegalStateException("native_actor_dispatch",e.getCause());}
-            finally{inputEventField.set(input,noInputEvents);Object previous=previousInput.get(controller);if(previous!=null)inputEventField.set(previous,noInputEvents);}
+            finally{coefficient.setFloat(config,originalCoefficient);inputEventField.set(input,noInputEvents);Object previous=previousInput.get(controller);if(previous!=null)inputEventField.set(previous,noInputEvents);}
         }
         Frame frame()throws Exception {
             owner();Object s=state();List<SceneCollision.Box> shapes=new ArrayList<>();

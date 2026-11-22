@@ -123,6 +123,8 @@ public final class NativeActorMotion implements ActorMotion,ActorDynamics,ActorJ
     @Override public ActorZipline ziplineGuide(Object value){try{return mapObjects.guide(value);}catch(Exception error){throw new IllegalStateException("native_zipline_guide",error);}}
     @Override public List<ActorSeat> seatGuides(Object value){return mapObjects.seatGuides(value);}
     Object seatAction(Object prepared,ActorControllerEngine.Seat request,ActorTraversal.Seat current,World.Vec actor,Object world,int x,int z,ActorWorldAccess access)throws Exception{return mapObjects.seatAction(prepared,request,current,actor,world,x,z,access);}
+    /** Resource configuration prepared at startup; independent from the optional NPC dispatcher. */
+    public Path anomalyResources(){return dispatcherResources;}
     @Override public boolean mapObjectsEnabled(){return dispatcherComponents!=null;}
     @Override public ActorSceneObject describeMapObject(SceneRegistry.Definition definition,SceneObject object){try{var prepared=mapObjects.prepare(definition,object);return prepared==null?null:new ActorSceneObject(definition,object,mapObjects.bounds(prepared,object.identity()));}catch(Exception error){throw new IllegalStateException("native_actor_map_object_bounds:"+definition.name()+":"+object.identity(),error);}}
     @Override public Object prepareMapObject(SceneRegistry.Definition definition,SceneObject object){try{return mapObjects.prepare(definition,object);}catch(Exception error){throw new IllegalStateException("native_actor_map_object_prepare",error);}}

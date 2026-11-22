@@ -18,6 +18,7 @@ public final class PlayerMovementConfiguration {
         bytes.putFloat(1,Math.max(0,1+speed/100));bytes.putFloat(6,energyCapacity);bytes.putFloat(24,sprint/100);
         return result;
     }
+    public static byte[] slowed(byte[] configuration,float coefficient){validate(configuration);if(coefficient==1)return configuration;if(!Float.isFinite(coefficient)||coefficient<0||coefficient>1)throw new IllegalArgumentException("movement_slow");var result=configuration.clone();var b=ByteBuffer.wrap(result);b.putFloat(28,b.getFloat(28)*coefficient);return result;}
     static void validate(byte[] value){if(value==null||value.length!=BYTES)throw new IllegalArgumentException("player_movement_configuration");}
     /** Native 1704556748.void multiplies (base speed + sprint bonus) by this final coefficient. */
     public static byte[] withCharacterScale(byte[] configuration,float scale){

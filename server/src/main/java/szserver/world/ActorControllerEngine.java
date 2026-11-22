@@ -44,6 +44,8 @@ public interface ActorControllerEngine {
         default void medicine(PreparedMedicine prepared,long tick){throw new UnsupportedOperationException("actor_medicine_unavailable");}
         default void removeBuff(int id,long tick){throw new UnsupportedOperationException("actor_medicine_unavailable");}
         default void health(float value){}
+        default void impulse(World.Vec value,boolean replace){throw new UnsupportedOperationException("actor_impulse_unavailable");}
+        default void anomalySlow(float value){}
         default ActorVitals vitals(){return null;}
         default boolean storedVitals(){return false;}
         default void equipment(PreparedEquipment prepared){throw new UnsupportedOperationException("actor_equipment_unavailable");}

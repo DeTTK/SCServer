@@ -94,6 +94,8 @@ def tests():
     cp=os.pathsep.join(map(str,[test_classes,classes]+deps));results=[]
     subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.world.RegionRecordBoundsTests'],check=True)
     subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.client.NativeMethodsTests'],check=True)
+    subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.AnomalyTests'],check=True)
+    subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.world.AnomalyIndexTests'],check=True)
     results.append('native return descriptor, bridge, parameters and static exclusion: 5 PASS')
     results.append('region slot/overflow/truncation/CRC/healthy-neighbour bounds')
     subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.inventory.StatValuesTests'],check=True)

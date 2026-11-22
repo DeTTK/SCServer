@@ -21,9 +21,17 @@ public final class CollisionBoxes {
         if(feedbackMotion==null)throw new IllegalStateException("native_feedback_geometry_unavailable");
         return SceneCollision.feedbackShape(object.identity(),feedbackMotion.feedbackBounds(object.affine(),asset));
     }
+    SceneCollision.Shape anomalyGeometry(SceneObject object,SceneRegistry.Definition definition)throws IOException{return feedbackMotion==null?SceneCollision.shape(object,feedback(definition)):feedbackShape(object,definition);}
     void mapObject(CollisionTree.Builder builder,int x,int z,boolean container,int occurrence,SceneObject object,SceneRegistry.Definition definition){
-        if(feedbackMotion==null||!feedbackMotion.mapObjectsEnabled()||!ActorSceneObject.supported(definition)||!object.feedbackActive()||object.behaviour(definition.behaviour()).equals("ladder"))return;
-        var descriptor=feedbackMotion.describeMapObject(definition,object);if(descriptor==null)return;var shape=SceneCollision.feedbackShape(object.identity(),List.of(descriptor.bounds()));
+        if(!ActorSceneObject.supported(definition)||!object.feedbackActive()||object.behaviour(definition.behaviour()).equals("ladder"))return;
+        boolean anomaly=szserver.client.AnomalySettings.supported(definition.behaviour());
+        if(!anomaly&&(feedbackMotion==null||!feedbackMotion.mapObjectsEnabled()))return;
+        ActorSceneObject descriptor;
+        if(anomaly&&(!definition.behaviour().equals("carousel")||feedbackMotion==null||!feedbackMotion.mapObjectsEnabled())){
+            var bounds=AnomalyZone.indexBounds(definition,object);
+            if(Set.of("simple_anomaly","puh","steam","lighter","mirror").contains(definition.behaviour()))try{var feedback=anomalyGeometry(object,definition);if(feedback!=null)bounds=feedback.bounds();}catch(IOException missing){return;}
+            descriptor=new ActorSceneObject(definition,object,bounds);
+        }else descriptor=feedbackMotion.describeMapObject(definition,object);if(descriptor==null)return;var shape=SceneCollision.feedbackShape(object.identity(),List.of(descriptor.bounds()));
         builder.add(new CollisionTree.Item(x,z,container,occurrence,shape,null,false,descriptor));
     }
     boolean ladderSource(SceneObject object,SceneRegistry.Definition definition){return definition!=null&&object.behaviour(definition.behaviour()).equals("ladder")&&szserver.client.SceneSettings.ladderSource(object);}

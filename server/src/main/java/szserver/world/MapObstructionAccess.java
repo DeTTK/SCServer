@@ -4,6 +4,7 @@ import szserver.util.Workers;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.concurrent.*;
+import java.util.*;
 
 /** Bounded asynchronous map queries; owner work is limited to a shallow read-view capture. */
 public final class MapObstructionAccess implements AutoCloseable,ActorMaps,ProjectileMaps {
@@ -27,6 +28,17 @@ public final class MapObstructionAccess implements AutoCloseable,ActorMaps,Proje
         catch(RejectedExecutionException full){preparation.completeExceptionally(full);}return preparation.copy();
     }
     private final java.util.concurrent.atomic.AtomicLong projectileBytes=new java.util.concurrent.atomic.AtomicLong();
+    public record AnomalyQuery(List<AnomalyZone> zones,Authorization authorization){public AnomalyQuery{zones=List.copyOf(zones);}}
+    public CompletableFuture<AnomalyQuery> anomalies(List<SceneCollision.Box> areas){
+        var input=List.copyOf(areas);if(input.size()>256)throw new IllegalArgumentException("anomaly_query_targets");
+        var result=world.submit(World::blockReadView).thenApplyAsync(captured->{try{
+            if(closed)throw new IllegalStateException("map_obstruction_stopped");
+            var view=current.capture(catalog==null?CollisionTree.empty():catalog.current(captured.nativeBase()),captured);var zones=new LinkedHashMap<UUID,AnomalyZone>();
+            for(var area:input){for(var source:view.anomalies(area))zones.computeIfAbsent(source.source().identity(),id->current.anomaly(source));if(zones.size()>8192)throw new IllegalArgumentException("anomaly_query_capacity");}
+            captured.checkCurrent();return new AnomalyQuery(new ArrayList<>(zones.values()),new Authorization(captured));
+        }catch(Exception error){throw new CompletionException(error);}},worker);
+        pending.add(result);result.whenComplete((v,e)->pending.remove(result));return result;
+    }
     private record ActorSource(BlockReadView blocks,ActorScene scene){}
     private CompletableFuture<ActorSource> actorSource(SceneCollision.Box area){
         return localSource(area,true);

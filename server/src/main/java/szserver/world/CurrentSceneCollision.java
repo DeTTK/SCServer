@@ -9,6 +9,7 @@ public final class CurrentSceneCollision {
     private final Map<String,SceneRegistry.Definition> definitions;private final CollisionBoxes boxes;private final long limit;
     private Object generation;private CollisionTree edited=CollisionTree.empty();private Set<Placement> replaced=Set.of();private long rebuilds;
     public CurrentSceneCollision(Map<String,SceneRegistry.Definition> definitions,CollisionBoxes boxes,long limit){this.definitions=Map.copyOf(definitions);this.boxes=Objects.requireNonNull(boxes);this.limit=limit;}
+    public AnomalyZone anomaly(ActorSceneObject source){try{var feedback=boxes.anomalyGeometry(source.source(),source.definition());return AnomalyZone.from(source,feedback==null?source.bounds():feedback.bounds());}catch(IOException invalid){throw new IllegalArgumentException("anomaly_feedback_geometry",invalid);}}
     public View capture(CollisionTree base,BlockReadView blocks)throws IOException{
         SceneCollision.worker();blocks.checkCurrent();var token=blocks.sceneGeneration();
         if(!token.equals(generation)){
@@ -32,6 +33,12 @@ public final class CurrentSceneCollision {
         private final CollisionTree base,edited;private final Set<Placement> replaced;private final BlockReadView blocks;
         private View(CollisionTree base,CollisionTree edited,Set<Placement> replaced,BlockReadView blocks){this.base=base;this.edited=edited;this.replaced=replaced;this.blocks=blocks;}
         public void checkCurrent(){blocks.checkCurrent();}
+        public List<ActorSceneObject> anomalies(SceneCollision.Box area){
+            SceneCollision.worker();checkCurrent();var result=new ArrayList<ActorSceneObject>();java.util.function.Consumer<CollisionTree.Item> add=item->{if(result.size()>=8192)throw new IllegalArgumentException("anomaly_query_capacity");result.add(item.object());};
+            edited.select(area,item->item.object()!=null&&szserver.client.AnomalySettings.supported(item.object().definition().behaviour()),add);
+            base.select(area,item->item.object()!=null&&szserver.client.AnomalySettings.supported(item.object().definition().behaviour())&&!replaced.contains(new Placement(item.homeX(),item.homeZ(),item.identity())),add);
+            checkCurrent();return List.copyOf(result);
+        }
         public ActorScene actors(SceneCollision.Box area){
             SceneCollision.worker();checkCurrent();List<ActorGeometry> cells=new ArrayList<>(),ladders=new ArrayList<>();List<ActorContacts.Volume> feedback=new ArrayList<>();List<ActorSceneObject> objects=new ArrayList<>();java.util.function.Consumer<CollisionTree.Item> collect=item->{
                 if(item.object()!=null){if(objects.size()>=ActorScene.MAX_CELLS)throw new IllegalArgumentException("actor_scene_capacity");objects.add(item.object());return;}

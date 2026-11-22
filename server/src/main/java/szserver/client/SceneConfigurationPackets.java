@@ -45,8 +45,9 @@ public final class SceneConfigurationPackets {
         else throw new IllegalArgumentException("scene_configuration_compression");validate(nbt);return nbt;
     }
     public static byte[] response(int sequence,byte[] payload){
-        validate(payload);return Wire.dynamic("977073877",Wire.bytes(out->{out.writeInt(sequence);out.writeShort(2);out.writeInt(payload.length);out.write(payload);}));
+        validate(payload);return typedResponse(sequence,payload);
     }
+    public static byte[] typedResponse(int sequence,byte[] payload){if(payload.length>MAX_NBT)throw new IllegalArgumentException("scene_configuration_response_size");return Wire.dynamic("977073877",Wire.bytes(out->{out.writeInt(sequence);out.writeShort(2);out.writeInt(payload.length);out.write(payload);}));}
     public static com.google.gson.JsonArray parts(byte[] payload){
         return parts(payload,false);
     }

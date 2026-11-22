@@ -36,6 +36,8 @@ final class NativeActorControllerEngine implements ActorControllerEngine {
         public void removeBuff(int id,long tick){try{session.removeBuff(id,tick);}catch(Exception failure){throw error(failure);}}
         public void close(){try{map.close(session);}catch(Exception failure){throw error(failure);}}
         public void health(float value){try{session.health(value);}catch(Exception failure){throw error(failure);}}
+        public void impulse(World.Vec value,boolean replace){try{session.impulse(value,replace);}catch(Exception failure){throw error(failure);}}
+        public void anomalySlow(float value){session.anomalySlow(value);}
         public ActorVitals vitals(){try{return session.vitals();}catch(Exception failure){throw error(failure);}}
         public boolean storedVitals(){return session.storedLife;}
         public void equipment(PreparedEquipment prepared){try{session.equipment(prepared);presentation=prepared.presentation();}catch(Exception failure){throw error(failure);}}

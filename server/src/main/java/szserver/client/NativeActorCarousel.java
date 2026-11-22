@@ -9,17 +9,17 @@ import java.util.*;
 /** One original carousel instance per world, shared by NPC hosts. All changes join the actor transaction. */
 final class NativeActorCarousel {
     private final ClassLoader loader;private final NativeActorMotion motion;
-    private final Class<?> objectType;private final Field behavior,world,matrix,target,phase,cooldown;
+    private final Class<?> objectType;private final Field behavior,world,matrix,target,phase,cooldown,chance;
     private final Method enter,advance,leave,contains,translate;private final Constructor<?> matrixCopy;
     private final Map<UUID,Entry> entries=new LinkedHashMap<>();
     private static final class Entry {
-        final UUID id;final ActorCarouselState source;final Object object,zone;String owner;
+        final UUID id;final ActorCarouselState source;final Object object,zone;String owner;long idleTick=Long.MIN_VALUE;final Map<String,Boolean> rolls=new LinkedHashMap<>();
         Entry(UUID id,ActorCarouselState source,Object object,Object zone){this.id=id;this.source=source;this.object=object;this.zone=zone;}
     }
     NativeActorCarousel(ClassLoader loader,NativeActorMotion motion,Path resources)throws Exception {
         this.loader=loader;this.motion=motion;prepareSettings(loader,resources);
         objectType=type("1886271463");Class<?> original=type("1952056351"),entity=type("1217489680");
-        behavior=field(objectType,"byte");world=field(objectType,"q");matrix=field(objectType,"m");target=original.getField("goto");phase=original.getField("else");cooldown=original.getField("char");
+        behavior=field(objectType,"byte");world=field(objectType,"q");matrix=field(objectType,"m");target=original.getField("goto");phase=original.getField("else");cooldown=original.getField("char");chance=type("304663057").getField("boolean");
         enter=original.getMethod("do",entity);advance=original.getMethod("if");leave=original.getMethod("goto",entity);contains=original.getMethod("protected",entity);
         Class<?> transform=type("447252483");translate=transform.getMethod("synchronized",float.class,float.class,float.class);matrixCopy=transform.getConstructor(type("1303032651"));
     }
@@ -38,8 +38,8 @@ final class NativeActorCarousel {
         private final List<Undo> undo=new ArrayList<>();private final Set<Entry> touched=Collections.newSetFromMap(new IdentityHashMap<>());
         void touch(Entry e)throws Exception {
             if(!touched.add(e))return;
-            String owner=e.owner;Object captured=target.get(e.zone),previousWorld=world.get(e.object),transform=matrixCopy.newInstance(matrix.get(e.object));int time=phase.getInt(e.zone),clock=cooldown.getInt(e.zone);
-            undo.add(()->{e.owner=owner;target.set(e.zone,captured);phase.setInt(e.zone,time);cooldown.setInt(e.zone,clock);world.set(e.object,previousWorld);matrix.set(e.object,transform);});
+            long idleTick=e.idleTick;var rolls=new LinkedHashMap<>(e.rolls);String owner=e.owner;Object captured=target.get(e.zone),previousWorld=world.get(e.object),transform=matrixCopy.newInstance(matrix.get(e.object));int time=phase.getInt(e.zone),clock=cooldown.getInt(e.zone);
+            undo.add(()->{e.idleTick=idleTick;e.rolls.clear();e.rolls.putAll(rolls);e.owner=owner;target.set(e.zone,captured);phase.setInt(e.zone,time);cooldown.setInt(e.zone,clock);world.set(e.object,previousWorld);matrix.set(e.object,transform);});
         }
         void added(Entry e){undo.add(()->entries.remove(e.id));}
         void removed(Entry e){undo.add(()->entries.put(e.id,e));}
@@ -66,13 +66,19 @@ final class NativeActorCarousel {
             source.use();Object value=source.object(id);var e=entries.get(id);
             if(value==null){if(e!=null&&actor.equals(e.owner)){tx.touch(e);leave.invoke(e.zone,session.actor());}continue;}
             e=adopt(id,(NativeActorMapObject.Prepared)value,tx);
-            if(e.owner!=null&&!e.owner.equals(actor))continue;
+            if(e.owner!=null&&!e.owner.equals(actor)&&target.get(e.zone)!=null)continue;
             bind(e,session,x,z,tx);
-            if(target.get(e.zone)==null&&(boolean)contains.invoke(e.zone,session.actor())){
+            if(target.get(e.zone)==null){long now=source.simulationTick();if(now<0)now=Math.round(session.frame().time()*20);if(e.idleTick!=now){e.idleTick=now;advance.invoke(e.zone);}}
+            boolean inside=(boolean)contains.invoke(e.zone,session.actor());float probability=chance.getFloat(e.zone);
+            if(!inside)e.rolls.remove(actor);
+            if(probability<=0&&actor.equals(e.owner)){leave.invoke(e.zone,session.actor());e.owner=null;continue;}
+            boolean admitted=probability>=1;
+            if(!admitted&&probability>0&&inside){Boolean accepted=e.rolls.get(actor);if(accepted==null){if(e.rolls.size()>=256)e.rolls.remove(e.rolls.keySet().iterator().next());accepted=new Random(((long)id.hashCode()<<32)^actor.hashCode()^source.simulationTick()).nextFloat()<probability;e.rolls.put(actor,accepted);}admitted=accepted;}
+            if(target.get(e.zone)==null&&inside&&admitted){
                 if(capture(session).size()>=8)throw new ActorScene.Deferred();enter.invoke(e.zone,session.actor());
                 if(target.get(e.zone)!=null)e.owner=actor;
             }
-            if(actor.equals(e.owner))advance.invoke(e.zone);
+            if(actor.equals(e.owner)&&target.get(e.zone)!=null)advance.invoke(e.zone);
         }
     }
     List<ActorCarouselState> capture(NativeActorDispatcher.Session session)throws Exception {
@@ -87,6 +93,6 @@ final class NativeActorCarousel {
         }catch(Exception failure){tx.rollback();throw failure;}
     }
     void close(NativeActorDispatcher.Session session)throws Exception {
-        String actor=session.identity().toString();for(var e:new ArrayList<>(entries.values()))if(actor.equals(e.owner)){Object captured=target.get(e.zone);if(captured!=null)leave.invoke(e.zone,captured);entries.remove(e.id);}
+        String actor=session.identity().toString();for(var e:entries.values())e.rolls.remove(actor);for(var e:new ArrayList<>(entries.values()))if(actor.equals(e.owner)){Object captured=target.get(e.zone);if(captured!=null)leave.invoke(e.zone,captured);entries.remove(e.id);}
     }
 }
