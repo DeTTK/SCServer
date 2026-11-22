@@ -1,0 +1,64 @@
+{
+  "result": "PASS",
+  "date": "2026-11-23",
+  "issue": 28,
+  "nativeCameraSha256": "8d4247b0cfe5a241ede3793e1d855e6ceb33f775f08064d612b5758cc52d78eb",
+  "bundledClientCameraHashMatches": true,
+  "baselineF5": [
+    "FIRST_PERSON",
+    "FIRST_PERSON",
+    "FIRST_PERSON"
+  ],
+  "patchedF5": [
+    "THIRD_PERSON_BACK",
+    "THIRD_PERSON_FRONT",
+    "FIRST_PERSON"
+  ],
+  "developerFlagRemainsFalseInNormalMode": true,
+  "nativeChecks": {
+    "heldThirdPersonWithoutDeveloperMode": true,
+    "shootingFromThirdPerson": true,
+    "inventoryRoundTrip": true,
+    "teleportAndPermissionRefresh": true
+  },
+  "afterReconnect": [
+    "THIRD_PERSON_BACK",
+    "THIRD_PERSON_FRONT",
+    "FIRST_PERSON"
+  ],
+  "developerModeCycle": [
+    "THIRD_PERSON_BACK",
+    "THIRD_PERSON_FRONT",
+    "FIRST_PERSON"
+  ],
+  "backToNormalCycle": [
+    "THIRD_PERSON_BACK",
+    "THIRD_PERSON_FRONT",
+    "FIRST_PERSON"
+  ],
+  "bytecodeContract": {
+    "checks": 32,
+    "onlyMethodChanged": "1389510037.default()V",
+    "allOtherMethodBytesIdentical": true,
+    "unknownVersionsSkippedWithoutInvalidClassBytes": true,
+    "unrelatedAgentEntriesByteIdentical": true
+  },
+  "inputGuard": {
+    "physicalCallbacksRegistered": false,
+    "nativeRawInputBlocked": true,
+    "nativeRawListenerBlocked": true,
+    "windowVisibilityPolicy": "hidden",
+    "fmodSilentSystems": 1
+  },
+  "installer": {
+    "safetyChecks": 54,
+    "bothLayoutsPreserveSavesAndRollback": true,
+    "fullBundleRedownloaded": false
+  },
+  "agentSha256": "665593b602e0610d8de23e1b446030243f417c175e01891dc35875fcd347912a",
+  "installedNativeClassesChanged": false,
+  "serverChanged": false,
+  "gameAssetsChanged": false,
+  "nativeQaServerSha256": "84c20e5369d6398159019981d02ec9e93fb25d58a55bdae79ece0550e91af8ee",
+  "installerRetainsCurrentServerPin": "50fc35338787784d619310a886e0210ad60269fe33687faeedb40b316342a810"
+}

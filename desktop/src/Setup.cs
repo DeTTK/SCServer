@@ -23,9 +23,9 @@ static class SetupPackage {
     internal const string Url="https://github.com/DeTTK/SCServer/releases/download/local-ready-2026.11.20/BSCPCRAFT-local-20261119.zip";
     internal const string Hash="644af9116bf0931884e778455179137e70e088f9e1fa77c66c00aad6d505752a";
     internal const long Bytes=1312415473;
-    internal const string AgentUrl="https://github.com/DeTTK/SCServer/releases/download/world-items-2026.11.22/game-resource-compat-udp-20261122.jar";
-    internal const string AgentHash="0ad625606c495904d22c9eb77bc9290dec9b741f0eeb1d45cf3440b2e50412b0";
-    internal const int AgentBytes=225369;
+    internal const string AgentUrl="https://github.com/DeTTK/SCServer/releases/download/native-f5-2026.11.23/game-resource-compat-f5-20261123.jar";
+    internal const string AgentHash="665593b602e0610d8de23e1b446030243f417c175e01891dc35875fcd347912a";
+    internal const int AgentBytes=228698;
     internal const string StartupUrl="https://github.com/DeTTK/SCServer/releases/download/unit-format-warmup-2026.11.22/startup-guard-20261122.jar";
     internal const string StartupHash="00dab163374e9f393775c1bd7e34422956ef3fb83ff83f45227eae4dda405298";
     internal const int StartupBytes=137094;
