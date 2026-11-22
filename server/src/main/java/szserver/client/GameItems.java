@@ -48,15 +48,32 @@ public final class GameItems implements AutoCloseable {
     public Map<String,String> codecFailures(){return Map.copyOf(codecFailures);}
     private JsonObject definitions;
     private Set<String> containerExempt=Set.of();
-    public record Medicine(int id,String group,int priority,boolean fast,int fastPriority,double duration,double cooldown,float instant,Map<String,Float> stats){}
+    public record MedicineStages(long startMillis,long activeMillis,long endMillis,Map<String,Float> stats,String key,boolean stopOnFullHealth){
+        public static final MedicineStages NONE=new MedicineStages(0,0,0,Map.of(),null,false);
+        public MedicineStages{stats=Map.copyOf(stats);}
+    }
+    public record MedicineRules(long useMillis,float instantStamina,boolean persistent,int food,float saturation,int calories,int drunkTicks,float toxicity,boolean quickEligible,int quickRank,MedicineStages stages,boolean active){
+        public MedicineRules(long useMillis,float instantStamina,boolean persistent,int food,float saturation,int calories,int drunkTicks,float toxicity,boolean quickEligible,int quickRank){this(useMillis,instantStamina,persistent,food,saturation,calories,drunkTicks,toxicity,quickEligible,quickRank,MedicineStages.NONE,false);}
+    }
+    public record Medicine(int id,String group,int priority,boolean fast,int fastPriority,double duration,double cooldown,float instant,Map<String,Float> stats,MedicineRules rules){
+        public Medicine(int id,String group,int priority,boolean fast,int fastPriority,double duration,double cooldown,float instant,Map<String,Float> stats){this(id,group,priority,fast,fastPriority,duration,cooldown,instant,stats,new MedicineRules(0,0,false,0,0,0,0,0,fast,fastPriority));}
+        public Medicine activeUse(){var stage=rules.stages();return new Medicine(id,group,priority,false,fastPriority,stage.activeMillis()/1000d,cooldown,0,stage.stats(),new MedicineRules(rules.useMillis(),0,false,0,0,0,0,0,false,rules.quickRank(),stage,true));}
+        public String cooldownKey(){return group==null?"item/"+id:group;}
+    }
+    public record MedicineEffect(int id,long until,Medicine medicine){}
     private final Map<Integer,Medicine> medicines=new HashMap<>();
     private final Map<Integer,szserver.inventory.ExplosiveProfile> explosives=new HashMap<>();
     public Map<Integer,szserver.inventory.ExplosiveProfile> explosives(){return Map.copyOf(explosives);}
     private Map<String,Integer> statOrdinals=Map.of();
     public Map<Integer,Medicine> medicines(){return Map.copyOf(medicines);}
+    public boolean medicineAllowed(int id,String mode,String location)throws Exception{return adapter.medicineAllowed(id,mode,location);}
+    public ClientStateAdapter.MedicineRequest medicineRequest(byte[] body)throws Exception{return adapter.medicineRequest(body);}
+    public Map<String,Float> medicineStats(Collection<Map<String,Float>> banks)throws Exception{return adapter.medicineStats(banks);}
+    public byte[] medicineEffects(List<Integer> removed,Collection<MedicineEffect> added,long now)throws Exception{return adapter.medicineEffects(removed,added,now);}
     public Map<String,Integer> statOrdinals(){return statOrdinals;}
     public String upgradeTag()throws Exception{return adapter.upgradeTag();}
     public void warmGameplay(Path definitionsPath,Path artifactSettings)throws Exception{
+        NativeMedicineRelease.verify(runtime);
         if(definitions!=null)throw new IllegalStateException("gameplay_already_warmed");
         Path fixtures=definitionsPath.getParent().toRealPath();JsonObject manifest=JsonParser.parseString(Files.readString(fixtures.resolve("native-gameplay-manifest.json"))).getAsJsonObject();
         for(var entry:manifest.getAsJsonObject("classes_sha256").entrySet()){
@@ -85,11 +102,10 @@ public final class GameItems implements AutoCloseable {
         adapter.warmArtifacts(Files.readString(artifactSettings),artifacts,definitionsPath.getParent().resolve("native-resources"));containerExempt=adapter.containerExemptStats();definitions=catalog;
         LauncherPackets.verifyManifest(fixtures.getParent(),runtime,"native-weapon-modules.json");LauncherPackets.verifyManifest(fixtures.getParent(),runtime,"native-weapon-jamming.json");
         Map<Integer,String> moduleClasses=new HashMap<>(),moduleDefs=new HashMap<>();for(var entry:registry.entrySet())if(entry.getValue().getAsJsonObject().has("definition")){int id=Integer.parseInt(entry.getKey());if(catalog.has(entry.getKey())){moduleClasses.put(id,entry.getValue().getAsJsonObject().get("definition").getAsString());moduleDefs.put(id,catalog.get(entry.getKey()).toString());}}adapter.moduleDefinitions(moduleClasses,moduleDefs);adapter.warmCosmetics(moduleClasses,moduleDefs);
-        statOrdinals=adapter.statOrdinals();for(var entry:catalog.entrySet()){
+        medicines.clear();medicines.putAll(adapter.warmMedicines());statOrdinals=adapter.statOrdinals();for(var entry:catalog.entrySet()){
             JsonObject item=entry.getValue().getAsJsonObject();int id=Integer.parseInt(entry.getKey());
             if(item.get("type").getAsString().equals("grenade"))explosives.put(id,adapter.explosive(id,(item.has("explosive_props")?item.getAsJsonObject("explosive_props"):item).toString()));
-            if(!item.get("type").getAsString().equals("medicine"))continue;
-            medicines.put(id,new Medicine(id,item.has("effect_type")?item.get("effect_type").getAsString():"medicine",(int)number(item,"effect_priority",0),item.has("fast_use")&&Boolean.parseBoolean(item.get("fast_use").getAsString()),(int)number(item,"fast_use_priority",0),Math.max(0,number(item,"duration",0)/20),Math.max(0,number(item,"cooldown",0)/20),number(item,"instant_regen",0),adapter.numericStats(item.toString())));
+
         }
     }
     private static float number(JsonObject item,String key,float fallback){float value=item.has(key)?item.get(key).getAsFloat():fallback;if(!Float.isFinite(value))throw new IllegalArgumentException("resource_number_nonfinite:"+key);return value;}

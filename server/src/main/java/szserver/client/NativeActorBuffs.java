@@ -24,7 +24,7 @@ final class NativeActorBuffs {
     private record Entry(int id,ActorBuff definition,long start,Object timer){long until(){return Math.addExact(start,definition.durationTicks());}}
     private record State(Base base,List<Entry> entries,Map<String,Long> cooldowns,int next,long tick,Object component,Map<String,Float> effective){}
 
-    NativeActorBuffs(ClassLoader loader,Path definitions)throws Exception{
+    NativeActorBuffs(ClassLoader loader,Path definitions,Path registry)throws Exception{
         component=type(loader,"1967986234");bank=type(loader,"964863275");builder=type(loader,"222945433");time=type(loader,"1819519616");attribute=type(loader,"461891820");kind=type(loader,"1585835196");stat=type(loader,"1924679062");
         componentCtor=component.getConstructor(boolean.class,boolean.class);bankCtor=bank.getConstructor();builderCtor=builder.getConstructor();timeCtor=time.getConstructor(Instant.class,Duration.class);
         bankPut=bank.getMethod("double",stat,float.class);bankExport=Arrays.stream(bank.getMethods()).filter(m->m.getName().equals("float")&&m.getParameterCount()==0&&Map.class.isAssignableFrom(m.getReturnType())).findFirst().orElseThrow();
@@ -32,20 +32,11 @@ final class NativeActorBuffs {
         nextField=component.getField("volatile");effectiveBank=component.getField("break");stateField=type(loader,"szserver.bridge.ActorLivingProfile").getField("buffState");life=new NativeActorLife(loader);
         Class<?> attributes=type(loader,"626983914");timerAttribute=attributes.getField("try").get(null);itemAttribute=attributes.getField("assert").get(null);groupAttribute=attributes.getField("import").get(null);priorityAttribute=attributes.getField("boolean").get(null);medicineKind=kind.getField("MEDICINE").get(null);
         for(Object key:stat.getEnumConstants())statKeys.put((String)stat.getField("for").get(key),key);
-        Method parse=type(loader,"com.google.gson.JsonParser").getMethod("parse",String.class),numeric=bank.getMethod("long",type(loader,"com.google.gson.JsonObject"));Object parser=type(loader,"com.google.gson.JsonParser").getConstructor().newInstance();
-        try(var text=Files.newBufferedReader(definitions);var input=new com.google.gson.stream.JsonReader(text)){
-            input.beginObject();while(input.hasNext()){
-                int id=Integer.parseInt(input.nextName());JsonObject row=JsonParser.parseReader(input).getAsJsonObject();if(!row.has("type")||!row.get("type").getAsString().equals("medicine"))continue;
-                Object json=parse.invoke(parser,row.toString());Object nativeBank=numeric.invoke(null,json.getClass().getMethod("getAsJsonObject").invoke(json));
-                medicines.put(id,new ActorBuff(id,row.has("effect_type")?row.get("effect_type").getAsString():"medicine",(int)number(row,"effect_priority"),ticks(row,"duration"),ticks(row,"cooldown"),(float)number(row,"instant_regen"),export(nativeBank)));
-            }input.endObject();
-        }
+        var nativeCatalog=NativeMedicines.load(loader,definitions,registry,this::export);for(var medicine:nativeCatalog.profiles().values())medicines.put(medicine.id(),new ActorBuff(medicine.id(),medicine.cooldownKey(),medicine.priority(),Math.round(medicine.duration()*20),Math.round(medicine.cooldown()*20),medicine.instant(),medicine.stats()));
         // Warm native builders, timer/stat codecs and the aggregate before a world owner exists.
         ActorBuff example=medicines.values().stream().findFirst().orElseThrow();build(new Base(ActorLocomotion.Profile.DEFAULT,1,Map.of()),List.of(new Entry(1_000_000,example,0,null)),Map.of(),1_000_001,0);
     }
     private static Class<?> type(ClassLoader loader,String name)throws Exception{return Class.forName(name,true,loader);}
-    private static double number(JsonObject row,String key){double v=row.has(key)?row.get(key).getAsDouble():0;if(!Double.isFinite(v))throw new IllegalArgumentException("actor_buff_resource_number");return v;}
-    private static long ticks(JsonObject row,String key){double v=number(row,key);if(v<0||v>630720000||v!=Math.rint(v))throw new IllegalArgumentException("actor_buff_resource_ticks");return (long)v;}
     private static void worker(){if(Set.of("world-tick","native-game-owner").contains(Thread.currentThread().getName()))throw new IllegalStateException("actor_medicine_prepare_on_owner");}
     ActorControllerEngine.PreparedMedicine prepare(int item){worker();var definition=medicines.get(item);if(definition==null)throw new IllegalArgumentException("actor_medicine_unknown");return new Prepared(this,definition);}
     private Map<String,Float> export(Object nativeBank)throws Exception{

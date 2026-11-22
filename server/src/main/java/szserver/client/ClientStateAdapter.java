@@ -472,6 +472,13 @@ public final class ClientStateAdapter implements AutoCloseable {
     public record Attachment(byte[] state,byte[] previous,boolean builtin) {}
     public String artifactResearchTag()throws Exception{return (String)Class.forName("1609149377",true,loader).getField("synchronized").get(null);}
     private NativeCosmetics cosmetics;
+    private NativeMedicines nativeMedicines;private NativeMedicineEffects medicineEffects;private NativeMedicinePackets medicinePackets;
+    public Map<Integer,GameItems.Medicine> warmMedicines()throws Exception{nativeMedicines=new NativeMedicines(cosmetics,this::bank);medicineEffects=new NativeMedicineEffects(cosmetics,this::bank);medicinePackets=new NativeMedicinePackets(cosmetics);return nativeMedicines.profiles();}
+    public boolean medicineAllowed(int id,String mode,String location)throws Exception{return nativeMedicines.allowed(id,mode,location);}
+    public record MedicineRequest(int owner,int sequence,szserver.inventory.Inventory.Address address){}
+    public MedicineRequest medicineRequest(byte[] raw)throws Exception{return medicinePackets.read(raw);}
+    public Map<String,Float> medicineStats(Collection<Map<String,Float>> banks)throws Exception{return medicineEffects.aggregate(banks);}
+    public byte[] medicineEffects(List<Integer> removed,Collection<GameItems.MedicineEffect> added,long now)throws Exception{return medicineEffects.delta(removed,added,now);}
     public void warmCosmetics(Map<Integer,String> classes,Map<Integer,String> definitions)throws Exception{cosmetics=new NativeCosmetics(loader,definitions,classes);}
     public record CosmeticSkin(byte[] state,int previous,boolean unchanged){}
     public CosmeticSkin nativeSkin(String kind,byte[] raw,int item,int selected)throws Exception{var change=cosmetics.skin(item,decode(codec(kind),raw),selected);return new CosmeticSkin(encode(codec(kind),change.state()),change.previous(),change.unchanged());}

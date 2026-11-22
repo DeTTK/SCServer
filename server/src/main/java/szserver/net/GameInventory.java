@@ -156,6 +156,10 @@ public final class GameInventory implements AutoCloseable {
     }
     public void faction(UUID id,String requested,Runnable success,Consumer<String> failure){String faction;try{faction=Factions.normalize(requested);}catch(IllegalArgumentException error){failure.accept(error.getMessage());return;}JsonObject state=new JsonObject();state.addProperty("faction",faction);mutate(id,before->before.replace(Map.of(),0),state,plan->success.run(),failure);}
     public Map<Integer,GameItems.Medicine> medicines(){return items.medicines();}
+    public InventoryPackets.MedicineRequest medicineRequest(byte[] body,int page)throws Exception{var request=items.medicineRequest(body);return InventoryPackets.medicine(request.owner(),request.sequence(),request.address(),page);}
+    public Map<String,Float> medicineStats(Collection<Map<String,Float>> banks){try{return items.medicineStats(banks);}catch(Exception error){throw new IllegalStateException("medicine_native_stats",error);}}
+    public byte[] medicineEffects(int tick,List<CharacterEffects.Effect> removed,Collection<CharacterEffects.Effect> added,long now){try{return GamePackets.effectRecords(tick,items.medicineEffects(removed.stream().map(CharacterEffects.Effect::id).toList(),added.stream().map(e->new GameItems.MedicineEffect(e.id(),e.until(),e.definition(items.medicines()))).toList(),now));}catch(Exception error){throw new IllegalStateException("medicine_native_effects",error);}}
+    public boolean medicineAllowed(int item,String mode,String location){try{return items.medicineAllowed(item,mode,location);}catch(Exception error){throw new IllegalStateException("medicine_native_admission",error);}}
     public Map<Integer,ExplosiveProfile> explosives(){return items.explosives();}
     public PhysicalReload.Mechanism physicalMechanism(int factory){return physicalMechanisms.get(factory);}
     public record PhysicalResult(Inventory.Plan plan,PhysicalReload.Result result){}

@@ -29,7 +29,8 @@ final class NativeActorComponents {
         Class<?> metadata=type("1993742576");if(metadata.getField("it").get(null)==null)metadata.getMethod("interface").invoke(null);
         strings=(String[])type("1281655698").getField("if").get(null);
         // This class must precede 1924679062 to avoid their original cyclic static initialization.
-        type("964863275");type("1464336358");prepareItems(definitions);equipment=new NativeActorEquipment(loader,define,definitions,registry,new NativeActorBuffs(loader,definitions));dispatcher=new NativeActorDispatcher(runtime,loader,equipment);
+        NativeMedicineRelease.verify(runtime);
+        type("964863275");type("1464336358");prepareItems(definitions);equipment=new NativeActorEquipment(loader,define,definitions,registry,new NativeActorBuffs(loader,definitions,registry));dispatcher=new NativeActorDispatcher(runtime,loader,equipment);
     }
     private Class<?> type(String name)throws ClassNotFoundException{return Class.forName(name,true,loader);}
     private Object allocate(Class<?> type)throws Exception{return allocate.invoke(unsafe,type);}

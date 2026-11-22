@@ -13,8 +13,13 @@ public final class InventoryPackets {
     }
     private static Inventory.Address address(DataInputStream in,int owner,int page)throws IOException {
         int aggregate=in.readUnsignedByte(),container=in.readUnsignedByte(),slot=in.readUnsignedShort();
-        if(owner==-1&&aggregate==0&&container==0)return new Inventory.Address(2,page,slot);
-        return new Inventory.Address(aggregate,container,slot);
+        return normalizeAddress(new Inventory.Address(aggregate,container,slot),owner,page);
+    }
+    private static Inventory.Address normalizeAddress(Inventory.Address address,int owner,int page){return owner==-1&&address.aggregate()==0&&address.container()==0?new Inventory.Address(2,page,address.slot()):address;}
+    public record MedicineRequest(int owner,int sequence,Inventory.Address address){}
+    public static MedicineRequest medicine(int owner,int sequence,Inventory.Address raw,int page)throws IOException{
+        if(owner!=0&&owner!=-1)throw new IOException("medicine_inventory_request");Inventory.Address source=raw==null?null:normalizeAddress(raw,owner,page);
+        if(source!=null&&!StorageLayout.validAddress(source))throw new IOException("medicine_inventory_request");return new MedicineRequest(owner,sequence,source);
     }
     public static Request read(int id,byte[] body,int page)throws IOException {
         DataInputStream in=Wire.input(body);int owner,sequence,count=0,target=-1;boolean split=id==102||id==2040;Inventory.Address source;List<Inventory.Address> destinations=new ArrayList<>();

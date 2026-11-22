@@ -19,4 +19,7 @@ final class NativeMethods {
                 .orElseThrow(() -> new NoSuchMethodException(owner.getName() + "." + name
                         + Arrays.toString(parameters) + ":" + result.getName()));
     }
+    static Method staticMethod(Class<?> owner,String name,Class<?> result,Class<?>... parameters)throws NoSuchMethodException {
+        return Arrays.stream(owner.getMethods()).filter(m->m.getName().equals(name)&&m.getReturnType()==result&&Modifier.isStatic(m.getModifiers())&&Arrays.equals(m.getParameterTypes(),parameters)).findFirst().orElseThrow(()->new NoSuchMethodException(owner.getName()+"."+name+Arrays.toString(parameters)+":"+result.getName()));
+    }
 }

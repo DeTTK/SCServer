@@ -81,6 +81,7 @@ public final class NativeActorMotion implements ActorMotion,ActorDynamics,ActorJ
     }
     NativeActorComponents dispatcherComponents(Path resources,Path itemDefinitions,Path itemRegistry)throws Exception{
         if(owner!=null||dispatcherComponents!=null)throw new IllegalStateException("actor_dispatch_prepare_order");
+        for(String part:List.of("resources/configs","resources/boxes")){Path extra=itemDefinitions.getParent().getParent().resolve(part);if(Files.isDirectory(extra))loader.resources(extra);}
         loader.resources(resources);dispatcherComponents=new NativeActorComponents(runtimeRoot,itemDefinitions,itemRegistry,loader,loader::define,unsafe,allocate);dispatcherComponents.warm(world);
         dispatcherMaps=new NativeActorMapWorld.Factory(runtimeRoot,itemDefinitions.resolveSibling("native-resource-block-profiles.json"),resources,loader,loader::define,unsafe,allocate,this,bodyFactory);dispatcherResources=resources;dispatcherDefinitions=itemDefinitions;dispatcherRegistry=itemRegistry;return dispatcherComponents;
     }

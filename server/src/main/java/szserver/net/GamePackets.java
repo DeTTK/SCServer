@@ -129,7 +129,9 @@ public final class GamePackets {
                 o.writeByte(1);o.writeInt((int)((now-1735689600000L)/250));Wire.varint(o,Math.max(1,(int)Math.ceil((effect.until()-now)/250d)));
                 o.writeByte(2);o.writeShort(effect.item());if(medicine.group()!=null){o.writeByte(5);o.writeUTF(medicine.group());}o.writeByte(6);o.writeByte(Math.max(-128,Math.min(127,medicine.priority())));
             }o.writeBoolean(false);
-        });byte[] records=Wire.bytes(o->{o.writeByte(73);o.writeInt(Integer.rotateLeft(-115771960,2)-582719528);o.writeByte(10);Wire.varint(o,payload.length);o.write(payload);});
+        });return effectRecords(tick,payload);
+    }
+    public static byte[] effectRecords(int tick,byte[] payload){byte[] records=Wire.bytes(o->{o.writeByte(73);o.writeInt(Integer.rotateLeft(-115771960,2)-582719528);o.writeByte(10);Wire.varint(o,payload.length);o.write(payload);});
         return Wire.dynamic("456314467",Wire.bytes(o->{o.writeByte(10);o.writeInt((tick+1861859542)^1976320645);Wire.varint(o,records.length);o.write(records);}));
     }
     public static byte[] stack(int id,int count,byte[] state){return Wire.bytes(o->{if(count<=0){o.writeBoolean(false);return;}o.writeBoolean(true);o.writeShort(id);o.writeInt(count);o.writeShort(0);o.writeBoolean(state.length>0);o.write(state);o.writeByte(0);});}
