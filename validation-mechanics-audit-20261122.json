@@ -1,0 +1,26 @@
+{
+  "date": "2026-11-22",
+  "files": 352,
+  "bytes": 13237464242,
+  "rows": 8873635,
+  "decodedPacketRows": 2235970,
+  "rawDatagrams": 3107493,
+  "badJsonLines": 1,
+  "numericPacketIds": 1522,
+  "duplicateFilesSkipped": 22,
+  "nativeCorpseSamples": 18,
+  "nativeCorpsePrefixChecks": 126,
+  "mechanicsRows": 64,
+  "statusCounts": {
+    "работает": 27,
+    "частично": 18,
+    "исправлено": 2,
+    "нет полного цикла": 5,
+    "работает с ограничениями": 3,
+    "нет": 3,
+    "не реализован полностью": 1,
+    "не подтверждено / нет полного цикла": 1,
+    "отдельная реализация": 3,
+    "не реализовано полностью": 1
+  }
+}

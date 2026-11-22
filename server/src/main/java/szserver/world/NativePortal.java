@@ -22,7 +22,7 @@ public record NativePortal(UUID id,String asset,String behaviour,World.Vec posit
         private static boolean flag(JsonObject object,String name){JsonElement value=object.get(name);if(value==null||value.isJsonNull())return false;try{return value.getAsJsonPrimitive().isBoolean()?value.getAsBoolean():new java.math.BigDecimal(value.getAsString()).intValue()!=0;}catch(RuntimeException invalid){throw new IllegalArgumentException("portal_flag:"+name,invalid);}}
         private static double number(JsonObject object,String name,double fallback,boolean zeroFallback){try{JsonElement value=object.get(name);if(value==null||value.isJsonNull())return fallback;double number=value.getAsDouble();if(!Double.isFinite(number))return fallback;return zeroFallback&&number==0?fallback:number;}catch(RuntimeException invalid){return fallback;}}
     }
-    public static NativePortal from(SceneObject object,String behaviour){if(!behaviour(behaviour)||object.portalParameters()==null)return null;return new NativePortal(object.identity(),object.asset(),behaviour,new World.Vec(object.x(),object.y(),object.z()),object.scale(),object.portalParameters());}
+    public static NativePortal from(SceneObject object,String behaviour){behaviour=object.behaviour(behaviour);if(!behaviour(behaviour)||object.portalParameters()==null)return null;return new NativePortal(object.identity(),object.asset(),behaviour,new World.Vec(object.x(),object.y(),object.z()),object.scale(),object.portalParameters());}
     /** Same last-authored portal choice as the native catalog. Nonportal copies
      * do not erase another physical factory's already parsed portal settings. */
     public static NativePortal from(ScenePayload.Entry entry,java.util.function.Function<String,String> behaviors){

@@ -29,9 +29,9 @@ static class SetupPackage {
     internal const string StartupUrl="https://github.com/DeTTK/SCServer/releases/download/loading-screen-2026.11.21/startup-guard-20261121.jar";
     internal const string StartupHash="e58ef38fb32af6d025adbf71ab3e8892fd9c6faac61a5fbb356fb38ee59b4fd0";
     internal const int StartupBytes=136518;
-    internal const string ServerUrl="https://github.com/DeTTK/SCServer/releases/download/anomaly-radius-2026.11.22/server-anomaly-radius-20261122.jar";
-    internal const string ServerHash="6914db8e3a24c3b5664f34d8d570d7f7de54393d72735a02cac1b7d30305d888";
-    internal const int ServerBytes=3835735;
+    internal const string ServerUrl="https://github.com/DeTTK/SCServer/releases/download/portals-2026.11.22/server-portals-20261122.jar";
+    internal const string ServerHash="b0c3b8a7d00cb113776de7057a8fd014b36e593e60533a846520fb8c3100fb93";
+    internal const int ServerBytes=3838321;
     internal const string CompletionUrl="https://github.com/DeTTK/SCServer/releases/download/lootboxes-2026.11.22/command-completion.jar";
     internal const string CompletionHash="2b20f9beccdf59d0f977f91259702f76887e485ba44486e93233910d1a1d97e9";
     internal const int CompletionBytes=16607;

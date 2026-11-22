@@ -33,6 +33,16 @@ public final class SceneAccess implements AutoCloseable {
     public CompletableFuture<JsonObject> queuedAnomaly(UUID writer,szserver.client.AnomalySettings.Save request,List<Long> chunks){
         List<Long> scope=List.copyOf(chunks);return writeQueue.submit(writer,request.settings().bytes().length,()->anomalySave(request.identity(),previous->request.settings(),false,scope));
     }
+    public CompletableFuture<JsonObject> queuedPortal(UUID writer,szserver.client.PortalPackets.Settings request,List<Long> chunks){
+        List<Long> scope=List.copyOf(chunks);return writeQueue.submit(writer,request.compressed().length,()->{
+            CompletableFuture<JsonObject> result=new CompletableFuture<>();pending.add(result);result.whenComplete((v,e)->pending.remove(result));
+            try{worker.execute(()->{try{
+                var object=locate(request.identity(),scope);String behavior=object.entry().object().behaviour(world.submit(w->w.sceneBehaviour(object.entry().object().asset())).get(5,TimeUnit.SECONDS));if(!NativePortal.behaviour(behavior))throw new IllegalArgumentException("scene_object_not_portal");
+                var settings=szserver.client.SceneNbt.read(SceneConfigurationPackets.compressedSaveNbt(request.compressed()));var original=szserver.client.SceneNbt.read(object.entry().object().configuration());var values=new LinkedHashMap<>(original.values());values.put("settings",new szserver.client.SceneNbt.Tag(10,settings.values()));byte[] payload=szserver.client.SceneNbt.write(new szserver.client.SceneNbt.Root(original.name(),values));
+                JsonObject command=Json.tree(Map.of("commandId",UUID.randomUUID().toString(),"type","scene_config","objectId",request.identity().toString(),"chunk",Map.of("x",object.x(),"z",object.z())));command.addProperty("fullSave",false);command.addProperty("configurationBehavior",behavior);command.add("configuration",SceneConfigurationPackets.parts(payload));submit(command).whenComplete((v,e)->{if(e!=null)result.completeExceptionally(e);else{writes.incrementAndGet();result.complete(v);}});
+            }catch(Exception error){result.completeExceptionally(error);}});}catch(RejectedExecutionException full){rejected.incrementAndGet();result.completeExceptionally(full);}return result;
+        });
+    }
     public CompletableFuture<JsonObject> queuedAnomalyStrength(UUID writer,szserver.client.AnomalySettings.Strength request,List<Long> chunks){
         List<Long> scope=List.copyOf(chunks);return writeQueue.submit(writer,20,()->anomalySave(request.identity(),s->new szserver.client.AnomalySettings(s.name(),s.chance(),s.dropDisabled(),s.preset(),s.cooldown(),request.value(),s.setVelocity(),s.individual()),true,scope));
     }

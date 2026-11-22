@@ -1,0 +1,132 @@
+{
+  "result": "PASS",
+  "date": "2026-11-22",
+  "portalChecks": 1019,
+  "actualRenderedClient": true,
+  "nativeInteractionState": {
+    "nativeType": "759996094",
+    "interaction": "INSTANT_INTERACT",
+    "flag": true,
+    "aimed": true
+  },
+  "negativeAimState": {
+    "nativeType": "759996094",
+    "interaction": "INSTANT_INTERACT",
+    "flag": true,
+    "aimed": false
+  },
+  "twoNearbyDoorsSelectedCorrectly": true,
+  "bubbleEntry": true,
+  "nativePortalSettingSaves": 3,
+  "settingsFailures": 0,
+  "inputGuard": {
+    "qaName": "rendered-client-qa-portal-eb88324124",
+    "isolatedTest": true,
+    "physicalCallbacksRegistered": false,
+    "nativeRawInputBlocked": true,
+    "nativeRawListenerBlocked": true,
+    "fmodSilentSystems": 1,
+    "isolationBlockedCalls": 9,
+    "glfwTransformed": true,
+    "frontendHook": true,
+    "quickSetupContinued": false,
+    "frontendError": "",
+    "blockedDesktopOperations": 8,
+    "windowCreates": 3,
+    "windowVisibilityPolicy": "hidden",
+    "virtualFocusReads": true,
+    "nativeAttackAttempts": 0,
+    "nativeAttackResult": "",
+    "virtualKeyboardStateReads": true,
+    "virtualInputModeReads": true,
+    "cursorCaptureWritesAllowed": false,
+    "cursorPositionWritesAllowed": false
+  },
+  "sourceSuite": {
+    "result": "PASS",
+    "checks": [
+      "native return descriptor, bridge, parameters and static exclusion: 5 PASS",
+      "region slot/overflow/truncation/CRC/healthy-neighbour bounds",
+      "native unlimited protection remains finite; unrelated invalid stats rejected",
+      "authored admin Gauss accepted; nonfinite weapon parameters rejected",
+      "character scale native dimensions, bounded commands, optional-save recovery, native ready bounds and ceiling admission",
+      "native grid migration preserves complete items; full bag overflow and interrupted-marker retry",
+      {
+        "journalAssertions": 12047,
+        "records": 12032
+      },
+      "gateway same/fresh-token retry, invalid identity/session, single-use world claim",
+      "72 full HTTP/gateway/world cycles, Unicode identities, concurrent protocols and cold one-shot recovery"
+    ],
+    "gameFilesUsed": false,
+    "networkSessionTested": false
+  },
+  "captureAudit": {
+    "date": "2026-11-22",
+    "files": 352,
+    "bytes": 13237464242,
+    "rows": 8873635,
+    "decodedPacketRows": 2235970,
+    "rawDatagrams": 3107493,
+    "badJsonLines": 1,
+    "numericPacketIds": 1522,
+    "duplicateFilesSkipped": 22,
+    "nativeCorpseSamples": 18,
+    "nativeCorpsePrefixChecks": 126,
+    "mechanicsRows": 64,
+    "statusCounts": {
+      "работает": 27,
+      "частично": 18,
+      "исправлено": 2,
+      "нет полного цикла": 5,
+      "работает с ограничениями": 3,
+      "нет": 3,
+      "не реализован полностью": 1,
+      "не подтверждено / нет полного цикла": 1,
+      "отдельная реализация": 3,
+      "не реализовано полностью": 1
+    }
+  },
+  "ragdollPhysicsFixed": false,
+  "serverSha256": "b0c3b8a7d00cb113776de7057a8fd014b36e593e60533a846520fb8c3100fb93",
+  "portalLookupAssertions": 50,
+  "installer": {
+    "result": "PASS",
+    "cases": [
+      {
+        "manual": false,
+        "serverAndClientUpdated": true,
+        "launcherUpdated": true,
+        "newUiAgentInstalled": true,
+        "commandCompletionInstalled": true,
+        "existingModSettingsPreserved": true,
+        "previousUiAgentRetained": true,
+        "scaleManifestAdded": true,
+        "worldAndCharactersPreserved": true,
+        "serverRollbackPreserved": true,
+        "repeatNoOp": true,
+        "fullBundleRedownloaded": false
+      },
+      {
+        "manual": true,
+        "serverAndClientUpdated": true,
+        "launcherUpdated": true,
+        "newUiAgentInstalled": true,
+        "commandCompletionInstalled": true,
+        "existingModSettingsPreserved": true,
+        "previousUiAgentRetained": true,
+        "scaleManifestAdded": true,
+        "worldAndCharactersPreserved": true,
+        "serverRollbackPreserved": true,
+        "repeatNoOp": true,
+        "fullBundleRedownloaded": false
+      }
+    ],
+    "setupSha256": "ad5726bd2d01c17ed2485ad5d07f4050b69d6ef7dadbf12c49781ef93bc9a916"
+  },
+  "nativeCorpsePrefixOracle": {
+    "samples": 18,
+    "checks": 126,
+    "skinArmorDecoded": false
+  }
+}
