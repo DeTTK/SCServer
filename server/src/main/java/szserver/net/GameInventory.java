@@ -307,16 +307,17 @@ public final class GameInventory implements AutoCloseable {
         mutate(id,operation,null,success,failure);
     }
     /** Character remains busy until the off-owner plan is durably committed or rejected. */
-    public void sort(UUID id,Inventory.Address root,Consumer<Inventory.Plan> success,Consumer<String> failure){
+    public void sort(UUID id,Inventory.Address root,Consumer<Inventory.Plan> success,Consumer<String> failure){mutateAsync(id,before->before.sort(root),success,failure);}
+    public void mutateAsync(UUID id,Function<Inventory,Inventory.Plan> operation,Consumer<Inventory.Plan> success,Consumer<String> failure){
         Character c=character(id);if(c.busy||c.failed||c.deathClear||!admissionAllowed(id)){denied++;failure.accept("inventory_busy");return;}
         Inventory before=c.inventory;c.busy=true;
         try{factories.execute(()->{try{
-            Inventory.Plan plan=before.sort(root);
+            Inventory.Plan plan=operation.apply(before);
             completion(()->{
-                if(c.inventory!=before||c.failed||c.deathClear||!admissionAllowed(id)){c.busy=false;denied++;failure.accept("inventory_sort_stale");return;}
+                if(c.inventory!=before||c.failed||c.deathClear||!admissionAllowed(id)){c.busy=false;denied++;failure.accept("inventory_plan_stale");return;}
                 persist(id,c,plan,success,failure);
             });
-        }catch(Exception|LinkageError error){completion(()->{c.busy=false;denied++;failure.accept(Objects.toString(error.getMessage(),"inventory_sort_failed"));});}});}
+        }catch(Exception|LinkageError error){completion(()->{c.busy=false;denied++;failure.accept(Objects.toString(error.getMessage(),"inventory_plan_failed"));});}});}
         catch(RejectedExecutionException full){c.busy=false;denied++;failure.accept("inventory_factory_queue_full");}
     }
     public boolean areaApplied(UUID target,UUID projectile,int profile){Character c=character(target);if(c.applications==null)c.applications=GrenadeApplications.read(journal.gameplay(target));return c.applications.contains(projectile,profile);}

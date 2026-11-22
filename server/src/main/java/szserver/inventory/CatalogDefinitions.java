@@ -19,6 +19,12 @@ public final class CatalogDefinitions {
                 if(!row.has("stack_size")&&limits.has(kind))row.add("stack_size",limits.get(kind).deepCopy());
             }
         }
+        // The optional compatibility file may predate newly reviewed factory families.
+        // Fill absent fields only; authored limits continue to win.
+        for(var entry:rows.entrySet()){
+            JsonObject row=entry.getValue().getAsJsonObject();String kind=row.has("type")?row.get("type").getAsString():"";
+            Integer limit=NativeStackRules.DEFAULTS.get(kind);if(!row.has("stack_size")&&limit!=null)row.addProperty("stack_size",limit);
+        }
         merge(rows,file.resolveSibling("native-builtin-definitions.json"));
         merge(rows,file.resolveSibling("native-block-item-definitions.json"));
         merge(rows,file.resolveSibling("native-developer-item-definitions.json"));

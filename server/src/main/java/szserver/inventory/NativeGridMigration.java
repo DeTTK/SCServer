@@ -10,7 +10,7 @@ import java.util.*;
 /** One-time repair and atomic checkpoint under ServerDataLease, before game listeners. */
 public final class NativeGridMigration {
     private NativeGridMigration(){}
-    private static final String POLICY="native-inventory-grid-v2";
+    private static final String POLICY="native-inventory-rules-v3";
     private static Map<String,Object> status(Path data)throws Exception{
         Path file=data.resolve("characters.sjournal"),marker=data.resolve("native-grid-migration.json");
         if(!Files.exists(file))return Map.of("status","not-needed");
@@ -32,7 +32,7 @@ public final class NativeGridMigration {
         Map<String,Object> status=status(data);if(status!=null)return status;
         Path file=data.resolve("characters.sjournal"),marker=data.resolve("native-grid-migration.json");
         ItemCatalog previous=ItemCatalog.legacyGeometry(definitions),current=new ItemCatalog(definitions);
-        Set<Integer> changed=current.geometryDifferences(previous);long[] scanned={0};int repaired=0,moved=0;
+        Set<Integer> changed=current.geometryDifferences(previous);long[] scanned={0};int repaired=0,moved=0,recoveredCopies=0;
         Path queue=data.resolve("native-grid-migration.queue"),temporary=data.resolve("native-grid-migration.incoming");
         try(InventoryJournal journal=new InventoryJournal(file,previous)){
             // Keep the queue on disk: a large cold character directory stays bounded.
@@ -42,18 +42,25 @@ public final class NativeGridMigration {
             try(var input=new DataInputStream(new BufferedInputStream(Files.newInputStream(queue,LinkOption.NOFOLLOW_LINKS)))){
                 for(;;){UUID id;try{id=new UUID(input.readLong(),input.readLong());}catch(EOFException end){break;}
                     Inventory before=journal.load(id);
-                    Map<Inventory.Address,ItemStack> prepared=new TreeMap<>();boolean metadataChanged=false;
-                    for(var row:before.items().entrySet()){ItemStack item=nativeItems==null?row.getValue():nativeItems.geometry(row.getValue());prepared.put(row.getKey(),item);metadataChanged|=item.gridWidth()!=row.getValue().gridWidth()||item.gridHeight()!=row.getValue().gridHeight();}
-                    boolean valid=true;try{Inventory.restore(current,prepared,before.revision());}
+                    Map<Inventory.Address,ItemStack> prepared=new TreeMap<>();List<ItemStack> extras=new ArrayList<>();boolean metadataChanged=false;
+                    for(var row:before.items().entrySet()){ItemStack item=nativeItems==null?row.getValue():nativeItems.geometry(row.getValue());if(NativeStackRules.singletonBuiltin(item.id(),current.get(item.id()).type())&&item.count()>1){
+                            if(nativeItems==null)throw new IllegalStateException("native_count_repair_requires_factories");
+                            ItemStack single=item.count(1);for(int n=1;n<item.count();n++)extras.add(nativeItems.copyForGrant(single));item=single;metadataChanged=true;
+                        }prepared.put(row.getKey(),item);metadataChanged|=item.gridWidth()!=row.getValue().gridWidth()||item.gridHeight()!=row.getValue().gridHeight();}
+                    boolean valid=extras.isEmpty();if(valid)try{Inventory.restore(current,prepared,before.revision());}
                     catch(IllegalArgumentException oldPlacement){if(!Set.of("occupied_inventory_cells","item_out_of_grid","wrong_equipment").contains(oldPlacement.getMessage()))throw oldPlacement;valid=false;}
                     if(valid&&!metadataChanged)continue;
+                    // Old generic quest rules could issue count>1 with one native identity.
+                    // Keep the original identity on the first item and assign fresh identities to its counted copies.
+                    for(int n=0;n<extras.size();n++)prepared.put(new Inventory.Address(1,0,32767-n),extras.get(n));
+                    recoveredCopies+=extras.size();
                     if(!valid){
                         Map<Inventory.Address,LegacyInventoryLayout.Root> roots=new TreeMap<>();prepared.forEach((address,item)->roots.put(address,new LegacyInventoryLayout.Root(item,false)));
-                        var after=LegacyInventoryLayout.repack(current,null,roots);if(after.splitRoots()!=0)throw new IllegalStateException("native_grid_repair_cannot_split_identity");prepared=new TreeMap<>(after.items());moved+=after.movedRoots();
+                        var after=LegacyInventoryLayout.repack(current,nativeItems,roots);if(after.splitRoots()!=0)throw new IllegalStateException("native_grid_repair_cannot_split_identity");prepared=new TreeMap<>(after.items());moved+=after.movedRoots();
                     }
                     Map<Inventory.Address,ItemStack> delta=new TreeMap<>();before.items().keySet().forEach(address->delta.put(address,null));delta.putAll(prepared);
-                    // Only positions change. The normal journal preserves complete native
-                    // stacks, gameplay and its durable revision/crash-recovery contract.
+                    // Preserve native bytes/gameplay; the reviewed singleton count repair above
+                    // retains one original identity and accounts for each freshly identified copy.
                     journal.commit(id,before.replace(delta,0)).get();repaired++;
                 }
             }
@@ -62,7 +69,7 @@ public final class NativeGridMigration {
             // replays the file. Also runs after a crash between commit and checkpoint.
             journal.compact().get();
         }finally{Files.deleteIfExists(queue);}
-        Map<String,Object> report=Map.of("policy",POLICY,"scanned",scanned[0],"characters",repaired,"movedRoots",moved);
+        Map<String,Object> report=Map.of("policy",POLICY,"scanned",scanned[0],"characters",repaired,"movedRoots",moved,"recoveredCopies",recoveredCopies);
         byte[] raw=new Gson().toJson(report).getBytes(java.nio.charset.StandardCharsets.UTF_8);
         try(FileChannel out=FileChannel.open(temporary,StandardOpenOption.CREATE,StandardOpenOption.TRUNCATE_EXISTING,StandardOpenOption.WRITE,LinkOption.NOFOLLOW_LINKS)){java.nio.ByteBuffer bytes=java.nio.ByteBuffer.wrap(raw);while(bytes.hasRemaining())out.write(bytes);out.force(true);}
         try{Files.move(temporary,marker,StandardCopyOption.ATOMIC_MOVE,StandardCopyOption.REPLACE_EXISTING);}catch(AtomicMoveNotSupportedException unsupported){Files.move(temporary,marker,StandardCopyOption.REPLACE_EXISTING);}

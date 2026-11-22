@@ -104,6 +104,10 @@ def tests():
     with tempfile.TemporaryDirectory(prefix='inventory-sort-',dir=B/'scratch' if (B/'scratch').exists() else B) as directory:
         subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.inventory.InventorySortTests',directory],check=True)
     results.append('inventory sort merges identical stacks, packs by family, covers bag/storage and packet 1506 layout')
+    for name in ['szserver.inventory.NativeStackRulesTests','szserver.net.InventoryTransferQueueTests']:
+        with tempfile.TemporaryDirectory(prefix='inventory-contract-',dir=B) as directory:
+            subprocess.run([tool('java'),'-Xmx128m','-cp',cp,name,directory],check=True)
+    results.append('native stack constructor defaults, game-object stacksize inheritance and bounded durable bulk-transfer FIFO')
     subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.world.RegionRecordBoundsTests'],check=True)
     subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.LootboxTests'],check=True)
     subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.WorldItemTests'],check=True)

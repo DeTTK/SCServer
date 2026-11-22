@@ -8,7 +8,9 @@ import com.github.luben.zstd.Zstd;
 /** Current native inventory wire formats, kept outside the inventory domain. */
 public final class InventoryPackets {
     public static final int SORT_ID=1506;
-    public record Request(int owner,int sequence,Inventory.Address source,List<Inventory.Address> destinations,int count,boolean split,int targetAggregate) {}
+    public record Request(int owner,int sequence,Inventory.Address source,List<Inventory.Address> destinations,int count,boolean split,int targetAggregate) {
+        public Request{Objects.requireNonNull(source);destinations=List.copyOf(destinations);}
+    }
     private static Inventory.Address address(DataInputStream in,int owner,int page)throws IOException {
         int aggregate=in.readUnsignedByte(),container=in.readUnsignedByte(),slot=in.readUnsignedShort();
         if(owner==-1&&aggregate==0&&container==0)return new Inventory.Address(2,page,slot);
@@ -18,7 +20,7 @@ public final class InventoryPackets {
         DataInputStream in=Wire.input(body);int owner,sequence,count=0,target=-1;boolean split=id==102||id==2040;Inventory.Address source;List<Inventory.Address> destinations=new ArrayList<>();
         if(id==1231||id==102||id==2009){
             if(id==102)count=in.readInt();owner=in.readShort();sequence=in.readShort();source=address(in,owner,page);
-            if(id==2009){target=in.readUnsignedByte();int n=in.readUnsignedShort();if(n==0||n>StorageLayout.MAX_CAPACITY)throw new IOException("quick_destination_limit");for(int i=0;i<n;i++)destinations.add(address(in,owner,page));count=in.readInt();}
+            if(id==2009){target=in.readUnsignedByte();int n=in.readUnsignedShort();if(n>StorageLayout.MAX_CAPACITY)throw new IOException("quick_destination_limit");for(int i=0;i<n;i++)destinations.add(address(in,owner,page));count=in.readInt();}
             else destinations.add(address(in,owner,page));
         }else if(id==1627||id==2040){
             // Owner trails the nullable addresses in these native variants.

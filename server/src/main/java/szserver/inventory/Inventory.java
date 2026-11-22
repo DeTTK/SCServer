@@ -24,7 +24,7 @@ public final class Inventory {
         if(x+width>8||a.slot/8+height>(capacity+7)/8)throw new IllegalArgumentException("item_out_of_grid");
         BitSet cells=new BitSet(capacity);for(int y=0;y<height;y++)for(int dx=0;dx<width;dx++){int slot=a.slot+y*8+dx;if(slot>=capacity)throw new IllegalArgumentException("item_out_of_grid");cells.set(slot);}return cells;
     }
-    private int limit(Address a,ItemStack item){int normal=catalog.get(item.id()).stackLimit();return a.aggregate==2&&normal>1?100000:normal;}
+    private int limit(Address a,ItemStack item){int normal=catalog.get(item.id()).stackLimit();return a.aggregate==2?NativeStackRules.storageLimit(normal):normal;}
     private void validate(Map<Address,ItemStack> state){Map<String,BitSet> occupied=new HashMap<>();
         for(var e:state.entrySet()){Address a=e.getKey();ItemStack item=e.getValue();check(a);if(item==null)throw new IllegalArgumentException("null_inventory_value");
             if(item.count()>limit(a,item))throw new IllegalArgumentException("stack_limit");

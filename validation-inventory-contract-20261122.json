@@ -1,0 +1,73 @@
+{
+  "result": "PASS",
+  "issue": 8,
+  "issue11ClosedAsRequested": true,
+  "serverOnlyChange": true,
+  "stockControlsPreserved": true,
+  "nativeFactoriesCaptured": 8783,
+  "nativeAndServerCommonItems": 8745,
+  "stackLimitMismatchesBefore": 225,
+  "stackLimitMismatchesAfter": 0,
+  "catalogueProfileDifference": {
+    "nativeOnlyIds": 38,
+    "serverOnlyIds": 43,
+    "scope": "profile composition differences documented separately; not counted as successfully matched item factories"
+  },
+  "nativeStackRuleAssertions": 35,
+  "transferQueueAssertions": 20,
+  "fullServerSuite": "PASS",
+  "nativeBulkRun": {
+    "manualFoodMerge": true,
+    "existingBreakfastStacksMergeOnStorageTransfer": true,
+    "nativeBulkBagToStorage": 135,
+    "nativeBulkStorageToBagSplitsAt64": true,
+    "baselineFourRequestAmmoReproNowMovesAll": 540,
+    "fullBagPartialWithdrawalAndNoRoomNoLoss": true,
+    "native50RootBulkCalls": 4,
+    "all159DetectorIdentitiesPreserved": true,
+    "transfers": {
+      "ownerLimit": 256,
+      "batches": 21,
+      "duplicates": 0,
+      "globalLimit": 2048,
+      "rejected": 0,
+      "admitted": 176,
+      "retained": 0,
+      "retainedBytes": 0,
+      "owners": 0
+    },
+    "result": "PASS",
+    "reconnectPreservesInventory": true
+  },
+  "crimsonNativeReward": "two official crimson rewards merge into six breakfasts with no_drop retained",
+  "bindingPropertiesPreserved": true,
+  "exactReleaseNoRoomAckAndSubsequentTransfers": "PASS",
+  "coldJournalCompleteItemBytesAndRevision": "PASS",
+  "oldInvalidSingletonCountRepair": {
+    "count": 5,
+    "distinctIdentities": 5,
+    "originalIdentityRetained": true,
+    "retryDidNotDuplicate": true
+  },
+  "installerSafetyAssertions": 54,
+  "installerUpdateLayouts": 2,
+  "testClient": {
+    "hidden": true,
+    "soundDisabled": true,
+    "physicalAndRawInputBlocked": true
+  },
+  "nativeClassHashes": {
+    "211097523": "4a9a19a8416399a0a331d3f9ac430c44c00609c9cdf1a503f0d2649c7b12194a",
+    "1366800141": "94f14ec8c4ac992b20763969bae2b6ee2bb151ca9eb16e79fac10b46c6453dba",
+    "105205961": "76cc9077ef02bf18e46ba5754649026167a0a425b571dc1fb45b0dde967ec958",
+    "830050478": "0d692aea94e445bb2fe1ec0137e547a8bbd241ff57ac8edd3871fd434dd2e442",
+    "175688206": "742d30deafd4018a48dfd3f2348556f080403e872bcd3b2a7a09f5c2f1550d9e",
+    "47325642": "1345757e4634c849a38c53a8810be683828360424ec9696a551400f9d0ca5288",
+    "1984657417": "c85ce5bb5eec1c333623e8e0b8b93a0d2d471f6ca618d84dec323196871aa908",
+    "833813734": "d84a18293e050ea41fd920bfa051caf823a0e7bd16af7f8d63b367a7f8d0d4ba",
+    "796253964": "794f586d7e22dfe542a1a3a078be52b85d930f58b13b1a92ddfb69191b97ea2b",
+    "1305711328": "fea773aba56a6537c05637ecb040ad36691af97f6b4f4e1d762418d962ef3f5b",
+    "721517361": "45c23518003e2866d34f4125736aacfdaea423eeac1ceb449cd342062faf6108",
+    "1617869543": "77858917dd96c71df0d877af8d5579f003ef89b9291f5a1d42d6f535bab902ac"
+  }
+}

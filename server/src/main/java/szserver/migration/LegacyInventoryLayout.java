@@ -16,7 +16,7 @@ public final class LegacyInventoryLayout {
     private int split,moved;
     private LegacyInventoryLayout(ItemCatalog catalog,GameItems nativeItems){this.catalog=catalog;this.nativeItems=nativeItems;}
     private int capacity(Inventory.Address a){return a.aggregate()==0?1:a.aggregate()==1?StorageLayout.BAG:StorageLayout.capacity(a.container());}
-    private int limit(Inventory.Address a,ItemStack item){int n=catalog.get(item.id()).stackLimit();return a.aggregate()==2&&n>1?100000:n;}
+    private int limit(Inventory.Address a,ItemStack item){int n=catalog.get(item.id()).stackLimit();return a.aggregate()==2?NativeStackRules.storageLimit(n):n;}
     private BitSet cells(Inventory.Address a,ItemStack item){
         if(!StorageLayout.validAddress(a))return null;
         // Preserve client-chosen equipment during unrelated grid/count repairs.
