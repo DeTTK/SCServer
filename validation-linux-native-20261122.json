@@ -1,0 +1,16 @@
+{
+  "result": "PASS",
+  "sourcePullRequest": 9,
+  "sourceHead": "83ef3d57526f19e680114faa14be69117291ab72",
+  "serverSuite": "full portable suite including 72 authentication cycles and current door/corpse tests",
+  "nativePlatformChecks": 18,
+  "aabbWindowsChecks": 10,
+  "installerSafetyChecks": 54,
+  "actualAdapterJniLoadAndCompression": true,
+  "canonicalSceneAndActorInitialization": true,
+  "missingAndCorruptNativeRetry": "PASS",
+  "intermediateAndStagingRootDirectoryLinks": "rejected before external child creation",
+  "freshAndManualInstallUpdates": "PASS; map, characters, mod settings and rollback preserved",
+  "nativeLinuxGameSessionTested": false,
+  "supersededPortalResearchIncluded": false
+}

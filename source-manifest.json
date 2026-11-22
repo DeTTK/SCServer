@@ -49,7 +49,7 @@
       "path": "README.md",
       "source": "publication/SCServer/README.md",
       "adjusted": true,
-      "sha256": "9904384c9f7bd12902c74a53b6bb048a5de643c1965c8ead6a7b0e87da76a3f4"
+      "sha256": "b9a8f00213a2b1bcfa10d3c12ba1271612f5f4d351f8066567e44bd737cadc4f"
     },
     {
       "path": "SECURITY.md",
@@ -421,13 +421,13 @@
       "path": "desktop/src/Setup.cs",
       "source": "publication/SCServer/desktop/src/Setup.cs",
       "adjusted": true,
-      "sha256": "d728682270cefd192be5c205e32645d26988207b8a8bf4549aeceb4eef4e65ad"
+      "sha256": "e33746a3ac1a2d49bff6abcbc8ca58cf56e872c9ca9c78010537a762beb93aac"
     },
     {
       "path": "desktop/tests/SetupSafetyTests.cs",
-      "source": "tools/setup-20261120/SetupSafetyTests.cs",
-      "adjusted": false,
-      "sha256": "ebe46233d28296642991d8668b306f10044f89bbbba9e0e40e3cc31449234250"
+      "source": "publication/SCServer/desktop/tests/SetupSafetyTests.cs",
+      "adjusted": true,
+      "sha256": "ef6190cd1c3a1ac3877cb63fe81557fa054bca89028b838bd661df98a6c2e41d"
     },
     {
       "path": "docs/ARCHITECTURE.md",
@@ -469,7 +469,7 @@
       "path": "docs/STATUS.md",
       "source": "publication/SCServer/docs/STATUS.md",
       "adjusted": true,
-      "sha256": "3e0dc06b5992de75c2b1ea6686b75eb25d4433ea7a13a6aaa202b2c7ed155772"
+      "sha256": "1e5cd70cd87bfffc4dd12252ea0537fbeb9891d33c3eaa6c41b32915720a490a"
     },
     {
       "path": "mods/arc-hud-prototype/src/ArcHudMod.java",
@@ -2209,7 +2209,7 @@
       "path": "scripts/build.py",
       "source": "publication/SCServer/scripts/build.py",
       "adjusted": true,
-      "sha256": "cc4dc5507a77edf7b51d16d9ba516fa18b6df1f6b46033a39d136d84352c9b95"
+      "sha256": "2798ed681c4f4819526e0b56ea5987f665c7a968df8ffc8de54fd68b17a57f4e"
     },
     {
       "path": "scripts/import_private_resources.py",
@@ -2508,8 +2508,8 @@
     {
       "path": "server/src/main/java/szserver/client/ClientSceneCodec.java",
       "source": "server-java/src/main/java/szserver/client/ClientSceneCodec.java",
-      "sha256": "1db66daca9bfea11354ed0d2547f1b58c45e08bce33b011b1bfe2778e43d6e07",
-      "adjusted": false
+      "adjusted": true,
+      "sha256": "e13d7b81a82de3a938217b9a83ae74dd2808c4f8f33514be8b002db2c97cbbdc"
     },
     {
       "path": "server/src/main/java/szserver/client/ClientStateAdapter.java",
@@ -2730,8 +2730,8 @@
     {
       "path": "server/src/main/java/szserver/client/NativeActorMotion.java",
       "source": "server-java/src/main/java/szserver/client/NativeActorMotion.java",
-      "sha256": "cdba2d9fe0774c1b78a81f4c0e3708ee49f6c35542ee84c55792ef3e17752959",
-      "adjusted": false
+      "adjusted": true,
+      "sha256": "6a9a43b7c60fff18781989e4da7600b7b1000057ccab1107e8a1fef6424814d9"
     },
     {
       "path": "server/src/main/java/szserver/client/NativeActorObstacles.java",
@@ -2852,6 +2852,12 @@
       "source": "server-java/src/main/java/szserver/client/NativeNbtLimits.java",
       "sha256": "19319e1b2c183c296bc59e08d427ebe6889e3855d7c473a4c821889b3ac5ec95",
       "adjusted": false
+    },
+    {
+      "path": "server/src/main/java/szserver/client/NativePlatform.java",
+      "source": "server-java/src/main/java/szserver/client/NativePlatform.java",
+      "adjusted": true,
+      "sha256": "e37ab4641ebb21c984a0d1a042d9adf33ab3a867c2527f469028c74dc7a9316e"
     },
     {
       "path": "server/src/main/java/szserver/client/NativeResidentChunkCodec.java",
@@ -4705,7 +4711,7 @@
       "path": "server/src/main/java/szserver/world/CollisionBoxes.java",
       "source": "server-java/src/main/java/szserver/world/CollisionBoxes.java",
       "adjusted": true,
-      "sha256": "b1808af00eb6bea10e0ac0f8d918fe7e48c9e77d898ce1c4e872243c13021d4c"
+      "sha256": "8ca254b26a54b7473238ab5f19e6829e0bf1425bb9650938b2b7c54004cd2587"
     },
     {
       "path": "server/src/main/java/szserver/world/CollisionTree.java",
@@ -5137,7 +5143,13 @@
       "path": "server/src/test/java/szserver/SceneInteractionTests.java",
       "source": "server-java/src/test/java/szserver/SceneInteractionTests.java",
       "adjusted": true,
-      "sha256": "c42cc894e189e71e75506c3de2e289b66ef5542a8a163ef867b42fce35f2e509"
+      "sha256": "f7bec97d2bce8cb9895c4e217a6adf8521235f1e2d2f49b58fe886556678baf5"
+    },
+    {
+      "path": "server/src/test/java/szserver/client/NativeLibraryProbe.java",
+      "source": "server-java/src/test/java/szserver/client/NativeLibraryProbe.java",
+      "adjusted": true,
+      "sha256": "0038a0b9e4a9846c1e3eac5fae4bb6ebce75f8711d6b7f9f9ae201a5da95c755"
     },
     {
       "path": "server/src/test/java/szserver/client/NativeMethodsTests.java",
@@ -5146,16 +5158,34 @@
       "sha256": "7a14d7716cbb57d82745bea62b09941dd87454d2e4c5cd32065aa57ed61181e7"
     },
     {
+      "path": "server/src/test/java/szserver/client/NativePlatformTests.java",
+      "source": "server-java/src/test/java/szserver/client/NativePlatformTests.java",
+      "adjusted": true,
+      "sha256": "2d8520bd92c867dae79e10b6678dfd137a3b744903885318da13f5beea3e383b"
+    },
+    {
       "path": "server/src/test/java/szserver/commands/SceneWritePressureTests.java",
       "source": "server-java/src/test/java/szserver/commands/SceneWritePressureTests.java",
       "adjusted": true,
       "sha256": "e4138535bcfda64027f18b62615d8d939c7d8c200a7a04b43a3c7a8b3552c317"
     },
     {
+      "path": "server/src/test/java/szserver/world/CollisionCaseTests.java",
+      "source": "server-java/src/test/java/szserver/world/CollisionCaseTests.java",
+      "adjusted": true,
+      "sha256": "d8d1353f2bb7e3e6fbd7629ba2c6536fabca7440c8c4b4bd68f2448c85681bae"
+    },
+    {
       "path": "server/src/test/java/szserver/world/RegionRecordBoundsTests.java",
       "source": "server-java/src/test/java/szserver/world/RegionRecordBoundsTests.java",
       "sha256": "a710c2171bc95e2ed060945f7060645da892ccbdf277dd0304f8e92fd2e2d9d6",
       "adjusted": false
+    },
+    {
+      "path": "validation-linux-native-20261122.json",
+      "source": "publication/SCServer/validation-linux-native-20261122.json",
+      "adjusted": true,
+      "sha256": "1cedc9183dd46ee9c1bdf818653742ecde6d8d022006be1c4bd2712f5ce9370e"
     },
     {
       "path": "validation-ragdolls-interactions-20261122.json",

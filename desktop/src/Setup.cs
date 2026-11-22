@@ -29,9 +29,9 @@ static class SetupPackage {
     internal const string StartupUrl="https://github.com/DeTTK/SCServer/releases/download/loading-screen-2026.11.21/startup-guard-20261121.jar";
     internal const string StartupHash="e58ef38fb32af6d025adbf71ab3e8892fd9c6faac61a5fbb356fb38ee59b4fd0";
     internal const int StartupBytes=136518;
-    internal const string ServerUrl="https://github.com/DeTTK/SCServer/releases/download/ragdolls-interactions-2026.11.22/server-ragdolls-interactions-20261122.jar";
-    internal const string ServerHash="b261e21dea7d68186e5fe5ebd2dd51966ba2d5aa99a47bd8ccb19aaf57493ecd";
-    internal const int ServerBytes=6591393;
+    internal const string ServerUrl="https://github.com/DeTTK/SCServer/releases/download/linux-native-2026.11.22/server-linux-native-20261122.jar";
+    internal const string ServerHash="f3ea9701c2633090786f3a6b5752991529183ee5c107f4031ba6b517fbcf06d5";
+    internal const int ServerBytes=6562981;
     internal const string CompletionUrl="https://github.com/DeTTK/SCServer/releases/download/lootboxes-2026.11.22/command-completion.jar";
     internal const string CompletionHash="2b20f9beccdf59d0f977f91259702f76887e485ba44486e93233910d1a1d97e9";
     internal const int CompletionBytes=16607;
@@ -246,8 +246,24 @@ static class SetupPackage {
             }
         }
     }
+    // Cache path parsing and directory creation, never the result of link checks.
+    // Every entry rechecks all ancestors, including previously used directories.
+    static void ExtractDirectory(string path,string stage,System.Collections.Generic.Dictionary<string,string[]> chains) {
+        string key=Plain(path);string[] chain;bool known=chains.TryGetValue(key,out chain);
+        if(!known){
+            NoLinks(key,stage);var parts=new System.Collections.Generic.List<string>();string current=key;
+            while(!String.Equals(current,stage,StringComparison.OrdinalIgnoreCase)){parts.Add(current);current=Path.GetDirectoryName(current);}
+            parts.Add(stage);parts.Reverse();chain=parts.ToArray();
+        }
+        foreach(string directory in chain){
+            if(Linked(directory))throw new IOException("В пути есть ссылка на другую папку. Выберите обычную папку установки.");
+            if(!known){Directory.CreateDirectory(Extended(directory));if(Linked(directory))throw new IOException("В пути есть ссылка на другую папку. Выберите обычную папку установки.");}
+        }
+        if(!known){if(chains.Count>=4096)chains.Clear();chains[key]=chain;}
+    }
     internal static void Extract(string archive,string stage,Action<string,int> progress,CancellationToken cancel) {
-        NoLinks(stage,stage);Directory.CreateDirectory(stage);
+        stage=Plain(stage);if(Linked(stage))throw new IOException("Временная папка не должна быть ссылкой.");Directory.CreateDirectory(Extended(stage));
+        var chains=new System.Collections.Generic.Dictionary<string,string[]>(StringComparer.OrdinalIgnoreCase);
         using(var zip=ZipFile.OpenRead(archive)) {
             if(zip.Entries.Count>500000)throw new InvalidDataException("Слишком много файлов в архиве");
             long sum=0;int done=0;var clock=Stopwatch.StartNew();
@@ -256,10 +272,11 @@ static class SetupPackage {
                 if(sum>5L*1024*1024*1024)throw new InvalidDataException("Слишком большой распакованный архив");
                 int mode=(entry.ExternalAttributes>>16)&0xF000;
                 if(mode!=0&&mode!=0x8000&&mode!=0x4000)throw new InvalidDataException("Ссылки в архиве не поддерживаются");
-                string path=EntryPath(stage,entry.FullName);NoLinks(path,stage);
-                if(String.IsNullOrEmpty(entry.Name))Directory.CreateDirectory(Extended(path));
+                string path=EntryPath(stage,entry.FullName);
+                if(String.IsNullOrEmpty(entry.Name))ExtractDirectory(path,stage,chains);
                 else {
-                    Directory.CreateDirectory(Extended(Path.GetDirectoryName(path)));
+                    ExtractDirectory(Path.GetDirectoryName(path),stage,chains);
+                    if(Linked(path))throw new IOException("В пути есть ссылка на другую папку. Выберите обычную папку установки.");
                     using(var input=entry.Open())using(var output=new FileStream(Extended(path),FileMode.CreateNew,FileAccess.Write,FileShare.None))input.CopyTo(output,1024*1024);
                 }
                 done++;if(clock.ElapsedMilliseconds>250){progress("Распаковывается: "+done+" / "+zip.Entries.Count+" файлов",80+(done*18/zip.Entries.Count));clock.Restart();}

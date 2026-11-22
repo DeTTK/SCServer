@@ -8,7 +8,9 @@ import java.util.*;
 public final class CollisionBoxes {
     public static final long DEFAULT_BYTES=32L*1024*1024;
     private record Cached(List<SceneCollision.Box> boxes,long bytes){}
-    private final Path root;private final long limit;private final LinkedHashMap<String,Cached> cache=new LinkedHashMap<>(16,.75f,true);private long retained,loads,evictions,failures;
+    private final Path root;private final long limit;private final LinkedHashMap<String,Cached> cache=new LinkedHashMap<>(16,.75f,true);private long retained,loads,evictions,failures,caseFallbacks,caseIndexBytes;
+    private Map<String,Path> caseIndex;private Set<String> ambiguousCase;
+    private static final int MAX_CASE_ASSETS=65536;private static final long MAX_CASE_BYTES=16L*1024*1024;
     public CollisionBoxes(Path root){this(root,DEFAULT_BYTES);}
     private ActorMotion feedbackMotion;
     ActorContacts.Obstacle livingObstacle(SceneObject object,SceneRegistry.Definition definition){return feedbackMotion!=null&&feedbackMotion.mapObjectsEnabled()?feedbackMotion.livingObstacle(definition,object):null;}
@@ -57,9 +59,25 @@ public final class CollisionBoxes {
         if(asset.behaviour().equals("culling_volume")||!feedback&&definition.has("collision")&&definition.get("collision").isJsonPrimitive()&&definition.get("collision").getAsString().equals("none")||!definition.has("aabb")||!definition.get("aabb").isJsonPrimitive()||!definition.get("aabb").getAsJsonPrimitive().isString())return List.of();
         String name=definition.get("aabb").getAsString();String cacheKey=state.isEmpty()?name:name+"#door="+state;Cached found=cache.get(cacheKey);if(found!=null)return found.boxes();
         int colon=name.indexOf(':');String relative=colon<0?name:name.substring(0,colon)+"/"+name.substring(colon+1);Path path=root.resolve("assets").resolve(relative).normalize();if(!path.startsWith(root)||!path.startsWith(root.resolve("assets")))throw new IllegalArgumentException("invalid_collision_asset_path");
-        try{Path real=path.toRealPath(),base=root.toRealPath();if(!real.startsWith(base))throw new IllegalArgumentException("invalid_collision_asset_path");long size=Files.size(real);if(size>SceneCollision.MAX_ASSET_BYTES)throw new IllegalArgumentException("collision_asset_size_limit");byte[] data;try(InputStream in=Files.newInputStream(real)){data=in.readNBytes(SceneCollision.MAX_ASSET_BYTES+1);}if(data.length>SceneCollision.MAX_ASSET_BYTES)throw new IllegalArgumentException("collision_asset_size_limit");List<SceneCollision.Box> boxes=state.isEmpty()?SceneCollision.decode(data):SceneCollision.decode(data,part->part.startsWith("closed_")?state.equals("closed"):!part.startsWith("open_")||state.equals("open"));long bytes=96L+cacheKey.length()*2L+boxes.size()*80L;loads++;
+        try{Path real;try{real=path.toRealPath();}catch(NoSuchFileException missing){Path candidate=caseInsensitive(root.resolve("assets"),relative);if(candidate==null)throw missing;real=candidate.toRealPath();caseFallbacks++;}Path base=root.toRealPath();if(!real.startsWith(base))throw new IllegalArgumentException("invalid_collision_asset_path");long size=Files.size(real);if(size>SceneCollision.MAX_ASSET_BYTES)throw new IllegalArgumentException("collision_asset_size_limit");byte[] data;try(InputStream in=Files.newInputStream(real)){data=in.readNBytes(SceneCollision.MAX_ASSET_BYTES+1);}if(data.length>SceneCollision.MAX_ASSET_BYTES)throw new IllegalArgumentException("collision_asset_size_limit");List<SceneCollision.Box> boxes=state.isEmpty()?SceneCollision.decode(data):SceneCollision.decode(data,part->part.startsWith("closed_")?state.equals("closed"):!part.startsWith("open_")||state.equals("open"));long bytes=96L+cacheKey.length()*2L+boxes.size()*80L;loads++;
             if(bytes<=limit){while(!cache.isEmpty()&&(retained+bytes>limit||cache.size()>=4096)){var it=cache.entrySet().iterator();retained-=it.next().getValue().bytes();it.remove();evictions++;}cache.put(cacheKey,new Cached(boxes,bytes));retained+=bytes;}return boxes;
         }catch(IOException|IllegalArgumentException error){failures++;throw error;}
     }
-    public Map<String,Object> metrics(){return Map.of("cached",cache.size(),"retainedBytes",retained,"limitBytes",limit,"loads",loads,"evictions",evictions,"failures",failures);}
+    /** This worker-owned resource catalog is immutable for the lifetime of the cache. Only AABBs are indexed. */
+    private Path caseInsensitive(Path assets,String relative)throws IOException{
+        if(caseIndex==null){
+            Map<String,Path> built=new HashMap<>();Set<String> ambiguous=new HashSet<>();long bytes=0;int count=0;
+            if(Files.isDirectory(assets))try(var walk=Files.walk(assets)){
+                var files=walk.iterator();while(files.hasNext()){
+                    Path file=files.next();if(!file.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".aabb")||!Files.isRegularFile(file))continue;
+                    String key=assets.relativize(file).toString().replace('\\','/').toLowerCase(Locale.ROOT);bytes+=192L+key.length()*4L;
+                    if(++count>MAX_CASE_ASSETS||bytes>MAX_CASE_BYTES)throw new IOException("collision_case_index_limit");
+                    Path previous=built.putIfAbsent(key,file);if(previous!=null&&!previous.equals(file))ambiguous.add(key);
+                }
+            }catch(UncheckedIOException error){throw error.getCause();}
+            caseIndex=Map.copyOf(built);ambiguousCase=Set.copyOf(ambiguous);caseIndexBytes=bytes;
+        }
+        String key=relative.replace('\\','/').toLowerCase(Locale.ROOT);if(ambiguousCase.contains(key))throw new IOException("ambiguous_collision_asset_case:"+key);return caseIndex.get(key);
+    }
+    public Map<String,Object> metrics(){return Map.of("cached",cache.size(),"retainedBytes",retained,"limitBytes",limit,"loads",loads,"evictions",evictions,"failures",failures,"caseFallbacks",caseFallbacks,"caseIndexEntries",caseIndex==null?0:caseIndex.size(),"caseIndexBytes",caseIndexBytes);}
 }

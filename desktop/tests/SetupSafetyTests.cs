@@ -8,6 +8,11 @@ static class SetupSafetyTests {
  static void Rejected(Action action,string why){try{action();throw new Exception("Accepted: "+why);}catch(InvalidDataException){checks++;}}
  static void RejectedIo(Action action,string why){try{action();throw new Exception("Accepted: "+why);}catch(InvalidDataException){throw;}catch(IOException){checks++;}}
  static bool CreateSymbolicLink(string link,string target,uint flags){try{return CreateSymbolicLinkW(link,target,flags);}catch(EntryPointNotFoundException){return false;}catch(DllNotFoundException){return false;}}
+ static bool DirectoryLink(string link,string target){
+  if(CreateSymbolicLink(link,target,3)||CreateSymbolicLink(link,target,1))return true;
+  // Junction creation does not require Developer Mode or the symlink privilege.
+  try{var start=new System.Diagnostics.ProcessStartInfo("powershell.exe","-NoProfile -NonInteractive -Command \"New-Item -ItemType Junction -Path '"+link.Replace("'","''")+"' -Target '"+target.Replace("'","''")+"' -ErrorAction Stop | Out-Null\""){UseShellExecute=false,CreateNoWindow=true,WindowStyle=System.Diagnostics.ProcessWindowStyle.Hidden};using(var process=System.Diagnostics.Process.Start(start)){if(!process.WaitForExit(10000)){process.Kill();return false;}return process.ExitCode==0;}}catch(System.ComponentModel.Win32Exception){return false;}
+ }
  static void Main(string[] args){SetupPackage.EnableLongPaths();string root=Path.GetFullPath(args[0]);Directory.CreateDirectory(root);
   foreach(string value in new[]{@"C:\folder with spaces\", "a\"b", "", @"C:\тест\игра", @"abc\\\", "nick name"}){
    foreach(string quoted in new[]{Portable.Q(value),SetupForm.Quote(value)}){
@@ -28,6 +33,16 @@ static class SetupSafetyTests {
   Rejected(()=>SetupPackage.Extract(bad,Path.Combine(root,"unpack-bad"),(s,p)=>{},CancellationToken.None),"Traversal archive");
   string symbolic=Path.Combine(root,"symbolic.zip");using(var z=ZipFile.Open(symbolic,ZipArchiveMode.Create)){var e=z.CreateEntry("Client/link");e.ExternalAttributes=unchecked((int)0xA1FF0000);}
   Rejected(()=>SetupPackage.Extract(symbolic,Path.Combine(root,"unpack-symlink"),(s,p)=>{},CancellationToken.None),"Symbolic ZIP entry");
+  string deepZip=Path.Combine(root,"deep.zip"),deepStage=Path.Combine(root,"unpack-deep");
+  using(var z=ZipFile.Open(deepZip,ZipArchiveMode.Create))for(int i=0;i<200;i++)using(var w=new StreamWriter(z.CreateEntry("Client/assets/g"+i%7+"/s"+i%11+"/f"+i+".json").Open()))w.Write(i);
+  SetupPackage.Extract(deepZip,deepStage,(s,p)=>{},CancellationToken.None);Require(Directory.GetFiles(deepStage,"*.json",SearchOption.AllDirectories).Length==200,"Repeated and implicit parent directories extracted");SetupPackage.RemoveStage(root,deepStage);
+  string linkedZip=Path.Combine(root,"linked-parent.zip"),linkedStage=Path.Combine(root,"unpack-linked-parent"),linkTarget=Path.Combine(root,"outside-stage"),assetLink=Path.Combine(linkedStage,"Client/assets");
+  Directory.CreateDirectory(Path.GetDirectoryName(assetLink));Directory.CreateDirectory(linkTarget);
+  using(var z=ZipFile.Open(linkedZip,ZipArchiveMode.Create))using(var w=new StreamWriter(z.CreateEntry("Client/assets/newdir/payload.txt").Open()))w.Write("must not escape");
+  if(!DirectoryLink(assetLink,linkTarget))throw new Exception("Cannot create a directory link for the extraction regression test");
+  try{RejectedIo(()=>SetupPackage.Extract(linkedZip,linkedStage,(s,p)=>{},CancellationToken.None),"Intermediate link rejected before creating child directory");Require(!Directory.Exists(Path.Combine(linkTarget,"newdir")),"No external directory created through ancestor link");}finally{Directory.Delete(assetLink);}
+  string stageLink=Path.Combine(root,"unpack-root-link");if(!DirectoryLink(stageLink,linkTarget))throw new Exception("Cannot create staging root link");
+  try{RejectedIo(()=>SetupPackage.Extract(zip,stageLink,(s,p)=>{},CancellationToken.None),"Linked staging root rejected");Require(!Directory.Exists(Path.Combine(linkTarget,"Client")),"Linked staging root leaves outside target untouched");}finally{Directory.Delete(stageLink);}
   string foreign=Path.Combine(root,"existing"),save=Path.Combine(foreign,"Local/Server/data/player.json");Directory.CreateDirectory(Path.GetDirectoryName(save));File.WriteAllText(save,"preserve me");
   try{SetupPackage.Install(foreign,(s,p)=>{},CancellationToken.None);throw new Exception("Foreign install replaced");}catch(IOException){Require(File.ReadAllText(save)=="preserve me","Existing saves preserved");}
   // Linux/Wine keeps /home, /var/home and redirected profiles behind a link above the chosen folder.
