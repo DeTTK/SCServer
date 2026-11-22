@@ -2,7 +2,7 @@ using System;using System.IO;using System.IO.Compression;using System.Threading;
 static class SetupSafetyTests {
  [DllImport("shell32.dll",SetLastError=true)]static extern IntPtr CommandLineToArgvW([MarshalAs(UnmanagedType.LPWStr)]string command,out int count);
  [DllImport("kernel32.dll",SetLastError=true)]static extern IntPtr LocalFree(IntPtr value);
- [DllImport("kernel32.dll",CharSet=CharSet.Unicode,SetLastError=true)]static extern bool CreateSymbolicLinkW(string link,string target,uint flags);
+ [DllImport("kernel32.dll",CharSet=CharSet.Unicode,SetLastError=true)][return:MarshalAs(UnmanagedType.U1)]static extern bool CreateSymbolicLinkW(string link,string target,uint flags);
  static int checks;
  static void Require(bool value,string why){if(!value)throw new Exception(why);checks++;}
  static void Rejected(Action action,string why){try{action();throw new Exception("Accepted: "+why);}catch(InvalidDataException){checks++;}}
