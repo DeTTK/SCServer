@@ -11,7 +11,7 @@ public final class AnomalyTests {
     private static int checks;
     private static void check(boolean value,String label){checks++;if(!value)throw new AssertionError(label);}
     private static AnomalyZone zone(String kind){return zone(kind,new AnomalySettings("test",1,false,"",60,1,false,false));}
-    private static AnomalyZone zone(String kind,AnomalySettings settings){return new AnomalyZone(UUID.randomUUID(),kind,kind,new World.Vec(0,0,0),1.5,new SceneCollision.Box(-1,-1,-1,1,3,1),settings,Set.of("puh","simple_anomaly","tesla").contains(kind)?8:-1,"TEAR",10,60,kind.equals("funnel")?120:kind.equals("carousel")?300:60,2,false,false,new float[]{1,0,0,0,1,0,0,0,1,0,0,0},1,60,60);}
+    private static AnomalyZone zone(String kind,AnomalySettings settings){return new AnomalyZone(UUID.randomUUID(),kind,kind,new World.Vec(0,0,0),1.5,new SceneCollision.Box(-1,-1,-1,1,3,1),settings,Set.of("puh","simple_anomaly","tesla").contains(kind)?8:-1,"TEAR",10,60,kind.equals("funnel")?120:kind.equals("carousel")?300:60,2,false,false,new float[]{1,0,0,0,1,0,0,0,1,0,0,0},1,60,60,kind.equals("carousel")?5:1.5);}
     private static AnomalySimulation.Target target(String key,double x){return new AnomalySimulation.Target(key,17,new World.Vec(x,0,0),.3,1.8,100,Map.of(),false);}
     private static List<AnomalySimulation.Event> step(AnomalySimulation s,long tick,AnomalyZone z,AnomalySimulation.Target...targets){return s.step(tick,List.of(z),List.of(targets));}
     private static boolean has(List<AnomalySimulation.Event> events,String type){return events.stream().anyMatch(e->e.type().equals(type));}

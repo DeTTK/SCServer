@@ -6,7 +6,7 @@ static class SetupSafetyTests {
  static int checks;
  static void Require(bool value,string why){if(!value)throw new Exception(why);checks++;}
  static void Rejected(Action action,string why){try{action();throw new Exception("Accepted: "+why);}catch(InvalidDataException){checks++;}}
- static void RejectedIo(Action action,string why){try{action();throw new Exception("Accepted: "+why);}catch(IOException error)when(!(error is InvalidDataException)){checks++;}}
+ static void RejectedIo(Action action,string why){try{action();throw new Exception("Accepted: "+why);}catch(InvalidDataException){throw;}catch(IOException){checks++;}}
  static bool CreateSymbolicLink(string link,string target,uint flags){try{return CreateSymbolicLinkW(link,target,flags);}catch(EntryPointNotFoundException){return false;}catch(DllNotFoundException){return false;}}
  static void Main(string[] args){SetupPackage.EnableLongPaths();string root=Path.GetFullPath(args[0]);Directory.CreateDirectory(root);
   foreach(string value in new[]{@"C:\folder with spaces\", "a\"b", "", @"C:\тест\игра", @"abc\\\", "nick name"}){
