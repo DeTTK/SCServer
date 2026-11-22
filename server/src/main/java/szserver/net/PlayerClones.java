@@ -24,7 +24,8 @@ public final class PlayerClones<T> {
     public Clone<T> find(String name){Clone<T> code=items.get(name);if(code!=null)return code;Clone<T> found=null;for(Clone<T> clone:items.values())if(clone.name.equals(name)){if(found!=null)throw new IllegalArgumentException("Несколько клонов с таким именем; укажите код");found=clone;}if(found==null)throw new IllegalArgumentException("Клон не найден");return found;}
     public boolean live(Clone<T> clone){return items.get(clone.code)==clone;}
     public boolean damage(Clone<T> clone,float amount){if(!live(clone)||!Float.isFinite(amount)||amount<=0)return false;clone.health=Math.max(0,clone.health-amount);return true;}
-    public void remove(Clone<T> clone){if(items.remove(clone.code,clone)){ids.release(clone.entity);killed++;}}
+    public void remove(Clone<T> clone){remove(clone,true);}
+    public void remove(Clone<T> clone,boolean release){if(items.remove(clone.code,clone)){if(release)ids.release(clone.entity);killed++;}}
     public void forget(T recipient){for(Clone<T> clone:items.values())clone.recipients.remove(recipient);}
     public List<Clone<T>> all(){return List.copyOf(items.values());}
     public List<Map<String,String>> catalog(){return items.values().stream().map(c->Map.of("code",c.code,"name",c.name)).toList();}

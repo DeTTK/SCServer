@@ -11,10 +11,11 @@ public final class SceneCollision {
         double low(int i){return i==0?x:i==1?y:z;}double high(int i){return i==0?xx:i==1?yy:zz;}
     }
     public static void worker(){String n=Thread.currentThread().getName();if(n.equals("world-tick")||n.equals("native-game-owner"))throw new IllegalStateException("collision_scan_on_owner");}
-    public static List<Box> decode(byte[] data){
+    public static List<Box> decode(byte[] data){return decode(data,null);}
+    public static List<Box> decode(byte[] data,java.util.function.Predicate<String> visible){
         worker();if(data.length<8||data.length>MAX_ASSET_BYTES)throw new IllegalArgumentException("invalid_box_header");ByteBuffer in=ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN);
         if(in.get()!=65||in.get()!=65||in.get()!=66||in.get()!=66)throw new IllegalArgumentException("invalid_box_header");long count=Integer.toUnsignedLong(in.getInt());if(count>MAX_BOXES)throw new IllegalArgumentException("invalid_box_count");List<Box> result=new ArrayList<>((int)count);
-        try{for(int n=0;n<count;n++){int size=Short.toUnsignedInt(in.getShort());if(size>in.remaining()-24)throw new IllegalArgumentException("truncated_box_data");in.position(in.position()+size);result.add(new Box(in.getFloat(),in.getFloat(),in.getFloat(),in.getFloat(),in.getFloat(),in.getFloat()));}}catch(BufferUnderflowException error){throw new IllegalArgumentException("truncated_box_data",error);}
+        try{for(int n=0;n<count;n++){int size=Short.toUnsignedInt(in.getShort());if(size>in.remaining()-24)throw new IllegalArgumentException("truncated_box_data");String name=null;if(visible==null)in.position(in.position()+size);else{byte[] rawName=new byte[size];in.get(rawName);name=new String(rawName,java.nio.charset.StandardCharsets.UTF_8);}Box box=new Box(in.getFloat(),in.getFloat(),in.getFloat(),in.getFloat(),in.getFloat(),in.getFloat());if(visible==null||visible.test(name))result.add(box);}}catch(BufferUnderflowException error){throw new IllegalArgumentException("truncated_box_data",error);}
         if(in.hasRemaining())throw new IllegalArgumentException("trailing_box_data");return List.copyOf(result);
     }
     /** Closed slab intersection, including old1e-9 parallel-axis threshold and exact endpoint. */

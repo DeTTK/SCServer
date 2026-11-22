@@ -1,5 +1,5 @@
 {
-  "snapshot": "2026-11-18",
+  "snapshot": "2026-11-22",
   "licenseChosen": false,
   "originReviewComplete": false,
   "files": [
@@ -47,9 +47,9 @@
     },
     {
       "path": "README.md",
-      "source": "tools/publication/template/README.md",
-      "adjusted": false,
-      "sha256": "bd1e1bcdad312fa6c09157fc0014509ccdbd47fbf1d715dc9fd91a71c7570251"
+      "source": "publication/SCServer/README.md",
+      "adjusted": true,
+      "sha256": "9904384c9f7bd12902c74a53b6bb048a5de643c1965c8ead6a7b0e87da76a3f4"
     },
     {
       "path": "SECURITY.md",
@@ -419,9 +419,9 @@
     },
     {
       "path": "desktop/src/Setup.cs",
-      "source": "tools/setup-20261120/Setup.cs",
-      "adjusted": false,
-      "sha256": "de11ef103da81ce6d670c239c402e40fb11f1112915343c7f52948494934907f"
+      "source": "publication/SCServer/desktop/src/Setup.cs",
+      "adjusted": true,
+      "sha256": "d728682270cefd192be5c205e32645d26988207b8a8bf4549aeceb4eef4e65ad"
     },
     {
       "path": "desktop/tests/SetupSafetyTests.cs",
@@ -467,9 +467,9 @@
     },
     {
       "path": "docs/STATUS.md",
-      "source": "tools/publication/template/docs/STATUS.md",
-      "adjusted": false,
-      "sha256": "86f1111e71b80297dc93aa508b1c58e9b97fdc9379e0b342227b84d4b338dee7"
+      "source": "publication/SCServer/docs/STATUS.md",
+      "adjusted": true,
+      "sha256": "3e0dc06b5992de75c2b1ea6686b75eb25d4433ea7a13a6aaa202b2c7ed155772"
     },
     {
       "path": "mods/arc-hud-prototype/src/ArcHudMod.java",
@@ -2207,9 +2207,9 @@
     },
     {
       "path": "scripts/build.py",
-      "source": "tools/publication/template/scripts/build.py",
-      "adjusted": false,
-      "sha256": "7f48098715d89b589a9706690253b2e4e40e849d28d3b0e78ccbcae52a77b093"
+      "source": "publication/SCServer/scripts/build.py",
+      "adjusted": true,
+      "sha256": "cc4dc5507a77edf7b51d16d9ba516fa18b6df1f6b46033a39d136d84352c9b95"
     },
     {
       "path": "scripts/import_private_resources.py",
@@ -2556,8 +2556,8 @@
     {
       "path": "server/src/main/java/szserver/client/GameplayPacketAliases.java",
       "source": "server-java/src/main/java/szserver/client/GameplayPacketAliases.java",
-      "sha256": "e1caa47514260dd1a96639e949c3060bf6bf0bee3234fa42b102806f3695f890",
-      "adjusted": false
+      "adjusted": true,
+      "sha256": "03c2a1b386f68160ab023cc739489eef90d0e705d3a2961f871f922efa6a130a"
     },
     {
       "path": "server/src/main/java/szserver/client/GrenadeAreaPackets.java",
@@ -2922,14 +2922,14 @@
     {
       "path": "server/src/main/java/szserver/client/PlayerAnimationPackets.java",
       "source": "server-java/src/main/java/szserver/client/PlayerAnimationPackets.java",
-      "sha256": "d1ab61c619b9e6c3525fcbde46363c2e05bcbbf7668d57fe3043d6f72619b1c3",
-      "adjusted": false
+      "adjusted": true,
+      "sha256": "8ea7e738638fbbfcd273c993dcb929a97b9e726daffb50b18086cb1df5a4350f"
     },
     {
       "path": "server/src/main/java/szserver/client/PortalPackets.java",
       "source": "server-java/src/main/java/szserver/client/PortalPackets.java",
-      "sha256": "32a1257aa062e11dbb44611f8d577ee81c2792dc0053130c55483e6871f4e275",
-      "adjusted": false
+      "adjusted": true,
+      "sha256": "4c036fb572a64b803c5f2bedd97f9785935458a5f5edf8e50eae657415e90bcd"
     },
     {
       "path": "server/src/main/java/szserver/client/ResourceBlockRelease.java",
@@ -2946,8 +2946,8 @@
     {
       "path": "server/src/main/java/szserver/client/SceneAttributes.java",
       "source": "server-java/src/main/java/szserver/client/SceneAttributes.java",
-      "sha256": "81e0337fe36a011afab8b68f58393dc88c591ee71d85b0686ad1eda004035c66",
-      "adjusted": false
+      "adjusted": true,
+      "sha256": "486baa915336940f4deb68915ed77d7ad2407ad5b0eaf07eebcd365fe0c13ef5"
     },
     {
       "path": "server/src/main/java/szserver/client/SceneCodecClock.java",
@@ -2990,6 +2990,12 @@
       "source": "server-java/src/main/java/szserver/client/SceneInspectorProjection.java",
       "sha256": "8dcf532e584e1148607e071713679c70f06e3e9ba7b568cb96353c79568c3943",
       "adjusted": false
+    },
+    {
+      "path": "server/src/main/java/szserver/client/SceneInteraction.java",
+      "source": "server-java/src/main/java/szserver/client/SceneInteraction.java",
+      "adjusted": true,
+      "sha256": "5d99364e8b87bfc85efaaf14ad8d0ff9182420f0c9304716a0acd51b1ed7eb1a"
     },
     {
       "path": "server/src/main/java/szserver/client/SceneItemValues.java",
@@ -3192,8 +3198,8 @@
     {
       "path": "server/src/main/java/szserver/commands/SceneAccess.java",
       "source": "server-java/src/main/java/szserver/commands/SceneAccess.java",
-      "sha256": "d09278ccb708ed54fcf479b739645c69d885f0cdab820ec24bfb5f83a6aba509",
-      "adjusted": false
+      "adjusted": true,
+      "sha256": "3cc52ed3a7ca160903d303b431509a45cbc503984767861eb5496b5b034b9ce7"
     },
     {
       "path": "server/src/main/java/szserver/commands/SceneChangeLog.java",
@@ -3342,8 +3348,8 @@
     {
       "path": "server/src/main/java/szserver/commands/SceneWriteQueue.java",
       "source": "server-java/src/main/java/szserver/commands/SceneWriteQueue.java",
-      "sha256": "87d09b1924e0caead78aac103f480db6e2118961677c7ca824bfdaf33a96ba97",
-      "adjusted": false
+      "adjusted": true,
+      "sha256": "0aa7cf2f4a7f1a4025f5b21f22ae5cee48aef52cb449f1482c468de5d686fde3"
     },
     {
       "path": "server/src/main/java/szserver/commands/TileEdits.java",
@@ -3960,14 +3966,14 @@
     {
       "path": "server/src/main/java/szserver/net/GamePackets.java",
       "source": "server-java/src/main/java/szserver/net/GamePackets.java",
-      "sha256": "028c7efc5646a4cb43a72f81e40b5fdf826e47fa48fe91218150e52881c4456d",
-      "adjusted": false
+      "adjusted": true,
+      "sha256": "cc17a65e1c3283e0b5658688026ce9c670c2bfb7ac163cff86ce46a2dd7aa178"
     },
     {
       "path": "server/src/main/java/szserver/net/GameServer.java",
       "source": "server-java/src/main/java/szserver/net/GameServer.java",
-      "sha256": "6a2adfdf5eafe533694b98e38bb6d1322b8a846bbf12ebe5e05bd5dbb8354923",
-      "adjusted": false
+      "adjusted": true,
+      "sha256": "4a3e74a3057af47d20536958c74b81a341b386f3204facaa7d6bfbc905015c8d"
     },
     {
       "path": "server/src/main/java/szserver/net/GiveCommand.java",
@@ -4068,8 +4074,8 @@
     {
       "path": "server/src/main/java/szserver/net/PlayerClones.java",
       "source": "server-java/src/main/java/szserver/net/PlayerClones.java",
-      "sha256": "ee53f50eb2866ea084736350b6a94a377725d80c8c670d2e8c00ef6d733d93f8",
-      "adjusted": false
+      "adjusted": true,
+      "sha256": "80c25eaa2a11fad5074a5416260bef97d6c63988c8437f88dee5dfdcad8b5258"
     },
     {
       "path": "server/src/main/java/szserver/net/PlayerCommands.java",
@@ -4116,8 +4122,8 @@
     {
       "path": "server/src/main/java/szserver/net/PortalLookup.java",
       "source": "server-java/src/main/java/szserver/net/PortalLookup.java",
-      "sha256": "96ee0ab0cc80ce7ecc9429a26c971f7d30c8aef3e06c46caccb38b2c5f3dad76",
-      "adjusted": false
+      "adjusted": true,
+      "sha256": "95428b31514fc03d986ff38f89e9fc485aa2d30d464f02009d9725b40b7540ef"
     },
     {
       "path": "server/src/main/java/szserver/net/ReliableInput.java",
@@ -4698,8 +4704,8 @@
     {
       "path": "server/src/main/java/szserver/world/CollisionBoxes.java",
       "source": "server-java/src/main/java/szserver/world/CollisionBoxes.java",
-      "sha256": "68d592fef1677a8d9b17cb7cce80de2446da120dddc57e4900df27f2bfc6c530",
-      "adjusted": false
+      "adjusted": true,
+      "sha256": "b1808af00eb6bea10e0ac0f8d918fe7e48c9e77d898ce1c4e872243c13021d4c"
     },
     {
       "path": "server/src/main/java/szserver/world/CollisionTree.java",
@@ -4710,8 +4716,8 @@
     {
       "path": "server/src/main/java/szserver/world/CurrentSceneCollision.java",
       "source": "server-java/src/main/java/szserver/world/CurrentSceneCollision.java",
-      "sha256": "31824055f8ec603722d442e9231d7ff655d836e2c327c96344a2e591e1633df1",
-      "adjusted": false
+      "adjusted": true,
+      "sha256": "760da7a8b5f919e2045394b16ad8a995479c502f26892ff467f5d7265d445b30"
     },
     {
       "path": "server/src/main/java/szserver/world/CustomBlockShapes.java",
@@ -4818,8 +4824,8 @@
     {
       "path": "server/src/main/java/szserver/world/NativePortal.java",
       "source": "server-java/src/main/java/szserver/world/NativePortal.java",
-      "sha256": "ff47ce0a5a3ba7f90b3729e6c2cfb5395930910ae1baa504fa85eb86e66e0efe",
-      "adjusted": false
+      "adjusted": true,
+      "sha256": "4c7ff486231f6df799dfdb9e93013ddf8a620fd9b1ea4e324d2aa628cc8a425d"
     },
     {
       "path": "server/src/main/java/szserver/world/NativeSceneCatalog.java",
@@ -4866,8 +4872,8 @@
     {
       "path": "server/src/main/java/szserver/world/RegionTerrain.java",
       "source": "server-java/src/main/java/szserver/world/RegionTerrain.java",
-      "sha256": "15ac9a25aa795cc256fd3343bfb5cb476d68f58b480e29cfd14eb8ce75af0317",
-      "adjusted": false
+      "adjusted": true,
+      "sha256": "d996b1bb7407f62db4305893d5afd749c82d15a9f2b33e60862dc8fa13ee7621"
     },
     {
       "path": "server/src/main/java/szserver/world/ResidentBlockOperations.java",
@@ -4944,8 +4950,8 @@
     {
       "path": "server/src/main/java/szserver/world/ResidentTerrainView.java",
       "source": "server-java/src/main/java/szserver/world/ResidentTerrainView.java",
-      "sha256": "5b8cbc2ea694fecde69d092dbc2fc8811a5616fe94c54f2c4da3c4d92166d29e",
-      "adjusted": false
+      "adjusted": true,
+      "sha256": "f503a37e13746c6cb849afe7c01d9c746eb8668351835ab57b8e1f234809c230"
     },
     {
       "path": "server/src/main/java/szserver/world/ResidentWorldMetadata.java",
@@ -4968,14 +4974,14 @@
     {
       "path": "server/src/main/java/szserver/world/SceneCollision.java",
       "source": "server-java/src/main/java/szserver/world/SceneCollision.java",
-      "sha256": "d4b78810cb5d2be7c5383e84fe881e8988d588e1ce018cde45861970e7ec790c",
-      "adjusted": false
+      "adjusted": true,
+      "sha256": "25c51ae3b8049a969e6dafc40d3afeafefe0ea0953ed459e903a8768e01baa69"
     },
     {
       "path": "server/src/main/java/szserver/world/SceneCollisionCatalog.java",
       "source": "server-java/src/main/java/szserver/world/SceneCollisionCatalog.java",
-      "sha256": "f88bf41a4eed29390f560d18b484d273596ff2ef9b4c74d1b94f432787e43751",
-      "adjusted": false
+      "adjusted": true,
+      "sha256": "8f16f1b5b7318a07b5a0c13ffdb093d0c01316782252a0fcc32780b21aa26b9e"
     },
     {
       "path": "server/src/main/java/szserver/world/SceneCullingVolume.java",
@@ -5040,8 +5046,8 @@
     {
       "path": "server/src/main/java/szserver/world/Terrain.java",
       "source": "server-java/src/main/java/szserver/world/Terrain.java",
-      "sha256": "21152e61ab7f380d126d57ef0ed612893a2319f9d4db8934f418f03d7ce05ad5",
-      "adjusted": false
+      "adjusted": true,
+      "sha256": "70ccd926cebc28fbe8bdff3ea595493856b5313decd5893bca09c3922fa2aeb2"
     },
     {
       "path": "server/src/main/java/szserver/world/TileCells.java",
@@ -5076,8 +5082,8 @@
     {
       "path": "server/src/main/java/szserver/world/World.java",
       "source": "server-java/src/main/java/szserver/world/World.java",
-      "sha256": "4f2bb0bd95c523c7c39475acb2bf648ac7cb2b7663039267c97fb7d2b216d1d8",
-      "adjusted": false
+      "adjusted": true,
+      "sha256": "e6613a0a49ae83f5554df084e2e7a8b5c35ddf67f693ed84cab7f095a5c92e56"
     },
     {
       "path": "server/src/main/java/szserver/world/WorldLoop.java",
@@ -5092,10 +5098,46 @@
       "adjusted": false
     },
     {
+      "path": "server/src/test/java/szserver/CloneDonorTests.java",
+      "source": "server-java/src/test/java/szserver/CloneDonorTests.java",
+      "adjusted": true,
+      "sha256": "fea7d73f8310b26ab62d66b65c1ba6a4dae6318092e0be742e5f4f190b62bf11"
+    },
+    {
+      "path": "server/src/test/java/szserver/CorpseHandoffTests.java",
+      "source": "server-java/src/test/java/szserver/CorpseHandoffTests.java",
+      "adjusted": true,
+      "sha256": "878a9d5164d88a93d48d8945aba1a35d0b19b420d7011e09ba97f128fe28ff71"
+    },
+    {
+      "path": "server/src/test/java/szserver/CorpseHeadingPortableTests.java",
+      "source": "server-java/src/test/java/szserver/CorpseHeadingPortableTests.java",
+      "adjusted": true,
+      "sha256": "93dba16b53596057e3a31618c63dbcd6b12ede30d0ec3359f0efdee98aa640c2"
+    },
+    {
       "path": "server/src/test/java/szserver/JournalStreamingTests.java",
       "source": "server-java/src/test/java/szserver/JournalStreamingTests.java",
       "sha256": "e7b064ab2a35f5234b4c7fdbb0eb6eea8c73cde2fe89dea9ab2215d30ff76029",
       "adjusted": false
+    },
+    {
+      "path": "server/src/test/java/szserver/PortalInteractionTests.java",
+      "source": "server-java/src/test/java/szserver/PortalInteractionTests.java",
+      "adjusted": true,
+      "sha256": "0d581e12869e0680bf6c7b914fa4579ef8ecfdc7d3fb2aed335227f0582521de"
+    },
+    {
+      "path": "server/src/test/java/szserver/PortalLookupTests.java",
+      "source": "server-java/src/test/java/szserver/PortalLookupTests.java",
+      "adjusted": true,
+      "sha256": "5ada12ff76b333508bbc94286b8e134aa9b73a0d9bbb1f211d62c45724bf881d"
+    },
+    {
+      "path": "server/src/test/java/szserver/SceneInteractionTests.java",
+      "source": "server-java/src/test/java/szserver/SceneInteractionTests.java",
+      "adjusted": true,
+      "sha256": "c42cc894e189e71e75506c3de2e289b66ef5542a8a163ef867b42fce35f2e509"
     },
     {
       "path": "server/src/test/java/szserver/client/NativeMethodsTests.java",
@@ -5104,10 +5146,22 @@
       "sha256": "7a14d7716cbb57d82745bea62b09941dd87454d2e4c5cd32065aa57ed61181e7"
     },
     {
+      "path": "server/src/test/java/szserver/commands/SceneWritePressureTests.java",
+      "source": "server-java/src/test/java/szserver/commands/SceneWritePressureTests.java",
+      "adjusted": true,
+      "sha256": "e4138535bcfda64027f18b62615d8d939c7d8c200a7a04b43a3c7a8b3552c317"
+    },
+    {
       "path": "server/src/test/java/szserver/world/RegionRecordBoundsTests.java",
       "source": "server-java/src/test/java/szserver/world/RegionRecordBoundsTests.java",
       "sha256": "a710c2171bc95e2ed060945f7060645da892ccbdf277dd0304f8e92fd2e2d9d6",
       "adjusted": false
+    },
+    {
+      "path": "validation-ragdolls-interactions-20261122.json",
+      "source": "publication/SCServer/validation-ragdolls-interactions-20261122.json",
+      "adjusted": true,
+      "sha256": "8577d4d1142f3980180f675b6214496827f387f33233ed96e535829a8c4ee8e9"
     }
   ],
   "excluded": [

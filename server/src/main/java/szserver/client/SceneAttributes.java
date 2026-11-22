@@ -8,12 +8,20 @@ import java.util.*;
 
 /** Bounded current-epoch attribute codec. No native constructors, migrations or IO on gameplay owners. */
 public final class SceneAttributes {
+    /** 1993742576.it.u: timestamped GOInstance_currentState in the installed wire epoch, shared by stateful factories. */
+    public static final int OBJECT_STATE=467;
+    private static SceneAttributeSchema.Descriptor descriptor(int id){return id==OBJECT_STATE?new SceneAttributeSchema.Descriptor("java.lang.String",true,0):SceneAttributeSchema.TYPES.get(id);}
+    private static boolean permits(Set<Integer> family,Set<Integer> ids){return family!=null&&ids.stream().allMatch(id->id==OBJECT_STATE||family.contains(id));}
+    public static String objectState(SceneObject object,String behavior,String fallback){byte[] value=objectStateValue(object,behavior);if(value==null)return fallback;try{var in=Wire.input(value);in.readLong();if(in.readBoolean())return fallback;String state=in.readUTF();return state.isEmpty()?fallback:state;}catch(IOException invalid){throw new IllegalArgumentException("scene_state_value",invalid);}}
+    public static long objectStateTime(SceneObject object,String behavior){byte[] value=objectStateValue(object,behavior);return value==null?0:ByteBuffer.wrap(value).getLong();}
+    private static byte[] objectStateValue(SceneObject object,String behavior){var prefix=SceneObject.prefix(object.record());if((prefix.packed()&1)==0)return null;byte[] record=object.record();var layout=layout(record,behavior);ByteBuffer in=ByteBuffer.wrap(record);in.position(layout.nbtEnd());return attributes(in).get(OBJECT_STATE);}
+    public static byte[] interactionState(SceneObject object,String behavior,String next,long now){if(next==null||next.length()>256||next.indexOf('\0')>=0)throw new IllegalArgumentException("scene_state_name");byte[] record=object.record();var layout=layout(record,behavior);int begin=SceneObject.prefix(record).behaviourAt();return Wire.bytes(out->{out.write(record,begin,layout.nbtEnd()-begin);Wire.varint(out,1);out.writeShort(OBJECT_STATE);out.writeLong(now);out.writeBoolean(false);out.writeUTF(next);});}
     public record Layout(int nbtEnd,int tailAt,SceneGenericState.Layout generic){}
     public static boolean reviewedBehavior(String behavior){return behavior!=null&&SceneAttributeSchema.FAMILIES.containsKey(behavior);}
     public static boolean timestampedBehavior(String behavior){var family=SceneAttributeSchema.FAMILIES.get(behavior);return family!=null&&family.stream().anyMatch(id->SceneAttributeSchema.TYPES.get(id).timestamp());}
     /** Exact current-registry records need no legacy attribute migration. Validate family membership too. */
     public static void validateCurrent(byte[] record,String behavior){
-        var layout=layout(record,behavior);var prefix=SceneObject.prefix(record);if((prefix.packed()&1)!=0){ByteBuffer in=ByteBuffer.wrap(record);in.position(layout.nbtEnd());var allowed=behavior==null?null:SceneAttributeSchema.FAMILIES.get(behavior);if(allowed==null||!allowed.containsAll(attributes(in).keySet()))throw new IllegalArgumentException("scene_configuration_attribute_family");}
+        var layout=layout(record,behavior);var prefix=SceneObject.prefix(record);if((prefix.packed()&1)!=0){ByteBuffer in=ByteBuffer.wrap(record);in.position(layout.nbtEnd());var allowed=behavior==null?null:SceneAttributeSchema.FAMILIES.get(behavior);if(!permits(allowed,attributes(in).keySet()))throw new IllegalArgumentException("scene_configuration_attribute_family");}
     }
     private record State(int nbtEnd,int end,Map<Integer,byte[]> values){}
     public static Layout layout(byte[] record){
@@ -33,7 +41,7 @@ public final class SceneAttributes {
         }return end;}
     private static Map<Integer,byte[]> attributes(ByteBuffer in){
         int count=ScenePayload.varint(in);if(count>256||count>in.remaining()/3)throw new IllegalArgumentException("scene_attribute_count");Map<Integer,byte[]> values=new TreeMap<>();
-        for(int i=0;i<count;i++){int id=in.getShort()&65535;var descriptor=SceneAttributeSchema.TYPES.get(id);if(descriptor==null||values.containsKey(id))throw new IllegalArgumentException("scene_attribute_identity:"+id);int at=in.position();value(in,descriptor);values.put(id,Arrays.copyOfRange(in.array(),at,in.position()));}return values;
+        for(int i=0;i<count;i++){int id=in.getShort()&65535;var descriptor=descriptor(id);if(descriptor==null||values.containsKey(id))throw new IllegalArgumentException("scene_attribute_identity:"+id);int at=in.position();value(in,descriptor);values.put(id,Arrays.copyOfRange(in.array(),at,in.position()));}return values;
     }
     private static State fullSave(byte[] payload){
         return fullSave(payload,null);
@@ -45,8 +53,8 @@ public final class SceneAttributes {
     public static void validateFullSave(byte[] payload,String behavior){fullSave(payload,behavior);}
     /** FULL_SAVE sets listed native attributes; attributes omitted from a partial save retain their values. */
     public static SceneObject configured(SceneObject object,byte[] payload,String behavior){
-        Set<Integer> allowed=behavior==null?null:SceneAttributeSchema.FAMILIES.get(behavior);if(allowed==null)throw new IllegalArgumentException("scene_configuration_behavior_unsupported");State save=fullSave(payload,behavior);if(!allowed.containsAll(save.values().keySet()))throw new IllegalArgumentException("scene_configuration_attribute_family");
-        byte[] record=object.record();var prefix=SceneObject.prefix(record);Layout layout=layout(record,behavior);ByteBuffer input=ByteBuffer.wrap(record);input.position(layout.nbtEnd());Map<Integer,byte[]> values=(prefix.packed()&1)!=0?attributes(input):new TreeMap<>();if(!allowed.containsAll(values.keySet()))throw new IllegalArgumentException("scene_configuration_attribute_family");values.putAll(save.values());int packed=values.isEmpty()?prefix.packed():prefix.packed()|1;
+        Set<Integer> allowed=behavior==null?null:SceneAttributeSchema.FAMILIES.get(behavior);if(allowed==null)throw new IllegalArgumentException("scene_configuration_behavior_unsupported");State save=fullSave(payload,behavior);if(!permits(allowed,save.values().keySet()))throw new IllegalArgumentException("scene_configuration_attribute_family");
+        byte[] record=object.record();var prefix=SceneObject.prefix(record);Layout layout=layout(record,behavior);ByteBuffer input=ByteBuffer.wrap(record);input.position(layout.nbtEnd());Map<Integer,byte[]> values=(prefix.packed()&1)!=0?attributes(input):new TreeMap<>();if(!permits(allowed,values.keySet()))throw new IllegalArgumentException("scene_configuration_attribute_family");values.putAll(save.values());int packed=values.isEmpty()?prefix.packed():prefix.packed()|1;
         byte[] body=Arrays.copyOf(payload,save.nbtEnd());if(SceneSpecialPayload.handles(behavior))body=SceneSpecialConfiguration.retainOmitted(Arrays.copyOfRange(record,prefix.behaviourAt(),layout.nbtEnd()),body,behavior);final byte[] mergedBody=body;
         byte[] changed=Wire.bytes(out->{out.write(record,0,prefix.behaviourAt());out.write(mergedBody);if((packed&1)!=0){Wire.varint(out,values.size());for(var entry:values.entrySet()){out.writeShort(entry.getKey());out.write(entry.getValue());}}out.write(record,layout.tailAt(),record.length-layout.tailAt());});if(changed.length>ScenePayload.MAX_OBJECT)throw new IllegalArgumentException("scene_object_bounds");changed[6]=(byte)packed;return new SceneObject(object.asset(),changed);
     }

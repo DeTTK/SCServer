@@ -43,15 +43,22 @@ public final class CollisionBoxes {
     public List<SceneCollision.Box> get(SceneRegistry.Definition asset)throws IOException{
         return get(asset,false);
     }
+    /** Native switchable_collision keeps frame geometry and selects closed_/open_ mesh groups. */
+    public List<SceneCollision.Box> get(SceneRegistry.Definition asset,SceneObject object)throws IOException{
+        String behavior=asset==null?"":object.behaviour(asset.behaviour());if(!behavior.equals("switchable_collision"))return get(asset,false);
+        String fallback=asset.definition().has("default_state")?asset.definition().get("default_state").getAsString():"closed";
+        boolean closed=szserver.client.SceneAttributes.objectState(object,behavior,fallback).equals("closed");return get(asset,false,closed?"closed":"open");
+    }
     /** Feedback uses the declared AABB even when physical collision is disabled. */
     public List<SceneCollision.Box> feedback(SceneRegistry.Definition asset)throws IOException{return get(asset,true);}
-    private List<SceneCollision.Box> get(SceneRegistry.Definition asset,boolean feedback)throws IOException{
+    private List<SceneCollision.Box> get(SceneRegistry.Definition asset,boolean feedback)throws IOException{return get(asset,feedback,"");}
+    private List<SceneCollision.Box> get(SceneRegistry.Definition asset,boolean feedback,String state)throws IOException{
         SceneCollision.worker();if(asset==null)throw new IllegalArgumentException("collision_asset_unknown");var definition=asset.definition();
         if(asset.behaviour().equals("culling_volume")||!feedback&&definition.has("collision")&&definition.get("collision").isJsonPrimitive()&&definition.get("collision").getAsString().equals("none")||!definition.has("aabb")||!definition.get("aabb").isJsonPrimitive()||!definition.get("aabb").getAsJsonPrimitive().isString())return List.of();
-        String name=definition.get("aabb").getAsString();Cached found=cache.get(name);if(found!=null)return found.boxes();
+        String name=definition.get("aabb").getAsString();String cacheKey=state.isEmpty()?name:name+"#door="+state;Cached found=cache.get(cacheKey);if(found!=null)return found.boxes();
         int colon=name.indexOf(':');String relative=colon<0?name:name.substring(0,colon)+"/"+name.substring(colon+1);Path path=root.resolve("assets").resolve(relative).normalize();if(!path.startsWith(root)||!path.startsWith(root.resolve("assets")))throw new IllegalArgumentException("invalid_collision_asset_path");
-        try{Path real=path.toRealPath(),base=root.toRealPath();if(!real.startsWith(base))throw new IllegalArgumentException("invalid_collision_asset_path");long size=Files.size(real);if(size>SceneCollision.MAX_ASSET_BYTES)throw new IllegalArgumentException("collision_asset_size_limit");byte[] data;try(InputStream in=Files.newInputStream(real)){data=in.readNBytes(SceneCollision.MAX_ASSET_BYTES+1);}if(data.length>SceneCollision.MAX_ASSET_BYTES)throw new IllegalArgumentException("collision_asset_size_limit");List<SceneCollision.Box> boxes=SceneCollision.decode(data);long bytes=96L+name.length()*2L+boxes.size()*80L;loads++;
-            if(bytes<=limit){while(!cache.isEmpty()&&(retained+bytes>limit||cache.size()>=4096)){var it=cache.entrySet().iterator();retained-=it.next().getValue().bytes();it.remove();evictions++;}cache.put(name,new Cached(boxes,bytes));retained+=bytes;}return boxes;
+        try{Path real=path.toRealPath(),base=root.toRealPath();if(!real.startsWith(base))throw new IllegalArgumentException("invalid_collision_asset_path");long size=Files.size(real);if(size>SceneCollision.MAX_ASSET_BYTES)throw new IllegalArgumentException("collision_asset_size_limit");byte[] data;try(InputStream in=Files.newInputStream(real)){data=in.readNBytes(SceneCollision.MAX_ASSET_BYTES+1);}if(data.length>SceneCollision.MAX_ASSET_BYTES)throw new IllegalArgumentException("collision_asset_size_limit");List<SceneCollision.Box> boxes=state.isEmpty()?SceneCollision.decode(data):SceneCollision.decode(data,part->part.startsWith("closed_")?state.equals("closed"):!part.startsWith("open_")||state.equals("open"));long bytes=96L+cacheKey.length()*2L+boxes.size()*80L;loads++;
+            if(bytes<=limit){while(!cache.isEmpty()&&(retained+bytes>limit||cache.size()>=4096)){var it=cache.entrySet().iterator();retained-=it.next().getValue().bytes();it.remove();evictions++;}cache.put(cacheKey,new Cached(boxes,bytes));retained+=bytes;}return boxes;
         }catch(IOException|IllegalArgumentException error){failures++;throw error;}
     }
     public Map<String,Object> metrics(){return Map.of("cached",cache.size(),"retainedBytes",retained,"limitBytes",limit,"loads",loads,"evictions",evictions,"failures",failures);}

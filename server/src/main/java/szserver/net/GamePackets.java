@@ -52,11 +52,13 @@ public final class GamePackets {
         new playerscale.ScaleValue(scale);
         if(entity<=0||source<0||!Float.isFinite(yaw))throw new IllegalArgumentException("corpse_identity");
         // 1688394027.static multiplies native inherited velocity by 20 before Bullet.
-        double[] nativeVelocity=corpseVelocity(velocity);
-        byte[] subtype=Wire.bytes(out->{out.writeBoolean(false);out.writeInt(source);out.writeByte(0);out.writeByte(255);out.writeUTF(name);out.writeBoolean(false);out.writeBoolean(false);vector(out,position);out.writeFloat(yaw);out.writeFloat(scale);out.writeBoolean(true);out.writeBoolean(true);vector(out,nativeVelocity);vector(out,impulse);vector(out,new double[3]);vector(out,impact==null?position:impact);out.writeBoolean(false);out.writeByte(0);out.writeUTF("");out.write(InventoryPackets.stack(armor==null?null:armor.count(1)));if(npcSkin!=null)out.writeUTF(npcSkin);});
+        double[] nativeVelocity=corpseVelocity(velocity);float modelYaw=corpseYaw(yaw);
+        byte[] subtype=Wire.bytes(out->{out.writeBoolean(false);out.writeInt(source);out.writeByte(0);out.writeByte(255);out.writeUTF(name);out.writeBoolean(false);out.writeBoolean(false);vector(out,position);out.writeFloat(modelYaw);out.writeFloat(scale);out.writeBoolean(true);out.writeBoolean(true);vector(out,nativeVelocity);vector(out,impulse);vector(out,new double[3]);vector(out,impact==null?position:impact);out.writeBoolean(false);out.writeByte(0);out.writeUTF("");out.write(InventoryPackets.stack(armor==null?null:armor.count(1)));if(npcSkin!=null)out.writeUTF(npcSkin);});
         for(double value:position)if(Math.abs(value)>30_000_001)throw new IllegalArgumentException("corpse_position");
-        return Wire.dynamic("1510484702",Wire.bytes(out->{out.writeByte(npcSkin==null?30:31);out.writeByte(angle(yaw)^26);out.writeInt(coord(position[1])-(int)2315843772L);out.writeInt((coord(position[2])+716018694)^0xc7a787d8);out.writeInt(Integer.rotateRight(coord(position[0]),15)-1385050365);out.writeInt(entity-1630978953);out.writeByte(ror8(0,3)+211);Wire.varint(out,subtype.length);out.write(subtype);out.write(new byte[2]);}));
+        return Wire.dynamic("1510484702",Wire.bytes(out->{out.writeByte(npcSkin==null?30:31);out.writeByte(angle(modelYaw)^26);out.writeInt(coord(position[1])-(int)2315843772L);out.writeInt((coord(position[2])+716018694)^0xc7a787d8);out.writeInt(Integer.rotateRight(coord(position[0]),15)-1385050365);out.writeInt(entity-1630978953);out.writeByte(ror8(0,3)+211);Wire.varint(out,subtype.length);out.write(subtype);out.write(new byte[2]);}));
     }
+    /** Living renderer uses 180 - heading; native Bullet initial pose uses -corpseYaw. */
+    public static float corpseYaw(float heading){if(!Float.isFinite(heading))throw new IllegalArgumentException("corpse_heading");float normalized=heading%360;return normalized>=0?normalized-180:normalized+180;}
     public static double[] corpseVelocity(double[] metresPerSecond){
         if(metresPerSecond==null||metresPerSecond.length!=3)throw new IllegalArgumentException("corpse_velocity");
         double[] result=new double[3];for(int i=0;i<3;i++){double v=metresPerSecond[i];if(!Double.isFinite(v)||Math.abs(v)>1000)throw new IllegalArgumentException("corpse_velocity");result[i]=v/20.;}return result;

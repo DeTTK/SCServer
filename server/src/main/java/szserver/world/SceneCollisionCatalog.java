@@ -53,13 +53,19 @@ public final class SceneCollisionCatalog implements AutoCloseable {
     private void add(CollisionTree.Builder builder,int x,int z,Map<UUID,ScenePayload.Entry> entries)throws IOException{
         for(var entry:entries.values()){int occurrence=0;for(var physical:entry.occurrences()){
             var object=physical.object();var definition=registry.target().names().get(object.asset());
-            var shape=SceneCollision.shape(object,asset(definition,false));if(shape!=null)builder.add(new CollisionTree.Item(x,z,physical.container(),occurrence,shape));
+            var shape=SceneCollision.shape(object,solidAsset(definition,object));if(shape!=null)builder.add(new CollisionTree.Item(x,z,physical.container(),occurrence,shape));
             if(boxes.ladderSource(object,definition)){var ladder=SceneCollision.shape(object,asset(definition,true));if(ladder!=null)builder.add(new CollisionTree.Item(x,z,physical.container(),occurrence,ladder,null,true));}
             boxes.mapObject(builder,x,z,physical.container(),occurrence,object,definition);
             var effect=SceneFeedback.effect(object,definition,boxes);
             if(effect!=null){var feedback=boxes.feedbackShape(object,asset(definition,true));if(feedback!=null){builder.reserve(80L*feedback.assetBoxes().size());builder.add(new CollisionTree.Item(x,z,physical.container(),occurrence,feedback,effect));}}
             occurrence++;
         }}
+    }
+    private List<SceneCollision.Box> solidAsset(SceneRegistry.Definition definition,SceneObject object)throws IOException{
+        if(definition==null||!object.behaviour(definition.behaviour()).equals("switchable_collision"))return asset(definition,false);
+        String fallback=definition.definition().has("default_state")?definition.definition().get("default_state").getAsString():"closed";
+        String state=szserver.client.SceneAttributes.objectState(object,"switchable_collision",fallback).equals("closed")?"closed":"open";
+        String key="door:"+state+":"+definition.name();var value=retainedAssets.get(key);if(value==null){value=boxes.get(definition,object);long charge=128L+key.length()*2L+80L*value.size();if(charge>limit-assetBytes)throw new IllegalArgumentException("scene_collision_memory_limit");assetBytes+=charge;retainedAssets.put(key,value);}return value;
     }
     private List<SceneCollision.Box> asset(SceneRegistry.Definition definition,boolean feedback)throws IOException{
         if(definition==null)throw new IllegalArgumentException("collision_asset_unknown");

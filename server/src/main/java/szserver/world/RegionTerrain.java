@@ -199,6 +199,7 @@ public final class RegionTerrain implements Terrain {
     @Override public boolean rawSceneContainer(int x,int z){Chunk found=chunk(x,z);if(found==null)throw new IllegalArgumentException("terrain_not_ready_retry");return found.rawContainer;}
     @Override public String sceneRegistryDigest(){return scenes==null?"":scenes.target().digest();}
     @Override public String sceneBehaviour(String asset){SceneRegistry.Definition found=scenes==null?null:scenes.target().names().get(asset);return found==null?"":found.behaviour();}
+    @Override public SceneRegistry.Definition sceneDefinition(String asset){return scenes==null?null:scenes.target().names().get(asset);}
     @Override public Map<UUID,NativePortal> portalIndex(int x,int z){NativeSceneCatalog nativeScenes=cache.scenes;return nativeScenes!=null?nativeScenes.portals(x,z):templates==null?Map.of():templates.portals(x,z);}
     @Override public boolean portalIndexReady(int x,int z){return templates==null||templates.portalReady();}
     @Override public long portalOrder(UUID id){return templates==null?Long.MAX_VALUE:templates.portalOrder(id);}

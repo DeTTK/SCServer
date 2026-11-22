@@ -36,6 +36,7 @@ public final class ResidentTerrainView<C extends Terrain.EditChunk> implements T
     @Override public NativePortal portalTemplate(String asset){return catalog==null?null:catalog.portalTemplate(asset);}
     @Override public boolean sceneAssetKnown(String asset){return catalog!=null&&catalog.sceneAssetKnown(asset);}
     @Override public String sceneBehaviour(String asset){return catalog==null?"":catalog.sceneBehaviour(asset);}
+    @Override public SceneRegistry.Definition sceneDefinition(String asset){return catalog==null?null:catalog.sceneDefinition(asset);}
     @Override public ResidentMapReads<C> residentReads(){return reads;}
     @Override public NativeCommitIndex nativeBase(){return catalog==null?NativeCommitIndex.empty():catalog.nativeBase();}
     private ResidentMapReads.Chunk<C> chunk(int x,int z){return reads.require(new ResidentChunks.Key(x,z));}

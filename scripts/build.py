@@ -134,6 +134,9 @@ def tests():
     with tempfile.TemporaryDirectory(prefix='authentication-stability-',dir=scratch) as directory:
         subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.net.AuthenticationStabilityTests',directory],check=True)
     results.append('72 full HTTP/gateway/world cycles, Unicode identities, concurrent protocols and cold one-shot recovery')
+    for case in ['PortalInteractionTests','PortalLookupTests','SceneInteractionTests','CloneDonorTests','CorpseHeadingPortableTests','commands.SceneWritePressureTests']:
+        subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.'+case],check=True)
+    results.append('aimed portal UUID/lifecycle, native object states and locks, state-specific door collision, clone donor ID lifetime, editor read/write ordering')
     (B/'verification.json').write_text(json.dumps({'result':'PASS','checks':results,'gameFilesUsed':False,'networkSessionTested':False},indent=2),'utf8')
 
 def desktop():

@@ -16,6 +16,8 @@ public final class SceneWriteQueue<T> {
     public CompletableFuture<T> submit(UUID writer,int size,Supplier<CompletableFuture<T>> action){
         return enqueue(writer,size,null,null,ignored->action.get());
     }
+    /** Wait for preceding writes from this connection without holding an owner thread. */
+    public CompletableFuture<Void> barrier(UUID writer){return submit(writer,0,()->CompletableFuture.completedFuture(null)).thenApply(ignored->null);}
     /** Only adjacent writes in the same logical selection may share a transaction.
      * The active transaction is never modified; config saves and other selections are FIFO barriers. */
     @SuppressWarnings("unchecked")

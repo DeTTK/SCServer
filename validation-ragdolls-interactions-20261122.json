@@ -1,0 +1,86 @@
+{
+  "result": "PASS",
+  "date": "2026-11-22",
+  "serverSha256": "b261e21dea7d68186e5fe5ebd2dd51966ba2d5aa99a47bd8ccb19aaf57493ecd",
+  "actualRenderedClients": 2,
+  "ragdollCases": [
+    "clone",
+    "NPC",
+    "remote player",
+    "local player"
+  ],
+  "worldHeadingCases": 5,
+  "nativeHeadingAngles": 12,
+  "localBoneValuesCompared": 434,
+  "nativeRigidBodies": 13,
+  "nativeStateWireId": 467,
+  "ordinaryDoorAndSwitchBothPeers": true,
+  "actualAimedFVerifiedForDoor": true,
+  "inspectorReadAfterCreateFailures": 0,
+  "physicsRemainsClientOwned": true,
+  "mapFormatChanged": false,
+  "limitations": [
+    "Own first-person death retains native full-body fallback.",
+    "No per-bone server simulation or deterministic cross-client Bullet lockstep."
+  ],
+  "inputIsolation": {
+    "hiddenWindows": true,
+    "soundDisabled": true,
+    "rawInputBlocked": true,
+    "physicalCallbacksBlocked": true
+  },
+  "sourceSuite": {
+    "result": "PASS",
+    "checks": [
+      "native return descriptor, bridge, parameters and static exclusion: 5 PASS",
+      "region slot/overflow/truncation/CRC/healthy-neighbour bounds",
+      "native unlimited protection remains finite; unrelated invalid stats rejected",
+      "authored admin Gauss accepted; nonfinite weapon parameters rejected",
+      "character scale native dimensions, bounded commands, optional-save recovery, native ready bounds and ceiling admission",
+      "native grid migration preserves complete items; full bag overflow and interrupted-marker retry",
+      {
+        "journalAssertions": 12047,
+        "records": 12032
+      },
+      "gateway same/fresh-token retry, invalid identity/session, single-use world claim",
+      "72 full HTTP/gateway/world cycles, Unicode identities, concurrent protocols and cold one-shot recovery",
+      "aimed portal UUID/lifecycle, native object states and locks, state-specific door collision, clone donor ID lifetime, editor read/write ordering"
+    ],
+    "gameFilesUsed": false,
+    "networkSessionTested": false
+  },
+  "installer": {
+    "result": "PASS",
+    "cases": [
+      {
+        "manual": false,
+        "serverAndClientUpdated": true,
+        "launcherUpdated": true,
+        "newUiAgentInstalled": true,
+        "commandCompletionInstalled": true,
+        "existingModSettingsPreserved": true,
+        "previousUiAgentRetained": true,
+        "scaleManifestAdded": true,
+        "worldAndCharactersPreserved": true,
+        "serverRollbackPreserved": true,
+        "repeatNoOp": true,
+        "fullBundleRedownloaded": false
+      },
+      {
+        "manual": true,
+        "serverAndClientUpdated": true,
+        "launcherUpdated": true,
+        "newUiAgentInstalled": true,
+        "commandCompletionInstalled": true,
+        "existingModSettingsPreserved": true,
+        "previousUiAgentRetained": true,
+        "scaleManifestAdded": true,
+        "worldAndCharactersPreserved": true,
+        "serverRollbackPreserved": true,
+        "repeatNoOp": true,
+        "fullBundleRedownloaded": false
+      }
+    ],
+    "setupSha256": "3372abb8f2af2892bd97adbb7a76578f1ea376d72dd51113010509479250c732"
+  }
+}

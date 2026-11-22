@@ -74,6 +74,7 @@ public interface Terrain extends AutoCloseable {
     default NativePortal portalTemplate(String asset){return null;}
     default boolean sceneAssetKnown(String asset){return !sceneBehaviour(asset).isEmpty();}
     default String sceneBehaviour(String asset){return "";}
+    default SceneRegistry.Definition sceneDefinition(String asset){return null;}
     default boolean rawSceneContainer(int x,int z){return true;}
     default String sceneRegistryDigest(){return "";}
     default SceneSource sceneSource(int x,int z){throw new IllegalArgumentException("scene_edit_disabled");}

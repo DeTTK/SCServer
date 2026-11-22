@@ -77,9 +77,15 @@ public final class PlayerAnimationPackets {
     private static int nativeAngle(float value){return (int)Math.min((value+180f)/360f*255f,255f);}
     private static int angle(double value){double n=(value+180)%360;if(n<0)n+=360;return (int)(n/360*255);}
     private static int rounded(double value){double f=Math.floor(value),fraction=value-f;return (int)(fraction<.5?f:fraction>.5?f+1:(((long)f&1)==0?f:f+1));}
+    private static final int COMPONENT_MASK=63|(1<<6)|(1<<7)|(1<<8)|(1<<9)|(1<<11)|(1<<12)|(1<<13)|(1<<15)|(1<<16)|(1<<17)|(1<<18)|(1<<23)|(1<<24)|(1<<25)|(1<<27)|(1<<28)|(1<<29);
+    /** Compose the actor/world angle with the relative body rotation sent to the native graph. */
+    public static float bodyHeading(byte[] component,float fallback){
+        if(component==null||component.length<16)return fallback;
+        try{ByteBuffer input=ByteBuffer.wrap(component);if(input.get()!=1||Wire.varint(input)!=COMPONENT_MASK||input.remaining()<11)return fallback;input.position(input.position()+10);return fallback+(input.get()&255)/255f*360f-180f;}catch(java.io.IOException|RuntimeException invalid){return fallback;}
+    }
     public static byte[] component(State s) {
         // Always carry nullable clears: a viewer may have last seen a ledge before teleport/holster.
-        int mask=63|(1<<6)|(1<<7)|(1<<8)|(1<<9)|(1<<11)|(1<<12)|(1<<13)|(1<<15)|(1<<16)|(1<<17)|(1<<18)|(1<<23)|(1<<24)|(1<<25)|(1<<27)|(1<<28)|(1<<29);
+        int mask=COMPONENT_MASK;
         return Wire.bytes(o->{o.writeByte(1);Wire.varint(o,mask);o.writeByte(s.locomotion);o.writeByte(s.previous);o.writeByte(s.mode);o.writeByte((int)Math.min(255,s.speed/12*255));o.writeByte(127);o.writeByte(angle(s.direction));o.writeByte(127);o.writeByte(s.jump);o.writeByte(s.boosted);o.writeBoolean(s.ground);o.writeByte(s.pose==null?angle(s.yaw):nativeAngle(s.pose.yaw));o.writeByte(s.pose==null?127:nativeAngle(s.pose.pitch));o.writeBoolean(s.aiming);o.writeByte(s.reload);o.writeByte(Math.max(0,Math.min(255,rounded(s.duration/5.0*255))));o.writeByte(s.swing);o.writeByte(s.strike);o.writeByte(127);o.writeByte(s.pose==null?127:nativeAngle(s.pose.prone));
             o.writeByte((int)Math.min(255,((s.cable==null?0:s.cable.angle())+180f)/360f*255f));
             o.writeBoolean(true);o.writeBoolean(s.edge==null);if(s.edge!=null){Edge e=s.edge;o.writeDouble(e.x1);o.writeDouble(e.y1);o.writeDouble(e.z1);o.writeDouble(e.x2);o.writeDouble(e.y2);o.writeDouble(e.z2);o.writeFloat(e.phase);}else o.writeFloat(0);

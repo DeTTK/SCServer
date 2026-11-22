@@ -172,6 +172,7 @@ public final class World implements BlockShapes.Voxels {
     void restoreResidentMetadata(MapCheckpointView saved,Map<ScenePlacement,ScenePayload.Entry> references){World next=restoredMapCheckpoint(saved);next.editedCullingReferences=ResidentMetadataMaps.mutable(references,(placement,entry)->25+ResidentWorldMetadata.entryBytes(entry));next.enableResidentMetadataSnapshots();enableResidentMetadataSnapshots();publishSceneMetadata(new SceneMetadataPrepared(sceneMetadataView(),next));}
     void editedReferencesForRestore(Map<ScenePlacement,ScenePayload.Entry> references){editedCullingReferences=ResidentMetadataMaps.mutable(references,(placement,entry)->25+ResidentWorldMetadata.entryBytes(entry));}
     public String sceneBehaviour(String asset){return terrain.sceneBehaviour(asset);}
+    public SceneRegistry.Definition sceneDefinition(String asset){return terrain.sceneDefinition(asset);}
     public boolean sceneShared(UUID id){return terrain.sceneShared(id);}
     public Map<UUID,Set<Long>> scenePlacementHomes(Set<UUID> ids){
         if(ids.size()>128)throw new IllegalArgumentException("scene_placement_identity_limit");

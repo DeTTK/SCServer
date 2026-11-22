@@ -17,7 +17,7 @@ public final class CurrentSceneCollision {
             for(var change:blocks.sceneChanges()){
                 builder.reserve(160);masks.add(new Placement(change.x(),change.z(),change.id()));if(change.value()==null)continue;int occurrence=0;
                 for(var physical:change.value().occurrences()){
-                    SceneObject object=physical.object();var asset=boxes.get(definitions.get(object.asset()));var shape=SceneCollision.shape(object,asset);
+                    SceneObject object=physical.object();var asset=boxes.get(definitions.get(object.asset()),object);var shape=SceneCollision.shape(object,asset);
                     if(shape!=null)builder.add(new CollisionTree.Item(change.x(),change.z(),physical.container(),occurrence,shape));
                     boxes.ladder(builder,change.x(),change.z(),physical.container(),occurrence,object,definitions.get(object.asset()));
                     boxes.mapObject(builder,change.x(),change.z(),physical.container(),occurrence,object,definitions.get(object.asset()));
