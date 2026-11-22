@@ -1,0 +1,4 @@
+numpy==2.4.6
+nbtlib==2.0.4
+zstandard==0.25.0
+pyinstaller==6.22.3
