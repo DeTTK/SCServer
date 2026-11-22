@@ -129,7 +129,7 @@ public final class ClientPackets implements AutoCloseable {
     }
     public int grenadeSpawnItem(byte[] body,int expectedEntity)throws Exception {
         Object packet=decode(GrenadePackets.SPAWN,body);Class<?> parent=Class.forName("1570813014",true,loader);
-        if(packet.getClass().getDeclaredField("boolean").getByte(packet)!=9||parent.getField("do").getInt(packet)+1630978953!=expectedEntity)throw new IOException("grenade_spawn_identity");
+        if(packet.getClass().getDeclaredField("boolean").getByte(packet)!=GrenadePackets.PROJECTILE_TYPE||parent.getField("do").getInt(packet)+1630978953!=expectedEntity)throw new IOException("grenade_spawn_identity");
         return grenadeSubtypeItem((byte[])parent.getField("break").get(packet));
     }
     /** QA: installed remote animation reader/writer, without entering an entity/renderer handler. */
