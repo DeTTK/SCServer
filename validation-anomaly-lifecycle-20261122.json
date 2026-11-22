@@ -1,0 +1,82 @@
+{
+  "result": "PASS",
+  "date": "2026-11-22",
+  "issue": 20,
+  "reportedFailureReproduced": false,
+  "issueClosed": false,
+  "baselineRelease": "inventory-contract-2026.11.22",
+  "confirmedDefects": [
+    "capture echo read UUID prefix as phase instead of final int",
+    "old-life cleanup lost local-owner mapping after death",
+    "precomputed same-tick slow could restore a dead target overlay"
+  ],
+  "changes": [
+    "release native capture and overlays before life changes",
+    "remove old-life contacts synchronously",
+    "ignore subsequent dead-target intents",
+    "decode stock UUID then phase without granting simulation authority"
+  ],
+  "nativeChecks": {
+    "isolatedHiddenClient": true,
+    "muted": true,
+    "physicalAndRawInputBlocked": true,
+    "deathsAndRespawns": [
+      {
+        "anomaly": "funnel",
+        "died": true,
+        "screenClosed": true,
+        "gameplayInputEnabled": true,
+        "returnedToSafeSpawn": true
+      },
+      {
+        "anomaly": "carousel",
+        "died": true,
+        "screenClosed": true,
+        "gameplayInputEnabled": true,
+        "returnedToSafeSpawn": true
+      },
+      {
+        "anomaly": "zastoy",
+        "died": true,
+        "screenClosed": true,
+        "gameplayInputEnabled": true,
+        "returnedToSafeSpawn": true
+      },
+      {
+        "anomaly": "electra",
+        "died": true,
+        "screenClosed": true,
+        "gameplayInputEnabled": true,
+        "returnedToSafeSpawn": true
+      }
+    ],
+    "additionalTransitions": [
+      "ADMIN",
+      "TELEPORT",
+      "DEAD_RECONNECT"
+    ],
+    "stockCaptureEchoesAccepted": 502,
+    "rejectedPackets": 0,
+    "vitalsFailures": 0
+  },
+  "checks": {
+    "fullSourceSuite": "PASS",
+    "anomalyTests": 78,
+    "pythonTests": 5,
+    "desktopSafetyTests": 54,
+    "installerUpgradeLayouts": 2,
+    "playerScaleTests": 5042
+  },
+  "nativeClasses": {
+    "804507492": "e06295e708bdb77028ec95212dde2a4b54f45f4fe089fb619fbb4c8a5aed1ed7",
+    "1410763904": "d9c142d9e76fedd33b3267f5f57b6ca9de231fbd82565a77efce03506d955e30",
+    "304663057": "fc4084793ab607839724ea4ae6cb3367a2e1200928372c36282df0a71873c562"
+  },
+  "serverSha256": "14310be778951d482ec087b3ea8e43a111ad94bb3151dd21f4cc249e7e2f664b",
+  "limitations": [
+    "Original report has no anomaly name, logs or build version; the reported permanent respawn failure was not reproduced on the previous or new release.",
+    "Issue remains open for author confirmation or a reproducible case."
+  ],
+  "productionServerChanged": false,
+  "canonicalClientChanged": false
+}

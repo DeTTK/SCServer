@@ -29,9 +29,9 @@ static class SetupPackage {
     internal const string StartupUrl="https://github.com/DeTTK/SCServer/releases/download/unit-format-warmup-2026.11.22/startup-guard-20261122.jar";
     internal const string StartupHash="00dab163374e9f393775c1bd7e34422956ef3fb83ff83f45227eae4dda405298";
     internal const int StartupBytes=137094;
-    internal const string ServerUrl="https://github.com/DeTTK/SCServer/releases/download/inventory-contract-2026.11.22/server-inventory-contract-20261122.jar";
-    internal const string ServerHash="84c20e5369d6398159019981d02ec9e93fb25d58a55bdae79ece0550e91af8ee";
-    internal const int ServerBytes=6594797;
+    internal const string ServerUrl="https://github.com/DeTTK/SCServer/releases/download/anomaly-lifecycle-2026.11.22/server-anomaly-lifecycle-20261122.jar";
+    internal const string ServerHash="14310be778951d482ec087b3ea8e43a111ad94bb3151dd21f4cc249e7e2f664b";
+    internal const int ServerBytes=6596302;
     internal const string CompletionUrl="https://github.com/DeTTK/SCServer/releases/download/alliance-transitions-2026.11.22/command-completion.jar";
     internal const string CompletionHash="4c8e18e6a0b533d7347c926529950a9ae429b057f18f1bb8a9703326eb312b7f";
     internal const int CompletionBytes=17289;

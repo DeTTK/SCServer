@@ -42,6 +42,15 @@ public final class AnomalySimulation {
         for(var it=mirrors.entrySet().iterator();it.hasNext();){var e=it.next();var t=live.get(e.getKey());var m=e.getValue();if(t==null||t.health()<=0||tick>=m.until()){it.remove();continue;}if(tick>=m.next()){hit(m.zone(),t,Math.min(Math.max(0,t.health()-1),t.health()*.2f),events);e.setValue(new Mirror(m.zone(),m.until(),tick+m.zone().period()));}}
         lastTargets.clear();lastTargets.putAll(live);previous.keySet().retainAll(live.keySet());for(var t:targets)previous.put(t.key(),t.position());return List.copyOf(events);
     }
+    /** Release the old life before its transport identity advances (death, teleport or disconnect). */
+    public List<Event> removeTarget(String key){
+        var events=new ArrayList<Event>();Target target=lastTargets.remove(key);previous.remove(key);mirrors.remove(key);
+        for(State state:states.values()){
+            Contact contact=state.contacts.remove(key);if(key.equals(state.capture)){if(target!=null)events.add(event("leave",state.zone,target,0));state.capture=null;}
+            if(contact!=null&&target!=null&&state.zone.kind().equals("stasis"))events.add(event("stasis_leave",state.zone,target,0));
+        }
+        return List.copyOf(events);
+    }
     private int between(int minimum,int maximum){return minimum+random.nextInt(Math.max(minimum,maximum)-minimum+1);}
     private static double distance(World.Vec a,World.Vec b){return Math.sqrt(Math.pow(a.x()-b.x(),2)+Math.pow(a.y()-b.y(),2)+Math.pow(a.z()-b.z(),2));}
     private void hit(AnomalyZone z,Target t,float value,List<Event> events){if(z.disabledDamage()||value<=0)return;float amount=(float)(value*BlastRules.factor(z.channel(),t.stats())*szserver.inventory.CombatModifiers.received(t.stats()));if(amount>0&&Float.isFinite(amount)){events.add(event("damage",z,t,amount));hits++;}}

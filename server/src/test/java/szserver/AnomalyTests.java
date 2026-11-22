@@ -30,6 +30,18 @@ public final class AnomalyTests {
         var stasis=zone("stasis");sim=new AnomalySimulation();check(has(step(sim,1,stasis,target("a",0)),"stasis_enter"),"stasis native overlay start");check(has(step(sim,2,stasis,target("a",10)),"stasis_leave"),"stasis overlay stop");
         sim=new AnomalySimulation();step(sim,1,stasis,target("a",0));check(has(sim.step(2,List.of(stasis),List.of()),"stasis_leave"),"mode change/disconnect releases native overlay");
         sim=new AnomalySimulation();step(sim,1,funnel,target("a",0));check(has(sim.step(2,List.of(funnel),List.of()),"leave"),"removed target releases native force");
+        for(String kind:List.of("funnel","carousel","stasis","mirror")){
+            var z=zone(kind);sim=new AnomalySimulation();step(sim,1,z,target("old-life",0));var released=sim.removeTarget("old-life");
+            check(kind.equals("mirror")?released.isEmpty():has(released,kind.equals("stasis")?"stasis_leave":"leave"),"explicit life release "+kind);
+            check(((Number)sim.metrics().get("contacts")).intValue()==0,"old contacts cleared "+kind);
+            check(sim.removeTarget("old-life").isEmpty(),"release is idempotent "+kind);
+            var next=step(sim,2,z,target("new-life",0));check(!has(next,"leave")&&!has(next,"stasis_leave"),"no delayed release against new life "+kind);
+            check(has(next,kind.equals("stasis")?"stasis_enter":kind.equals("mirror")?"mirror":"enter"),"new life can enter "+kind);
+        }
+        UUID echoed=UUID.fromString("f0123456-789a-4bcd-8123-456789abcdef");byte[] echo=Wire.bytes(out->{out.writeLong(echoed.getMostSignificantBits());out.writeLong(echoed.getLeastSignificantBits());out.writeInt(120);});
+        check(AnomalySettings.captureEcho(echo).equals(new AnomalySettings.CaptureEcho(echoed,120)),"capture echo phase follows UUID, including negative UUID prefix");
+        for(int size:new int[]{0,4,19,21}){boolean denied=false;try{AnomalySettings.captureEcho(new byte[size]);}catch(java.io.IOException expected){denied=true;}check(denied,"echo size "+size);}
+        for(int phase:new int[]{-1,100001}){byte[] bad=echo.clone();ByteBuffer.wrap(bad).putInt(16,phase);boolean denied=false;try{AnomalySettings.captureEcho(bad);}catch(java.io.IOException expected){denied=true;}check(denied,"invalid echo phase "+phase);}
         var acid=zone("simple_anomaly");sim=new AnomalySimulation();step(sim,1,acid,target("a",-4));check(has(step(sim,2,acid,target("a",4)),"damage"),"swept fast crossing");sim=new AnomalySimulation();step(sim,1,acid,target("a",-40));check(!has(step(sim,2,acid,target("a",40)),"damage"),"teleport does not cross every hazard");
         var resistant=new AnomalySimulation.Target("a",1,new World.Vec(0,0,0),.3,1.8,100,Map.of("tear_dmg_factor",100f),false);check(step(new AnomalySimulation(),1,acid,resistant).stream().filter(e->e.type().equals("damage")).findFirst().orElseThrow().amount()==4,"native resistance channel");
         var tesla=zone("tesla");check(step(new AnomalySimulation(),1,tesla,target("a",0),target("b",0),target("c",0)).stream().filter(e->e.type().equals("damage")).count()==2,"tesla target limit");
