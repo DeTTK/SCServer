@@ -56,6 +56,38 @@ public final class InventorySortTests {
         rejected(()->{try{InventoryPackets.sort(sortBody(0,3,0,0),4,false);}catch(IOException error){throw new IllegalArgumentException(error.getMessage());}});
         rejected(()->{try{InventoryPackets.sort(sortBody(99,0,0,0),4,true);}catch(IOException error){throw new IllegalArgumentException(error.getMessage());}});
         rejected(()->{try{InventoryPackets.sort(sortBody(0,0,0,0),4,false);}catch(IOException error){throw new IllegalArgumentException(error.getMessage());}});
+        // Regression: all 160 cells fit, but family-first packing strands the 2x3 armor.
+        Map<Inventory.Address,ItemStack> dense=new LinkedHashMap<>();dense.put(address(1,0,0),new ItemStack(4,1,0,new byte[]{99}));int serial=0;
+        for(int y=0;y<20;y++)for(int x=0;x<8;x+=2)if(y>=3||x!=0)dense.put(address(1,0,y*8+x),new ItemStack(1,1,serial++,new byte[0]));
+        Inventory full=new Inventory(catalog).replace(dense,0).after(),repacked=full.sort(address(1,0,0)).after();
+        check(repacked.items().size()==78&&count(repacked,1,0,1)==77&&count(repacked,1,0,4)==1,"full valid bag sorts without overflow or loss");
+        check(repacked.at(address(1,0,0)).id()==4,"dense packing retries the large footprint first");
+        check(repacked.sort(address(1,0,0)).changes().isEmpty(),"dense retry is idempotent");
+        check(full.items().equals(dense),"sorting never mutates the source revision");
+        // Key fields and native geometry must prevent accidental state/identity merging.
+        Map<Inventory.Address,ItemStack> variants=new LinkedHashMap<>();
+        List<ItemStack> distinct=List.of(new ItemStack(2,2,0,new byte[]{1}),new ItemStack(2,2,1,new byte[]{1}),
+            new ItemStack(2,2,0,new byte[]{2}),new ItemStack(2,2,0,new byte[]{1},new byte[]{1}),
+            new ItemStack(2,2,0,new byte[]{1},new byte[]{0},1<<8),new ItemStack(2,2,0,new byte[]{1}).geometry(2,1));
+        for(int i=0;i<distinct.size();i++)variants.put(address(1,0,16*i),distinct.get(i));
+        Inventory keyed=new Inventory(catalog).replace(variants,0).after().sort(address(1,0,0)).after();
+        check(keyed.items().size()==distinct.size()&&count(keyed,1,0,2)==12,"sort key preserves metadata, bytes, properties, mask and geometry");
+        byte[] publicBytes=distinct.get(0).state();publicBytes[0]=9;check(distinct.get(0).state()[0]==1,"sort comparator keeps byte arrays private");
+        Map<Inventory.Address,ItemStack> partials=new LinkedHashMap<>();
+        partials.put(address(1,0,50),new ItemStack(2,7,0,new byte[0]));partials.put(address(1,0,60),new ItemStack(2,8,0,new byte[0]));partials.put(address(1,0,70),new ItemStack(2,9,0,new byte[0]));
+        Inventory chained=new Inventory(catalog).replace(partials,0).after().sort(address(1,0,0)).after();
+        check(chained.items().values().stream().map(ItemStack::count).toList().equals(List.of(10,10,4)),"partial index carries remainder across several stacks");
+        // Dense heterogeneous layouts exercise both retries and the original-anchor fallback.
+        Random random=new Random(120612);for(int attempt=0;attempt<200;attempt++){
+            BitSet occupied=new BitSet(160);Map<Inventory.Address,ItemStack> generated=new LinkedHashMap<>();int identity=0;
+            for(int k=0;k<600;k++){int width=1+random.nextInt(5),height=1+random.nextInt(4),slot=random.nextInt(160);if(slot%8+width>8||slot/8+height>20)continue;
+                BitSet cells=new BitSet(160);for(int y=0;y<height;y++)for(int x=0;x<width;x++)cells.set(slot+y*8+x);if(occupied.intersects(cells))continue;occupied.or(cells);
+                generated.put(address(1,0,slot),new ItemStack(1,1,identity++,new byte[0]).geometry(width,height));
+            }
+            Inventory original=new Inventory(catalog).replace(generated,0).after(),result=original.sort(address(1,0,0)).after();
+            check(result.items().values().stream().map(i->i.json().toString()).sorted().toList().equals(original.items().values().stream().map(i->i.json().toString()).sorted().toList()),"heterogeneous page preserves complete state "+attempt);
+            check(result.sort(address(1,0,0)).changes().isEmpty(),"heterogeneous sort is stable "+attempt);
+        }
         System.out.println("Inventory sort: "+checks+" PASS");
     }
 }

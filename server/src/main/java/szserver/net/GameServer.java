@@ -1316,9 +1316,10 @@ public final class GameServer implements AutoCloseable {
         Inventory.Address target=InventoryPackets.sort(body,s.inventoryScreen.page(),s.inventoryScreen.storageOpen());boolean storage=target.aggregate()==2;
         if(storage&&(!s.inventoryScreen.storageOpen()||target.container()!=s.inventoryScreen.page())){inventorySnapshot(s,-1);return;}
         if(!InventoryScreen.available(s.hp,s.respawning)){inventorySnapshot(s,storage?-1:0);return;}
-        inventories.mutate(character(s),before->before.sort(target),plan->{
+        inventories.sort(character(s),target,plan->{
+            if(closed||sessions.get(s.address)!=s||storage&&!s.inventoryScreen.storageOpen())return;
             if(plan.changes().size()>32)inventorySnapshot(s,storage?-1:0);else inventoryChanged(s,plan,()->{});
-        },error->inventorySnapshot(s,storage?-1:0));
+        },error->{if(!closed&&sessions.get(s.address)==s&&(!storage||s.inventoryScreen.storageOpen()))inventorySnapshot(s,storage?-1:0);});
     }
     private void inventoryRequest(Session s,int id,byte[] body)throws Exception{
         if(BoltCosmetics.handle(this,s,id,body))return;

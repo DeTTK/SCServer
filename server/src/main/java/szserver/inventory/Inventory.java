@@ -97,7 +97,7 @@ public final class Inventory {
         "barter_resource","barter_coupon","currency_token","premium_token","bet_coin",
         "reputation_token","season_pass_point_token","season_pass_level_token","season_pass_bp_token",
         "custom","quest_item","lootbox");
-    private static boolean same(ItemStack a,ItemStack b){return a==b||a!=null&&b!=null&&a.id()==b.id()&&a.count()==b.count()&&a.metadata()==b.metadata()&&a.equipmentMask()==b.equipmentMask()&&a.gridWidth()==b.gridWidth()&&a.gridHeight()==b.gridHeight()&&Arrays.equals(a.state(),b.state())&&Arrays.equals(a.properties(),b.properties());}
+    private static boolean same(ItemStack a,ItemStack b){return a==b||a!=null&&b!=null&&a.count()==b.count()&&a.compareSortKey(b)==0;}
     private int rank(ItemStack item){String type=catalog.get(item.id()).type();int rank=SORT_ORDER.indexOf(type);return rank<0?SORT_ORDER.size():rank;}
     private static int place(BitSet occupied,int capacity,int width,int height){
         int rows=(capacity+7)/8;
@@ -107,25 +107,36 @@ public final class Inventory {
             if(free)return slot;
         }return -1;
     }
-    /** Compact one native bag or storage page: merge identical stacks, then pack by item family and id. */
+    private Map<Address,ItemStack> sortedLayout(Address root,List<ItemStack> stacks){
+        int capacity=capacity(root);BitSet occupied=new BitSet(capacity);Map<Address,ItemStack> layout=new LinkedHashMap<>();
+        for(ItemStack item:stacks){
+            int width=catalog.width(item),height=catalog.height(item),slot=place(occupied,capacity,width,height);
+            if(slot<0)return null;
+            layout.put(new Address(root.aggregate,root.container,slot),item);int x=slot%8,y=slot/8;
+            for(int dy=0;dy<height;dy++)for(int dx=0;dx<width;dx++)occupied.set((y+dy)*8+x+dx);
+        }return layout;
+    }
+    /** Merge at original anchors first, so even a dense irregular page has a valid fallback. */
     public Plan sort(Address root){
         check(root);if(root.slot()!=0||root.aggregate()!=1&&root.aggregate()!=2)throw new IllegalArgumentException("sort_address");
         if(root.aggregate()==2)deposit(root);
-        int capacity=capacity(root);List<ItemStack> stacks=new ArrayList<>();
+        Map<Address,ItemStack> merged=new LinkedHashMap<>();NavigableMap<ItemStack,Address> partial=new TreeMap<>(ItemStack::compareSortKey);
         for(var e:items.entrySet())if(e.getKey().aggregate()==root.aggregate()&&e.getKey().container()==root.container()){
             ItemStack item=e.getValue();int limit=limit(e.getKey(),item),remaining=item.count();
-            for(int i=0;i<stacks.size()&&remaining>0;i++){ItemStack row=stacks.get(i);
-                if(row.mergeable(item)&&row.gridWidth()==item.gridWidth()&&row.gridHeight()==item.gridHeight()&&row.count()<limit){int moved=Math.min(remaining,limit-row.count());stacks.set(i,row.count(row.count()+moved));remaining-=moved;}
+            // Full/nonstackable rows never enter the index; matching is O(log n), not an all-pairs state scan.
+            Address previous=limit>1?partial.get(item):null;
+            if(previous!=null){ItemStack row=merged.get(previous);int moved=Math.min(remaining,limit-row.count());
+                merged.put(previous,row.count(row.count()+moved));remaining-=moved;if(row.count()+moved==limit)partial.remove(item);
             }
-            while(remaining>0){int take=Math.min(remaining,limit);stacks.add(item.count(take));remaining-=take;}
+            if(remaining>0){ItemStack rest=remaining==item.count()?item:item.count(remaining);merged.put(e.getKey(),rest);if(remaining<limit)partial.put(rest,e.getKey());}
         }
-        stacks.sort((a,b)->{int n=Integer.compare(rank(a),rank(b));if(n==0)n=catalog.get(a.id()).type().compareTo(catalog.get(b.id()).type());if(n==0)n=Integer.compare(a.id(),b.id());if(n==0)n=Integer.compare(a.metadata(),b.metadata());if(n==0)n=Arrays.compareUnsigned(a.state(),b.state());if(n==0)n=Arrays.compareUnsigned(a.properties(),b.properties());if(n==0)n=Integer.compare(a.equipmentMask(),b.equipmentMask());return n==0?Integer.compare(b.count(),a.count()):n;});
-        BitSet occupied=new BitSet(capacity);Map<Address,ItemStack> layout=new LinkedHashMap<>();
-        for(ItemStack item:stacks){
-            int width=catalog.width(item),height=catalog.height(item),slot=place(occupied,capacity,width,height);
-            if(slot<0)throw new IllegalArgumentException("inventory_sort_overflow");
-            layout.put(new Address(root.aggregate,root.container,slot),item);int x=slot%8,y=slot/8;
-            for(int dy=0;dy<height;dy++)for(int dx=0;dx<width;dx++)occupied.set((y+dy)*8+x+dx);
+        Comparator<ItemStack> family=(a,b)->{int n=Integer.compare(rank(a),rank(b));if(n==0)n=catalog.get(a.id()).type().compareTo(catalog.get(b.id()).type());if(n==0)n=a.compareSortKey(b);return n==0?Integer.compare(b.count(),a.count()):n;};
+        List<ItemStack> stacks=new ArrayList<>(merged.values());stacks.sort(family);Map<Address,ItemStack> layout=sortedLayout(root,stacks);
+        if(layout==null){
+            // Preserve family order normally; dense pages get one deterministic large-footprint-first retry.
+            stacks.sort(Comparator.<ItemStack>comparingInt(item->catalog.width(item)*catalog.height(item)).reversed()
+                .thenComparing(Comparator.<ItemStack>comparingInt(catalog::height).reversed()).thenComparing(family));
+            layout=sortedLayout(root,stacks);if(layout==null)layout=merged;
         }
         Set<Address> addresses=new TreeSet<>();for(Address a:items.keySet())if(a.aggregate()==root.aggregate()&&a.container()==root.container())addresses.add(a);addresses.addAll(layout.keySet());
         Map<Address,ItemStack> changes=new LinkedHashMap<>();for(Address a:addresses)if(!same(items.get(a),layout.get(a)))changes.put(a,layout.get(a));

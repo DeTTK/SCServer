@@ -1,0 +1,44 @@
+{
+  "result": "PASS",
+  "sourcePr": 12,
+  "sourceAuthor": "ReversalReside",
+  "sortAssertions": 436,
+  "generatedDenseLayouts": 200,
+  "privateAsyncAssertions": 14,
+  "fullServerSuite": "PASS",
+  "nativeClient": {
+    "hidden": true,
+    "soundDisabled": true,
+    "physicalAndRawInputBlocked": true,
+    "bag": true,
+    "storage": true,
+    "largeDeltaWhileStorageOpen": true,
+    "otherPage": true,
+    "purchasesReadOnly": true,
+    "wireStatesAndCountsPreserved": true,
+    "exactReleaseRestartAndResort": true
+  },
+  "synthetic800Item8191ByteStates": {
+    "beforeMillis": [
+      52,
+      48,
+      51,
+      48,
+      54,
+      55,
+      55
+    ],
+    "afterMillis": [
+      3,
+      4,
+      3,
+      3,
+      4,
+      3,
+      2
+    ],
+    "calculationOnGameOwner": false
+  },
+  "installerSafetyAssertions": 54,
+  "installerLayoutsVerified": 2
+}

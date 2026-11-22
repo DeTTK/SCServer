@@ -32,6 +32,13 @@ public final class ItemStack {
     public ItemStack count(int n){return n==0?null:new ItemStack(id,n,metadata,state,properties,equipmentMask,gridWidth,gridHeight);}
     public ItemStack state(byte[] bytes){return new ItemStack(id,count,metadata,bytes,properties,equipmentMask,gridWidth,gridHeight);}
     public boolean mergeable(ItemStack other){return other!=null&&id==other.id&&metadata==other.metadata&&equipmentMask==other.equipmentMask&&Arrays.equals(state,other.state)&&Arrays.equals(properties,other.properties);}
+    /** Stable stack/geometry key without exposing or cloning immutable native bytes. Counts are excluded. */
+    int compareSortKey(ItemStack other){
+        int n=Integer.compare(id,other.id);if(n==0)n=Integer.compare(metadata,other.metadata);
+        if(n==0)n=Arrays.compareUnsigned(state,other.state);if(n==0)n=Arrays.compareUnsigned(properties,other.properties);
+        if(n==0)n=Integer.compare(equipmentMask,other.equipmentMask);if(n==0)n=Integer.compare(gridWidth,other.gridWidth);
+        return n==0?Integer.compare(gridHeight,other.gridHeight):n;
+    }
     public JsonObject json(){JsonObject p=new JsonObject();p.addProperty("id",id);p.addProperty("count",count);p.addProperty("metadata",metadata);p.addProperty("state",HexFormat.of().formatHex(state));p.addProperty("properties",HexFormat.of().formatHex(properties));p.addProperty("equipmentMask",equipmentMask);if(gridWidth>0){p.addProperty("nativeGridWidth",gridWidth);p.addProperty("nativeGridHeight",gridHeight);}return p;}
     public static ItemStack read(JsonObject p){return new ItemStack(p.get("id").getAsInt(),p.get("count").getAsInt(),p.get("metadata").getAsInt(),HexFormat.of().parseHex(p.get("state").getAsString()),p.has("properties")?HexFormat.of().parseHex(p.get("properties").getAsString()):new byte[]{0},p.has("equipmentMask")?p.get("equipmentMask").getAsInt():0,p.has("nativeGridWidth")?p.get("nativeGridWidth").getAsInt():0,p.has("nativeGridHeight")?p.get("nativeGridHeight").getAsInt():0);}
 }
