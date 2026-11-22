@@ -1,10 +1,13 @@
 using System;using System.IO;using System.IO.Compression;using System.Threading;using System.Runtime.InteropServices;
 static class SetupSafetyTests {
  [DllImport("shell32.dll",SetLastError=true)]static extern IntPtr CommandLineToArgvW([MarshalAs(UnmanagedType.LPWStr)]string command,out int count);
- [DllImport("kernel32.dll")]static extern IntPtr LocalFree(IntPtr value);
+ [DllImport("kernel32.dll",SetLastError=true)]static extern IntPtr LocalFree(IntPtr value);
+ [DllImport("kernel32.dll",CharSet=CharSet.Unicode,SetLastError=true)]static extern bool CreateSymbolicLinkW(string link,string target,uint flags);
  static int checks;
  static void Require(bool value,string why){if(!value)throw new Exception(why);checks++;}
  static void Rejected(Action action,string why){try{action();throw new Exception("Accepted: "+why);}catch(InvalidDataException){checks++;}}
+ static void RejectedIo(Action action,string why){try{action();throw new Exception("Accepted: "+why);}catch(IOException error)when(!(error is InvalidDataException)){checks++;}}
+ static bool CreateSymbolicLink(string link,string target,uint flags){try{return CreateSymbolicLinkW(link,target,flags);}catch(EntryPointNotFoundException){return false;}catch(DllNotFoundException){return false;}}
  static void Main(string[] args){SetupPackage.EnableLongPaths();string root=Path.GetFullPath(args[0]);Directory.CreateDirectory(root);
   foreach(string value in new[]{@"C:\folder with spaces\", "a\"b", "", @"C:\тест\игра", @"abc\\\", "nick name"}){
    foreach(string quoted in new[]{Portable.Q(value),SetupForm.Quote(value)}){
@@ -27,6 +30,22 @@ static class SetupSafetyTests {
   Rejected(()=>SetupPackage.Extract(symbolic,Path.Combine(root,"unpack-symlink"),(s,p)=>{},CancellationToken.None),"Symbolic ZIP entry");
   string foreign=Path.Combine(root,"existing"),save=Path.Combine(foreign,"Local/Server/data/player.json");Directory.CreateDirectory(Path.GetDirectoryName(save));File.WriteAllText(save,"preserve me");
   try{SetupPackage.Install(foreign,(s,p)=>{},CancellationToken.None);throw new Exception("Foreign install replaced");}catch(IOException){Require(File.ReadAllText(save)=="preserve me","Existing saves preserved");}
+  // Linux/Wine keeps /home, /var/home and redirected profiles behind a link above the chosen folder.
+  // Only links inside the chosen folder are a hazard, so the walk must start there.
+  string real=Path.Combine(root,"profile-real"),outside=Path.Combine(root,"profile-link"),chosen=Path.Combine(outside,"BSCPCRAFT"),inside=Path.Combine(chosen,"link-in-inside");
+  Directory.CreateDirectory(Path.Combine(real,"BSCPCRAFT"));
+  if(CreateSymbolicLink(outside,real,1)){
+   Directory.CreateDirectory(chosen);
+   SetupPackage.NoLinks(chosen,chosen);
+   Require(Directory.Exists(chosen),"Chosen folder behind a symbolic link is visible");
+   RejectedIo(()=>SetupPackage.NoLinks(Path.Combine(root,"elsewhere"),chosen),"Path outside the chosen folder rejected");
+   if(CreateSymbolicLink(inside,chosen,1)){
+    RejectedIo(()=>SetupPackage.NoLinks(inside,chosen),"Link inside the chosen folder rejected");
+    Directory.Delete(inside);
+   }
+   Directory.Delete(outside);
+  }
+
   Require(!SetupPackage.NativesCurrent(root),"Missing nested native DLLs need repair");
   Rejected(()=>SetupPackage.InstallNatives(root,root,zip,false,CancellationToken.None),"Unverified native archive rejected before installation");
   string serverRoot=Path.Combine(root,"server-update"),serverCache=Path.Combine(root,"server-cache"),serverFile=Path.Combine(serverRoot,"Server/server.jar");

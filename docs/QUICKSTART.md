@@ -48,6 +48,8 @@ Java включена. JDK, Python и PATH не нужны. Свободного
 
 В окне Wine Linux-путь `/home/имя/.local/share/Steam/steamapps/common/…` обычно выглядит как `Z:\home\имя\.local\share\Steam\steamapps\common\…`. Выберите корень игры с `assets`, `modassets`, `bin_ru`, `bin_global`. В Flatpak Steam путь может быть внутри `~/.var/app/com.valvesoftware.Steam/` — важны файлы внутри, а не название папки.
 
+Установщик отказывается работать, если внутри выбранной папки есть ссылка на другую папку. Ссылки выше неё его не смущают: в Fedora Silverblue, Bazzite и похожих системах `/home` сам является ссылкой на `/var/home`, и выбирать `/home/имя/BSCPCRAFT` нормально. Если видите ошибку «В пути есть ссылка на другую папку», проверьте `ls -l` по пути от выбранной папки вглубь, а не сверху.
+
 Следующие запуски — через `Local/Играть.exe` в том же Wine. Не подменяйте комплектную Windows Java системной Linux Java: в этой поставке клиент использует Windows DLL. Нативного Linux-клиента в комплекте нет.
 
 Структура Steam и загрузка её ресурсов проверены на Windows. Полный игровой запуск этой сборки под Linux/Wine ещё требует проверки на Linux. Если упадёт, приложите свежие `Client/logs/client-*.log`, `Server/logs/*` и версию Wine/Proton.
