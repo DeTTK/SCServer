@@ -122,6 +122,9 @@ def tests():
     with tempfile.TemporaryDirectory(prefix='character-scale-',dir=scratch) as directory:
         subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.net.CharacterScaleTests',directory],check=True)
     results.append('character scale native dimensions, bounded commands, optional-save recovery, native ready bounds and ceiling admission')
+    with tempfile.TemporaryDirectory(prefix='alliance-',dir=scratch) as directory:
+        subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.net.AllianceStateTests',directory],check=True)
+    results.append('alliance bonuses add/remove, transfer fee, persistence and packet 1667 layout')
     results.append('native grid migration preserves complete items; full bag overflow and interrupted-marker retry')
     with tempfile.TemporaryDirectory(prefix='journal-',dir=scratch) as directory:
         root=Path(directory);(root/'var').mkdir();(root/'results').mkdir()

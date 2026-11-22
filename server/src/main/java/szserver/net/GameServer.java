@@ -101,6 +101,7 @@ public final class GameServer implements AutoCloseable {
     private long portalQueries,portalActivations,portalErrors;
     private long nextLocationFlush;
     private final GameInventory inventories;
+    private final AllianceState allianceState;
     private static final class VitalsTask {final UUID id;final Session session;final Runnable finished;CompletableFuture<Void> save;boolean held=true;VitalsTask(UUID id,Session session,Runnable finished){this.id=id;this.session=session;this.finished=finished;}}
     private record ReviveCheck(Session target,GrenadeAreaStore.Activation source,int profile,UUID death,long life,double[] position,CompletableFuture<Integer> placement){}
     private final Map<UUID,ReviveCheck> reviveChecks=new LinkedHashMap<>();private long revives,reviveDenied,reviveErrors;
@@ -265,7 +266,7 @@ public final class GameServer implements AutoCloseable {
         var anomalyResources=world.actorMotion() instanceof NativeActorMotion nativeMotion&&nativeMotion.anomalyResources()!=null?nativeMotion.anomalyResources():fpvSettings.boxes();anomalies=new AnomalySimulation(new Random(),szserver.world.NativeAnomalyDefaults.damage(anomalyResources));
         fpvMap=new szserver.world.MapObstructionAccess(world,terrain,fpvSettings.boxes(),fpvSettings.baseBytes(),fpvSettings.editedBytes(),regions==null?szserver.world.SceneRegistry.load(registry.resolveSibling("active-stock-gameobjects.json")).names():regions.collisionDefinitions());rollback.push(fpvMap);zombies=new ZombieHorde(world,commands,fpvMap);fpvReceipts=new FpvReceipts(data);rollback.push(fpvReceipts);
         if(world.beforeStart())world.bootstrap(w->{w.actorMaps(fpvMap);return true;});else world.submit(w->{w.actorMaps(fpvMap);return true;}).get(5,TimeUnit.SECONDS);
-        locations=new CharacterLocations(data,regions==null?"flat:arena-v1":regions.identity());rollback.push(locations);warps=new szserver.persistence.WarpStore(data);rollback.push(warps);environment=commands.environment();environmentAccess=new EnvironmentAccess(environment,new szserver.persistence.WeatherConfigurations(data,runtime));rollback.push(environmentAccess);
+        locations=new CharacterLocations(data,regions==null?"flat:arena-v1":regions.identity());rollback.push(locations);allianceState=new AllianceState(data);rollback.push(allianceState::close);warps=new szserver.persistence.WarpStore(data);rollback.push(warps);environment=commands.environment();environmentAccess=new EnvironmentAccess(environment,new szserver.persistence.WeatherConfigurations(data,runtime));rollback.push(environmentAccess);
         packets=new GamePackets(root.resolve("fixtures/world-ready.b64"));nativePackets=new ClientPackets(runtime);rollback.push(nativePackets);nativePackets.input(Wire.bytes(o->{o.writeByte(7);o.writeFloat(0);o.writeInt(0);o.write(new byte[8]);o.writeInt(0);o.writeDouble(.5);o.writeDouble(1);o.writeDouble(.5);o.writeFloat(0);o.writeFloat(0);o.writeInt(1);o.writeInt(0);o.writeInt(1);o.writeFloat(.05f);o.writeByte(0);}),false);
         fpvExplosion=new FpvExplosion(root.resolve("fixtures/fpv-fab100.bin"));nativePackets.roundTrip(FpvExplosion.PACKET,fpvExplosion.body(new FpvPackets.Vector(0,64,0)));staminaRules=nativePackets.staminaRules();terrainProjection=new TerrainProjection(world,regions,packets,256);rollback.push(terrainProjection);nativeBlocks=new NativeBlockAccess(world,regions,terrainProjection,commands);rollback.push(nativeBlocks);nativePackets.roundTrip("146340354",new byte[20]);
         chunkManifests=new ChunkManifests(world,regions,packets);rollback.push(chunkManifests);nativePackets.roundTrip("1980173742",ChunkManifestPackets.body(List.of()));nativePackets.roundTrip("297896610",ChunkManifestPackets.body(List.of()));szserver.client.ChunkDistancePackets.warm(nativePackets,chunkSettings.distance());
@@ -1010,7 +1011,7 @@ public final class GameServer implements AutoCloseable {
         enqueue(s,0,GamePackets.attributes(tick,0,equipment(s)));inventorySnapshot(s,0);syncHand(s);syncAmmo(s);
         var initialEnvironment=environment.state();enqueue(s,0,EnvironmentPackets.clock(environment.clockAnchor(),System.currentTimeMillis()));
         sendEffects(s,List.of(),s.effects.active(System.currentTimeMillis()));sendPulseEffects(s,List.of(),s.pulses.effects(System.currentTimeMillis()));sendSickness(s,true);
-        sendPermissions(s,true);enqueue(s,0,GamePackets.attributes(++tick,0,Factions.attributes(s.faction)));s.ready=true;sendPulseEffects(s,List.of(),s.pulses.effects(System.currentTimeMillis()));resetPoses(s);for(Session viewer:sessions.values())if(viewer!=s&&viewer.ready&&viewer.scaleCapable)sendScale(viewer,s);for(Session other:sessions.values())if(other!=s&&other.ready){enqueue(other,0,Wire.concat(GamePackets.spawn(s.entity,s.grant.name(),s.pos,s.yaw,s.pitch),GamePackets.attributes(tick,s.entity,equipment(s)),GamePackets.attributes(tick,s.entity,hand(s)),GamePackets.attributes(tick,s.entity,Factions.attributes(s.faction)),GamePackets.vitals(tick,s.entity,s.hp,s.maxHp,s.animation.aiming())));enqueue(s,0,Wire.concat(GamePackets.spawn(other.entity,other.grant.name(),other.pos,other.yaw,other.pitch),GamePackets.attributes(tick,other.entity,equipment(other)),GamePackets.attributes(tick,other.entity,hand(other)),GamePackets.attributes(tick,other.entity,Factions.attributes(other.faction)),GamePackets.vitals(tick,other.entity,visibleHealth(other),other.maxHp,other.animation.aiming())));}
+        sendPermissions(s,true);enqueue(s,0,GamePackets.attributes(++tick,0,Factions.attributes(s.faction)));enqueue(s,0,allianceState.frame());s.ready=true;sendPulseEffects(s,List.of(),s.pulses.effects(System.currentTimeMillis()));resetPoses(s);for(Session viewer:sessions.values())if(viewer!=s&&viewer.ready&&viewer.scaleCapable)sendScale(viewer,s);for(Session other:sessions.values())if(other!=s&&other.ready){enqueue(other,0,Wire.concat(GamePackets.spawn(s.entity,s.grant.name(),s.pos,s.yaw,s.pitch),GamePackets.attributes(tick,s.entity,equipment(s)),GamePackets.attributes(tick,s.entity,hand(s)),GamePackets.attributes(tick,s.entity,Factions.attributes(s.faction)),GamePackets.vitals(tick,s.entity,s.hp,s.maxHp,s.animation.aiming())));enqueue(s,0,Wire.concat(GamePackets.spawn(other.entity,other.grant.name(),other.pos,other.yaw,other.pitch),GamePackets.attributes(tick,other.entity,equipment(other)),GamePackets.attributes(tick,other.entity,hand(other)),GamePackets.attributes(tick,other.entity,Factions.attributes(other.faction)),GamePackets.vitals(tick,other.entity,visibleHealth(other),other.maxHp,other.animation.aiming())));}
             chunkWindow(s);System.out.println("Native joined: "+s.grant.name()+" entity="+s.entity);
     }
     private UUID character(Session s){return s.grant.characterId();}
@@ -1571,12 +1572,55 @@ public final class GameServer implements AutoCloseable {
     private void receiveChat(Session s,byte[] body){
         try{chat(s,ChatPackets.request(body));}catch(IOException|IllegalArgumentException error){enqueue(s,0,GamePackets.chat(error.getMessage()));}
     }
+    /** Admin control over the alliance menu: bonuses and the readmission/transfer fee. */
+    private String allianceCommand(Session s,String text)throws IOException{
+        if(!playerRules.entitled(character(s)))throw new IllegalArgumentException("Недостаточно прав: команда доступна администратору.");
+        List<String> words=CommandSupport.split(text);
+        if(words.size()==1)return allianceState.describe();
+        if(words.size()==2&&(words.get(1).equalsIgnoreCase("reload")||words.get(1).equalsIgnoreCase("перечитать"))){allianceState.reload();broadcastAllianceState();return "Настройки фракций перечитаны.\n"+allianceState.describe();}
+        if(words.size()==2&&(words.get(1).equalsIgnoreCase("list")||words.get(1).equalsIgnoreCase("показать")))return allianceState.describe();
+        if(words.size()==2&&(words.get(1).equalsIgnoreCase("help")||words.get(1).equalsIgnoreCase("помощь")))return ALLIANCE_USAGE;
+        if(words.size()==3&&(words.get(2).equalsIgnoreCase("list")||words.get(2).equalsIgnoreCase("показать")))
+            return "Активные бонусы "+words.get(1)+": "+(allianceState.active(words.get(1)).isEmpty()?"нет":String.join(", ",allianceState.active(words.get(1))));
+        if(words.size()==4&&(words.get(2).equalsIgnoreCase("remove")||words.get(2).equalsIgnoreCase("убрать")||words.get(2).equalsIgnoreCase("удалить"))){
+            String reply=allianceState.remove(words.get(1),words.get(3));
+            broadcastAllianceState();
+            return reply;
+        }
+        if((words.size()==4||words.size()==5)&&(words.get(2).equalsIgnoreCase("add")||words.get(2).equalsIgnoreCase("добавить"))){
+            Double value=words.size()==5?number(words.get(4)):null;
+            String reply=allianceState.add(words.get(1),words.get(3),value);
+            broadcastAllianceState();
+            return reply;
+        }
+        if(words.size()==4){
+            String reply=allianceState.set(words.get(1),words.get(2),number(words.get(3)));
+            broadcastAllianceState();
+            return reply;
+        }
+        throw new IllegalArgumentException(ALLIANCE_USAGE);
+    }
+    private static final String ALLIANCE_USAGE="Использование:\n"
+            +"/alliance — все значения\n"
+            +"/alliance reload — перечитать файл\n"
+            +"/alliance <фракция> <bonus> <значение> — задать бонус (0 скрывает строку)\n"
+            +"/alliance <фракция> add <bonus> [значение] — добавить/показать бонус\n"
+            +"/alliance <фракция> remove <bonus> — убрать бонус\n"
+            +"/alliance <фракция> fee <значение> — стоимость перехода\n"
+            +"bonus: "+String.join(", ",AllianceState.BONUSES);
+    private static double number(String text){
+        try{return Double.parseDouble(text.replace(',','.'));}catch(NumberFormatException error){throw new IllegalArgumentException("Не число: "+text);}
+    }
+    private void broadcastAllianceState(){byte[] frame=allianceState.frame();for(Session other:sessions.values())if(other.ready)enqueueOrRetire(other,frame);}
     private void chat(Session s,String text){
         if(text.length()>16384)return;if(NpcEditorHooks.chat(this,s,text))return;if(NpcToolsHooks.chat(this,s,text))return;String verb=CommandSupport.verb(text);
         if(verb.equals("/zombies")){
             try{if(!playerRules.entitled(character(s)))throw new IllegalArgumentException("zombies_requires_admin");var words=CommandSupport.split(text);if(words.size()>2)throw new IllegalArgumentException("/zombies start|stop|status");String operation=words.size()==1?"start":words.get(1).toLowerCase(Locale.ROOT);String reply=switch(operation){case "start"->zombies.start(character(s));case "stop"->zombies.stop();case "status"->zombies.status().toString();default->throw new IllegalArgumentException("/zombies start|stop|status");};enqueue(s,0,GamePackets.chat(reply));}catch(IllegalArgumentException error){enqueue(s,0,GamePackets.chat(error.getMessage()));}return;
         }
         if(commandRuntime(s,text))return;
+        if(verb.equals("/alliance")||verb.equals("/фракции")){
+            try{enqueue(s,0,GamePackets.chat(allianceCommand(s,text)));}catch(IllegalArgumentException|IOException error){enqueue(s,0,GamePackets.chat(Objects.toString(error.getMessage(),"alliance_failed")));}return;
+        }
         if(verb.equals("/drone")){try{if(CommandSupport.split(text).size()!=1)throw new IllegalArgumentException("usage_drone");toggleFpv(s);}catch(IllegalArgumentException error){enqueueOrRetire(s,GamePackets.chat(error.getMessage()));}return;}
         if(ChunkDistanceCommands.matches(text)){try{int distance=ChunkDistanceCommands.parse(text),previous=s.window.radius();if(s.window.distance(distance)){s.windowEpoch++;pruneChunkWindow(s);}enqueue(s,0,szserver.client.ChunkDistancePackets.frame(distance));enqueue(s,0,GamePackets.chat("Дальность чанков: "+previous+" -> "+distance));}catch(IllegalArgumentException error){enqueue(s,0,GamePackets.chat(error.getMessage()));}return;}
         if(InventoryCommand.matches(text)){try{InventoryCommand request=InventoryCommand.parse(text);inventories.remove(character(s),request,s.pos.clone(),plan->inventoryChanged(s,plan,()->enqueue(s,0,GamePackets.chat(request.operation().equals("drop")?"Предмет выброшен ("+plan.moved()+" шт.)":"Предмет удалён ("+plan.moved()+" шт.)"))),error->enqueue(s,0,GamePackets.chat(error)));}catch(IllegalArgumentException error){enqueue(s,0,GamePackets.chat(error.getMessage()));}return;}
@@ -1591,7 +1635,7 @@ public final class GameServer implements AutoCloseable {
             }catch(IllegalArgumentException error){enqueue(s,0,GamePackets.chat(error.getMessage()));}return;
         }
         if(verb.equals("/fraction")){
-            try{String faction=PlayerCommands.faction(text);inventories.faction(character(s),faction,()->{if(sessions.get(s.address)!=s)return;s.faction=inventories.faction(character(s));enqueue(s,0,GamePackets.attributes(++tick,0,Factions.attributes(s.faction)));for(Session other:sessions.values())if(other!=s&&other.ready)enqueue(other,0,GamePackets.attributes(tick,s.entity,Factions.attributes(s.faction)));enqueue(s,0,GamePackets.chat("Фракция изменена: "+s.faction));},error->enqueue(s,0,GamePackets.chat(error)));}catch(IllegalArgumentException error){enqueue(s,0,GamePackets.chat(error.getMessage()));}return;
+            try{String faction=PlayerCommands.faction(text);inventories.faction(character(s),faction,()->{if(sessions.get(s.address)!=s)return;s.faction=inventories.faction(character(s));enqueue(s,0,GamePackets.attributes(++tick,0,Factions.attributes(s.faction)));enqueue(s,0,allianceState.frame());for(Session other:sessions.values())if(other!=s&&other.ready)enqueue(other,0,GamePackets.attributes(tick,s.entity,Factions.attributes(s.faction)));enqueue(s,0,GamePackets.chat("Фракция изменена: "+s.faction));},error->enqueue(s,0,GamePackets.chat(error)));}catch(IllegalArgumentException error){enqueue(s,0,GamePackets.chat(error.getMessage()));}return;
         }
         if(verb.equals("/loadout")){
             try{PlayerCommands.Loadout request=PlayerCommands.loadout(text);if(request.operation().equals("list")){JsonObject progress=inventories.gameplay(character(s));String names=progress.has("loadouts")?String.join(", ",new TreeSet<>(progress.getAsJsonObject("loadouts").keySet())):"";enqueue(s,0,GamePackets.chat("Комплекты: "+names));return;}
