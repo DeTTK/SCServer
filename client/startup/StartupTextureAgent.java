@@ -70,13 +70,31 @@ public final class StartupTextureAgent {
         catch(ReflectiveOperationException error){throw splashFailure(error);}
     }
     public static long renderedStartupFrames(){return splashFrames.get();}
+    private static final java.util.concurrent.atomic.AtomicBoolean unitFormattingStarted=new java.util.concurrent.atomic.AtomicBoolean();
+    /** CLDR builds immutable conversion tables on first inventory tooltip. Keep that
+     * CPU-only class initialization off the render thread and start it during loading. */
+    private static void warmUnitFormatting() {
+        if(!unitFormattingStarted.compareAndSet(false,true))return;
+        Thread worker=new Thread(()->{
+            long start=System.nanoTime();
+            try {
+                Class.forName("com.squarespace.cldr.units.BaseUnitConverter",true,StartupTextureAgent.class.getClassLoader());
+                System.err.println("[Java play launch] Unit formatter ready ("+(System.nanoTime()-start)/1_000_000+" ms)");
+            } catch(ClassNotFoundException | LinkageError failure) {
+                System.err.println("[Java play launch] Unit formatter warmup skipped: "+failure);
+            }
+        },"client-unit-format-warmup");
+        worker.setDaemon(true);worker.start();
+    }
     public static void premain(String arguments, Instrumentation instrumentation) {
+        warmUnitFormatting();
         instrumentationActive=true;
         System.err.println("[Java play launch] Startup texture guard loaded");
         instrumentation.addTransformer(transformer());
     }
     /** The portable RAM loader applies the same fixes without requiring new launcher flags. */
     public static byte[] transformForLoader(String name, byte[] bytes) {
+        warmUnitFormatting();
         if(instrumentationActive || !(name.equals("1497795389") || name.equals("464670247") || name.equals("1788203808"))) return bytes;
         try {
             byte[] transformed=transformer().transform(null,name,null,null,bytes);

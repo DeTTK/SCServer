@@ -26,9 +26,9 @@ static class SetupPackage {
     internal const string AgentUrl="https://github.com/DeTTK/SCServer/releases/download/world-items-2026.11.22/game-resource-compat-udp-20261122.jar";
     internal const string AgentHash="0ad625606c495904d22c9eb77bc9290dec9b741f0eeb1d45cf3440b2e50412b0";
     internal const int AgentBytes=225369;
-    internal const string StartupUrl="https://github.com/DeTTK/SCServer/releases/download/loading-screen-2026.11.21/startup-guard-20261121.jar";
-    internal const string StartupHash="e58ef38fb32af6d025adbf71ab3e8892fd9c6faac61a5fbb356fb38ee59b4fd0";
-    internal const int StartupBytes=136518;
+    internal const string StartupUrl="https://github.com/DeTTK/SCServer/releases/download/unit-format-warmup-2026.11.22/startup-guard-20261122.jar";
+    internal const string StartupHash="00dab163374e9f393775c1bd7e34422956ef3fb83ff83f45227eae4dda405298";
+    internal const int StartupBytes=137094;
     internal const string ServerUrl="https://github.com/DeTTK/SCServer/releases/download/inventory-contract-2026.11.22/server-inventory-contract-20261122.jar";
     internal const string ServerHash="84c20e5369d6398159019981d02ec9e93fb25d58a55bdae79ece0550e91af8ee";
     internal const int ServerBytes=6594797;

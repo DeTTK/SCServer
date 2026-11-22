@@ -1,0 +1,89 @@
+{
+  "result": "PASS",
+  "date": "2026-11-22",
+  "issue": 18,
+  "issueResolved": false,
+  "scope": "One isolated map and one real native client; server freezes reported by other users are not reproduced or ruled out.",
+  "baselineServer": {
+    "slowPackets": [
+      {
+        "uptimeMs": 66511.662999,
+        "phase": "application",
+        "bytes": 16,
+        "ms": 28.949499,
+        "id": 1060
+      }
+    ],
+    "maxLateMs": 20.5403,
+    "lateTicks": [],
+    "maxSocketWaitMs": 32.312201,
+    "maxApplicationMs": 28.949499,
+    "maxReceiveMs": 1.8,
+    "maxCompletionMs": 20.744899,
+    "maxGapMs": 67.4388
+  },
+  "warmServer": {
+    "maxReceiveMs": 1.6828,
+    "maxApplicationMs": 20.9502,
+    "maxSocketWaitMs": 29.265999,
+    "lateTicks": [],
+    "maxLateMs": 26.703201,
+    "slowPackets": [
+      {
+        "bytes": 16,
+        "phase": "application",
+        "uptimeMs": 49379.705801,
+        "id": 1060,
+        "ms": 20.9502
+      }
+    ],
+    "maxGapMs": 72.1299,
+    "maxCompletionMs": 21.656301
+  },
+  "soupItems": [
+    26650,
+    26651,
+    26652,
+    26653,
+    26654,
+    26655
+  ],
+  "allSixConsumedBeforeAndAfter": true,
+  "skippedSlotsDuringEachUseBeforeAndAfter": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "clientObservation": {
+    "snapshotEveryFrames": 16,
+    "firstInventorySnapshotGapBeforeMs": 1797.0000002533197,
+    "firstInventorySnapshotGapAfterMs": 655.9999999590218,
+    "idleSnapshotGapBeforeMs": 563.0000000819564,
+    "idleSnapshotGapAfterMs": 592.9999998770654,
+    "limitation": "Snapshot intervals are not single-frame timings. JFR samples separately locate cold CLDR initialization on the main game thread."
+  },
+  "cause": "Lazy initialization of CLDR BaseUnitConverter / UnitFactors during first inventory formatting; moved to a daemon during startup. No GL work moved.",
+  "startupAgentSha256": "00dab163374e9f393775c1bd7e34422956ef3fb83ff83f45227eae4dda405298",
+  "loadingScreen": {
+    "checks": 9,
+    "renderedFrames": 115,
+    "passed": true
+  },
+  "desktop": {
+    "safetyChecks": 54,
+    "preflightPassed": true,
+    "bothInstallLayoutsPreserveSavesAndRollback": true
+  },
+  "gameClassesChanged": false,
+  "serverChanged": false,
+  "gameAssetsChanged": false
+}
