@@ -122,6 +122,7 @@ python scripts/run_server.py --bundle "C:/LocalGame/Server" --map "C:/LocalGame/
 ## Что читать дальше
 
 - `docs/QUICKSTART.md` — установка, Steam/Wine, запуск своего JAR, диагностика падений.
+- `docs/SDK.md` — моды: манифест, жизненный цикл, настройки, HUD, ввод, таблица хуков.
 - `docs/ARCHITECTURE.md` — схема и границы модулей.
 - `docs/TESTING.md` — что именно проверяет `build.py test` и что остаётся на ручной игровой прогон.
 - `docs/PRIVATE_INPUTS.md` — перечень приватных входов и почему их нельзя импортировать автоматически.
