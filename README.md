@@ -1,6 +1,6 @@
 # SCServer / Бскпкрафт
 
-**[Скачать установщик локалки](https://github.com/DeTTK/SCServer/releases/download/anomalies-2026.11.22/BSCPCRAFT-Setup.exe)** · [полный ZIP](https://github.com/DeTTK/SCServer/releases/download/local-ready-2026.11.20/BSCPCRAFT-local-20261119.zip)
+**[Скачать установщик локалки](https://github.com/DeTTK/SCServer/releases/download/lootboxes-2026.11.22/BSCPCRAFT-Setup.exe)** · [полный ZIP](https://github.com/DeTTK/SCServer/releases/download/local-ready-2026.11.20/BSCPCRAFT-local-20261119.zip)
 
 Локальный запуск сервера БСКПКрафт (stalzone.gay) сервер + клиент
 
@@ -28,7 +28,7 @@
 
 ## Скачать и запустить
 
-**[Скачать установщик BSCPCRAFT-Setup.exe](https://github.com/DeTTK/SCServer/releases/download/anomalies-2026.11.22/BSCPCRAFT-Setup.exe)**
+**[Скачать установщик BSCPCRAFT-Setup.exe](https://github.com/DeTTK/SCServer/releases/download/lootboxes-2026.11.22/BSCPCRAFT-Setup.exe)**
 
 1. Откройте установщик.
 2. Выберите, куда поставить локалку. Папку по умолчанию можно оставить.
@@ -99,6 +99,12 @@ python scripts/run_server.py --bundle "C:/LocalGame/Server" --map "C:/LocalGame/
 Меняются тело, хитбоксы, высота камеры и скорость движения. Видно от первого лица и другим игрокам. Анимации учитывают размер: гигант делает обычные шаги, просто длиннее. В транспорте менять размер нельзя, под низким потолком сервер не даст вырасти.
 
 Чтобы заработало у всех, обновите и сервер, и клиент через свежий установщик. Карта и персонажи сохранятся. В `mods` ничего добавлять не нужно. [Подробности и сборка](docs/character-scale.md).
+
+## Кейсы и подсказки команд
+
+Кейсы открываются из обычного инвентаря. Выпавшие вещи остаются в рюкзаке, ключи списываются вместе с кейсом. Если не хватает места или ключа, ничего не теряется. [Подробности и ограничения](docs/LOOTBOXES.md).
+
+В комплект входит автодополнение: начните писать команду в чате, нажимайте **Tab** для подстановки и **Shift+Tab** для предыдущего варианта. **↑/↓** выбирают подсказку, **Esc** скрывает список. Установщик добавит мод и в уже установленную локалку. [Исходники и сборка](client/command-completion/README.md).
 
 ## Админки и кнопки
 

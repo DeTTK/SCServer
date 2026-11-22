@@ -73,11 +73,13 @@ public final class GameServer implements AutoCloseable {
         final WeaponActions weaponActions=new WeaponActions();LauncherReload launcherReload;
         Inventory.Address adminSelected;int creativeSelected;final Map<Integer,Integer> creativeHints=new HashMap<>();
         final ArrayDeque<NativeGrant> nativeGrants=new ArrayDeque<>();int nativeGrantBytes;boolean nativeGrantPending;
+        int lootboxItem=-1,lootSequence;final LinkedHashMap<Integer,LootReply> lootReplies=new LinkedHashMap<>();
     }
     private static final class BlockRepair {final Set<World.Block> points=new LinkedHashSet<>();CompletableFuture<NativeBlockAccess.Repair> future;}
     private long physicalAccepted,physicalDenied,physicalDuplicates;
     private long replicationFrames,replicationRecords,replicationBytes,replicationDeferred;
     private record NativeGrant(Session target,NativeAdminPackets.Give give,Inventory.Address weapon,ItemStack expected,long life,long deadline,int bytes){}
+    private static final class LootReply {final LootboxPackets.Open request;byte[] frame;LootReply(LootboxPackets.Open request){this.request=request;}}
     private long nativeAdminAccepted,nativeAdminDenied,nativeAdminEchoes;
     private final NativeBlockAccess nativeBlocks;private long nativeBlockDenied,nativeBlockFailed,nativeBlockIntents,nativeBlockRepairs;
     private final CommandService commands;
@@ -411,7 +413,9 @@ public final class GameServer implements AutoCloseable {
         if(szserver.client.TeleportPackets.mapId(id,body.length)){try{teleport(s,TeleportCommands.map(body),"Телепортация по карте выполнена.");}catch(IllegalArgumentException error){enqueue(s,0,GamePackets.chat(error.getMessage()));}return;}
         if(id==1022){meleeSwing(s,body);return;}
         if(id==1435){meleeHit(s,body);return;}
-        if(id==693){var in=Wire.input(body);int owner=in.readShort(),sequence=in.readShort();Inventory.Address address=nullableAddress(in);if(owner!=0||address!=null&&(address.aggregate()!=1||address.container()!=0)||in.available()!=0)throw new IOException("medicine_inventory_request");medicine(s,address==null?null:address.slot(),()->enqueue(s,0,InventoryPackets.ack(owner,sequence)));return;}
+        if(id==693){var in=Wire.input(body);int owner=in.readShort(),sequence=in.readShort();Inventory.Address address=nullableAddress(in);if(owner!=0||address!=null&&(address.aggregate()!=1||address.container()!=0)||in.available()!=0)throw new IOException("medicine_inventory_request");ItemStack selected=address==null?null:inventory(s).at(address);if(selected!=null&&inventories.lootboxes().isBox(selected.id())){lootboxPreview(s,selected.id());enqueue(s,0,InventoryPackets.ack(owner,sequence));}else medicine(s,address==null?null:address.slot(),()->enqueue(s,0,InventoryPackets.ack(owner,sequence)));return;}
+        if(id==1741){var in=Wire.input(body);Inventory.Address address=new Inventory.Address(in.readUnsignedByte(),in.readUnsignedByte(),in.readUnsignedShort());int owner=in.readShort(),sequence=in.readShort();if(owner!=0||address.aggregate()!=1||address.container()!=0||in.available()!=0)throw new IOException("lootbox_open_all_request");ItemStack selected=inventory(s).at(address);if(selected==null||!inventories.lootboxes().isBox(selected.id())){enqueue(s,0,InventoryPackets.ack(owner,sequence));return;}int count=Math.min(500,LootboxOpening.count(inventory(s),selected.id()));if(s.hp<=0||s.respawning){enqueue(s,0,InventoryPackets.ack(owner,sequence));return;}inventories.openLootboxes(character(s),selected.id(),count,result->{inventoryChanged(s,result.plan(),()->enqueue(s,0,InventoryPackets.ack(owner,sequence)));enqueue(s,0,GamePackets.chat("Открыто ящиков: "+count+". Добыча добавлена в рюкзак."));},error->{inventorySnapshot(s,0);enqueue(s,0,InventoryPackets.ack(owner,sequence));enqueue(s,0,GamePackets.chat(lootboxError(error)));});return;}
+        if(id==695){if(body.length!=16)throw new IOException("lootbox_finish_request");return;}
         if(id==928){if(body.length!=4||ByteBuffer.wrap(body).getInt()!=-1)throw new IOException("inventory_open");openInventory(s);return;}
         if(id==2060||id==562){if(id==2060&&body.length!=0||id==562&&body.length!=4)throw new IOException("storage_open");int page=id==562?ByteBuffer.wrap(body).getInt():s.inventoryScreen.page();if(page<0||page>=InventoryScreen.PAGES)throw new IOException("storage_page");openStorage(s,page,id==2060);return;}
         if(id==1231||id==102||id==1627||id==2040||id==2009){inventoryRequest(s,id,body);return;}
@@ -880,7 +884,24 @@ public final class GameServer implements AutoCloseable {
             s.effects=CharacterEffects.read(inventories.gameplay(grant.characterId()),medicines,System.currentTimeMillis());inventories.prepare(grant.characterId(),new ItemStack(20004,1,0,s.magazines[30]),new ItemStack(12714,90,0,new byte[0]),()->refreshWeapon(s,()->{if(sessions.get(s.address)==s){s.inventoryReady=true;completeJoin(s);}}),error->{enqueue(s,0,GamePackets.chat(error));remove(s);});
     }
     private void sceneConfiguration(Session s,byte[] body)throws IOException{
+        LootboxPackets.Open opening=LootboxPackets.request(body);if(opening!=null){openLootboxes(s,opening);return;}
         SceneConfigurationPackets.Request request=SceneConfigurationPackets.request(body);if(request==null)return;if(s.sceneReads.containsKey(request.sequence()))return;if(s.sceneReads.size()>=8){sceneDenied++;enqueue(s,0,GamePackets.chat("scene_configuration_busy"));return;}s.sceneReads.put(request.sequence(),sceneAccess.configuration(request,new ArrayList<>(s.chunks)));
+    }
+    private void lootboxPreview(Session s,int item){
+        try{if(s.hp<=0||s.respawning)throw new IllegalArgumentException("lootbox_not_available");inventories.lootboxes().available(item);int count=LootboxOpening.count(inventory(s),item);if(count<1)throw new IllegalArgumentException("lootbox_missing");s.lootboxItem=item;boolean tradeable=inventories.lootboxes().tradeable(item);enqueue(s,0,LootboxPackets.preview(item,tradeable?0:count,tradeable?count:0,tradeable));}
+        catch(IllegalArgumentException error){enqueue(s,0,GamePackets.chat(lootboxError(error.getMessage())));}
+    }
+    private static String lootboxError(String error){
+        if(error==null)return "Не удалось открыть ящик.";
+        return switch(error){case "inventory_full"->"Освободите место в рюкзаке: ящик и ключ сохранены.";case "lootbox_key_missing"->"Для открытия не хватает подходящих ключей.";case "lootbox_missing"->"В рюкзаке не хватает этих ящиков.";case "inventory_busy"->"Дождитесь завершения предыдущего действия.";default->"Не удалось открыть ящик: "+error;};
+    }
+    private void openLootboxes(Session s,LootboxPackets.Open request){
+        LootReply existing=s.lootReplies.get(request.sequence());if(existing!=null){if(existing.request.equals(request)){if(existing.frame!=null)enqueue(s,0,existing.frame);}else enqueue(s,0,GamePackets.chat("lootbox_request_sequence_conflict"));return;}
+        if(request.sequence()<=s.lootSequence){enqueue(s,0,LootboxPackets.denied(request.sequence()));return;}
+        s.lootSequence=request.sequence();LootReply reply=new LootReply(request);s.lootReplies.put(request.sequence(),reply);while(s.lootReplies.size()>8)s.lootReplies.remove(s.lootReplies.keySet().iterator().next());
+        java.util.function.Consumer<String> failed=error->{reply.frame=LootboxPackets.denied(request.sequence());if(sessions.get(s.address)==s){inventorySnapshot(s,0);enqueue(s,0,reply.frame);enqueue(s,0,GamePackets.chat(lootboxError(error)));}};
+        if(s.hp<=0||s.respawning||s.lootboxItem!=request.item()){failed.accept("lootbox_not_available");return;}
+        inventories.openLootboxes(character(s),request.item(),request.count(),result->{reply.frame=LootboxPackets.result(request.sequence(),result.receipt(),result.rewards());if(sessions.get(s.address)==s){inventoryChanged(s,result.plan(),()->{});enqueue(s,0,reply.frame);}},failed);
     }
     private boolean sceneWriteAllowed(Session s){
         if(!playerRules.editor(character(s),worldEditors)){sceneDenied++;enqueue(s,0,GamePackets.chat("scene_configuration_requires_world_editor"));return false;}advanceSceneConfiguration(s);if(s.sceneSaves.size()>=128){sceneDenied++;enqueue(s,0,GamePackets.chat("scene_write_queue_full"));return false;}return true;

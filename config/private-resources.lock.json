@@ -2,5 +2,6 @@
   "szserver/npc/npc-editor-defaults.json": "5e8f959711c4fefcd82814d2b713d7f5ed054d7b072e763de65d9002cb2d131c",
   "szserver/client/npc-visual-profiles.json": "c31ff2676ebb1d0cb7819c9bdbe6319b86f5ca89beb44a6b9d5779a6f6a5a6e9",
   "szserver/weather-default.json.zst": "8ea0fd66aa28469eea91c7613a7429d1415f9ee27bceff5e0da8ad0aa480a1ef",
-  "assets/bundle/feature_flags.json": "76887a15e4f391818eee52d950fa0d4144075db6dd6a5bfbd0efdf677af67a74"
+  "assets/bundle/feature_flags.json": "76887a15e4f391818eee52d950fa0d4144075db6dd6a5bfbd0efdf677af67a74",
+  "szserver/inventory/lootbox-tables.json.gz": "ef5b9fe58a3caa2c648949c3cd84b9e4bd6d8f865b46c7da216296c6bc04519a"
 }

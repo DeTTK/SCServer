@@ -147,6 +147,7 @@ public final class ClientPackets implements AutoCloseable {
     }
     /** QA uses the canonical numeric RPC registries, matching the production game protocol. */
     public byte[] sceneConfigurationRoundTrip(boolean response,byte[] body)throws Exception{Class.forName("1046176253",true,loader).getField("final").setBoolean(null,true);return roundTrip(response?"977073877":"1048773550",body);}
+    public byte[] lootboxPreviewRoundTrip(byte[] body)throws Exception{return roundTrip("860869075",body);}
     /** Native save reader restores buffer capacity but leaves its write cursor at zero.
      * Verify the decoded bytes/UUID, then exercise the native writer with a freshly populated buffer. */
     public byte[] sceneConfigurationSaveCodec(byte[] body)throws Exception{

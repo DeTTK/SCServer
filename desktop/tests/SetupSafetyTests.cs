@@ -52,6 +52,18 @@ static class SetupSafetyTests {
    Require(File.ReadAllText(manifest).Contains(SetupPackage.ScaleHash),"New scale component added to manifest");
    SetupPackage.InstallScale(scaleRoot,scaleCache,payload,true);Require(File.ReadAllText(Path.Combine(scaleCache,"previous-character-scale.jar"))=="old scale","Repeat scale update preserves rollback");
   }
+  string completionRoot=Path.Combine(root,"completion-update"),completionCache=Path.Combine(root,"completion-cache"),completionFile=Path.Combine(completionRoot,"Client/mods/command-completion.jar");
+  Directory.CreateDirectory(Path.GetDirectoryName(completionFile));Directory.CreateDirectory(completionCache);File.WriteAllText(completionFile,"old completion");
+  Require(!SetupPackage.CompletionCurrent(completionRoot),"Missing or outdated completion needs update");
+  Rejected(()=>SetupPackage.InstallCompletion(completionRoot,completionCache,new byte[]{1,2,3},true),"Invalid completion payload rejected");
+  Require(File.ReadAllText(completionFile)=="old completion","Invalid completion update preserves mod");
+  if(args.Length>3){
+   string manifest=Path.Combine(completionRoot,"Client/FILES.sha256.json");File.WriteAllText(manifest,"[]");byte[] payload=File.ReadAllBytes(args[3]);
+   SetupPackage.InstallCompletion(completionRoot,completionCache,payload,true);Require(SetupPackage.CompletionCurrent(completionRoot),"Completion installed");
+   Require(File.ReadAllText(Path.Combine(completionCache,"previous-command-completion.jar"))=="old completion","Previous completion retained");
+   Require(File.ReadAllText(manifest).Contains("mods/command-completion.jar"),"Completion added to client manifest");
+   SetupPackage.InstallCompletion(completionRoot,completionCache,payload,true);Require(File.ReadAllText(Path.Combine(completionCache,"previous-command-completion.jar"))=="old completion","Repeat preserves completion rollback");
+  }
   string gameRoot=Path.Combine(root,"game-layout");Directory.CreateDirectory(Path.Combine(gameRoot,"assets"));Directory.CreateDirectory(Path.Combine(gameRoot,"modassets"));
   InstalledGame layout;Require(!InstalledGame.TryResolve(gameRoot,out layout),"Incomplete installed game rejected");
   Action<string> touch=relative=>{string file=Path.Combine(gameRoot,relative);Directory.CreateDirectory(Path.GetDirectoryName(file));File.WriteAllText(file,"fixture");};

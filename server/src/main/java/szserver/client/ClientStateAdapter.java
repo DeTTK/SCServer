@@ -266,7 +266,18 @@ public final class ClientStateAdapter implements AutoCloseable {
         Class<?> stackType=Class.forName("211097523",true,loader);Object stack=stackType.getConstructor(DataInput.class).newInstance(new BoundedNativeInput(raw));Object root=compound.getConstructor().newInstance();stackType.getMethod("char",compound).invoke(stack,root);
         Map<String,Object> fields=(Map<String,Object>)compound.getField("transient").get(root);Object tag=fields.get("tag");if(tag==null){tag=compound.getConstructor().newInstance();compound.getMethod("finally",String.class,compound).invoke(root,"tag",tag);}
         ((Map<String,Object>)compound.getField("transient").get(tag)).putAll((Map<String,Object>)compound.getField("transient").get(changes));
-        Object edited=stackType.getConstructor(compound).newInstance(root);restoreArtifactBonuses(edited,root,0);ByteArrayOutputStream output=new ByteArrayOutputStream();stackType.getMethod("switch",DataOutput.class).invoke(edited,new DataOutputStream(output));return readStack(output.toByteArray());
+        Object edited=stackType.getConstructor(compound).newInstance(root);restoreArtifactBonuses(edited,root,0);
+        // Fresh native NBT imports can write attachment maps in a different order
+        // from the stream reader. Accept only a stable encoding with identical
+        // complete NBT; never relax the strict decoder for incoming stacks.
+        Object before=compound.getConstructor().newInstance();stackType.getMethod("char",compound).invoke(edited,before);
+        byte[] encoded=szserver.net.Wire.bytes(out->stackType.getMethod("switch",DataOutput.class).invoke(edited,out));
+        if(encoded.length<10||encoded.length>8192)throw new IOException("native_stack_size");
+        BoundedNativeInput input=new BoundedNativeInput(encoded);Object decoded=stackType.getConstructor(DataInput.class).newInstance(input);
+        if(input.available()!=0)throw new IOException("native_stack_trailing");
+        Object after=compound.getConstructor().newInstance();stackType.getMethod("char",compound).invoke(decoded,after);
+        if(!before.equals(after))throw new IOException("native_tagged_stack_semantics_changed");
+        return readStack(szserver.net.Wire.bytes(out->stackType.getMethod("switch",DataOutput.class).invoke(decoded,out)));
     }
     public byte[] stackConfig(byte[] raw)throws Exception {
         Object stack=Class.forName("211097523",true,loader).getConstructor(DataInput.class).newInstance(new BoundedNativeInput(raw));

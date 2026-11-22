@@ -18,6 +18,7 @@ public final class GameInventory implements AutoCloseable {
         Character(Inventory inventory,InventoryJournal.Lease lease){this.inventory=inventory;this.lease=lease;}
     }
     private final ItemCatalog catalog;
+    private final LootboxCatalog lootboxes;
     private final Path equipmentRoot;
     private final InventoryJournal journal;
     private final GameItems items;private Map<Integer,List<GrenadeAreaProfile>> pulseProfiles=Map.of();private boolean pulseProfilesPrepared;
@@ -69,7 +70,7 @@ public final class GameInventory implements AutoCloseable {
     /** Isolated test fault injection, never set from the live configuration. */
     public GameInventory(Path root,Path data,Path runtime,Path registry,long testDelayMillis)throws Exception {
         equipmentRoot=root;
-        catalog=new ItemCatalog(root.resolve("fixtures/item-definitions.json"));journal=new InventoryJournal(data.resolve("characters.sjournal"),catalog,testDelayMillis);items=new GameItems(runtime,registry);
+        catalog=new ItemCatalog(root.resolve("fixtures/item-definitions.json"));lootboxes=new LootboxCatalog(catalog,root);journal=new InventoryJournal(data.resolve("characters.sjournal"),catalog,testDelayMillis);items=new GameItems(runtime,registry);
         physicalMechanisms=PhysicalReload.catalogue(root.resolve("fixtures/vr-weapon-catalog.json"));
         items.warmGameplay(root.resolve("fixtures/item-definitions.json"),root.resolve("fixtures/artifact-settings.json"));
         for(var entry:JsonParser.parseString(java.nio.file.Files.readString(root.resolve("fixtures/equipment-appearances.json"))).getAsJsonObject().entrySet())defaultAppearances.put(Integer.parseInt(entry.getKey()),HexFormat.of().parseHex(entry.getValue().getAsString()));
@@ -82,6 +83,20 @@ public final class GameInventory implements AutoCloseable {
         try{factories.execute(()->{try{future.complete(items.actorEquipment(equipmentRoot,copy,held,encumbered));}catch(Throwable failure){future.completeExceptionally(failure);}});}catch(RejectedExecutionException failure){future.completeExceptionally(failure);}return future.copy();
     }
     public ItemCatalog catalog(){return catalog;}
+    public LootboxCatalog lootboxes(){return lootboxes;}
+    public record LootResult(Inventory.Plan plan,UUID receipt,List<ItemStack> rewards){}
+    public void openLootboxes(UUID id,int box,int count,Consumer<LootResult> success,Consumer<String> failure){
+        Character c=character(id);if(c.busy||c.failed||c.deathClear){failure.accept("inventory_busy");return;}
+        try{lootboxes.available(box);if(count<1||count>500||LootboxOpening.count(c.inventory,box)<count)throw new IllegalArgumentException("lootbox_missing");if(lootboxes.key(box)!=-1&&LootboxOpening.count(c.inventory,lootboxes.key(box))<count)throw new IllegalArgumentException("lootbox_key_missing");}catch(IllegalArgumentException error){failure.accept(error.getMessage());return;}
+        Inventory before=c.inventory;JsonObject saved=journal.gameplay(id),previous=saved.has("lootboxes")?saved.getAsJsonObject("lootboxes"):new JsonObject();c.busy=true;
+        try{factories.execute(()->{try{
+            String rank="newbie";List<String> ranks=List.of("picklock","newbie","stalker","veteran","master","legend");int highest=1;for(var e:before.items().entrySet())if(e.getKey().aggregate()==0){JsonObject definition=catalog.get(e.getValue().id()).properties();if(definition.has("rank"))highest=Math.max(highest,ranks.indexOf(definition.get("rank").getAsString().toLowerCase(Locale.ROOT)));}rank=ranks.get(highest);
+            var draw=lootboxes.draw(box,count,rank,previous,java.util.concurrent.ThreadLocalRandom.current());
+            var opened=LootboxOpening.plan(before,catalog,box,lootboxes.key(box),count,draw.prizes(),(prize,amount)->items.createStack(prize.id(),amount,prize.metadata(),prize.tags()));
+            UUID receipt=UUID.randomUUID();JsonObject state=draw.progress(),last=new JsonObject();last.addProperty("receipt",receipt.toString());last.addProperty("item",box);last.addProperty("count",count);state.add("last",last);JsonObject progress=new JsonObject();progress.add("lootboxes",state);
+            completion(()->{if(c.deathClear||!admissionAllowed(id)){c.busy=false;failure.accept("lootbox_owner_changed");return;}persist(id,c,opened.plan(),progress,plan->success.accept(new LootResult(plan,receipt,opened.rewards())),failure);});
+        }catch(Exception|LinkageError error){completion(()->{c.busy=false;denied++;failure.accept(Objects.toString(error.getMessage(),"lootbox_failed"));});}});}catch(RejectedExecutionException error){c.busy=false;failure.accept("inventory_factory_queue_full");}
+    }
     public boolean hasAppearanceCodec(int id)throws Exception{return items.hasAppearanceCodec(id);}
     public byte[] appearance(UUID id,int container){return character(id).appearances.get(container);}
     public Map<String,Float> stats(UUID id){return character(id).stats;}
@@ -503,7 +518,7 @@ public final class GameInventory implements AutoCloseable {
     }
     /** Preparation only: no native owner or cached gameplay requests exist yet. */
     public CompletableFuture<Void> deleteOffline(UUID id){if(!characters.isEmpty())return CompletableFuture.failedFuture(new IllegalStateException("character_delete_requires_owner"));return journal.deleteCharacter(id);}
-    public Map<String,Object> metrics(){int pending;synchronized(pendingInitializations){pending=pendingInitializations.size();}var metrics=new LinkedHashMap<String,Object>(Map.of("accepted",accepted,"denied",denied,"characters",characters.size(),"busy",characters.values().stream().filter(c->c.busy).count(),"journal",journal.metrics(),"factoryQueue",factories.getQueue().size(),"callbackFailures",callbackFailures,"initializations",pending,"pendingDeathClears",pendingDeathClears.size(),"pendingExpirations",pendingExpirations.size()));metrics.put("characterCache",Map.of("idleLimit",IDLE_LIMIT,"idleByteLimit",IDLE_BYTES,"idleBytes",idleBytes,"active",activeCharacters.size(),"evicted",evicted));return Collections.unmodifiableMap(metrics);}
+    public Map<String,Object> metrics(){int pending;synchronized(pendingInitializations){pending=pendingInitializations.size();}var metrics=new LinkedHashMap<String,Object>(Map.of("accepted",accepted,"denied",denied,"characters",characters.size(),"busy",characters.values().stream().filter(c->c.busy).count(),"journal",journal.metrics(),"factoryQueue",factories.getQueue().size(),"callbackFailures",callbackFailures,"initializations",pending,"pendingDeathClears",pendingDeathClears.size(),"pendingExpirations",pendingExpirations.size()));metrics.put("lootboxes",lootboxes.metrics());metrics.put("characterCache",Map.of("idleLimit",IDLE_LIMIT,"idleByteLimit",IDLE_BYTES,"idleBytes",idleBytes,"active",activeCharacters.size(),"evicted",evicted));return Collections.unmodifiableMap(metrics);}
     public boolean healthy(){return !closed&&!completionFailure&&Boolean.TRUE.equals(((Map<?,?>)journal.metrics().get("writer")).get("healthy"));}
     @Override public void close()throws Exception{List<CompletableFuture<Void>> pending;synchronized(pendingInitializations){closed=true;pending=List.copyOf(pendingInitializations.values());initializations.clear();}for(var future:pending)future.completeExceptionally(new IllegalStateException("inventory_closed"));Workers.stop(factories);try{long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(10);while(!pendingDeathClears.isEmpty()||!pendingExpirations.isEmpty()||!completed.isEmpty()||characters.values().stream().anyMatch(c->c.busy||c.clearingEffects)){drain();if(System.nanoTime()>=deadline)throw new IllegalStateException("inventory_shutdown_timeout");Thread.sleep(2);}}finally{for(Character c:characters.values())c.lease.close();characters.clear();activeCharacters.clear();journal.close();items.close();}}
 }

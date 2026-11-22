@@ -87,12 +87,21 @@ def sdk():
     classes=compile_java('sdk',(ROOT/'sdk/api').rglob('*.java'));api=jar('mod-api',classes)
     example=compile_java('hello',(ROOT/'sdk/example/src').rglob('*.java'),[api])
     jar('hello-mod',example,[(ROOT/'sdk/example/stalcraft-mod.properties','stalcraft-mod.properties')])
+    return api
+
+def completion():
+    api=sdk();deps=dependencies();source=ROOT/'client/command-completion'
+    classes=compile_java('command-completion',(source/'src').rglob('*.java'),[api]+deps)
+    jar('command-completion',classes,[(source/'stalcraft-mod.properties','stalcraft-mod.properties')])
+    test=compile_java('command-completion-tests',(source/'tests').rglob('*.java'),[classes])
+    subprocess.run([tool('java'),'-cp',os.pathsep.join(map(str,[test,classes])),'completion.CompletionTest'],check=True)
 
 def tests():
-    classes,deps=server();sdk()
+    classes,deps=server();completion()
     test_classes=compile_java('tests',(ROOT/'server/src/test/java').rglob('*.java'),[classes]+deps)
     cp=os.pathsep.join(map(str,[test_classes,classes]+deps));results=[]
     subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.world.RegionRecordBoundsTests'],check=True)
+    subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.LootboxTests'],check=True)
     subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.client.NativeMethodsTests'],check=True)
     subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.AnomalyTests'],check=True)
     subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.world.AnomalyIndexTests'],check=True)
@@ -141,8 +150,8 @@ def desktop():
         subprocess.run([str(test),directory],check=True)
 
 if __name__=='__main__':
-    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('target',choices=['server','sdk','test','desktop']);parser.add_argument('--private-resources',action='store_true',help='Package pinned local game resources; never upload this JAR');args=parser.parse_args()
+    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('target',choices=['server','sdk','command-completion','test','desktop']);parser.add_argument('--private-resources',action='store_true',help='Package pinned local game resources; never upload this JAR');args=parser.parse_args()
     if args.private_resources and args.target!='server':parser.error('--private-resources requires target server')
     B.mkdir(exist_ok=True)
     if args.target=='server':server(args.private_resources)
-    else:{'sdk':sdk,'test':tests,'desktop':desktop}[args.target]()
+    else:{'sdk':sdk,'command-completion':completion,'test':tests,'desktop':desktop}[args.target]()

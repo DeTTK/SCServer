@@ -1,4 +1,4 @@
-"""Import four pinned resources from your compatible private server JAR, never its classes."""
+"""Import pinned resources from your compatible private server JAR, never its classes."""
 from pathlib import Path
 import argparse,hashlib,json,zipfile
 ROOT=Path(__file__).resolve().parents[1]
@@ -20,4 +20,4 @@ for name,raw in verified.items():
     target=ROOT/'.local/server-resources'/name
     target.parent.mkdir(parents=True,exist_ok=True)
     target.write_bytes(raw)
-print('Imported 4 pinned private resources into ignored .local/server-resources; no classes copied')
+print('Imported '+str(len(verified))+' pinned private resources into ignored .local/server-resources; no classes copied')
