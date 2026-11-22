@@ -1,0 +1,28 @@
+{
+  "result": "PASS",
+  "graphicalClient": true,
+  "nativeRequestId": 1232,
+  "factionsTested": [
+    "duty",
+    "freedom",
+    "bandits",
+    "merc",
+    "covenant",
+    "stalkers"
+  ],
+  "factionPersistedAcrossServerAndClientRestart": true,
+  "factionPersistedAcrossReconnect": true,
+  "screenshotsResolution": [
+    1920,
+    1080
+  ],
+  "nativeMemberCardConfirmed": true,
+  "withBonusRows": 8,
+  "withoutBonusRows": 2,
+  "remainingRows": "stock intrinsic faction features",
+  "requiresReopenForBonusListRefresh": true,
+  "productionChanged": false,
+  "inputAndAudioIsolated": true,
+  "ownedProcessesStopped": true,
+  "ownedTestDataRemoved": true
+}

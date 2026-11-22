@@ -71,7 +71,7 @@ public final class GameServer implements AutoCloseable {
         Session(InetSocketAddress address,int id,int clientId,byte[] cookie,ChunkStreamingSettings settings){this.address=address;this.id=id;this.clientId=clientId;this.cookie=cookie;window=new ChunkWindow(settings.distance(),settings.outstandingLimit());}
         long authenticationOrder;CompletableFuture<Boolean> accountPreparation;CompletableFuture<Void> inventoryPreparation;boolean inventoryPinned;CharacterLocations.Lease locationLease;UUID locationProtocol;Teleport teleport;final TeleportGuard teleportGuard=new TeleportGuard();CompletableFuture<Void> warpSave;String warpReply;CompletableFuture<World.Vec> warpRead;String warpReadName;long warpReadLife;
         final PortalLookup portalLookup=new PortalLookup();long portalUntil;final Map<UUID,PortalStatus> portalStatuses=new LinkedHashMap<>();CompletableFuture<JsonObject> sceneInteraction;long sceneInteractionAt;
-        CompletableFuture<szserver.persistence.WorldEnvironment.State> environmentSave;boolean weatherCommand;final EnvironmentAccess.Client environmentClient=new EnvironmentAccess.Client();CompletableFuture<String> allianceChange;
+        CompletableFuture<szserver.persistence.WorldEnvironment.State> environmentSave;boolean weatherCommand;final EnvironmentAccess.Client environmentClient=new EnvironmentAccess.Client();CompletableFuture<String> allianceChange;boolean factionChanging;
         final ArrayDeque<CompletableFuture<NativeBlockAccess.Outcome>> blockSaves=new ArrayDeque<>();final LinkedHashMap<Long,BlockRepair> blockRepairs=new LinkedHashMap<>();
         UUID anomalyStasis;long anomalyMirrorUntil;float anomalySlow=1;final Set<UUID> anomalyCircuses=new HashSet<>();
         final Map<Integer,CompletableFuture<byte[]>> sceneReads=new LinkedHashMap<>();final UUID sceneWriter=UUID.randomUUID();final ArrayDeque<CompletableFuture<JsonObject>> sceneSaves=new ArrayDeque<>();
@@ -412,6 +412,7 @@ public final class GameServer implements AutoCloseable {
         if(id==1338){anomalyForceEcho(body);return;}
         if(id==747){anomalyStrengthSave(s,body);return;}
         if(id==559){anomalyConfigurationSave(s,body);return;}
+        if(szserver.client.AlliancePackets.request(id)){changeFaction(s,szserver.client.AlliancePackets.faction(body));return;}
         if(id==466){sceneConfiguration(s,body);return;}
         if(id==1191||id==1610){sceneConfigurationSave(s,body,id==1610);return;}
         String sceneKind=szserver.client.SceneEditPackets.kind(id);if(sceneKind!=null){sceneEdit(s,sceneKind,body);return;}
@@ -1603,6 +1604,15 @@ public final class GameServer implements AutoCloseable {
     private void receiveChat(Session s,byte[] body){
         try{chat(s,ChatPackets.request(body));}catch(IOException|IllegalArgumentException error){enqueue(s,0,GamePackets.chat(error.getMessage()));}
     }
+    /** Menu requests and the existing development command share one durable inventory mutation. */
+    private void changeFaction(Session s,String requested){
+        String faction=Factions.normalize(requested);
+        if(!s.ready||s.respawning||s.hp<=0){enqueueOrRetire(s,GamePackets.chat("Сейчас нельзя изменить фракцию"));return;}
+        if(s.factionChanging){enqueueOrRetire(s,GamePackets.chat("Переход во фракцию ещё сохраняется"));return;}
+        if(s.faction.equals(faction)){enqueueOrRetire(s,allianceState.frame());return;}
+        s.factionChanging=true;
+        inventories.faction(character(s),faction,()->{s.factionChanging=false;if(sessions.get(s.address)!=s)return;s.faction=inventories.faction(character(s));int revision=++tick;enqueueOrRetire(s,GamePackets.attributes(revision,0,Factions.attributes(s.faction)));enqueueOrRetire(s,allianceState.frame());for(Session viewer:new ArrayList<>(sessions.values()))if(viewer!=s&&viewer.ready)enqueueOrRetire(viewer,GamePackets.attributes(revision,s.entity,Factions.attributes(s.faction)));enqueueOrRetire(s,GamePackets.chat("Фракция изменена: "+s.faction));},error->{s.factionChanging=false;if(sessions.get(s.address)==s)enqueueOrRetire(s,GamePackets.chat(error));});
+    }
     private void advanceAlliance(){
         long revision=allianceState.revision();if(revision!=allianceRevision){byte[] frame=allianceState.frame();for(Session viewer:new ArrayList<>(sessions.values()))if(viewer.ready)enqueueOrRetire(viewer,frame);allianceRevision=revision;}
         for(Session viewer:new ArrayList<>(sessions.values()))if(viewer.allianceChange!=null&&viewer.allianceChange.isDone()){
@@ -1633,7 +1643,7 @@ public final class GameServer implements AutoCloseable {
             }catch(IllegalArgumentException error){enqueue(s,0,GamePackets.chat(error.getMessage()));}return;
         }
         if(verb.equals("/fraction")){
-            try{String faction=PlayerCommands.faction(text);inventories.faction(character(s),faction,()->{if(sessions.get(s.address)!=s)return;s.faction=inventories.faction(character(s));enqueue(s,0,GamePackets.attributes(++tick,0,Factions.attributes(s.faction)));for(Session other:sessions.values())if(other!=s&&other.ready)enqueue(other,0,GamePackets.attributes(tick,s.entity,Factions.attributes(s.faction)));enqueue(s,0,GamePackets.chat("Фракция изменена: "+s.faction));},error->enqueue(s,0,GamePackets.chat(error)));}catch(IllegalArgumentException error){enqueue(s,0,GamePackets.chat(error.getMessage()));}return;
+            try{changeFaction(s,PlayerCommands.faction(text));}catch(IllegalArgumentException error){enqueue(s,0,GamePackets.chat(error.getMessage()));}return;
         }
         if(verb.equals("/loadout")){
             try{PlayerCommands.Loadout request=PlayerCommands.loadout(text);if(request.operation().equals("list")){JsonObject progress=inventories.gameplay(character(s));String names=progress.has("loadouts")?String.join(", ",new TreeSet<>(progress.getAsJsonObject("loadouts").keySet())):"";enqueue(s,0,GamePackets.chat("Комплекты: "+names));return;}

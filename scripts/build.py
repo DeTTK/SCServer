@@ -107,6 +107,7 @@ def tests():
     subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.world.WorldItemPhysicsTests'],check=True)
     subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.client.NativeMethodsTests'],check=True)
     subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.client.NativePlatformTests'],check=True)
+    subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.client.AllianceRequestTests'],check=True)
     subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.world.CollisionCaseTests'],check=True)
     subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.AnomalyRadiusTests'],check=True)
     subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.AnomalyTests'],check=True)

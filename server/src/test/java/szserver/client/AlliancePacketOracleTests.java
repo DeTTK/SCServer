@@ -5,6 +5,7 @@ public final class AlliancePacketOracleTests {
     public static void main(String[] args)throws Exception{
         Path scratch=Path.of(args[1]);Files.createDirectories(scratch);Path directory=Files.createTempDirectory(scratch,"alliance-native-");int checks=0;
         try(AllianceState state=new AllianceState(directory);ClientPackets packets=new ClientPackets(Path.of(args[0]))){
+            for(String request:java.util.List.of(AlliancePackets.JOIN)){byte[] body=Wire.bytes(out->out.writeUTF("duty"));packets.roundTrip(request,body);if(!AlliancePackets.faction(body).equals("duty"))throw new AssertionError("native request adapter");checks++;}
             state.set("duty","fee",76543).get();state.set("duty","farm",12.5).get();
             byte[] framed=Wire.readFrame(new ByteArrayInputStream(state.frame()));ByteBuffer buffer=ByteBuffer.wrap(framed);if(Wire.varint(buffer)!=1667)throw new AssertionError("packet ID");
             Field field=ClientPackets.class.getDeclaredField("loader");field.setAccessible(true);ClassLoader loader=(ClassLoader)field.get(packets);

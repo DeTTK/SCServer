@@ -29,10 +29,10 @@ static class SetupPackage {
     internal const string StartupUrl="https://github.com/DeTTK/SCServer/releases/download/loading-screen-2026.11.21/startup-guard-20261121.jar";
     internal const string StartupHash="e58ef38fb32af6d025adbf71ab3e8892fd9c6faac61a5fbb356fb38ee59b4fd0";
     internal const int StartupBytes=136518;
-    internal const string ServerUrl="https://github.com/DeTTK/SCServer/releases/download/alliance-settings-2026.11.22/server-alliance-settings-20261122.jar";
-    internal const string ServerHash="a554c10ba6ef5dcef0769de1dee7c47e3458d2c9a6a539312fd0b379f0b1bc2c";
-    internal const int ServerBytes=6576516;
-    internal const string CompletionUrl="https://github.com/DeTTK/SCServer/releases/download/alliance-settings-2026.11.22/command-completion.jar";
+    internal const string ServerUrl="https://github.com/DeTTK/SCServer/releases/download/alliance-transitions-2026.11.22/server-alliance-transitions-20261122.jar";
+    internal const string ServerHash="fee6200dd309bf114321327c6983e51335f12a3ec5636bad393e9442824da568";
+    internal const int ServerBytes=6577852;
+    internal const string CompletionUrl="https://github.com/DeTTK/SCServer/releases/download/alliance-transitions-2026.11.22/command-completion.jar";
     internal const string CompletionHash="4c8e18e6a0b533d7347c926529950a9ae429b057f18f1bb8a9703326eb312b7f";
     internal const int CompletionBytes=17289;
     internal const string ScaleUrl="https://github.com/DeTTK/SCServer/releases/download/character-scale-2026.11.22/character-scale.jar";
