@@ -1,6 +1,6 @@
 # SCServer / Бскпкрафт
 
-**[Скачать установщик локалки](https://github.com/DeTTK/SCServer/releases/download/steam-compat-2026.11.22/BSCPCRAFT-Setup.exe)** · [полный ZIP](https://github.com/DeTTK/SCServer/releases/download/local-ready-2026.11.20/BSCPCRAFT-local-20261119.zip)
+**[Скачать установщик локалки](https://github.com/DeTTK/SCServer/releases/download/anomalies-2026.11.22/BSCPCRAFT-Setup.exe)** · [полный ZIP](https://github.com/DeTTK/SCServer/releases/download/local-ready-2026.11.20/BSCPCRAFT-local-20261119.zip)
 
 Локальный запуск сервера БСКПКрафт (stalzone.gay) сервер + клиент
 
@@ -28,7 +28,7 @@
 
 ## Скачать и запустить
 
-**[Скачать установщик BSCPCRAFT-Setup.exe](https://github.com/DeTTK/SCServer/releases/download/steam-compat-2026.11.22/BSCPCRAFT-Setup.exe)**
+**[Скачать установщик BSCPCRAFT-Setup.exe](https://github.com/DeTTK/SCServer/releases/download/anomalies-2026.11.22/BSCPCRAFT-Setup.exe)**
 
 1. Откройте установщик.
 2. Выберите, куда поставить локалку. Папку по умолчанию можно оставить.
@@ -52,7 +52,7 @@
 
 Исправлены повторный вход с `gateway_token_mismatch`, вход с бронёй Дио/Джотаро и админской гаусс-пушкой, размеры предметов и слот ПНВ. Старые пересекающиеся предметы сервер разложит заново без удаления; если рюкзак заполнен, перенесёт их на личный склад. Обновление сервера входит в свежий установщик; прежний `server.jar` сохраняется в `.setup/previous-server.jar`.
 
-Можно вручную: [маленький ZIP-патч](https://github.com/DeTTK/SCServer/releases/download/steam-compat-2026.11.22/BSCPCRAFT-steam-fixes-20261122.zip). Распакуйте с заменой в папку с `Client`, `Server` и `Map`, предварительно закрыв игру и сервер.
+Можно вручную: [маленький ZIP-патч](https://github.com/DeTTK/SCServer/releases/download/anomalies-2026.11.22/BSCPCRAFT-anomalies-20261122.zip). Распакуйте с заменой в папку с `Client`, `Server` и `Map`, предварительно закрыв игру и сервер.
 
 ### Если хочется распаковать вручную
 

@@ -29,9 +29,9 @@ static class SetupPackage {
     internal const string StartupUrl="https://github.com/DeTTK/SCServer/releases/download/loading-screen-2026.11.21/startup-guard-20261121.jar";
     internal const string StartupHash="e58ef38fb32af6d025adbf71ab3e8892fd9c6faac61a5fbb356fb38ee59b4fd0";
     internal const int StartupBytes=136518;
-    internal const string ServerUrl="https://github.com/DeTTK/SCServer/releases/download/steam-compat-2026.11.22/server-20261122.jar";
-    internal const string ServerHash="cc75cfd374ffd920d8d8e2932a611a6c0d354714bee8e956c860d80852960506";
-    internal const int ServerBytes=3551867;
+    internal const string ServerUrl="https://github.com/DeTTK/SCServer/releases/download/anomalies-2026.11.22/server-anomalies-20261122.jar";
+    internal const string ServerHash="297ff39ec3711be5eba9f49aee78d1430155bc6ae2d94135f88800b4a870136d";
+    internal const int ServerBytes=3585460;
     internal const string ScaleUrl="https://github.com/DeTTK/SCServer/releases/download/character-scale-2026.11.22/character-scale.jar";
     internal const string ScaleHash="952b4a4423aa140bd2223d68335eedb58acf276bcaaea585ab6057f801f1aaeb";
     internal const int ScaleBytes=24131;
