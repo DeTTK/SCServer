@@ -19,7 +19,8 @@ public final class LegacyInventoryLayout {
     private int limit(Inventory.Address a,ItemStack item){int n=catalog.get(item.id()).stackLimit();return a.aggregate()==2&&n>1?100000:n;}
     private BitSet cells(Inventory.Address a,ItemStack item){
         if(!StorageLayout.validAddress(a))return null;
-        if(a.aggregate()==0)return catalog.fits(item,a.container())?BitSet.valueOf(new long[]{1}):null;
+        // Preserve client-chosen equipment during unrelated grid/count repairs.
+        if(a.aggregate()==0)return BitSet.valueOf(new long[]{1});
         int width=catalog.width(item),height=catalog.height(item),cap=capacity(a),x=a.slot()%8;
         if(x+width>8||a.slot()/8+height>(cap+7)/8)return null;
         BitSet b=new BitSet(cap);

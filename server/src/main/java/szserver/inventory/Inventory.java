@@ -31,8 +31,8 @@ public final class Inventory {
             if(item.stateful()&&catalog.get(item.id()).stackLimit()==1&&item.count()!=1)throw new IllegalArgumentException("stateful_stack_count");
             // Equipment has one root cell, not a universal one-item stack limit.
             // Native grenade stacks retain the same resource-defined cap here.
-            if(a.aggregate==0){if(!catalog.fits(item,a.container))throw new IllegalArgumentException("wrong_equipment");}
-            else{BitSet used=occupied.computeIfAbsent(a.aggregate+":"+a.container,k->new BitSet());BitSet footprint=cells(a,item);if(used.intersects(footprint))throw new IllegalArgumentException("occupied_inventory_cells");used.or(footprint);}
+            // Native client owns equipment compatibility. Keep structural and quantity validation here.
+            if(a.aggregate!=0){BitSet used=occupied.computeIfAbsent(a.aggregate+":"+a.container,k->new BitSet());BitSet footprint=cells(a,item);if(used.intersects(footprint))throw new IllegalArgumentException("occupied_inventory_cells");used.or(footprint);}
             // Do not manufacture another identity by splitting a stateful item.
         }
     }

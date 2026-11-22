@@ -431,9 +431,9 @@ public final class GameInventory implements AutoCloseable {
     }
     /** Administrative replacement still uses native construction and durable atomic inventory publication. */
     public void applyEquipment(UUID id,int container,int factory,Consumer<Inventory.Plan> success,Consumer<String> failure){
-        if(!Set.of(1,2,3,5,6,7).contains(container)||factory<0||factory>65535){failure.accept("apply_arguments");return;}
+        if(container<0||container>=StorageLayout.EQUIPMENT||factory<0||factory>65535){failure.accept("apply_arguments");return;}
         Character c=character(id);if(c.busy||c.failed||c.deathClear){failure.accept("inventory_busy");return;}
-        try{if(factory!=0&&!catalog.fits(factory,container))throw new IllegalArgumentException("wrong_equipment");}catch(IllegalArgumentException e){failure.accept(e.getMessage());return;}
+        try{if(factory!=0)catalog.get(factory);}catch(IllegalArgumentException e){failure.accept(e.getMessage());return;}
         c.busy=true;Inventory before=c.inventory;
         try{factories.execute(()->{try{
             ItemStack item=factory==0?null:items.createStack(factory,1,0,new JsonObject());

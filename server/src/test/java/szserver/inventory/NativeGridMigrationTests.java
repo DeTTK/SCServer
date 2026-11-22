@@ -32,12 +32,12 @@ public final class NativeGridMigrationTests {
             journal.commit(head,initial.replace(Map.of(new Inventory.Address(0,0,0),new ItemStack(7,1,0,new byte[]{77})),0)).get();
             journal.commit(wrongHead,initial.replace(Map.of(new Inventory.Address(0,1,0),new ItemStack(7,1,0,new byte[]{88})),0)).get();
         }
-        Map<String,Object> report=NativeGridMigration.repair(data,definitions);check(((Number)report.get("characters")).intValue()==3,"overlaps and invalid legacy headgear slot repaired");
+        Map<String,Object> report=NativeGridMigration.repair(data,definitions);check(((Number)report.get("characters")).intValue()==2,"bag overlaps repaired without moving client-chosen equipment");
         long revision;
         try(InventoryJournal journal=new InventoryJournal(data.resolve("characters.sjournal"),now)){
             Inventory repaired=journal.load(first);revision=repaired.revision();check(contents(repaired).equals(firstContents),"complete state, metadata, count and identities unchanged");check(revision==2,"one durable repair revision");
             Inventory crowded=journal.load(full);check(contents(crowded).equals(fullContents),"full bag preserves every item");check(crowded.items().keySet().stream().anyMatch(a->a.aggregate()==2),"overflow relocated to personal storage");
-            check(journal.load(head).at(new Inventory.Address(0,0,0)).id()==7,"correctly equipped headgear preserved");check(journal.load(wrongHead).at(new Inventory.Address(1,0,0)).id()==7,"invalid legacy body slot relocated without item loss");
+            check(journal.load(head).at(new Inventory.Address(0,0,0)).id()==7,"correctly equipped headgear preserved");check(journal.load(wrongHead).at(new Inventory.Address(0,1,0)).id()==7,"client-chosen legacy body slot preserved");
         }
         check(NativeGridMigration.repair(data,definitions).get("status").equals("current"),"marker avoids repeated full scans");
         Files.delete(data.resolve("native-grid-migration.json"));Map<String,Object> retry=NativeGridMigration.repair(data,definitions);check(((Number)retry.get("characters")).intValue()==0,"retry after interrupted marker publication is idempotent");
