@@ -1,0 +1,27 @@
+{
+  "result": "PASS",
+  "issue": 19,
+  "reproducedError": "vitals_receipt_without_position",
+  "reporterLogAvailable": false,
+  "reproduction": "A retained global inventory receipt with no location for its character on the selected map stops GameServer bootstrap. Reproduced using a copy of an old save; identical save boots after fix.",
+  "rootRecovery": "Defer unpositioned receipts at bootstrap; after validated placement asynchronously persist location and replay the receipt before admitting the player.",
+  "dataFilesDeletedForRecovery": false,
+  "fullServerSuite": "PASS",
+  "mapRecoveryAssertions": 15,
+  "legacyCopiesBootedBeforeFix": 3,
+  "legacyCopyFailedBeforeAndBootedAfterFix": 1,
+  "nativeClient": {
+    "result": "PASS",
+    "hidden": true,
+    "soundDisabled": true,
+    "physicalAndRawInputBlocked": true,
+    "seedReceiptHealth": 55,
+    "observedHealthAfterNormalRegeneration": 60.25,
+    "inventoryAmmoPreserved": 37,
+    "worldJoined": true,
+    "rejoinPreserved": true
+  },
+  "installerSafetyAssertions": 54,
+  "installerUpdateLayouts": 2,
+  "gameWireAndJournalSchemaChanged": false
+}

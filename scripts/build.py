@@ -123,6 +123,9 @@ def tests():
     results.append('authored admin Gauss accepted; nonfinite weapon parameters rejected')
     # These are wholly owned synthetic files, not game data or user saves.
     scratch=B/'scratch';scratch.mkdir(exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix='map-vitals-',dir=scratch) as directory:
+        subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.VitalsMapRecoveryTests',directory],check=True)
+    results.append('global inventory receipts defer missing map positions, restore after placement and remain idempotent across checkpoint/restart')
     with tempfile.TemporaryDirectory(prefix='native-grid-',dir=scratch) as directory:
         subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.inventory.NativeGridMigrationTests',directory],check=True)
     with tempfile.TemporaryDirectory(prefix='character-scale-',dir=scratch) as directory:

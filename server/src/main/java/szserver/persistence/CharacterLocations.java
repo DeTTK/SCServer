@@ -170,13 +170,23 @@ public final class CharacterLocations implements AutoCloseable {
     }
     /** Startup-only bounded replay. A newer ordinary snapshot carries the receipt marker and wins. */
     public CompletableFuture<Void> recoverVitals(Map<UUID,szserver.inventory.VitalsReceipt> receipts){if(receipts!=null&&receipts.isEmpty())return CompletableFuture.completedFuture(null);return loadedBatch(receipts,"vitals_recovery_batch_limit",()->recoverVitalsLoaded(receipts));}
+    /** Called only after native placement succeeds; never invent coordinates during startup replay. */
+    public CompletableFuture<Void> recoverVitalsAt(UUID id,szserver.inventory.VitalsReceipt receipt,Vec placement){
+        if(receipt==null)return CompletableFuture.completedFuture(null);
+        try{
+            CompletableFuture<Void> positioned=position(id)==null?teleport(id,validPosition(placement)):CompletableFuture.completedFuture(null);
+            return positioned.thenCompose(ignored->recoverVitals(Map.of(id,receipt)));
+        }catch(RuntimeException error){return CompletableFuture.failedFuture(error);}
+    }
     private synchronized CompletableFuture<Void> recoverVitalsLoaded(Map<UUID,szserver.inventory.VitalsReceipt> receipts){
         if(closing||!healthy()||receipts.size()>BATCH)return CompletableFuture.failedFuture(new IllegalStateException("vitals_recovery_unavailable"));
         Map<String,PlayerState> batch=new LinkedHashMap<>();
         try{for(var entry:receipts.entrySet()){
             String key=entry.getKey().toString();var receipt=entry.getValue();long applied=vitalsRevisions.getOrDefault(key,0L);
             if(applied>receipt.revision())throw new IllegalStateException("vitals_receipt_behind_locations");if(applied==receipt.revision())continue;
-            if(!positions.containsKey(key))throw new IllegalStateException("vitals_receipt_without_position");
+            // Inventory is global, positions belong to a map. Keep an unpositioned
+            // character's receipt pending until its first validated placement here.
+            if(!positions.containsKey(key))continue;
             batch.put(key,receipt.recover(states.get(key)));
         }}catch(RuntimeException error){return CompletableFuture.failedFuture(error);}
         if(batch.isEmpty())return CompletableFuture.completedFuture(null);
