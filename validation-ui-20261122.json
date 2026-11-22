@@ -1,0 +1,20 @@
+{
+  "result": "PASS",
+  "scope": "Native UI widgets and render methods executed on a guarded real client game thread; no claim of every menu route",
+  "nativeChecks": 189,
+  "nativeCycles": 3,
+  "originalErrorsReproduced": 4,
+  "priorOptionalResourceChecks": 24,
+  "installerSafetyChecks": 46,
+  "installerLayoutsVerified": 2,
+  "physicalAndRawInputBlocked": true,
+  "audioMuted": true,
+  "serverSimulationChanged": false,
+  "playerSavesChanged": false,
+  "remaining": [
+    "Detached slope block render NPE: world reference missing, 6 occurrences; captured map object required for diagnosis",
+    "Missing optional textures and minimap tiles; no reconstruction of absent assets",
+    "Native GPU/JVM memory failures remain outside this UI patch"
+  ],
+  "agentSha256": "4bea8ca80496fa47ca75141579917419cc3f69945e98965576ec0f26b83f5a09"
+}

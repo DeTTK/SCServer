@@ -9,6 +9,7 @@ public final class ResourceCompatibilityAgent {
   if(AttributeWireIds.baseSize()!=469)throw new IllegalStateException("wire table unavailable");
   agent.addTransformer(new ResourceSchemaTransformer());
   agent.addTransformer(new OptionalResourceTransformer());
+  agent.addTransformer(new UiStabilityTransformer());
   agent.addTransformer(new SceneHashTransformer());
   agent.addTransformer(new ClassFileTransformer(){public byte[] transform(ClassLoader loader,String name,Class<?> redefined,ProtectionDomain domain,byte[] original){
    if(!"1993742576".equals(name))return null;
