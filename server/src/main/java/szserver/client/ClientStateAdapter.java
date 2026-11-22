@@ -471,6 +471,11 @@ public final class ClientStateAdapter implements AutoCloseable {
     }
     public record Attachment(byte[] state,byte[] previous,boolean builtin) {}
     public String artifactResearchTag()throws Exception{return (String)Class.forName("1609149377",true,loader).getField("synchronized").get(null);}
+    private NativeCosmetics cosmetics;
+    public void warmCosmetics(Map<Integer,String> classes,Map<Integer,String> definitions)throws Exception{cosmetics=new NativeCosmetics(loader,definitions,classes);}
+    public record CosmeticSkin(byte[] state,int previous,boolean unchanged){}
+    public CosmeticSkin nativeSkin(String kind,byte[] raw,int item,int selected)throws Exception{var change=cosmetics.skin(item,decode(codec(kind),raw),selected);return new CosmeticSkin(encode(codec(kind),change.state()),change.previous(),change.unchanged());}
+    public Attachment nativePaint(String kind,byte[] raw,int slot,byte[] attached,boolean virtual)throws Exception{Stack original=readStack(raw);var change=cosmetics.paint(original.id(),decode(codec(kind),original.state()),kind,slot,raw,attached,virtual);return new Attachment(encode(codec(kind),change.state()),change.previous(),change.builtin());}
     public record Visual(byte[] state,String previous) {}
     public Visual skin(String kind,byte[] raw,String name)throws Exception{
         Object state=decode(codec(kind),raw);Class<?> visual=Class.forName("865153858",true,loader);
@@ -478,17 +483,6 @@ public final class ClientStateAdapter implements AutoCloseable {
         if((Boolean)visual.getMethod("abstract").invoke(state))throw new IOException("visual_name_locked");
         String previous=(String)visual.getMethod("transient").invoke(state);visual.getMethod("double",String.class).invoke(state,name);
         return new Visual(encode(codec(kind),state),previous);
-    }
-    public Attachment paint(String kind,byte[] raw,int slot,byte[] attached,boolean virtual)throws Exception{
-        if(slot<0||slot>1)throw new IOException("paint_slot");Object state=decode(codec(kind),raw);
-        Object key=cosmeticKey(kind,slot);
-        Class<?> flags=Class.forName("1156376641",true,loader);if(!flags.isInstance(state))throw new IOException("paint_flags_missing");
-        boolean wasVirtual=(Boolean)flags.getMethod(slot==0?"throw":"finally").invoke(state);
-        Map<Object,Object> map=(Map<Object,Object>)state.getClass().getMethod("for").invoke(state);Object previous=map.remove(key);
-        if(attached!=null)map.put(key,Class.forName("211097523",true,loader).getConstructor(DataInput.class).newInstance(new BoundedNativeInput(attached)));
-        flags.getMethod(slot==0?"assert":"private",boolean.class).invoke(state,virtual&&attached!=null);
-        byte[] old=null;if(previous!=null){ByteArrayOutputStream bytes=new ByteArrayOutputStream();previous.getClass().getMethod("switch",DataOutput.class).invoke(previous,new DataOutputStream(bytes));old=bytes.toByteArray();}
-        return new Attachment(encode(codec(kind),state),old,wasVirtual);
     }
     private Object cosmeticKey(String kind,int slot)throws Exception{
         String[] descriptor=switch(kind){case "1535556086","259689215"->new String[]{"catch","1173269411"};case "1865555906"->new String[]{"double","1082342295"};case "1176431411","1782792945","810393443"->new String[]{"strictfp","1143465724"};case "1490492938"->new String[]{"throw","531128727"};default->throw new IOException("paint_target_state");};

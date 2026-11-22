@@ -39,18 +39,6 @@ public final class ItemCatalog {
     private static String text(JsonObject p,String k,String fallback){return p.has(k)?p.get(k).getAsString():fallback;}
     public Definition get(int id){Definition d=items.get(id);if(d==null)throw new IllegalArgumentException("unknown_item:"+id);return d;}
     public int size(){return items.size();}
-    private static boolean contains(JsonElement ids,int id){if(ids==null||ids.isJsonNull())return false;if(ids.isJsonArray()){for(JsonElement value:ids.getAsJsonArray())if(value.getAsInt()==id)return true;return false;}return ids.getAsInt()==id;}
-    public boolean skinCompatible(int target,int skin){JsonObject row=get(skin).properties();return get(skin).type().equals("item_skin")&&contains(row.get("applicable_id"),target)&&!contains(row.get("forbidden_id"),target);}
-    public int skinId(int target,String name){if(name==null)return 0;for(Definition row:items.values())if(row.type().equals("item_skin")&&row.properties().has("skin")&&name.equals(row.properties().get("skin").getAsString())&&skinCompatible(target,row.id()))return row.id();return 0;}
-    /** Authored style maps accept comma-separated numeric IDs or native item names. */
-    public static boolean paintApplies(JsonObject paint,int target,JsonObject targetDefinition){
-        JsonElement mappings=paint.get("applicable_items");if(mappings==null||!mappings.isJsonObject())return false;
-        String id=Integer.toString(target),name=text(targetDefinition,"unlocalized_name","");
-        for(String group:mappings.getAsJsonObject().keySet())for(String token:group.split(",")){
-            String key=token.trim();if(key.equals(id)||!name.isEmpty()&&key.equals(name))return true;
-        }
-        return false;
-    }
     public boolean fits(ItemStack item,int container){return (item.equipmentMask()&(1<<container))!=0||fits(item.id(),container);}
     public boolean fits(int id,int container){Definition d=get(id);return switch(container){
         case 0 -> d.type.equals("armor")&&d.properties.has("armor_slot")&&d.properties.get("armor_slot").getAsInt()==0;

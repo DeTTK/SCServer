@@ -474,14 +474,10 @@ public final class GameInventory implements AutoCloseable {
     public void cosmetic(UUID id,Inventory.Address target,Inventory.Address source,int selection,int slot,boolean skin,Consumer<Inventory.Plan> success,Consumer<String> failure){
         Character c=character(id);if(c.busy||c.failed||c.deathClear){failure.accept("inventory_busy");return;}Inventory before=c.inventory;ItemStack item=before.at(target),consumed=source==null?null:before.at(source);
         if(item==null||item.count()!=1||source!=null&&(source.equals(target)||consumed==null)){failure.accept("cosmetic_inventory_address");return;}
-        int selected=consumed==null?selection:consumed.id();
-        if(selected>0){if(skin){if(!catalog.skinCompatible(item.id(),selected)){failure.accept("skin_incompatible");return;}}
-            else{String type=catalog.get(item.id()).type(),family=type.equals("armor")?"armor":Set.of("backpack","container","tradepack","extreme_tradepack").contains(type)?"backpack":Set.of("melee","melee_weapon").contains(type)?"melee":"weapon";
-                if(!catalog.get(selected).type().equals(family+(slot==0?"_style":"_motif"))){failure.accept("paint_family_incompatible");return;}}}
         c.busy=true;
         try{factories.execute(()->{try{
             ItemStack changed,removed;boolean noChange=false;
-            if(skin){String name=consumed==null?null:catalog.get(consumed.id()).properties().get("skin").getAsString();var edit=items.skin(item,name);changed=edit.item();noChange=Objects.equals(name,edit.previous());int old=catalog.skinId(item.id(),edit.previous());removed=old==0?null:items.createStack(old,1,0,new JsonObject());}
+            if(skin){var edit=items.nativeSkin(item,consumed);changed=edit.item();noChange=edit.unchanged();removed=edit.removed();}
             else{var edit=items.paint(item,slot,consumed,selection);changed=edit.weapon();removed=edit.removed();}
             Map<Inventory.Address,ItemStack> changes=new LinkedHashMap<>();if(!noChange){changes.put(target,changed);if(source!=null)changes.put(source,consumed.count(consumed.count()-1));}
             Inventory after=before.replace(changes,0).after();if(!noChange&&removed!=null)after=after.give(removed).after();

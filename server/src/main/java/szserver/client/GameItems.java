@@ -84,7 +84,7 @@ public final class GameItems implements AutoCloseable {
         adapter.warmArmorUpgrades(definitionsPath.getParent().resolve("native-resources"),armors);
         adapter.warmArtifacts(Files.readString(artifactSettings),artifacts,definitionsPath.getParent().resolve("native-resources"));containerExempt=adapter.containerExemptStats();definitions=catalog;
         LauncherPackets.verifyManifest(fixtures.getParent(),runtime,"native-weapon-modules.json");LauncherPackets.verifyManifest(fixtures.getParent(),runtime,"native-weapon-jamming.json");
-        Map<Integer,String> moduleClasses=new HashMap<>(),moduleDefs=new HashMap<>();for(var entry:registry.entrySet())if(entry.getValue().getAsJsonObject().has("definition")){int id=Integer.parseInt(entry.getKey());if(catalog.has(entry.getKey())){moduleClasses.put(id,entry.getValue().getAsJsonObject().get("definition").getAsString());moduleDefs.put(id,catalog.get(entry.getKey()).toString());}}adapter.moduleDefinitions(moduleClasses,moduleDefs);
+        Map<Integer,String> moduleClasses=new HashMap<>(),moduleDefs=new HashMap<>();for(var entry:registry.entrySet())if(entry.getValue().getAsJsonObject().has("definition")){int id=Integer.parseInt(entry.getKey());if(catalog.has(entry.getKey())){moduleClasses.put(id,entry.getValue().getAsJsonObject().get("definition").getAsString());moduleDefs.put(id,catalog.get(entry.getKey()).toString());}}adapter.moduleDefinitions(moduleClasses,moduleDefs);adapter.warmCosmetics(moduleClasses,moduleDefs);
         statOrdinals=adapter.statOrdinals();for(var entry:catalog.entrySet()){
             JsonObject item=entry.getValue().getAsJsonObject();int id=Integer.parseInt(entry.getKey());
             if(item.get("type").getAsString().equals("grenade"))explosives.put(id,adapter.explosive(id,(item.has("explosive_props")?item.getAsJsonObject("explosive_props"):item).toString()));
@@ -208,12 +208,14 @@ public final class GameItems implements AutoCloseable {
         JsonObject row=registry.getAsJsonObject(Integer.toString(item.id()));if(!row.has("state"))throw new IllegalArgumentException("skin_target_state");
         var edit=adapter.skin(row.get("state").getAsString(),item.state(),name);return new SkinEdit(item.state(edit.state()),edit.previous());
     }
+    public record CosmeticEdit(szserver.inventory.ItemStack item,szserver.inventory.ItemStack removed,boolean unchanged){}
+    public CosmeticEdit nativeSkin(szserver.inventory.ItemStack item,szserver.inventory.ItemStack source)throws Exception{
+        String kind=stateKind(item);var edit=adapter.nativeSkin(kind,item.state(),item.id(),source==null?0:source.id());return new CosmeticEdit(item.state(edit.state()),edit.previous()==0?null:createStack(edit.previous(),1,0,new JsonObject()),edit.unchanged());
+    }
     public ModuleEdit paint(szserver.inventory.ItemStack item,int slot,szserver.inventory.ItemStack source,int selection)throws Exception{
         JsonObject row=registry.getAsJsonObject(Integer.toString(item.id()));if(!row.has("state"))throw new IllegalArgumentException("paint_target_state");
         szserver.inventory.ItemStack paint=source==null&&selection>0?createStack(selection,1,0,new JsonObject()):source;
-        if(paint!=null){JsonObject definition=registry.getAsJsonObject(Integer.toString(paint.id()));if(definition==null||!definition.has("paint_kind")||definition.get("paint_kind").getAsInt()!=slot)throw new IllegalArgumentException("paint_kind_incompatible");
-            if(definitions!=null&&!szserver.inventory.ItemCatalog.paintApplies(definitions.getAsJsonObject(Integer.toString(paint.id())),item.id(),definitions.getAsJsonObject(Integer.toString(item.id()))))throw new IllegalArgumentException("paint_target_incompatible");}
-        byte[] raw=paint==null?null:szserver.net.InventoryPackets.stack(paint.count(1));var edit=adapter.paint(row.get("state").getAsString(),item.state(),slot,raw==null?null:Arrays.copyOfRange(raw,1,raw.length),source==null&&selection>0);
+        byte[] raw=paint==null?null:szserver.net.InventoryPackets.stack(paint.count(1)),target=szserver.net.InventoryPackets.stack(item);var edit=adapter.nativePaint(row.get("state").getAsString(),Arrays.copyOfRange(target,1,target.length),slot,raw==null?null:Arrays.copyOfRange(raw,1,raw.length),source==null&&selection>0);
         return new ModuleEdit(item.state(edit.state()),edit.previous()==null||edit.builtin()?null:readStack(edit.previous()));
     }
     public String artifactResearchTag()throws Exception{return adapter.artifactResearchTag();}

@@ -1,0 +1,181 @@
+{
+  "result": "PASS",
+  "date": "2026-11-23",
+  "issue": 17,
+  "reproducedFromAttachment": true,
+  "baseline": {
+    "release": "anomaly-lifecycle-2026.11.22",
+    "bagParentAccepted": 20574,
+    "bagVariantRejected": 20866,
+    "cosmetic": 13200
+  },
+  "implementation": {
+    "handwrittenCompatibilityTables": false,
+    "handwrittenInheritanceRules": false,
+    "nativeFactoryPredicates": true,
+    "nativeCosmeticSlotMethods": true,
+    "nativeResourceGraphAndNameParser": true,
+    "canonicalClientClassesChanged": false,
+    "clientModRequired": false,
+    "inventoryOwnerDoesFactoryWork": false
+  },
+  "nativeCatalogue": {
+    "codecRegistryAndEnvironmentRestored": true,
+    "result": "PASS",
+    "tokens": 1628,
+    "realTargetFactories": 1278,
+    "comparisons": 81503472,
+    "skinPairs": 509499,
+    "paintPairs": 894,
+    "errors": []
+  },
+  "nativeRoundTripChecks": 54,
+  "liveCases": [
+    {
+      "target": 20866,
+      "token": 13200,
+      "kind": "skin",
+      "equipped": false,
+      "nativeRoundTrip": true,
+      "countsPreserved": true,
+      "sameColorNoop": true
+    },
+    {
+      "target": 20000,
+      "token": 13200,
+      "kind": "skin",
+      "equipped": false,
+      "nativeRoundTrip": true,
+      "countsPreserved": true,
+      "sameColorNoop": true
+    },
+    {
+      "target": 25000,
+      "token": 13600,
+      "kind": "skin",
+      "equipped": false,
+      "nativeRoundTrip": true,
+      "countsPreserved": true,
+      "sameColorNoop": true
+    },
+    {
+      "target": 20296,
+      "token": 17579,
+      "kind": "VISUAL_STYLE",
+      "equipped": false,
+      "nativeRoundTrip": true,
+      "countsPreserved": true,
+      "sameColorNoop": false
+    },
+    {
+      "target": 25161,
+      "token": 17100,
+      "kind": "VISUAL_STYLE",
+      "equipped": false,
+      "nativeRoundTrip": true,
+      "countsPreserved": true,
+      "sameColorNoop": false
+    },
+    {
+      "target": 25354,
+      "token": 19629,
+      "kind": "MOTIF",
+      "equipped": false,
+      "nativeRoundTrip": true,
+      "countsPreserved": true,
+      "sameColorNoop": false
+    },
+    {
+      "target": 12061,
+      "token": 18836,
+      "kind": "VISUAL_STYLE",
+      "equipped": false,
+      "nativeRoundTrip": true,
+      "countsPreserved": true,
+      "sameColorNoop": false
+    },
+    {
+      "target": 25138,
+      "token": 19594,
+      "kind": "MOTIF",
+      "equipped": false,
+      "nativeRoundTrip": true,
+      "countsPreserved": true,
+      "sameColorNoop": false
+    },
+    {
+      "target": 25077,
+      "token": 19063,
+      "kind": "MOTIF",
+      "equipped": false,
+      "nativeRoundTrip": true,
+      "countsPreserved": true,
+      "sameColorNoop": false
+    },
+    {
+      "target": 12061,
+      "token": 18836,
+      "kind": "MOTIF",
+      "nativeDenialPreservedInventory": true
+    },
+    {
+      "target": 20866,
+      "token": 13600,
+      "kind": "skin",
+      "nativeDenialPreservedInventory": true
+    },
+    {
+      "target": 20004,
+      "equipped": true,
+      "token": 13200,
+      "roundTrip": true
+    },
+    {
+      "target": 25078,
+      "equipped": true,
+      "token": 13600,
+      "roundTrip": true
+    },
+    {
+      "combinedStyleAndColor": true,
+      "otherSlotPreserved": true
+    }
+  ],
+  "fullBagAtomicity": {
+    "failurePreservesInventory": true,
+    "retryAfterFreeSpace": true,
+    "contiguousSpaceRequiredForReturnedToken": true
+  },
+  "coldRecovery": {
+    "journalRootsCompared": 72,
+    "completeItemStateCountsGeometryAndRevisionEqual": true,
+    "realClientAdmission": true,
+    "savedCosmeticsReadAndReturned": true,
+    "containerRefundWaitedForFreeSpaceWithoutLoss": true
+  },
+  "tests": {
+    "fullSourceSuite": "PASS",
+    "pythonTests": 5,
+    "desktopChecks": 54,
+    "installerLayouts": 2
+  },
+  "nativeRuntimeSha256": {
+    "985191831": "c4de5c62512394cd14f738f652e225f29baae920aa6f668b3093024f22b5c393",
+    "1078890796": "eefb20c5f36537b53b0eff08223d8fb59c62c2aa161e65fa6e65851aaa4b1f88",
+    "871813794": "3b0c36e874f5718fb51739218262bd0e1a4007febdf3f2c43fa7a9bb5cd07389",
+    "714221946": "4d5cd5040f75461be15bd14f26bbb1f8713d6700d7fe3cf7cea6ced6e1147366",
+    "865153858": "78cbec4de97c9c29248446e240a33a54def650d9e8e36e22fbb91e14fee41e33",
+    "1156376641": "93ef6c77f70ebe9885eb63d3950035d5e7ab7fb00e8b7d141fe844f857881822",
+    "1847365303": "71680a83a4d7f67ef3420344d7ba506a3f05246197aaba65c13d662557c9278b",
+    "313873871": "92a18f48dcfca060647ad49f38d316f22bb706ef0001c24fe225a4331eff90f6",
+    "1598274006": "2a0ee18666b1263ff0ae134bf62d714efcbc957b23a16ab216e23decbd140d21"
+  },
+  "serverSha256": "50fc35338787784d619310a886e0210ad60269fe33687faeedb40b316342a810",
+  "productionServerChanged": false,
+  "originalSavesChanged": false,
+  "limitations": [
+    "Only compatible items offered by the native game are supported; no blanket cosmetic/equipment bypass.",
+    "The stock player modification path targets equipment and bag; no new storage modification flow was added.",
+    "Native integration tests require the compatible private runtime and resource bundle."
+  ]
+}
