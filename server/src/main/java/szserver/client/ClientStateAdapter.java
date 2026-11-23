@@ -38,6 +38,14 @@ public final class ClientStateAdapter implements AutoCloseable {
         }
         Class<?> define(String name,byte[] bytes){return defineClass(name,bytes,0,bytes.length);}
         void resources(Path directory)throws IOException{addURL(szserver.util.GameResources.url(directory));}
+        @Override public void close()throws IOException {
+            // Native logging owns a JVM shutdown hook. Stop its worker while this classpath is open.
+            try {
+                Class<?> registry=findLoadedClass("org.tinylog.provider.ProviderRegistry");
+                if(registry!=null){Object provider=registry.getMethod("getLoggingProvider").invoke(null);Class.forName("org.tinylog.provider.LoggingProvider",false,this).getMethod("shutdown").invoke(provider);}
+            }catch(ReflectiveOperationException failure){if(failure.getCause() instanceof InterruptedException)Thread.currentThread().interrupt();throw new IOException("native_logging_shutdown",failure);}
+            finally{super.close();}
+        }
     }
     private final NativeLoader loader;
     private final Map<String,Constructor<?>> factories=new HashMap<>();

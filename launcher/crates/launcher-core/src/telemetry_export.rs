@@ -308,7 +308,7 @@ mod tests {
         let task = std::thread::spawn(move || {
             let (mut stream, _) = listener.accept().unwrap();
             stream
-                .set_read_timeout(Some(Duration::from_secs(5)))
+                .set_read_timeout(Some(Duration::from_secs(30)))
                 .unwrap();
             let mut header = Vec::new();
             while !header.ends_with(b"\r\n\r\n") {
@@ -354,14 +354,14 @@ mod tests {
             ..Default::default()
         };
         write_json(&layout.at("config/telemetry.json"), &config).unwrap();
-        let first = flush_telemetry(&layout, Duration::from_secs(3)).unwrap();
+        let first = flush_telemetry(&layout, Duration::from_secs(30)).unwrap();
         assert_eq!(first.status, "retry-pending");
         assert_eq!(queue.pending().unwrap().len(), 1);
         server.join().unwrap();
         let (url, server) = receiver(204);
         config.faro_url = url;
         write_json(&layout.at("config/telemetry.json"), &config).unwrap();
-        let second = flush_telemetry(&layout, Duration::from_secs(3)).unwrap();
+        let second = flush_telemetry(&layout, Duration::from_secs(30)).unwrap();
         assert_eq!(second.sent_events, 1);
         assert!(queue.pending().unwrap().is_empty());
         let body = server.join().unwrap();

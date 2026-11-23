@@ -178,13 +178,22 @@ mod tests {
         }
         let text =
             |s: &[u16]| String::from_utf16(&s[..s.iter().position(|x| *x == 0).unwrap()]).unwrap();
-        assert_eq!(Path::new(&text(&target)), shell_path(&executable));
+        assert_eq!(
+            std::fs::canonicalize(Path::new(&text(&target))).unwrap(),
+            std::fs::canonicalize(&executable).unwrap()
+        );
         assert_eq!(
             text(&arguments),
             format!("--root \"{}\"", shell_path(&root).display())
         );
-        assert_eq!(Path::new(&text(&icon)), shell_path(&executable));
+        assert_eq!(
+            std::fs::canonicalize(Path::new(&text(&icon))).unwrap(),
+            std::fs::canonicalize(&executable).unwrap()
+        );
         assert_eq!(icon_index, 0);
-        assert_eq!(Path::new(&text(&working)), shell_path(&folder));
+        assert_eq!(
+            std::fs::canonicalize(Path::new(&text(&working))).unwrap(),
+            std::fs::canonicalize(&folder).unwrap()
+        );
     }
 }
