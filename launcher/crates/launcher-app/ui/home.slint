@@ -16,6 +16,7 @@ export component Home inherits HorizontalLayout {
     callback manage-worlds;
     callback connect(string);
     callback add-favorite;
+    callback remove-favorite(string);
     private property <bool> show-history;
     private property <[ServerRow]> servers: show-history ? server-history : favorites;
     spacing: 22px;
@@ -104,11 +105,24 @@ export component Home inherits HorizontalLayout {
                             Action { label: "Добавить сервер"; glyph: "\u{e710}"; enabled: !root.busy; activated => { root.add-favorite(); } }
                         }
                     }
-                    for s in root.servers: RowButton {
-                        enabled: !root.busy; title: s.title == "" ? s.address : s.title;
-                        detail: s.title == "" ? "" : s.address; meta: s.status; online: s.online;
-                        glyph: "\u{e839}"; selected: s.address == root.address && root.address != "";
-                        activated => { root.address = s.address; }
+                    for s in root.servers: HorizontalLayout {
+                        spacing: 4px;
+                        RowButton {
+                            horizontal-stretch: 1;
+                            enabled: !root.busy; title: s.title == "" ? s.address : s.title;
+                            detail: s.title == "" ? "" : s.address; meta: s.status; online: s.online;
+                            glyph: "\u{e839}"; selected: s.address == root.address && root.address != "";
+                            activated => { root.address = s.address; }
+                        }
+                        if !root.show-history: VerticalLayout {
+                            width: 32px; alignment: center;
+                            Action {
+                                width: 32px; glyph: "\u{e74d}"; kind: "plain";
+                                accessible-label: "Удалить из избранного";
+                                enabled: !root.busy;
+                                activated => { root.remove-favorite(s.address); }
+                            }
+                        }
                     }
                 }
             }

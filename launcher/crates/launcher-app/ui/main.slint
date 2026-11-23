@@ -164,6 +164,7 @@ export component AppWindow inherits Window {
                 server-column-width: clamp((root.width - 250px) * 0.36, 310px, 460px);
                 select-world(id) => { root.select-world(id); } manage-worlds => { root.navigate("worlds"); }
                 connect(address) => { root.connect(address); }
+                remove-favorite(address) => { root.favorite-action("delete", "", address, ""); }
                 add-favorite => { root.dialog-value = root.address; root.favorite-name = ""; root.favorite-nick = ""; root.dialog = "favorite"; }
             }
             if !root.setup-visible && root.page == "worlds": WorldsPage {

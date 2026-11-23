@@ -1249,11 +1249,11 @@ fn execute(
             Ok("Операция с миром завершена".into())
         }
         Work::Favorite(action, name, address, nickname) => {
-            let normalized = bscp_launcher_host::network::endpoint(address.trim())?.to_string();
             let mut list: Vec<ServerEntry> = read_json(&layout.at("config/servers.json"))?;
             if action == "delete" {
                 list.retain(|s| s.address != address);
             } else {
+                let normalized = bscp_launcher_host::network::endpoint(address.trim())?.to_string();
                 let entry = ServerEntry {
                     id: uuid::Uuid::new_v4().simple().to_string(),
                     name: if name.trim().is_empty() {
