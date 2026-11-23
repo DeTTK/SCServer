@@ -72,26 +72,11 @@ pub fn base(java: &Path, session: &Path) -> Result<tokio::process::Command> {
 }
 pub fn server_config(source: &Path, map: &Path, data: &Path, s: &Settings) -> Result<String> {
     let template = std::fs::read_to_string(component_file(source, "server.template.properties")?)?;
-    let automatic = crate::network::local_addresses()
-        .into_iter()
-        .next()
-        .unwrap_or_else(|| "127.0.0.1".into());
-    let host = if s.advertised_host.trim().is_empty() {
-        &automatic
-    } else {
-        s.advertised_host.trim()
-    };
-    if host
-        .chars()
-        .any(|c| c.is_whitespace() || "/=,#\\".contains(c))
-    {
-        bail!("HOST_INVALID")
-    }
     let mut text = template;
     for (k, v) in [
         ("@ROOT@", prop(path(&component_base(source)?))),
         ("@MAP@", prop(path(map))),
-        ("@HOST@", prop(host)),
+        ("@HOST@", "127.0.0.1".into()),
         ("@HTTP@", s.base_port.to_string()),
         ("@GAME@", (s.base_port + 1).to_string()),
         ("@WORLD@", (s.base_port + 2).to_string()),
@@ -115,6 +100,7 @@ pub fn server_config(source: &Path, map: &Path, data: &Path, s: &Settings) -> Re
         ("world.regions", prop(path(map))),
         ("http.host", "127.0.0.1".into()),
         ("game.bindAddress", "0.0.0.0".into()),
+        ("game.advertisedHosts", "127.0.0.1".into()),
         ("development.enabled", "false".into()),
         ("launcher.enabled", "false".into()),
         ("game.playerPermission", "stalker".into()),
@@ -123,8 +109,21 @@ pub fn server_config(source: &Path, map: &Path, data: &Path, s: &Settings) -> Re
         values.insert(k.into(), v);
     }
     let resources = component_base(source)?.join("resources");
+    if let Some(world) = data
+        .parent()
+        .filter(|p| p.join("world.properties").is_file())
+    {
+        values.insert("world.directory".into(), prop(path(world)));
+        values.insert("world.resident.saveSeconds".into(), "300".into());
+        values.insert("world.checkpoint.intervalSeconds".into(), "300".into());
+        values.remove("world.objectTemplateMap");
+    }
     if resources.join("configs.xeon").is_file() {
-        for (key, relative) in [("assets.configs", "configs.xeon"), ("assets.boxes", "boxes.xeon"), ("assets.overrides", "overrides")] {
+        for (key, relative) in [
+            ("assets.configs", "configs.xeon"),
+            ("assets.boxes", "boxes.xeon"),
+            ("assets.overrides", "overrides"),
+        ] {
             values.insert(key.into(), prop(path(&resources.join(relative))));
         }
     }
@@ -142,6 +141,12 @@ pub fn server(
     agent: &Path,
     java: &Path,
 ) -> Result<tokio::process::Command> {
+    if data
+        .parent()
+        .is_some_and(|p| p.join("world.properties").is_file())
+    {
+        bscp_launcher_core::require_portable_server(&component_file(source, "server.jar")?)?;
+    }
     for p in [
         component_file(source, "server.jar")?,
         component_file(source, "lib/gson-2.13.2.jar")?,
@@ -375,6 +380,9 @@ mod tests {
         assert!(config.contains("assets.boxes="));
         assert!(config.contains("assets.overrides="));
         assert!(config.contains("http.host=127.0.0.1\n"));
+        assert!(config.contains("game.bindAddress=0.0.0.0\n"));
+        assert!(config.contains("game.advertisedHosts=127.0.0.1\n"));
+        assert!(!config.contains("@HOST@"));
         assert!(config.contains("game.playerPermission=stalker\n"));
         assert!(config.contains("http.port=29545\n"));
         assert!(config.contains("development.enabled=false\n"));

@@ -331,7 +331,10 @@ public final class LocalAccounts implements AutoCloseable {
         byte[] body=e.getRequestBody().readNBytes(8193);if(body.length>8192)throw new IllegalArgumentException("body_limit");
         Map<String,String> p=new HashMap<>();String raw=e.getRequestMethod().equals("POST")?new String(body,StandardCharsets.UTF_8):Objects.toString(e.getRequestURI().getRawQuery(),"");
         for(String field:raw.split("&")){String[] kv=field.split("=",2);if(kv.length==2)p.put(URLDecoder.decode(kv[0],StandardCharsets.UTF_8),URLDecoder.decode(kv[1],StandardCharsets.UTF_8));}
-        String host=ConnectionRoutes.requestHost(e.getRequestHeaders().getFirst("Host"));if(host==null)host=ConnectionRoutes.configHost(e.getLocalAddress().getAddress().getHostAddress());
+        String route=p.remove("__bscp_route");
+        String host=ConnectionRoutes.requestHost(route==null?e.getRequestHeaders().getFirst("Host"):route);
+        if(route!=null&&host==null)throw new IllegalArgumentException("invalid_connection_origin");
+        if(host==null)host=ConnectionRoutes.configHost(e.getLocalAddress().getAddress().getHostAddress());
         Result result=routed(e.getRequestMethod(),e.getRequestURI().getPath(),p,host);result.durable.get(10,TimeUnit.SECONDS);prepareEquipment(result.payload);respond(e,200,result.payload);
     }catch(Exception ex){Throwable cause=ex;while((cause instanceof ExecutionException||cause instanceof CompletionException)&&cause.getCause()!=null)cause=cause.getCause();try{respond(e,cause instanceof RouteError error?error.status:storageFailed||cause instanceof TimeoutException?503:Objects.toString(cause.getMessage(),"").equals("character_has_world_drops")?409:400,Map.of("error",Objects.toString(cause.getMessage(),"request_failed")));}catch(Exception ignored){e.close();}}}
     private static void respond(HttpExchange e,int code,Object payload)throws Exception{e.getResponseHeaders().set("Cache-Control","no-store");e.getResponseHeaders().set("Access-Control-Allow-Origin","*");if(code==204){e.sendResponseHeaders(code,-1);e.close();return;}byte[] data=HTTP_JSON.toJson(payload).getBytes(StandardCharsets.UTF_8);e.getResponseHeaders().set("Content-Type","application/json; charset=utf-8");e.sendResponseHeaders(code,data.length);try(var out=e.getResponseBody()){out.write(data);}}

@@ -25,7 +25,6 @@ struct Draft {
     server: String,
     cmem: String,
     smem: String,
-    host: String,
     port: String,
     feed: String,
     branch: String,
@@ -42,7 +41,6 @@ impl Draft {
             server: ui.get_server_path().to_string(),
             cmem: ui.get_client_memory().to_string(),
             smem: ui.get_server_memory_setting().to_string(),
-            host: ui.get_advertised_host().to_string(),
             port: ui.get_port().to_string(),
             feed: ui.get_feed_url().to_string(),
             branch: ui.get_game_branch().to_string(),
@@ -77,7 +75,6 @@ impl Draft {
             .port
             .parse()
             .context("PORT_INVALID: Укажите порт числом от 1024 до 65000.")?;
-        s.advertised_host = self.host.trim().into();
         s.feed_url = self.feed.trim().into();
         s.game_branch = self.branch.trim().into();
         s.validate()?;
@@ -123,7 +120,6 @@ fn set_draft(ui: &AppWindow, s: &Settings) {
     ui.set_client_memory(s.client_memory_mb.to_string().into());
     ui.set_server_memory_setting(s.server_memory_mb.to_string().into());
     ui.set_port(s.base_port.to_string().into());
-    ui.set_advertised_host(s.advertised_host.clone().into());
     ui.set_feed_url(s.feed_url.clone().into());
     ui.set_game_branch(s.game_branch.clone().into());
     ui.set_branches(rows(vec![SharedString::from(s.game_branch.as_str())]));
@@ -820,14 +816,7 @@ pub fn bind(ui: &AppWindow, layout: Layout) -> Binding {
             let addresses = bscp_launcher_host::network::local_addresses();
             let address = format!(
                 "{}:{}",
-                if s.advertised_host.is_empty() {
-                    addresses
-                        .first()
-                        .cloned()
-                        .unwrap_or_else(|| "127.0.0.1".into())
-                } else {
-                    s.advertised_host
-                },
+                addresses.first().cloned().unwrap_or_else(|| "127.0.0.1".into()),
                 s.base_port
             );
             let _ = poll_ui.upgrade_in_event_loop(move |ui| {
@@ -1182,6 +1171,10 @@ fn execute(
         }
         Work::World(action, id, value, file) => {
             let worlds = WorldStore::new(layout.data(&s))?;
+            if matches!(action.as_str(), "clone" | "export" | "backup" | "restore") {
+                progress("Подготавливаем самостоятельный мир…".into());
+                bscp_launcher_host::world_tools::prepare(layout, &id, cancel)?;
+            }
             match action.as_str() {
                 "create" => {
                     let bundled = Setup::discover(load_bundle(layout, &s));
@@ -1191,7 +1184,7 @@ fn execute(
                         let w = worlds.get(&s.selected_world)?;
                         worlds.map(&w)?
                     };
-                    progress("Проверяем базовую карту и создаём мир…".into());
+                    progress("Создаём мир из шаблона…".into());
                     let w = worlds.create_cancellable(
                         &value,
                         &map,
@@ -1219,6 +1212,7 @@ fn execute(
                 "export" => worlds.export(&id, &file.context("Не выбран файл архива.")?)?,
                 "import" => {
                     let w = worlds.import(&file.context("Не выбран файл архива.")?)?;
+                    bscp_launcher_host::world_tools::prepare(layout, &w.id, cancel)?;
                     s.selected_world = w.id;
                     layout.save(&s)?;
                 }
@@ -1231,7 +1225,7 @@ fn execute(
                     return Ok(String::new());
                 }
                 "backup" => {
-                    call(layout, "backup", kv(&[("world", &id)]))?;
+                    worlds.automatic_backup(&id, s.automatic_backups as usize)?;
                     backups(ui, layout, &id)?;
                     return Ok("Резервная копия создана".into());
                 }

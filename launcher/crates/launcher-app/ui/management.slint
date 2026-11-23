@@ -38,7 +38,7 @@ export component WorldsPage inherits HorizontalLayout {
             Hint { text: "Выбран для запуска"; }
             SectionTitle { text: root.world-title == "" ? "Мир не выбран" : root.world-title; wrap: word-wrap; overflow: clip; }
             Rule {}
-            if root.world-id == "": Hint { text: "Выберите сохранение в списке миров."; wrap: word-wrap; }
+            if root.world-id == "": Hint { text: "Выберите мир в списке."; wrap: word-wrap; }
             if root.world-id != "": VerticalLayout {
                 spacing: 6px;
                 Action { label: "Переименовать"; glyph: "\u{e70f}"; kind: "plain"; align-left: true; enabled: !root.busy; activated => { root.ask("rename"); } }
@@ -80,7 +80,7 @@ export component ServerPage inherits HorizontalLayout {
             VerticalLayout {
                 spacing: 18px; alignment: start;
                 Reading { title: "Статус"; value: root.state; }
-                Reading { title: "Адреса подключения"; value: root.address; }
+                Reading { title: "Адрес в локальной сети"; value: root.address; }
                 Rule {}
                 HorizontalLayout { spacing: 18px; Reading { title: "Время работы"; value: root.uptime; } Reading { title: "Память"; value: root.memory; } }
             }

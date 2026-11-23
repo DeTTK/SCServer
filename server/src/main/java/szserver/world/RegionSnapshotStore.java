@@ -91,6 +91,9 @@ public final class RegionSnapshotStore implements ResidentChunks.Storage {
     @Override public synchronized <T> T bootstrapState(ResidentChunks.StateRead<T> reader)throws Exception{
         open();if(mapExposed)throw new IOException("resident_state_bootstrap_after_map_reads");try{return reader.read(stateFiles(head));}catch(IOException invalid){if(previous==null)throw invalid;T recovered;try{recovered=reader.read(stateFiles(previous));}catch(Exception fallback){fallback.addSuppressed(invalid);throw fallback;}head=previous;publishedStateRevision=head.stateRevision();recoveredPrevious=true;return recovered;}
     }
+    public synchronized <T> T previousState(ResidentChunks.StateRead<T> read)throws Exception{
+        open();return previous==null||previous.stateRevision()==0?null:read.read(stateFiles(previous));
+    }
     private ResidentChunks.StateFiles stateFiles(Head root){return new ResidentChunks.StateFiles(){public ResidentChunks.StateIndex index(){return stateIndex(root);}public ResidentChunks.Saved load(String name)throws IOException{return state(root,name);}};}
     private ResidentChunks.Saved read(ResidentChunks.Key key,Ref ref)throws IOException {
         var region=new Region(key.regionX(),key.regionZ());Path path=generation(ref.generation()).resolve(region.file());regular(path);
@@ -107,24 +110,48 @@ public final class RegionSnapshotStore implements ResidentChunks.Storage {
         long stateAdded=state==null?0:state.files().stream().filter(file->!nextState.containsKey(file.name())).count();if((long)next.size()+unique.stream().filter(key->!next.containsKey(key)).count()+nextState.size()+stateAdded>MAX_ROWS)throw new IOException("resident_map_head_row_limit");
         // Repack every affected region as a whole, on the IO worker. Otherwise a
         // single unchanged chunk can pin an ever-growing series of obsolete files.
-        for(var row:head.chunks().entrySet()){
-            List<ResidentChunks.Write> region=regions.get(new Region(row.getKey().regionX(),row.getKey().regionZ()));
-            if(region!=null&&!unique.contains(row.getKey())){var saved=read(row.getKey(),row.getValue());region.add(new ResidentChunks.Write(row.getKey(),saved.revision(),saved.bytes()));}
+        Map<Region,List<ResidentChunks.Key>> unchanged=new HashMap<>();
+        for(var key:head.chunks().keySet()){
+            Region region=new Region(key.regionX(),key.regionZ());
+            if(regions.containsKey(region)&&!unique.contains(key))unchanged.computeIfAbsent(region,ignored->new ArrayList<>()).add(key);
         }
-        for(var region:regions.values())region.sort(Comparator.comparingInt((ResidentChunks.Write write)->write.key().x()).thenComparingInt(write->write.key().z()));
         UUID id=UUID.randomUUID();Path generation=root.resolve(id.toString());Files.createDirectory(generation);directory(generation);writeNew(generation.resolve("generation.binding"),binding.getBytes(StandardCharsets.UTF_8));
         for(var region:regions.entrySet()){
             try(FileChannel file=FileChannel.open(generation.resolve(region.getKey().file()),StandardOpenOption.CREATE_NEW,StandardOpenOption.WRITE,LinkOption.NOFOLLOW_LINKS)){
-                writeFully(file,ByteBuffer.allocate(20).putInt(REGION).putInt(VERSION).putInt(region.getKey().x()).putInt(region.getKey().z()).putInt(region.getValue().size()).flip());
+                writeFully(file,ByteBuffer.allocate(20).putInt(REGION).putInt(VERSION).putInt(region.getKey().x()).putInt(region.getKey().z()).putInt(region.getValue().size()+unchanged.getOrDefault(region.getKey(),List.of()).size()).flip());
                 for(var chunk:region.getValue()) {byte[] bytes=chunk.bytes();long offset=file.position();writeFully(file,ByteBuffer.wrap(bytes));next.put(chunk.key(),new Ref(id,offset,bytes.length,checksum(bytes),chunk.revision()));}
+                // Repack old members one at a time, even if the whole region is larger than the heap budget.
+                for(var key:unchanged.getOrDefault(region.getKey(),List.of())){
+                    var old=head.chunks().get(key);byte[] bytes=read(key,old).bytes();long offset=file.position();
+                    writeFully(file,ByteBuffer.wrap(bytes));next.put(key,new Ref(id,offset,bytes.length,old.checksum(),old.revision()));
+                }
                 file.force(true);
             }
         }
         if(state!=null)for(var file:state.files()){byte[] bytes=file.bytes();writeNew(generation.resolve(stateFile(file.name())),bytes);nextState.put(file.name(),new Ref(id,0,bytes.length,checksum(bytes),state.revision()));}
+        PortableWorld.syncDirectory(generation);PortableWorld.syncDirectory(root);
         Head candidate=new Head(Math.incrementExact(head.sequence()),Map.copyOf(next),state==null?head.stateRevision():state.revision(),Map.copyOf(nextState));Path pending=root.resolve("head."+id+".tmp"),prior=root.resolve("previous."+id+".tmp");
-        writeNew(pending,encodeHead(candidate));writeNew(prior,encodeHead(head));replace(prior,root.resolve("head.previous"));replace(pending,root.resolve("head"));previous=head;head=candidate;publishedStateRevision=head.stateRevision();recoveredPrevious=false;
+        writeNew(pending,encodeHead(candidate));writeNew(prior,encodeHead(head));replace(prior,root.resolve("head.previous"));PortableWorld.syncDirectory(root);replace(pending,root.resolve("head"));
+        // On a directory fsync error the old in-memory revision remains retryable.
+        // Both referenced generations still exist until a publication succeeds.
+        PortableWorld.syncDirectory(root);previous=head;head=candidate;publishedStateRevision=head.stateRevision();recoveredPrevious=false;
         // Retire only complete, self-owned generations absent from BOTH recovery roots.
         try{retainRecoveryRoots();maintenanceError="";}catch(IOException maintenance){maintenanceError=maintenance.getClass().getSimpleName();}
+    }
+    /** Offline integrity check; validate references one payload at a time. Never mix recovery roots. */
+    private void verifyRoot(Head selected)throws IOException{
+        if(selected==null||selected.stateRevision()==0)throw new IOException("resident_complete_generation_missing");
+        for(var chunk:selected.chunks().entrySet())read(chunk.getKey(),chunk.getValue());
+        for(String name:selected.state().keySet())state(selected,name);
+    }
+    public synchronized void verifyPublished()throws IOException{
+        open();if(recoveredPrevious)throw new IOException("resident_current_head_invalid_previous_available");verifyRoot(head);
+    }
+    public synchronized void rollback()throws IOException{
+        open();if(mapExposed)throw new IOException("resident_map_already_exposed");verifyRoot(previous);
+        Path pending=root.resolve("rollback."+UUID.randomUUID()+".tmp");writeNew(pending,encodeHead(previous));
+        replace(pending,root.resolve("head"));PortableWorld.syncDirectory(root);
+        head=previous;publishedStateRevision=head.stateRevision();recoveredPrevious=false;
     }
     private void retainRecoveryRoots()throws IOException {
         Map<UUID,Set<String>> retained=new HashMap<>();

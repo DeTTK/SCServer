@@ -655,7 +655,17 @@ impl Supervisor {
         let s = self.layout.load()?;
         s.validate()?;
         let worlds = self.worlds()?;
-        let mut world = worlds.get(id)?;
+        self.state("Preparing", "Подготавливаем мир…");
+        let prepare_layout = self.layout.clone();
+        let prepare_id = id.to_owned();
+        let mut world = tokio::task::spawn_blocking(move || {
+            crate::world_tools::prepare(
+                &prepare_layout,
+                &prepare_id,
+                &Arc::new(std::sync::atomic::AtomicBool::new(false)),
+            )
+        })
+        .await??;
         if world.base_identity_mode != "content-v2" {
             bail!("WORLD_MIGRATION")
         }
@@ -666,12 +676,17 @@ impl Supervisor {
             let _lease = worlds.lease(id)?;
         }
         let data = worlds.folder(id)?.join("data");
-        if std::fs::read_dir(&data)?.filter_map(|x| x.ok()).any(|x| {
-            !matches!(
-                x.file_name().to_str(),
-                Some(".server-lease" | "admin-token.txt")
-            )
-        }) {
+        let server_digest = sha(&component_file(&source, "server.jar")?)?;
+        // Full portable backups include the map. Preserve one before changing the
+        // server version; ordinary restarts rely on durable saves and rollback heads.
+        if world.server_release != server_digest
+            && std::fs::read_dir(&data)?.filter_map(|x| x.ok()).any(|x| {
+                !matches!(
+                    x.file_name().to_str(),
+                    Some(".server-lease" | "admin-token.txt")
+                )
+            })
+        {
             worlds.automatic_backup(id, s.automatic_backups as usize)?;
         }
         let lease = worlds.lease(id)?;
@@ -682,7 +697,7 @@ impl Supervisor {
             .join(uuid::Uuid::new_v4().simple().to_string());
         std::fs::create_dir_all(&session)?;
         self.state("Preparing", "Проверка карты и портов");
-        if map_digest(&map)? != world.map_hash {
+        if world.schema_version == 1 && map_digest(&map)? != world.map_hash {
             self.state("Failed", "Базовая карта изменилась");
             bail!("MAP_HASH")
         }
@@ -731,9 +746,7 @@ impl Supervisor {
                 if h["ready"] == true {
                     self.verify(&o).await?;
                     launch::need(&session.join("server-patches.ok"))?;
-                    world.server_release = hex::encode(sha2::Sha256::digest(std::fs::read(
-                        component_file(&source, "server.jar")?,
-                    )?));
+                    world.server_release = server_digest.clone();
                     world.last_played = Some(chrono::Utc::now().to_rfc3339());
                     worlds.save(&world)?;
                     self.state("Ready", "Мир запущен");
@@ -847,8 +860,6 @@ impl Supervisor {
                     &Owned::default(),
                 )?;
                 self.state("Stopped", "Мир сохранён, сервер остановлен");
-                self.worlds()?
-                    .automatic_backup(&o.world, self.layout.load()?.automatic_backups as usize)?;
                 return Ok(());
             }
             tokio::time::sleep(Duration::from_millis(250)).await;
@@ -949,7 +960,6 @@ impl Supervisor {
         Ok(())
     }
 }
-use sha2::Digest;
 fn pump(child: &mut tokio::process::Child, folder: &Path, name: &str) {
     fn reader<R: tokio::io::AsyncRead + Unpin + Send + 'static>(input: R, path: PathBuf) {
         tokio::spawn(async move {

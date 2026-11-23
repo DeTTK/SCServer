@@ -109,6 +109,9 @@ def tests():
             subprocess.run([tool('java'),'-Xmx128m','-cp',cp,name,directory],check=True)
     results.append('native stack constructor defaults, game-object stacksize inheritance and bounded durable bulk-transfer FIFO')
     results.append('medicine exact-root admission, native quick selection inputs, nullable categories, cooldown, expiry and saved persistence flags')
+    with tempfile.TemporaryDirectory(prefix='portable-world-',dir=B) as directory:
+        subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.world.PortableWorldTests',str(Path(directory).resolve())],check=True)
+    results.append('portable worlds, independent regions, corruption rollback and mixed journal migration')
     subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.world.RegionRecordBoundsTests'],check=True)
     subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.world.MergedMapCompatibilityTests'],check=True)
     subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.client.RuntimeFilesTests'],check=True)

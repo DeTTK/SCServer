@@ -25,8 +25,6 @@ pub struct Settings {
     pub nickname: String,
     #[serde(alias = "selected_world", alias = "selectedWorld")]
     pub selected_world: String,
-    #[serde(alias = "advertised_host", alias = "advertisedHost")]
-    pub advertised_host: String,
     #[serde(alias = "base_port", alias = "basePort")]
     pub base_port: u16,
     #[serde(alias = "client_memory_mb", alias = "clientMemoryMb")]
@@ -44,6 +42,17 @@ pub struct Settings {
     #[serde(alias = "setup_completed", alias = "setupCompleted")]
     pub setup_completed: bool,
 }
+#[cfg(test)]
+mod route_settings_tests {
+    use super::*;
+    #[test]
+    fn obsolete_public_host_setting_is_ignored_and_not_saved() {
+        let settings:Settings=serde_json::from_value(serde_json::json!({"AdvertisedHost":"obsolete.invalid","nickname":"Player"})).unwrap();
+        settings.validate().unwrap();
+        let saved=serde_json::to_value(settings).unwrap();
+        assert!(saved.get("AdvertisedHost").is_none());assert!(saved.get("advertised_host").is_none());
+    }
+}
 impl Default for Settings {
     fn default() -> Self {
         Self {
@@ -54,7 +63,6 @@ impl Default for Settings {
             server_path: String::new(),
             nickname: "Player".into(),
             selected_world: String::new(),
-            advertised_host: String::new(),
             base_port: 29545,
             client_memory_mb: 4096,
             server_memory_mb: 2048,

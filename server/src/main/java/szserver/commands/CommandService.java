@@ -204,7 +204,7 @@ public final class CommandService implements AutoCloseable {
         if(binding.source()==null||!journal.matches(binding.source()))throw new IllegalArgumentException("resident_command_source_changed");
         world.bootstrap(w->{bundle.metadata().requireBinding(w.identity(),w.sceneRegistryDigest());return true;});
         initializeState(bundle.takeCommands());world.bootstrap(w->{bundle.metadata().restoreInto(w);entityProgram.restoreWorld(w);return true;});
-        long cut=binding.source().end();long[] covered={0},suffix={0};
+        var effective=journal.effectivePrefix(binding.source());long cut=effective.end();long[] covered={0},suffix={0};
         journal.replayLocated((reference,event)->{
             long end=Math.addExact(reference.offset(),8L+reference.length());String type=Json.text(event,"type",32);
             if(end<=cut){
@@ -215,7 +215,7 @@ public final class CommandService implements AutoCloseable {
                 recover(reference,event);suffix[0]++;
             }
         }).get();
-        if(covered[0]!=binding.source().records())throw new IllegalArgumentException("resident_command_source_count");
+        if(covered[0]!=effective.records())throw new IllegalArgumentException("resident_command_source_count");
         restoreEnabled=false;savedCheckpointRecords=covered[0];savedActorTick=world.snapshot().tick();bootstrapView=Map.of("method","resident","revision",bundle.history().revision(),"coveredRecords",covered[0],"suffixApplied",suffix[0],"fallback",false);nativeCommitView=Map.of("status","resident_authority");
     }
     private void bootstrap()throws Exception{

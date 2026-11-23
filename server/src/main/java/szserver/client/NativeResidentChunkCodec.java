@@ -201,9 +201,12 @@ public final class NativeResidentChunkCodec implements ResidentChunks.Codec<Nati
         /** Scene-only native record, for worker parsing; geometry remains in immutable sections. */
         public byte[] sceneRecord(){return Wire.bytes(out->{out.writeInt(key.x());out.writeInt(key.z());out.writeBoolean(false);out.write(sideChannels);});}
         public byte[] networkRecord(){
-            SceneCollision.worker();int mask=0,additional=0;for(int s=0;s<16;s++)if(sections[s]!=null){mask|=1<<s;if(sections[s].high!=null)additional|=1<<s;}
+            SceneCollision.worker();try{return encodeRecord(geometry());}catch(Exception failure){throw new IllegalStateException("resident_network_encode",failure);}
+        }
+        private Geometry geometry(){
+            int mask=0,additional=0;for(int s=0;s<16;s++)if(sections[s]!=null){mask|=1<<s;if(sections[s].high!=null)additional|=1<<s;}
             int primary=mask,upper=additional;byte[] arrays=Wire.bytes(out->{for(var section:sections)if(section!=null)out.write(section.ids);for(int group=0;group<4;group++)for(var section:sections)if(section!=null){byte[] value=switch(group){case 0->section.metadata;case 1->section.blockLight;case 2->section.sky;default->section.auxiliary;};out.write(value==null?new byte[2048]:value);}for(int s=0;s<16;s++)if((upper&(1<<s))!=0)out.write(sections[s].high);out.write(biomes);});
-            var states=tiles.entrySet().stream().sorted(Map.Entry.comparingByKey()).map(row->row.getValue().tile()).toList();try{return encodeRecord(new Snapshot(key.x(),key.z(),primary,upper,nativeRevision,arrays,sideChannels,states,changed));}catch(Exception failure){throw new IllegalStateException("resident_network_encode",failure);}
+            var states=tiles.entrySet().stream().sorted(Map.Entry.comparingByKey()).map(row->row.getValue().tile()).toList();return new Geometry(key.x(),key.z(),primary,upper,nativeRevision,arrays,sideChannels,states,changed);
         }
         private long bytes(){long bytes=512+tiles.size()*96L+(sceneData==null?0:sceneData.bytes);for(var section:sections)if(section!=null){bytes+=96+section.ids.length;for(byte[] group:new byte[][]{section.metadata,section.high,section.blockLight,section.sky,section.auxiliary})if(group!=null)bytes+=group.length;}return bytes;}
     }
@@ -246,9 +249,10 @@ public final class NativeResidentChunkCodec implements ResidentChunks.Codec<Nati
     }
     private static void sceneHistory(DataOutputStream out,List<ScenePayload.Occurrence> frames)throws IOException{out.writeInt(frames.size());for(var occurrence:frames){SceneObject object=occurrence.object();if(object.asset().length()>1024)throw new IllegalArgumentException("resident_scene_asset_name");out.writeBoolean(occurrence.container());out.writeUTF(object.asset());byte[] frame=object.record();out.writeInt(frame.length);out.write(frame);}}
     public static final class Snapshot {
-        private final int x,z,mask,additional;private final UUID revision;private final byte[] arrays,sideChannels;private final List<TilePayload.Tile> tiles;private final boolean changed;
-        private Snapshot(int x,int z,int mask,int additional,UUID revision,byte[] arrays,byte[] sideChannels,List<TilePayload.Tile> tiles,boolean changed){this.x=x;this.z=z;this.mask=mask;this.additional=additional;this.revision=revision;this.arrays=arrays;this.sideChannels=sideChannels;this.tiles=tiles;this.changed=changed;}
+        private final ReadSnapshot read;
+        private Snapshot(ReadSnapshot read){this.read=read;}
     }
+    private record Geometry(int x,int z,int mask,int additional,UUID revision,byte[] arrays,byte[] sideChannels,List<TilePayload.Tile> tiles,boolean changed) {}
     private static IllegalStateException nativeFailure(Throwable failure){if(failure instanceof InvocationTargetException target&&target.getCause()!=null)failure=target.getCause();return new IllegalStateException("resident_native_chunk_operation",failure);}
     public boolean supportsTile(int id,int metadata,int type)throws Exception {
         if(id<1||id>=blocks.length||metadata<0||metadata>15||type<0||type>1||blocks[id]==null||!(Boolean)tileAllowed.invoke(blocks[id],metadata))return false;
@@ -325,21 +329,16 @@ public final class NativeResidentChunkCodec implements ResidentChunks.Codec<Nati
     @Override public long residentBytes(Chunk chunk){try{long bytes=4096+chunk.sideChannels.length+256;for(Object section:chunk.nativeSections)if(section!=null){bytes+=4096+128;for(Field group:groups){Object nibble=group.get(section);if(nibble!=null)bytes+=2048+48;}if(high.get(section)!=null)bytes+=2048+48;}bytes+=chunk.compactTileBytes+chunk.completeTileBytes+chunk.tiles.size()*768L;if(chunk.readSnapshot!=null)bytes+=chunk.readSnapshot.bytes();return bytes;}catch(ReflectiveOperationException failure){throw nativeFailure(failure);}}
     @Override public Snapshot freeze(Chunk chunk)throws Exception {
         chunk.current();if(chunk.transaction!=null)throw new IllegalStateException("resident_native_snapshot_during_transaction");
-        int mask=0,additional=0;for(int s=0;s<16;s++)if(chunk.nativeSections[s]!=null){mask|=1<<s;if(high.get(chunk.nativeSections[s])!=null)additional|=1<<s;}
-        var bytes=new ByteArrayOutputStream();for(Object section:chunk.nativeSections)if(section!=null)bytes.write(((byte[])low.get(section)).clone());
-        for(Field group:groups)for(Object section:chunk.nativeSections)if(section!=null){Object nibble=group.get(section);bytes.write(nibble==null?new byte[2048]:((byte[])nibbleBytes.invoke(nibble)).clone());}
-        for(int s=0;s<16;s++)if((additional&(1<<s))!=0)bytes.write(((byte[])nibbleBytes.invoke(high.get(chunk.nativeSections[s]))).clone());
-        bytes.write(((byte[])biomes.get(chunk.nativeChunk)).clone());
-        return new Snapshot(chunk.x,chunk.z,mask,additional,chunk.sourceRevision,bytes.toByteArray(),chunk.sideChannels.clone(),List.copyOf(chunk.tiles.values()),chunk.changed);
+        return new Snapshot(chunk.readSnapshot());
     }
-    private static byte[] encodeRecord(Snapshot state)throws Exception {
+    private static byte[] encodeRecord(Geometry state)throws Exception {
         byte[] geometry=Wire.bytes(out->{out.write(state.arrays);out.write(TilePayload.encode(state.tiles));});byte[] compressed=Zstd.compress(geometry,3);UUID revision=state.revision;
         if(state.changed){MessageDigest hash=MessageDigest.getInstance("SHA-256");hash.update(geometry);hash.update(state.sideChannels);for(var tile:state.tiles)if(tile.completeStateSize()>0)hash.update(tile.completeState());revision=UUID.nameUUIDFromBytes(hash.digest());}UUID version=revision;
         byte[] record=Wire.bytes(out->{out.writeInt(state.x);out.writeInt(state.z);out.writeBoolean(true);out.writeInt(state.mask);out.writeInt(state.additional);out.writeLong(version.getMostSignificantBits());out.writeLong(version.getLeastSignificantBits());out.writeInt(state.arrays.length);out.writeInt(compressed.length);out.write(compressed);out.write(state.sideChannels);});
         return record;
     }
-    @Override public byte[] encode(Snapshot state)throws Exception {return envelope(ScenePersistence.encodeRecord(encodeRecord(state),persistenceCatalog),state.tiles,VERSION);}
-    public byte[] networkRecord(Snapshot snapshot)throws Exception {byte[] record=encodeRecord(snapshot);if(record.length>MAX_RECORD)throw new IOException("resident_native_record_size");return record;}
+    @Override public byte[] encode(Snapshot state)throws Exception {Geometry geometry=state.read.geometry();return envelope(ScenePersistence.encodeRecord(encodeRecord(geometry),persistenceCatalog),geometry.tiles,VERSION);}
+    public byte[] networkRecord(Snapshot snapshot)throws Exception {byte[] record=encodeRecord(snapshot.read.geometry());if(record.length>MAX_RECORD)throw new IOException("resident_native_record_size");return record;}
     @Override public void activate(Chunk chunk){if(owner==null)owner=Thread.currentThread();owner();if(active.putIfAbsent(chunk.key(),chunk)!=null)throw new IllegalStateException("resident_native_duplicate_chunk");chunk.chunkOwner=owner;}
     @Override public void activate(ResidentChunks.Key expected,Chunk chunk,long revision){if(!expected.equals(chunk.key()))throw new IllegalArgumentException("resident_native_chunk_coordinate");activate(chunk);}
     @Override public void replace(ResidentChunks.Key key,Chunk previous,Chunk replacement,long revision){owner();if(!key.equals(replacement.key())||replacement.chunkOwner!=null||!active.replace(key,previous,replacement))throw new IllegalStateException("resident_native_replace");replacement.chunkOwner=owner;}

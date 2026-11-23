@@ -17,7 +17,10 @@ final class AccountCache {
     private final Path base,folder;private final String source;
     private volatile String startup="cold",failure="";private volatile long cleaned,cleanedBytes,seals;private Path warmPath;
     AccountCache(Path base)throws Exception{
-        this.base=base.toAbsolutePath();source=this.base.toString();folder=base.resolveSibling(base.getFileName()+".account-cache").toAbsolutePath();
+        this.base=base.toAbsolutePath();Path data=this.base.getParent();
+        boolean portable=data.getFileName()!=null&&data.getFileName().toString().equals("data")&&Files.isRegularFile(data.resolveSibling("world.properties"),LinkOption.NOFOLLOW_LINKS);
+        source=portable?"world-data/"+base.getFileName():this.base.toString();
+        folder=this.base.resolveSibling(base.getFileName()+(portable?".account-cache-v2":".account-cache"));
         if(Files.exists(folder,LinkOption.NOFOLLOW_LINKS)&&(!Files.isDirectory(folder,LinkOption.NOFOLLOW_LINKS)||Files.isSymbolicLink(folder)))throw new IOException("account_cache_not_directory");
         Files.createDirectories(folder);Path owner=folder.resolve("owner.json");
         if(Files.exists(owner,LinkOption.NOFOLLOW_LINKS)){JsonObject row=checked(owner);if(!row.keySet().equals(Set.of("kind","source"))||!row.get("kind").getAsString().equals("account-cache")||!row.get("source").getAsString().equals(source))throw new IOException("account_cache_foreign_owner");}

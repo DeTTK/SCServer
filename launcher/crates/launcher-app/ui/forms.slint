@@ -22,7 +22,6 @@ export component Configuration inherits VerticalLayout {
     in-out property <string> server-path;
     in-out property <string> client-memory;
     in-out property <string> server-memory-setting;
-    in-out property <string> advertised-host;
     in-out property <string> port;
     in-out property <string> feed-url;
     in-out property <string> game-branch;
@@ -32,7 +31,7 @@ export component Configuration inherits VerticalLayout {
         ((root.wizard ? root.step == 0 : root.tab == "basic") && (root.error-field == "game" || root.error-field == "data" || root.error-field == "nick"))
         || (root.wizard && (root.step == 2 && root.error-field == "world"))
         || (!root.wizard && ((root.tab == "client" && (root.error-field == "client" || root.error-field == "cmem"))
-            || (root.tab == "server" && (root.error-field == "server" || root.error-field == "smem" || root.error-field == "port" || root.error-field == "host"))
+            || (root.tab == "server" && (root.error-field == "server" || root.error-field == "smem" || root.error-field == "port"))
             || (root.tab == "updates" && root.error-field == "feed")));
     changed game-branch => { if root.wizard && root.step == 1 { root.bundle-path = ""; } }
     callback browse(string);
@@ -68,7 +67,7 @@ export component Configuration inherits VerticalLayout {
                 spacing: 18px;
                 Label { text: "Ветка игры"; }
                 ComboBox { model: root.branches; current-value <=> root.game-branch; enabled: !root.busy; height: 38px; }
-                Hint { text: "Лаунчер установит клиент, сервер, Java и базовую карту. Уже имеющиеся файлы используются повторно."; wrap: word-wrap; overflow: clip; }
+                Hint { text: "Лаунчер установит клиент, сервер, Java и шаблон для новых миров. Уже имеющиеся файлы используются повторно."; wrap: word-wrap; overflow: clip; }
                 HorizontalLayout {
                     spacing: 8px; alignment: start;
                     Action { label: root.bundle-path == "" ? "Установить игру" : "Проверить файлы"; glyph: "\u{e896}"; enabled: !root.busy; activated => { root.install("download"); } }
@@ -90,7 +89,6 @@ export component Configuration inherits VerticalLayout {
             }
             if !root.wizard && root.tab == "server": VerticalLayout {
                 spacing: 18px;
-                Field { label: "Адрес для внешних игроков"; hint: "IP или домен без порта. Для локальной сети оставьте поле пустым."; value <=> root.advertised-host; enabled: !root.busy; error: root.error-field == "host" ? root.error : ""; }
                 HorizontalLayout {
                     spacing: 14px;
                     Field { label: "Начальный игровой порт"; value <=> root.port; enabled: !root.busy; error: root.error-field == "port" ? root.error : ""; }

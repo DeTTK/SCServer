@@ -29,8 +29,8 @@ final class CheckpointSources {
         children.sort(Comparator.comparing(p->p.getFileName().toString()));
         for(Path child:children){count[0]=Math.addExact(count[0],1);if(Files.isDirectory(child,LinkOption.NOFOLLOW_LINKS))tree(out,root,child,depth+1,count,contents);else file(out,root,child,contents);}
     }
-    private static void map(MessageDigest out,Path root,String registry,boolean contents)throws IOException{
-        text(out,root.toString());text(out,registry);List<Path> regions=new ArrayList<>();
+    private static void map(MessageDigest out,Path root,String registry,boolean contents,String namespace)throws IOException{
+        text(out,namespace);text(out,registry);List<Path> regions=new ArrayList<>();
         try(var stream=Files.newDirectoryStream(root,"r.*.*.szr")){for(Path path:stream){if(regions.size()>=65536)throw new IOException("checkpoint_source_region_limit");regions.add(path);}}
         regions.sort(Comparator.comparing(p->p.getFileName().toString()));out.update(ByteBuffer.allocate(4).putInt(regions.size()).array());for(Path path:regions)file(out,root,path,contents);
         for(String name:List.of("registry.json","scene-sql-catalog.jsonl")){Path path=name.equals("registry.json")?SceneRegistry.sourceRegistry(root):root.resolve(name);text(out,name);out.update((byte)(Files.exists(path,LinkOption.NOFOLLOW_LINKS)?1:0));if(Files.exists(path,LinkOption.NOFOLLOW_LINKS))file(out,root,path,contents);}
@@ -38,17 +38,17 @@ final class CheckpointSources {
         Path completeTiles=root.resolve("tile-states");if(Files.exists(completeTiles,LinkOption.NOFOLLOW_LINKS)){text(out,"native-complete-tiles-v1");tree(out,root,completeTiles,0,new long[1],contents);}
     }
     static String regions(Path root,SceneRegistry registry,Path templates,SceneRegistry templateRegistry,Integer fallback)throws IOException{
-        return regions(root,registry,templates,templateRegistry,fallback,true);
+        return regions(root,registry,templates,templateRegistry,fallback,true,root.toString());
     }
     /** The original source is immutable for this process. Check its file set and
      * identities before/after saves, reusing the content SHA verified at startup.
      * Server writes go to native overlays, never these source files. */
     static String regionsMetadata(Path root,SceneRegistry registry,Path templates,SceneRegistry templateRegistry,Integer fallback)throws IOException{
-        return regions(root,registry,templates,templateRegistry,fallback,false);
+        return regions(root,registry,templates,templateRegistry,fallback,false,root.toString());
     }
-    private static String regions(Path root,SceneRegistry registry,Path templates,SceneRegistry templateRegistry,Integer fallback,boolean contents)throws IOException{
+    static String regions(Path root,SceneRegistry registry,Path templates,SceneRegistry templateRegistry,Integer fallback,boolean contents,String namespace)throws IOException{
         if(Thread.currentThread().getName().equals("world-tick")||Thread.currentThread().getName().equals("native-game-owner"))throw new IllegalStateException("checkpoint_source_io_on_owner");
-        MessageDigest out=digest();text(out,contents?"szwc-base-v1":"szwc-base-metadata-v1");text(out,fallback==null?"blocked":"flat-native-v1:"+fallback);map(out,root,registry==null?"disabled":registry.checkpointIdentity(),contents);
-        text(out,"templates");if(root.equals(templates)){text(out,"same-map");text(out,templateRegistry==null?"disabled":templateRegistry.checkpointIdentity());}else map(out,templates,templateRegistry==null?"disabled":templateRegistry.checkpointIdentity(),contents);return HexFormat.of().formatHex(out.digest());
+        MessageDigest out=digest();text(out,contents?"szwc-base-v1":"szwc-base-metadata-v1");text(out,fallback==null?"blocked":"flat-native-v1:"+fallback);map(out,root,registry==null?"disabled":registry.checkpointIdentity(),contents,namespace);
+        text(out,"templates");if(root.equals(templates)){text(out,"same-map");text(out,templateRegistry==null?"disabled":templateRegistry.checkpointIdentity());}else map(out,templates,templateRegistry==null?"disabled":templateRegistry.checkpointIdentity(),contents,templates.toString());return HexFormat.of().formatHex(out.digest());
     }
 }

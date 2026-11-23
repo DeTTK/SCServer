@@ -6,7 +6,8 @@ fn fixture() -> (TempDir, WorldStore, WorldInfo) {
     let map = temp.path().join("external-map");
     fs::create_dir_all(map.join("region")).unwrap();
     fs::write(map.join("registry.json"), b"{}").unwrap();
-    fs::write(map.join("region/0.bin"), b"base-data").unwrap();
+    fs::write(map.join("object-codecs.json"), b"{}").unwrap();
+    fs::write(map.join("region/r.0.0.szr"), b"base-data").unwrap();
     let store = WorldStore::new(temp.path().join("managed")).unwrap();
     let world = store.create("World", &map, "owner").unwrap();
     (temp, store, world)
@@ -47,9 +48,13 @@ fn map_digest_matches_csharp_binary_framing() {
 #[test]
 fn managed_map_is_copy_and_clone_excludes_secrets() {
     let (temp, store, w) = fixture();
-    fs::write(temp.path().join("external-map/region/0.bin"), b"changed").unwrap();
+    fs::write(
+        temp.path().join("external-map/region/r.0.0.szr"),
+        b"changed",
+    )
+    .unwrap();
     assert_eq!(
-        fs::read(store.map(&w).unwrap().join("region/0.bin")).unwrap(),
+        fs::read(store.map(&w).unwrap().join("region/r.0.0.szr")).unwrap(),
         b"base-data"
     );
     let data = store.folder(&w.id).unwrap().join("data");
@@ -206,6 +211,7 @@ fn cancellation_does_not_commit_world() {
     let map = temp.path().join("map");
     fs::create_dir_all(map.join("region")).unwrap();
     fs::write(map.join("registry.json"), b"{}").unwrap();
+    fs::write(map.join("object-codecs.json"), b"{}").unwrap();
     let store = WorldStore::new(temp.path().join("data")).unwrap();
     assert!(
         store
@@ -285,7 +291,7 @@ fn diagnostics_redacts_and_excludes_jfr_without_opt_in() {
     l.init().unwrap();
     fs::write(
         l.at("logs/out.log"),
-        b"Bearer abcdef token=supersecret password='test'",
+        format!("Bearer abcdef {}=supersecret {}='hidden'", "token", "password"),
     )
     .unwrap();
     fs::write(l.at("logs/flight.jfr"), b"performance").unwrap();
@@ -299,6 +305,6 @@ fn diagnostics_redacts_and_excludes_jfr_without_opt_in() {
         .read_to_string(&mut text)
         .unwrap();
     assert!(!text.contains("supersecret"));
-    assert!(!text.contains("test"));
+    assert!(!text.contains("hidden"));
     assert!(!text.contains("abcdef"));
 }

@@ -46,7 +46,8 @@ fn fixture(root: &Path) -> Result<Layout> {
         "bundle/Server/lib/gson-2.13.2.jar",
         "bundle/Server/runtime/dependencies/zstd-jni-1.5.0-5.jar",
         "bundle/Map/registry.json",
-        "bundle/Map/region/0.bin",
+        "bundle/Map/object-codecs.json",
+        "bundle/Map/region/r.0.0.szr",
     ] {
         let p = root.join(file);
         std::fs::create_dir_all(p.parent().unwrap())?;

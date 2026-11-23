@@ -17,6 +17,8 @@ import java.util.zip.CRC32;
 public final class RegionTerrain implements Terrain {
     private record Key(int x,int z) {}
     private final Path root;
+    private final String bindingNamespace;
+    private final String worldIdentity;
     private volatile NativeCommitIndex archiveCommits=NativeCommitIndex.empty();
     /** Detached exports keep their own captured durable native root. */
     public void archiveCommits(NativeCommitIndex committed){archiveCommits=Objects.requireNonNull(committed);}
@@ -51,7 +53,7 @@ public final class RegionTerrain implements Terrain {
         return checkpointBindingFor(committed,true);
     }
     public String checkpointBindingFor(NativeCommitIndex committed,boolean sceneBase)throws IOException{
-        if(checkpointBase==null)return null;if(!checkpointSourceMetadata.equals(CheckpointSources.regionsMetadata(root,scenes,templateRoot,templateRegistry,checkpointFallback)))throw new IOException("checkpoint_base_changed_since_start");String original=checkpointBase;
+        if(checkpointBase==null)return null;if(!checkpointSourceMetadata.equals(CheckpointSources.regions(root,scenes,templateRoot,templateRegistry,checkpointFallback,false,bindingNamespace)))throw new IOException("checkpoint_base_changed_since_start");String original=checkpointBase;
         return committed.generation().isEmpty()?original:CheckpointSources.textDigest((sceneBase?"szwc-native-live-v2:":"szwc-native-live-v1:")+original+":"+committed.generation());
     }
     /** Constant-work identity for an immutable captured root; the checkpoint IO worker
@@ -84,7 +86,13 @@ public final class RegionTerrain implements Terrain {
         this(path,capacity,fallbackSurface,scenes,null);
     }
     public RegionTerrain(Path path,int capacity,Integer fallbackSurface,SceneRegistry scenes,CatalogSource source) throws IOException {
+        this(path,capacity,fallbackSurface,scenes,source,null);
+    }
+    public RegionTerrain(Path path,int capacity,Integer fallbackSurface,SceneRegistry scenes,CatalogSource source,String namespace) throws IOException {
         root=(Files.isDirectory(path.resolve("region"))?path.resolve("region"):path).toRealPath();
+        boolean managed=namespace!=null&&namespace.matches("content-v2:[0-9a-f]{64}");
+        bindingNamespace=managed?"managed-map-content-v2":namespace==null?root.toString():namespace;
+        worldIdentity="regions:"+(managed?namespace:bindingNamespace);
         if(capacity<16 || capacity>4096) throw new IllegalArgumentException("terrain_cache_capacity");
         Path alternate=source==null?root:(Files.isDirectory(source.path().resolve("region"))?source.path().resolve("region"):source.path()).toRealPath();
         if(source!=null&&(scenes==null||source.registry()==null||!source.registry().target().digest().equals(scenes.target().digest())))throw new IllegalArgumentException("scene_template_target_registry_mismatch");
@@ -93,13 +101,14 @@ public final class RegionTerrain implements Terrain {
         manifestScenes=scenes==null?null:scenes.fork();
         flatFallback=fallbackSurface==null?null:new FlatChunk(fallbackSurface);
         templateRegistry=source==null||alternate.equals(root)?scenes:source.registry();checkpointFallback=fallbackSurface;
-        String initialBinding,initialMetadata;try{initialMetadata=CheckpointSources.regionsMetadata(root,scenes,alternate,templateRegistry,fallbackSurface);initialBinding=CheckpointSources.regions(root,scenes,alternate,templateRegistry,fallbackSurface);if(!initialMetadata.equals(CheckpointSources.regionsMetadata(root,scenes,alternate,templateRegistry,fallbackSurface)))throw new IOException("checkpoint_source_changed_during_read");}catch(IOException unavailable){initialBinding=null;initialMetadata=null;}checkpointBase=initialBinding;checkpointSourceMetadata=initialMetadata;
+        String initialBinding,initialMetadata;try{initialMetadata=CheckpointSources.regions(root,scenes,alternate,templateRegistry,fallbackSurface,false,bindingNamespace);initialBinding=CheckpointSources.regions(root,scenes,alternate,templateRegistry,fallbackSurface,true,bindingNamespace);if(!initialMetadata.equals(CheckpointSources.regions(root,scenes,alternate,templateRegistry,fallbackSurface,false,bindingNamespace)))throw new IOException("checkpoint_source_changed_during_read");}catch(IOException unavailable){initialBinding=null;initialMetadata=null;}checkpointBase=initialBinding;checkpointSourceMetadata=initialMetadata;
+        if(managed&&!worldIdentity.equals("regions:content-v2:"+checkpointBase))throw new IOException("portable_managed_map_content_changed");
         catalog=scenes==null?null:new SceneCatalog(root,scenes);
         templateRoot=alternate;
         templates=source==null||alternate.equals(root)?catalog:new SceneCatalog(alternate,source.registry());
     }
     @Override public boolean ready(int x,int z) { return chunk(Math.floorDiv(x,16),Math.floorDiv(z,16))!=null; }
-    public String identity(){return "regions:"+root.toString();}
+    public String identity(){return worldIdentity;}
     NativeMapArchive.Source archiveSource(){return new NativeMapArchive.Source(root,scenes==null?null:scenes.fork(),flatFallback,archiveCommits);}
     /** Original content is hashed at startup; saves verify source file identities without re-reading the map. */
     public String nativeCommitBinding(){return scenes==null?null:checkpointBase;}

@@ -216,6 +216,18 @@ async fn forward(
     }
     let mut body = vec![0; length];
     stream.read_exact(&mut body).await?;
+    // The connection target belongs to this proxy, never to a browser header or
+    // game-supplied field. Keep the existing v1 signature and bind the route by
+    // including it in the signed form body / raw query.
+    let route=route_parameter(remote)?;
+    let mut path=path.to_owned();
+    if method=="GET" {
+        path.push(if path.contains('?'){'&'}else{'?'});path.push_str(&route);
+    }else{
+        if !body.is_empty() && !body.ends_with(b"&"){body.push(b'&');}
+        body.extend_from_slice(route.as_bytes());
+        if body.len()>8192{bail!("PROXY_BODY");}
+    }
     let time = SystemTime::now()
         .duration_since(UNIX_EPOCH)?
         .as_secs()
@@ -257,6 +269,13 @@ async fn forward(
     }
     Ok((status, ct, out))
 }
+fn route_parameter(remote:&reqwest::Url)->Result<String> {
+    if !matches!(remote.scheme(),"http"|"https") || remote.path()!="/" || remote.query().is_some() || remote.fragment().is_some() || !remote.username().is_empty() || remote.password().is_some() || remote.host_str().is_none(){bail!("ADDRESS_INVALID");}
+    let authority=remote.as_str().split_once("://").ok_or_else(||anyhow::anyhow!("ADDRESS_INVALID"))?.1.trim_end_matches('/');
+    let mut encoder=reqwest::Url::parse("http://route.invalid/")?;
+    encoder.query_pairs_mut().append_pair("__bscp_route",authority);
+    Ok(encoder.query().unwrap().into())
+}
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -271,6 +290,14 @@ mod tests {
             assert!(endpoint(a).is_err())
         }
         assert_eq!(endpoint("127.0.0.1").unwrap().port(), Some(29545));
+    }
+    #[test]
+    fn route_field_preserves_ipv6_and_encodes_authority_as_one_value() {
+        let field=route_parameter(&reqwest::Url::parse("https://[2001:db8::7]:8443/").unwrap()).unwrap();
+        let mut url=reqwest::Url::parse("http://fixture.invalid/").unwrap();url.set_query(Some(&field));
+        let fields=url.query_pairs().collect::<Vec<_>>();
+        assert_eq!(fields.len(),1);assert_eq!(fields[0].0,"__bscp_route");assert_eq!(fields[0].1,"[2001:db8::7]:8443");
+        assert!(route_parameter(&reqwest::Url::parse("https://user:pw@host/").unwrap()).is_err());
     }
 }
 #[cfg(test)]
@@ -306,6 +333,9 @@ mod integration_tests {
             let mut body = vec![0; header("content-length").parse::<usize>().unwrap()];
             s.read_exact(&mut body).await.unwrap();
             assert!(raw.starts_with("POST /session/game?x=%2f&x=+ HTTP/1.1"));
+            let mut form=reqwest::Url::parse("http://fixture.invalid/").unwrap();
+            form.set_query(Some(std::str::from_utf8(&body).unwrap()));
+            assert_eq!(form.query_pairs().filter(|(k,_)|k=="__bscp_route").last().unwrap().1,format!("127.0.0.1:{port}"));
             assert_eq!(header("X-BSCP-Nonce").len(), 40);
             assert!(
                 header("X-BSCP-Nonce")
@@ -334,7 +364,7 @@ mod integration_tests {
         .unwrap();
         let r = reqwest::Client::new()
             .post(format!("{}session/game?x=%2f&x=+", proxy.url()))
-            .body("login=Player")
+            .body("login=Player&__bscp_route=attacker.invalid")
             .send()
             .await
             .unwrap();

@@ -41,7 +41,7 @@ impl Default for WorldInfo {
         Self {
             schema_version: 1,
             id: Uuid::new_v4().simple().to_string(),
-            name: "РќРѕРІС‹Р№ РјРёСЂ".into(),
+            name: "Новый мир".into(),
             created: now(),
             last_played: None,
             map_path: String::new(),
@@ -61,7 +61,16 @@ impl WorldStore {
         let root = std::path::absolute(data)?.join("worlds");
         no_links(&root)?;
         fs::create_dir_all(&root)?;
-        Ok(Self { root })
+        let store = Self { root };
+        for item in fs::read_dir(&store.root)? {
+            let path = item?.path();
+            let id = path.file_name().unwrap_or_default().to_string_lossy();
+            if store.folder(&id).is_ok() && path.join("portable.pending.json").is_file() {
+                let _lease = store.lease(&id)?;
+                store.recover_portable(&id)?;
+            }
+        }
+        Ok(store)
     }
     pub fn folder(&self, id: &str) -> Result<PathBuf> {
         if id.len() != 32
@@ -98,7 +107,7 @@ impl WorldStore {
             bail!("WORLD_MISSING: world not found")
         }
         let w: WorldInfo = read_json(&p)?;
-        if w.id != id || w.schema_version != 1 {
+        if w.id != id || !matches!(w.schema_version, 1 | 2) {
             bail!("WORLD_FORMAT: invalid world metadata")
         }
         Ok(w)
@@ -107,6 +116,9 @@ impl WorldStore {
         write_json(&self.folder(&w.id)?.join("world.json"), w)
     }
     pub fn map(&self, w: &WorldInfo) -> Result<PathBuf> {
+        if w.schema_version == 2 {
+            return child(&self.folder(&w.id)?, "Map");
+        }
         child(self.root.parent().unwrap(), &w.map_path.replace('\\', "/"))
     }
     pub fn supervisor_lease(&self, id: &str) -> Result<Lease> {
@@ -116,9 +128,11 @@ impl WorldStore {
     pub fn lease(&self, id: &str) -> Result<Lease> {
         let held = self.supervisor_lease(id)?;
         for p in ["data", "data.before-restore"] {
-            let path = self.folder(id)?.join(p).join(".server-lease");
-            if path.exists() {
-                let _probe = Lease::acquire(&path)?;
+            for name in [".server-lease", "server-owner.lock"] {
+                let path = self.folder(id)?.join(p).join(name);
+                if path.exists() {
+                    let _probe = Lease::acquire(&path)?;
+                }
             }
         }
         self.recover_restore(id)?;
@@ -135,47 +149,53 @@ impl WorldStore {
         cancel: &std::sync::atomic::AtomicBool,
     ) -> Result<WorldInfo> {
         validate_name(name)?;
-        if !map.join("registry.json").is_file() || !map.join("region").is_dir() {
-            bail!("MAP_INVALID: registry.json and region required")
-        }
+        check_cancel(cancel)?;
+        validate_region_map(map)?;
         let hash = map_digest_cancellable(map, cancel)?;
-        let base = self.root.parent().unwrap().join("maps").join(&hash);
-        no_links(&base)?;
-        if !base.exists() {
-            fs::create_dir_all(base.parent().unwrap())?;
-            let stage = base.with_extension(format!("incoming-{}", Uuid::new_v4().simple()));
-            let result = (|| {
-                copy_tree_cancellable(map, &stage, |_| true, cancel)?;
-                if map_digest_cancellable(&stage, cancel)? != hash {
-                    bail!("MAP_CHANGED: map changed during copy")
-                }
-                match fs::rename(&stage, &base) {
-                    Ok(_) => Ok(()),
-                    Err(_) if base.is_dir() => Ok(()),
-                    Err(e) => Err(e.into()),
-                }
-            })();
-            delete_owned(base.parent().unwrap(), &stage)?;
-            result?;
-        } else if map_digest(&base)? != hash {
-            bail!("MAP_CHANGED: managed base changed")
-        };
         let w = WorldInfo {
+            schema_version: 2,
             name: name.trim().into(),
-            map_path: format!("maps/{hash}"),
+            map_path: "Map".into(),
             map_hash: hash,
             owner_id: owner.into(),
             ..Default::default()
         };
-        fs::create_dir_all(self.folder(&w.id)?.join("data"))?;
-        self.save(&w)?;
-        Ok(w)
+        let stage = self
+            .root
+            .join(format!(".creating-{}", Uuid::new_v4().simple()));
+        let result = (|| {
+            copy_selected_tree(map, &stage.join("Map"), |_| true, cancel)?;
+            if map_digest_cancellable(&stage.join("Map"), cancel)? != w.map_hash {
+                bail!("MAP_CHANGED: template changed during copy");
+            }
+            if !stage.join("Map/object-codecs.json").is_file() {
+                let parent = map.parent().context("MAP_CODECS: template parent")?;
+                let fallback = parent.join("Server/registries/live-object-codecs.json");
+                no_links(&fallback)?;
+                fs::copy(&fallback, stage.join("Map/object-codecs.json"))
+                    .context("MAP_CODECS: отсутствуют кодеки карты и резервные кодеки поставки")?;
+            }
+            fs::create_dir(stage.join("data"))?;
+            write_portable_manifest(&stage, &format!("world-v2/{}", Uuid::new_v4()), cancel)?;
+            write_json(&stage.join("world.json"), &w)?;
+            fs::rename(&stage, self.folder(&w.id)?)?;
+            Ok(w)
+        })();
+        if result.is_err() {
+            delete_owned(&self.root, &stage)?;
+        }
+        result
     }
     pub fn clone_world(&self, id: &str, name: &str) -> Result<WorldInfo> {
         validate_name(name)?;
         let _lease = self.lease(id)?;
         let old = self.get(id)?;
+        if old.schema_version != 2 {
+            bail!("WORLD_UPGRADE: сначала подготовьте мир в новом формате");
+        }
+        let source_map = self.map(&old)?;
         let w = WorldInfo {
+            schema_version: 2,
             name: name.trim().into(),
             map_path: old.map_path,
             map_hash: old.map_hash,
@@ -186,6 +206,16 @@ impl WorldStore {
         };
         let target = self.folder(&w.id)?;
         let result = (|| {
+            copy_selected_tree(
+                &source_map,
+                &target.join("Map"),
+                |_| true,
+                &std::sync::atomic::AtomicBool::new(false),
+            )?;
+            fs::copy(
+                self.folder(id)?.join("world.properties"),
+                target.join("world.properties"),
+            )?;
             copy_tree(&self.folder(id)?.join("data"), &target.join("data"), |p| {
                 !secret(p) && p != ".server-lease"
             })?;
@@ -204,6 +234,79 @@ impl WorldStore {
         w.name = name.trim().into();
         self.save(&w)
     }
+    /// Publish a verified Java PortableWorld migration. Caller holds this world's lease.
+    /// Original data remain live until first launch; the copied data and old metadata
+    /// stay in the reserved staging directory as a rollback copy.
+    pub fn install_portable(&self, id: &str, prepared: &Path) -> Result<()> {
+        let original = self.get(id)?;
+        if original.schema_version != 1 {
+            bail!("WORLD_FORMAT: migration requires legacy world");
+        }
+        let stage = prepared.strip_prefix(&self.root).context("WORLD_STAGE")?;
+        let name = stage.to_str().context("WORLD_STAGE")?;
+        if !name
+            .strip_prefix(".portable-")
+            .is_some_and(|v| Uuid::parse_str(v).is_ok())
+            || stage.components().count() != 1
+        {
+            bail!("WORLD_STAGE");
+        }
+        for name in ["Map", "world.properties"] {
+            if self.folder(id)?.join(name).exists() {
+                bail!("WORLD_UPGRADE: unjournaled partial migration");
+            }
+        }
+        if !prepared.join("Map/region").is_dir()
+            || !prepared.join("world.properties").is_file()
+            || !prepared.join("data").is_dir()
+        {
+            bail!("WORLD_STAGE: incomplete prepared world");
+        }
+        write_json(&prepared.join("world.json"), &original)?;
+        write_json(
+            &self.folder(id)?.join("portable.pending.json"),
+            &PortableMigration {
+                stage: name.into(),
+                original,
+            },
+        )?;
+        self.recover_portable(id)
+    }
+    fn recover_portable(&self, id: &str) -> Result<()> {
+        let folder = self.folder(id)?;
+        let pending = folder.join("portable.pending.json");
+        if !pending.exists() {
+            return Ok(());
+        }
+        let txn: PortableMigration = read_json(&pending)?;
+        if txn.original.id != id
+            || txn.original.schema_version != 1
+            || !txn
+                .stage
+                .strip_prefix(".portable-")
+                .is_some_and(|v| Uuid::parse_str(v).is_ok())
+        {
+            bail!("WORLD_STAGE: invalid migration journal");
+        }
+        let source = child(&self.root, &txn.stage)?;
+        for name in ["Map", "world.properties"] {
+            let from = source.join(name);
+            let to = folder.join(name);
+            no_links(&from)?;
+            no_links(&to)?;
+            if from.exists() && !to.exists() {
+                fs::rename(from, to)?;
+            } else if from.exists() || !to.exists() {
+                bail!("WORLD_STAGE: conflicting migration files");
+            }
+        }
+        let mut world = txn.original;
+        world.schema_version = 2;
+        world.map_path = "Map".into();
+        self.save(&world)?;
+        fs::remove_file(pending)?;
+        Ok(())
+    }
     pub fn delete(&self, id: &str, confirmation: &str) -> Result<()> {
         let lease = self.lease(id)?;
         let w = self.get(id)?;
@@ -217,6 +320,9 @@ impl WorldStore {
     }
     pub fn export(&self, id: &str, destination: &Path) -> Result<()> {
         let _lease = self.lease(id)?;
+        if self.get(id)?.schema_version != 2 {
+            bail!("WORLD_UPGRADE: подготовьте старый мир перед экспортом");
+        }
         let root = self.folder(id)?;
         no_links(destination)?;
         if destination.starts_with(&root) {
@@ -234,10 +340,12 @@ impl WorldStore {
             let opts = zip::write::SimpleFileOptions::default()
                 .compression_method(zip::CompressionMethod::Deflated);
             let mut manifest = ArchiveManifest::default();
+            if self.get(id)?.schema_version == 2 {
+                manifest.schema_version = 2;
+            }
             for p in files(&root)? {
                 let name = relative(&root, &p);
-                if secret(&name)
-                    || name.ends_with(".bak")
+                if (!name.starts_with("Map/") && (secret(&name) || name.ends_with(".bak")))
                     || name == "data/.server-lease"
                     || name == ".lock"
                 {
@@ -267,28 +375,44 @@ impl WorldStore {
         let result = (|| {
             safe_extract(archive, &stage, 20 * 1024 * 1024 * 1024, |_| true)?;
             let manifest: ArchiveManifest = read_json(&stage.join("archive-manifest.json"))?;
-            if manifest.schema_version != 1 || manifest.kind != "world" || manifest.files.is_empty()
+            if !matches!(manifest.schema_version, 1 | 2)
+                || manifest.kind != "world"
+                || manifest.files.is_empty()
             {
                 bail!("ARCHIVE_FORMAT: invalid manifest")
             };
             verify_inventory(&stage, &manifest.files, Some("archive-manifest.json"))?;
-            if manifest.files.keys().any(|p| secret(p)) {
+            if manifest
+                .files
+                .keys()
+                .any(|p| !p.starts_with("Map/") && secret(p))
+            {
                 bail!("ARCHIVE_SECRET: archive contains credentials")
             };
             let mut w: WorldInfo = read_json(&stage.join("world.json"))?;
-            if w.schema_version != 1
+            if !matches!(w.schema_version, 1 | 2)
                 || !valid_hash(&w.map_hash)
                 || w.base_identity_mode != "content-v2"
             {
                 bail!("WORLD_FORMAT: unsupported world")
             };
             w.id = Uuid::new_v4().simple().to_string();
-            w.name += " (РёРјРїРѕСЂС‚)";
+            w.name += " (импорт)";
             w.last_played = None;
-            w.map_path = format!("maps/{}", w.map_hash);
-            if !self.map(&w)?.is_dir() {
-                bail!("MAP_MISSING: import world base first")
-            };
+            if w.schema_version == 2 {
+                w.map_path = "Map".into();
+                validate_region_map(&stage.join("Map"))?;
+                if !stage.join("Map/object-codecs.json").is_file()
+                    || !stage.join("world.properties").is_file()
+                {
+                    bail!("WORLD_FORMAT: portable world is incomplete");
+                }
+            } else {
+                w.map_path = format!("maps/{}", w.map_hash);
+                if !self.map(&w)?.is_dir() {
+                    bail!("MAP_MISSING: legacy archive requires its original base");
+                }
+            }
             fs::create_dir_all(stage.join("data"))?;
             fs::remove_file(stage.join("archive-manifest.json"))?;
             write_json(&stage.join("world.json"), &w)?;
@@ -306,7 +430,7 @@ impl WorldStore {
         let folder = self.folder(id)?;
         let pending = folder.join("restore.pending.json");
         let result = (|| {
-            if current.map_hash != imported.map_hash {
+            if current.schema_version == 1 && current.map_hash != imported.map_hash {
                 bail!("BACKUP_BASE: backup belongs to another map")
             };
             if folder.join("data.before-restore").exists() {
@@ -322,10 +446,34 @@ impl WorldStore {
             let mut txn = RestoreTransaction {
                 imported_id: imported.id.clone(),
                 phase: "prepared".into(),
+                map: current.schema_version == 2 && imported.schema_version == 2,
+                original: Some(current.clone()),
+                restored: Some(WorldInfo {
+                    id: current.id.clone(),
+                    name: current.name.clone(),
+                    created: current.created.clone(),
+                    ..imported.clone()
+                }),
             };
+            if current.schema_version != imported.schema_version {
+                bail!("WORLD_UPGRADE: restore requires matching world formats");
+            }
             write_json(&pending, &txn)?;
             fs::rename(folder.join("data"), folder.join("data.before-restore"))?;
             fs::rename(source.join("data"), folder.join("data"))?;
+            if txn.map {
+                for name in ["Map", "world.properties"] {
+                    if folder.join(format!("{name}.before-restore")).exists() {
+                        bail!("RESTORE_PENDING: preserved world files exist");
+                    }
+                    fs::rename(
+                        folder.join(name),
+                        folder.join(format!("{name}.before-restore")),
+                    )?;
+                    fs::rename(source.join(name), folder.join(name))?;
+                }
+                self.save(txn.restored.as_ref().unwrap())?;
+            }
             txn.phase = "committed".into();
             write_json(&pending, &txn)?;
             self.recover_restore(id)
@@ -375,10 +523,53 @@ impl WorldStore {
             if !data.is_dir() {
                 bail!("RESTORE_MISSING: original data missing; launch blocked")
             }
+            if txn.map {
+                for name in ["Map", "world.properties"] {
+                    let kept = folder.join(format!("{name}.before-restore"));
+                    let live = folder.join(name);
+                    let staged = source.join(name);
+                    if kept.exists() {
+                        if live.exists() {
+                            if staged.exists() {
+                                bail!("RESTORE_SOURCE: conflicting world files");
+                            }
+                            fs::create_dir_all(&source)?;
+                            fs::rename(&live, staged)?;
+                        }
+                        fs::rename(kept, live)?;
+                    }
+                    if !folder.join(name).exists() {
+                        bail!("RESTORE_MISSING: original world files missing");
+                    }
+                }
+                self.save(
+                    txn.original
+                        .as_ref()
+                        .context("RESTORE_FORMAT: missing original metadata")?,
+                )?;
+            }
         } else {
             if !data.is_dir() {
                 bail!("RESTORE_MISSING: restored data missing; launch blocked")
             };
+            if txn.map {
+                for name in ["Map", "world.properties"] {
+                    if !folder.join(name).exists() {
+                        bail!("RESTORE_MISSING: restored world files missing");
+                    }
+                }
+                self.save(
+                    txn.restored
+                        .as_ref()
+                        .context("RESTORE_FORMAT: missing restored metadata")?,
+                )?;
+                delete_owned(&folder, &folder.join("Map.before-restore"))?;
+                let kept = folder.join("world.properties.before-restore");
+                no_links(&kept)?;
+                if kept.exists() {
+                    fs::remove_file(kept)?;
+                }
+            }
             delete_owned(&folder, &old)?;
         }
         delete_owned(&self.root, &source)?;
@@ -419,6 +610,103 @@ fn validate_name(name: &str) -> Result<()> {
     {
         bail!("WORLD_NAME: name must contain 1..100 characters")
     }
+    Ok(())
+}
+#[derive(Default, Serialize, Deserialize)]
+struct PortableMigration {
+    stage: String,
+    original: WorldInfo,
+}
+
+/// Java PortableWorld digest: DFS, ordinal UTF-16 names, BE path length and raw content hash.
+pub fn portable_map_digest(root: &Path, cancel: &std::sync::atomic::AtomicBool) -> Result<String> {
+    fn visit(
+        root: &Path,
+        dir: &Path,
+        cancel: &std::sync::atomic::AtomicBool,
+        digest: &mut Sha256,
+    ) -> Result<()> {
+        no_links(dir)?;
+        let mut paths = fs::read_dir(dir)?
+            .map(|p| p.map(|e| e.path()))
+            .collect::<std::io::Result<Vec<_>>>()?;
+        paths.sort_by_cached_key(|p| {
+            p.file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .encode_utf16()
+                .collect::<Vec<_>>()
+        });
+        for path in paths {
+            check_cancel(cancel)?;
+            no_links(&path)?;
+            if path.is_dir() {
+                visit(root, &path, cancel, digest)?;
+            } else if path.is_file() {
+                let name = relative(root, &path);
+                digest.update(u32::try_from(name.len())?.to_be_bytes());
+                digest.update(name.as_bytes());
+                digest.update(hex::decode(sha(&path)?)?);
+            } else {
+                bail!("WORLD_FILE: unsupported entry");
+            }
+        }
+        Ok(())
+    }
+    let mut digest = Sha256::new();
+    visit(root, root, cancel, &mut digest)?;
+    Ok(hex::encode(digest.finalize()))
+}
+pub fn require_portable_server(jar: &Path) -> Result<()> {
+    let mut zip = zip::ZipArchive::new(File::open(jar)?)?;
+    if zip.by_name("szserver/world/PortableWorld.class").is_err() {
+        bail!("SERVER_UPDATE_REQUIRED: обновите игровые компоненты для нового формата миров");
+    }
+    Ok(())
+}
+fn validate_region_map(map: &Path) -> Result<()> {
+    let region = map.join("region");
+    if !region.is_dir()
+        || !(map.join("registry.json").is_file() || region.join("registry.json").is_file())
+    {
+        bail!("MAP_INVALID: registry.json and region required");
+    }
+    for entry in fs::read_dir(region)? {
+        let entry = entry?;
+        let name = entry.file_name();
+        let Some(name) = name.to_str() else { continue };
+        let parts: Vec<_> = name.split('.').collect();
+        if parts.len() == 4
+            && parts[0] == "r"
+            && parts[3] == "szr"
+            && parts[1].parse::<i32>().is_ok()
+            && parts[2].parse::<i32>().is_ok()
+            && entry.file_type()?.is_file()
+        {
+            return Ok(());
+        }
+    }
+    bail!("MAP_INVALID: no native regions")
+}
+
+fn write_portable_manifest(
+    world: &Path,
+    binding: &str,
+    cancel: &std::sync::atomic::AtomicBool,
+) -> Result<()> {
+    let digest = portable_map_digest(&world.join("Map"), cancel)?;
+    // New bindings contain ASCII UUIDs only; migrated bindings are emitted by Java.
+    if !binding.starts_with("world-v2/")
+        || binding
+            .chars()
+            .any(|c| !c.is_ascii_alphanumeric() && !"/-".contains(c))
+    {
+        bail!("WORLD_BINDING");
+    }
+    let path = world.join("world.properties");
+    let mut out = OpenOptions::new().write(true).create_new(true).open(path)?;
+    write!(out, "format=2\nbinding={binding}\nmapSha256={digest}\n")?;
+    out.sync_all()?;
     Ok(())
 }
 pub fn relative(root: &Path, file: &Path) -> String {
@@ -475,6 +763,20 @@ pub fn copy_tree_cancellable(
     include: impl Fn(&str) -> bool,
     cancel: &std::sync::atomic::AtomicBool,
 ) -> Result<()> {
+    copy_selected_tree(
+        from,
+        to,
+        |rel| rel != ".lock" && !rel.ends_with(".tmp") && include(rel),
+        cancel,
+    )
+}
+
+fn copy_selected_tree(
+    from: &Path,
+    to: &Path,
+    include: impl Fn(&str) -> bool,
+    cancel: &std::sync::atomic::AtomicBool,
+) -> Result<()> {
     if contains_path(from, to)? {
         bail!("COPY_RECURSIVE: папка назначения находится внутри источника")
     }
@@ -483,7 +785,7 @@ pub fn copy_tree_cancellable(
     for p in files(from)? {
         check_cancel(cancel)?;
         let rel = relative(from, &p);
-        if rel == ".lock" || rel.ends_with(".tmp") || !include(&rel) {
+        if !include(&rel) {
             continue;
         }
         let target = child(to, &rel)?;
@@ -545,6 +847,9 @@ impl Default for ArchiveManifest {
 struct RestoreTransaction {
     imported_id: String,
     phase: String,
+    map: bool,
+    original: Option<WorldInfo>,
+    restored: Option<WorldInfo>,
 }
 pub fn valid_hash(hash: &str) -> bool {
     hash.len() == 64

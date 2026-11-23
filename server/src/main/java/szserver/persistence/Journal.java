@@ -47,7 +47,14 @@ public final class Journal implements AutoCloseable {
         public Prefix{if(end<8||records<0||sha256==null||!sha256.matches("[0-9a-f]{64}"))throw new IllegalArgumentException("invalid_journal_prefix");}
     }
     @FunctionalInterface public interface LocatedRecovery {void accept(Reference reference,JsonObject event)throws Exception;}
-    public Path path(){return path;}
+    private Path logicalPath;
+    private PortableReceipts portableReceipts;
+    static Journal portable(Path physical,Path logical,PortableReceipts receipts)throws IOException{
+        Journal opened=streaming(physical);opened.logicalPath=logical;opened.portableReceipts=receipts;return opened;
+    }
+    public PortableReceipts receipts(){return portableReceipts;}
+    public Prefix effectivePrefix(Prefix p){return portableReceipts==null?p:portableReceipts.translate(p);}
+    public Path path(){return logicalPath==null?path:logicalPath;}
     /** World receipt indexes reference this immutable append-only file until checkpoint support replaces them. */
     public void pinOffsets(){offsetsPinned=true;}
     public synchronized AutoCloseable claimHistoryIndex(){if(historyIndexOwned)throw new IllegalStateException("world_history_already_owned");historyIndexOwned=true;pinOffsets();return ()->{synchronized(this){historyIndexOwned=false;}};}
@@ -72,6 +79,7 @@ public final class Journal implements AutoCloseable {
     }
     /** Read-only verification:appending a suffix preserves a prefix;rewrites,wrong counts and partial cuts do not. */
     public boolean matches(Prefix prefix)throws IOException{
+        prefix=effectivePrefix(prefix);
         if(prefix.end()>logicalSize())return false;
         try{return prefix.equals(scanPrefix(prefix.end()));}catch(PrefixBoundaryException invalid){return false;}catch(IOException corrupt){failure=corrupt;throw corrupt;}
     }

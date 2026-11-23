@@ -112,7 +112,10 @@ impl Setup {
                             }))
                 }
                 "Server" => p.join("server.jar").is_file(),
-                _ => p.join("registry.json").is_file() && p.join("region").is_dir(),
+                _ => {
+                    (p.join("registry.json").is_file() || p.join("region/registry.json").is_file())
+                        && p.join("region").is_dir()
+                }
             })
             .map(|p| p.to_string_lossy().into_owned())
             .unwrap_or_default()
@@ -207,7 +210,7 @@ impl Setup {
         let worlds = WorldStore::new(&data)?;
         let list = worlds.list()?;
         if list.is_empty() {
-            progress(callback, "Проверяем и копируем базовую карту…");
+            progress(callback, "Создаём самостоятельный мир…");
             proposed.selected_world = worlds
                 .create_cancellable(world_name, map, &LocalIdentity::load(layout)?.id, cancel)?
                 .id;

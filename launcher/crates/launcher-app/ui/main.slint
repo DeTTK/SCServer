@@ -44,7 +44,6 @@ export component AppWindow inherits Window {
     in-out property <string> server-path;
     in-out property <string> client-memory;
     in-out property <string> server-memory-setting;
-    in-out property <string> advertised-host;
     in-out property <string> port;
     in-out property <string> feed-url;
     in-out property <string> game-branch;
@@ -188,7 +187,7 @@ export component AppWindow inherits Window {
                     vertical-stretch: 1; wizard: root.setup-visible; step: root.setup-step; tab <=> root.settings-tab;
                     game-path <=> root.game-path; data-path <=> root.data-path; nickname <=> root.nickname; bundle-path <=> root.bundle-path;
                     client-path <=> root.client-path; server-path <=> root.server-path; client-memory <=> root.client-memory;
-                    server-memory-setting <=> root.server-memory-setting; advertised-host <=> root.advertised-host; port <=> root.port;
+                    server-memory-setting <=> root.server-memory-setting; port <=> root.port;
                     feed-url <=> root.feed-url; game-branch <=> root.game-branch; branches: root.branches; first-world-name <=> root.first-world-name;
                     transfer-view: root.transfer-view;
                     busy: root.busy; error: root.error; error-field: root.error-field; progress: root.progress; progress-text: root.progress-text; status: root.status;
