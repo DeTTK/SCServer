@@ -5,7 +5,7 @@ import { Action, Entry, EmptyState, Hint, Icon, Label, Rule, RowButton, SectionT
 export component Home inherits HorizontalLayout {
     in property <[WorldRow]> worlds;
     in property <[ServerRow]> favorites;
-    in property <[ServerRow]> project-servers;
+    in property <[ServerRow]> server-history;
     in property <[ChangeRow]> changes;
     in property <string> world-id;
     in property <string> world-title;
@@ -16,8 +16,8 @@ export component Home inherits HorizontalLayout {
     callback manage-worlds;
     callback connect(string);
     callback add-favorite;
-    private property <bool> projects;
-    private property <[ServerRow]> servers: projects ? project-servers : favorites;
+    private property <bool> show-history;
+    private property <[ServerRow]> servers: show-history ? server-history : favorites;
     spacing: 22px;
     VerticalLayout {
         min-width: 290px; horizontal-stretch: 6; spacing: 18px;
@@ -85,8 +85,8 @@ export component Home inherits HorizontalLayout {
             SectionTitle { text: "Серверы"; height: 30px; }
             HorizontalLayout {
                 spacing: 6px; height: 38px; alignment: start;
-                Action { label: "Избранные"; kind: "plain"; selected: !root.projects; activated => { root.projects = false; } }
-                Action { label: "Проекта"; kind: "plain"; selected: root.projects; activated => { root.projects = true; } }
+                Action { label: "Избранные"; kind: "plain"; selected: !root.show-history; activated => { root.show-history = false; } }
+                Action { label: "История"; kind: "plain"; selected: root.show-history; activated => { root.show-history = true; } }
             }
             Rule {}
             Scroller {
@@ -96,10 +96,10 @@ export component Home inherits HorizontalLayout {
                     if root.servers.length == 0: VerticalLayout {
                         padding-top: 10px; spacing: 12px;
                         EmptyState {
-                            title: root.projects ? "Список пока пуст" : "Нет избранных серверов";
-                            detail: root.projects ? "Опубликованные серверы проекта появятся здесь." : "Добавьте адрес сервера, чтобы вернуться к нему позже.";
+                            title: root.show-history ? "История пока пуста" : "Нет избранных серверов";
+                            detail: root.show-history ? "Здесь появятся серверы, к которым вы подключались." : "Добавьте адрес сервера, чтобы вернуться к нему позже.";
                         }
-                        if !root.projects: HorizontalLayout {
+                        if !root.show-history: HorizontalLayout {
                             alignment: start;
                             Action { label: "Добавить сервер"; glyph: "\u{e710}"; enabled: !root.busy; activated => { root.add-favorite(); } }
                         }
@@ -112,14 +112,14 @@ export component Home inherits HorizontalLayout {
                     }
                 }
             }
-            if !root.projects && root.servers.length > 0: HorizontalLayout {
+            if !root.show-history && root.servers.length > 0: HorizontalLayout {
                 alignment: start;
                 Action { label: "Добавить сервер"; glyph: "\u{e710}"; kind: "plain"; enabled: !root.busy; activated => { root.add-favorite(); } }
             }
             Rule {}
             Label { text: "Адрес подключения"; font-weight: 600; height: 20px; }
             Entry {
-                label: "Адрес подключения"; placeholder: "IP или домен с портом"; value <=> root.address;
+                label: "Адрес подключения"; placeholder: "IP или домен · порт необязателен"; value <=> root.address;
                 enabled: !root.busy; accepted => { if root.address != "" { root.connect(root.address); } }
             }
         }

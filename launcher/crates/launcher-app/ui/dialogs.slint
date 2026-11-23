@@ -50,7 +50,7 @@ export component LauncherDialog inherits FocusScope {
             if root.kind == "favorite": VerticalLayout {
                 spacing: 14px;
                 Field { label: "Название сервера"; value <=> root.favorite-name; enabled: !root.busy; }
-                Field { label: "Адрес подключения"; value <=> root.value; enabled: !root.busy; placeholder: "IP или домен с портом"; }
+                Field { label: "Адрес подключения"; value <=> root.value; enabled: !root.busy; placeholder: "IP или домен · порт необязателен"; }
                 Field { label: "Ник на этом сервере"; value <=> root.favorite-nick; enabled: !root.busy; hint: "Оставьте пустым, чтобы использовать ник из профиля."; }
             }
             if root.kind == "backups": VerticalLayout {

@@ -145,6 +145,7 @@ fn refresh(ui: &slint::Weak<AppWindow>, layout: &Layout, drafts: bool) -> Result
     let s = layout.load()?;
     let worlds = WorldStore::new(layout.data(&s))?.list()?;
     let favorites: Vec<ServerEntry> = read_json(&layout.at("config/servers.json"))?;
+    let history: Vec<ServerEntry> = read_json(&layout.at("config/server-history.json"))?;
     let bundle = load_bundle(layout, &s);
     let selected = worlds
         .iter()
@@ -201,9 +202,8 @@ fn refresh(ui: &slint::Weak<AppWindow>, layout: &Layout, drafts: bool) -> Result
                 })
                 .collect(),
         ));
-        ui.set_project_servers(rows(
-            available
-                .servers
+        ui.set_server_history(rows(
+            history
                 .into_iter()
                 .map(|s| ServerRow {
                     id: s.id.into(),
@@ -766,9 +766,9 @@ pub fn bind(ui: &AppWindow, layout: Layout) -> Binding {
         while probe_alive.load(Ordering::Relaxed) {
             let favorites: Vec<ServerEntry> =
                 read_json(&probe_layout.at("config/servers.json")).unwrap_or_default();
-            let available: ReleaseManifest =
-                read_json(&probe_layout.at("state/available.json")).unwrap_or_default();
-            for (project, entries) in [(false, favorites), (true, available.servers)] {
+            let history: Vec<ServerEntry> =
+                read_json(&probe_layout.at("config/server-history.json")).unwrap_or_default();
+            for (history, entries) in [(false, favorites), (true, history)] {
                 for entry in entries.into_iter().take(32) {
                     if !probe_alive.load(Ordering::Relaxed) {
                         return;
@@ -779,8 +779,8 @@ pub fn bind(ui: &AppWindow, layout: Layout) -> Binding {
                     }
                     let (online, status) = probe_status(result.ok().as_ref());
                     let _ = probe_ui.upgrade_in_event_loop(move |ui| {
-                        let model = if project {
-                            ui.get_project_servers()
+                        let model = if history {
+                            ui.get_server_history()
                         } else {
                             ui.get_favorites()
                         };
@@ -816,7 +816,10 @@ pub fn bind(ui: &AppWindow, layout: Layout) -> Binding {
             let addresses = bscp_launcher_host::network::local_addresses();
             let address = format!(
                 "{}:{}",
-                addresses.first().cloned().unwrap_or_else(|| "127.0.0.1".into()),
+                addresses
+                    .first()
+                    .cloned()
+                    .unwrap_or_else(|| "127.0.0.1".into()),
                 s.base_port
             );
             let _ = poll_ui.upgrade_in_event_loop(move |ui| {
@@ -1055,12 +1058,18 @@ fn execute(
         }
         Work::Connect(address, nickname) => {
             let favorites: Vec<ServerEntry> = read_json(&layout.at("config/servers.json"))?;
-            let nickname = connection_nickname(&favorites, &address, &nickname)?;
+            let mut known = favorites.clone();
+            known.extend(read_json::<Vec<ServerEntry>>(
+                &layout.at("config/server-history.json"),
+            )?);
+            let nickname = connection_nickname(&known, &address, &nickname)?;
             call(
                 layout,
                 "connect",
                 kv(&[("address", address.trim()), ("nickname", &nickname)]),
             )?;
+            remember_server(layout, &favorites, &address, &nickname)?;
+            refresh(ui, layout, false)?;
             Ok("Клиент запускается и подключается к серверу".into())
         }
         Work::Select(id) => {
@@ -1398,6 +1407,41 @@ fn has_user_data(data: &Path) -> Result<bool> {
     }
     Ok(false)
 }
+fn remember_server(
+    layout: &Layout,
+    favorites: &[ServerEntry],
+    address: &str,
+    nickname: &str,
+) -> Result<()> {
+    let normalized = bscp_launcher_host::network::endpoint(address.trim())?.to_string();
+    let file = layout.at("config/server-history.json");
+    let mut history: Vec<ServerEntry> = read_json(&file)?;
+    let matches = |entry: &ServerEntry| {
+        bscp_launcher_host::network::endpoint(entry.address.trim())
+            .is_ok_and(|url| url.as_str() == normalized)
+    };
+    let previous = history.iter().find(|entry| matches(entry)).cloned();
+    let favorite = favorites.iter().find(|entry| matches(entry));
+    history.retain(|entry| !matches(entry));
+    history.insert(
+        0,
+        ServerEntry {
+            id: previous
+                .as_ref()
+                .map(|e| e.id.clone())
+                .unwrap_or_else(|| uuid::Uuid::new_v4().simple().to_string()),
+            name: favorite
+                .map(|e| e.name.clone())
+                .or_else(|| previous.map(|e| e.name))
+                .unwrap_or_else(|| address.trim().into()),
+            address: normalized,
+            nickname: nickname.into(),
+        },
+    );
+    history.truncate(32);
+    write_json(&file, &history)
+}
+
 fn connection_nickname(favorites: &[ServerEntry], address: &str, fallback: &str) -> Result<String> {
     let normalized = bscp_launcher_host::network::endpoint(address.trim())?;
     let nickname = favorites
@@ -1635,5 +1679,41 @@ mod transfer_tests {
         assert_eq!(view.remaining, "—");
         assert_eq!(view.eta, "—");
         assert_eq!(view.fraction, -1.0);
+    }
+}
+
+#[cfg(test)]
+mod history_tests {
+    use super::*;
+    #[test]
+    fn history_survives_reload_merges_default_port_and_keeps_recent_servers() {
+        let temp = tempfile::tempdir().unwrap();
+        let layout = Layout::new(temp.path());
+        layout.init().unwrap();
+        let favorites = vec![ServerEntry {
+            name: "Друзья".into(),
+            address: "example.test".into(),
+            ..Default::default()
+        }];
+        remember_server(&layout, &favorites, "example.test", "First").unwrap();
+        remember_server(&layout, &[], "other.test", "Other").unwrap();
+        remember_server(&layout, &favorites, "http://example.test:29545/", "Updated").unwrap();
+        let saved: Vec<ServerEntry> = read_json(&layout.at("config/server-history.json")).unwrap();
+        assert_eq!(saved.len(), 2);
+        assert_eq!(saved[0].name, "Друзья");
+        assert_eq!(saved[0].nickname, "Updated");
+        assert_eq!(saved[0].address, "http://example.test:29545/");
+        assert_eq!(
+            connection_nickname(&saved, "example.test", "Default").unwrap(),
+            "Updated"
+        );
+        for n in 0..40 {
+            remember_server(&layout, &[], &format!("server{n}.test"), "Player").unwrap();
+        }
+        let saved: Vec<ServerEntry> = read_json(&layout.at("config/server-history.json")).unwrap();
+        assert_eq!(saved.len(), 32);
+        assert_eq!(saved[0].address, "http://server39.test:29545/");
+        let unchanged: Vec<ServerEntry> = read_json(&layout.at("config/servers.json")).unwrap();
+        assert!(unchanged.is_empty());
     }
 }

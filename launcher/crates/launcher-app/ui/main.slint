@@ -24,7 +24,7 @@ export component AppWindow inherits Window {
     in property <string> selected-world-id;
     in property <string> selected-world-title;
     in property <[ServerRow]> favorites;
-    in property <[ServerRow]> project-servers;
+    in property <[ServerRow]> server-history;
     in property <[ChangeRow]> changes;
     in property <[WorldRow]> backups;
     in property <bool> server-running;
@@ -159,7 +159,7 @@ export component AppWindow inherits Window {
                 }
             }
             if !root.setup-visible && root.page == "home": Home {
-                vertical-stretch: 1; worlds: root.worlds; favorites: root.favorites; project-servers: root.project-servers; changes: root.changes;
+                vertical-stretch: 1; worlds: root.worlds; favorites: root.favorites; server-history: root.server-history; changes: root.changes;
                 world-id: root.selected-world-id; world-title: root.selected-world-title; address <=> root.address; busy: root.busy;
                 server-column-width: clamp((root.width - 250px) * 0.36, 310px, 460px);
                 select-world(id) => { root.select-world(id); } manage-worlds => { root.navigate("worlds"); }

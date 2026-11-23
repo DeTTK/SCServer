@@ -27,7 +27,17 @@ pub fn endpoint(a: &str) -> Result<reqwest::Url> {
     {
         bail!("ADDRESS_INVALID: IP or domain and port required")
     }
-    if u.port().is_none() {
+    let authority = raw
+        .split_once("://")
+        .map(|(_, tail)| tail)
+        .unwrap_or(&raw)
+        .split('/')
+        .next()
+        .unwrap_or("");
+    let explicit_port = authority
+        .rsplit_once(':')
+        .is_some_and(|(_, port)| !port.is_empty() && port.bytes().all(|b| b.is_ascii_digit()));
+    if u.port().is_none() && !explicit_port {
         u.set_port(Some(29545))
             .map_err(|_| anyhow::anyhow!("port"))?
     }
@@ -219,14 +229,19 @@ async fn forward(
     // The connection target belongs to this proxy, never to a browser header or
     // game-supplied field. Keep the existing v1 signature and bind the route by
     // including it in the signed form body / raw query.
-    let route=route_parameter(remote)?;
-    let mut path=path.to_owned();
-    if method=="GET" {
-        path.push(if path.contains('?'){'&'}else{'?'});path.push_str(&route);
-    }else{
-        if !body.is_empty() && !body.ends_with(b"&"){body.push(b'&');}
+    let route = route_parameter(remote)?;
+    let mut path = path.to_owned();
+    if method == "GET" {
+        path.push(if path.contains('?') { '&' } else { '?' });
+        path.push_str(&route);
+    } else {
+        if !body.is_empty() && !body.ends_with(b"&") {
+            body.push(b'&');
+        }
         body.extend_from_slice(route.as_bytes());
-        if body.len()>8192{bail!("PROXY_BODY");}
+        if body.len() > 8192 {
+            bail!("PROXY_BODY");
+        }
     }
     let time = SystemTime::now()
         .duration_since(UNIX_EPOCH)?
@@ -269,11 +284,27 @@ async fn forward(
     }
     Ok((status, ct, out))
 }
-fn route_parameter(remote:&reqwest::Url)->Result<String> {
-    if !matches!(remote.scheme(),"http"|"https") || remote.path()!="/" || remote.query().is_some() || remote.fragment().is_some() || !remote.username().is_empty() || remote.password().is_some() || remote.host_str().is_none(){bail!("ADDRESS_INVALID");}
-    let authority=remote.as_str().split_once("://").ok_or_else(||anyhow::anyhow!("ADDRESS_INVALID"))?.1.trim_end_matches('/');
-    let mut encoder=reqwest::Url::parse("http://route.invalid/")?;
-    encoder.query_pairs_mut().append_pair("__bscp_route",authority);
+fn route_parameter(remote: &reqwest::Url) -> Result<String> {
+    if !matches!(remote.scheme(), "http" | "https")
+        || remote.path() != "/"
+        || remote.query().is_some()
+        || remote.fragment().is_some()
+        || !remote.username().is_empty()
+        || remote.password().is_some()
+        || remote.host_str().is_none()
+    {
+        bail!("ADDRESS_INVALID");
+    }
+    let authority = remote
+        .as_str()
+        .split_once("://")
+        .ok_or_else(|| anyhow::anyhow!("ADDRESS_INVALID"))?
+        .1
+        .trim_end_matches('/');
+    let mut encoder = reqwest::Url::parse("http://route.invalid/")?;
+    encoder
+        .query_pairs_mut()
+        .append_pair("__bscp_route", authority);
     Ok(encoder.query().unwrap().into())
 }
 #[cfg(test)]
@@ -292,11 +323,40 @@ mod tests {
         assert_eq!(endpoint("127.0.0.1").unwrap().port(), Some(29545));
     }
     #[test]
+    fn missing_port_uses_game_default_and_explicit_ports_are_preserved() {
+        for address in [
+            "127.0.0.1",
+            "play.example.test",
+            "http://play.example.test",
+            "[::1]",
+        ] {
+            assert_eq!(
+                endpoint(address).unwrap().port_or_known_default(),
+                Some(29545)
+            );
+        }
+        for (address, expected) in [
+            ("127.0.0.1:30000", 30000),
+            ("http://play.example.test:80", 80),
+            ("https://play.example.test:443", 443),
+            ("[::1]:30001", 30001),
+        ] {
+            assert_eq!(
+                endpoint(address).unwrap().port_or_known_default(),
+                Some(expected)
+            );
+        }
+    }
+    #[test]
     fn route_field_preserves_ipv6_and_encodes_authority_as_one_value() {
-        let field=route_parameter(&reqwest::Url::parse("https://[2001:db8::7]:8443/").unwrap()).unwrap();
-        let mut url=reqwest::Url::parse("http://fixture.invalid/").unwrap();url.set_query(Some(&field));
-        let fields=url.query_pairs().collect::<Vec<_>>();
-        assert_eq!(fields.len(),1);assert_eq!(fields[0].0,"__bscp_route");assert_eq!(fields[0].1,"[2001:db8::7]:8443");
+        let field =
+            route_parameter(&reqwest::Url::parse("https://[2001:db8::7]:8443/").unwrap()).unwrap();
+        let mut url = reqwest::Url::parse("http://fixture.invalid/").unwrap();
+        url.set_query(Some(&field));
+        let fields = url.query_pairs().collect::<Vec<_>>();
+        assert_eq!(fields.len(), 1);
+        assert_eq!(fields[0].0, "__bscp_route");
+        assert_eq!(fields[0].1, "[2001:db8::7]:8443");
         assert!(route_parameter(&reqwest::Url::parse("https://user:pw@host/").unwrap()).is_err());
     }
 }
@@ -333,9 +393,16 @@ mod integration_tests {
             let mut body = vec![0; header("content-length").parse::<usize>().unwrap()];
             s.read_exact(&mut body).await.unwrap();
             assert!(raw.starts_with("POST /session/game?x=%2f&x=+ HTTP/1.1"));
-            let mut form=reqwest::Url::parse("http://fixture.invalid/").unwrap();
+            let mut form = reqwest::Url::parse("http://fixture.invalid/").unwrap();
             form.set_query(Some(std::str::from_utf8(&body).unwrap()));
-            assert_eq!(form.query_pairs().filter(|(k,_)|k=="__bscp_route").last().unwrap().1,format!("127.0.0.1:{port}"));
+            assert_eq!(
+                form.query_pairs()
+                    .filter(|(k, _)| k == "__bscp_route")
+                    .last()
+                    .unwrap()
+                    .1,
+                format!("127.0.0.1:{port}")
+            );
             assert_eq!(header("X-BSCP-Nonce").len(), 40);
             assert!(
                 header("X-BSCP-Nonce")
