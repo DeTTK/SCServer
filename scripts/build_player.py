@@ -66,9 +66,17 @@ def build(output):
     copy(ROOT/'desktop/server.template.properties',player/'Server/server.template.properties')
     for dep in tools.dependencies():copy(dep,player/'Server/lib'/dep.name)
     copy(ROOT/'build/command-completion.jar',player/'Client/mods/command-completion.jar')
+    lock=json.loads((ROOT/'bootstrap/base.lock.json').read_text('utf8'))
+    spec=importlib.util.spec_from_file_location('delivery',ROOT/'scripts/delivery.py');delivery=importlib.util.module_from_spec(spec);spec.loader.exec_module(delivery)
+    asm,tree,kotlin=[delivery.pinned(lock[name]) for name in ('asm','asmTree','kotlin')]
     libraries=[runtime/'game.jar',runtime/'libraries.jar',*sorted((runtime/'dependencies').glob('*.jar'))]
     boot=tools.compile_java('player-bootstrap',[*(ROOT/'client/bootstrap').glob('*.java'),*(ROOT/'client/bootstrap-compat').rglob('*.java'),*(ROOT/'client/mod-runtime/src').rglob('*.java')],libraries)
+    generators=tools.compile_java('player-bootstrap-generators',(ROOT/'client/bootstrap-tools').glob('*.java'),[asm])
+    for generator in ('GenerateLegacyAdapter','GenerateCommandPackets','InstallFpvPackets','InstallVehiclePackets'):
+        subprocess.run([tools.tool('java'),'-cp',os.pathsep.join(map(str,[generators,asm])),generator,str(boot)],check=True)
     jar(runtime/'bootstrap.jar',entries(boot))
+    verify=tools.compile_java('player-bootstrap-verify',[ROOT/'client/bootstrap-tools/tests/BootstrapAbiTest.java'])
+    subprocess.run([tools.tool('java'),'-cp',os.pathsep.join(map(str,[verify,runtime/'bootstrap.jar',*libraries])),'BootstrapAbiTest'],check=True)
     imgui={}
     for dependency in (runtime/'dependencies').glob('imgui-java-*-1.82.2.jar'):
         with zipfile.ZipFile(dependency) as z:
@@ -76,9 +84,6 @@ def build(output):
                 if name.startswith('imgui/') and name.endswith('.class'):imgui[name]=z.read(name)
     if not imgui:raise ValueError('Missing pinned ImGui ABI')
     jar(runtime/'imgui-compat.jar',imgui)
-    lock=json.loads((ROOT/'bootstrap/base.lock.json').read_text('utf8'))
-    spec=importlib.util.spec_from_file_location('delivery',ROOT/'scripts/delivery.py');delivery=importlib.util.module_from_spec(spec);spec.loader.exec_module(delivery)
-    asm,tree,kotlin=[delivery.pinned(lock[name]) for name in ('asm','asmTree','kotlin')]
     subprocess.run([sys.executable,str(ROOT/'client/startup/build.py'),'--asm',str(asm)],check=True)
     subprocess.run([sys.executable,str(ROOT/'client-compat/character-scale/build.py')],check=True)
     for name in ('startup-guard','character-scale'):copy(ROOT/'build'/(name+'.jar'),player/'Client/compat'/(name+'.jar'))
