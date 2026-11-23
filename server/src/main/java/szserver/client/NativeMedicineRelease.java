@@ -19,6 +19,6 @@ final class NativeMedicineRelease {
         Map.entry("1819519616","6333c4762b02e0ce3f1e72b93b2956d2aef3cc68c58611d8740cc6f20f54dc24"),
         Map.entry("1419211943","034b5abb70d4e06fa8cc6ed14bd6619c3033b94a893eb7ee5385e149cc75ee92"),
         Map.entry("666192130","ff504c8969ffc7f873fa61a2611f3e4b48f585c8be72ededbbc906bd5f76021d"));
-    static void verify(Path runtime)throws Exception{for(var e:HASHES.entrySet()){String digest=HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(runtime.resolve("classes").resolve(e.getKey()+".class"))));if(!digest.equals(e.getValue()))throw new IllegalStateException("native_medicine_release_changed:"+e.getKey());}}
+    static void verify(Path runtime)throws Exception{for(var e:HASHES.entrySet()){String digest=HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(RuntimeFiles.read(runtime.resolve("classes").resolve(e.getKey()+".class"))));if(!digest.equals(e.getValue()))throw new IllegalStateException("native_medicine_release_changed:"+e.getKey());}}
     private NativeMedicineRelease(){}
 }

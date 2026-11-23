@@ -19,5 +19,5 @@ final class ActorSceneLadderRelease {
      Map.entry("1738045740","65bc3aa0dae524a5355953dbcac185b9f9fbda5ff573485a0c7b2b4c8e6760a8"),
      Map.entry("1087990608","878690de2df6e9eece2db86550d92afb99a6e97cc9becdf6fbf14ee9d421b2d7")
  );
- static void verify(Path runtime)throws Exception{for(var e:HASHES.entrySet())if(!HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(runtime.resolve("classes").resolve(e.getKey()+".class")))).equals(e.getValue()))throw new IllegalStateException("actor_scene_ladder_release_mismatch:"+e.getKey());}
+ static void verify(Path runtime)throws Exception{for(var e:HASHES.entrySet())if(!HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(RuntimeFiles.read(runtime.resolve("classes").resolve(e.getKey()+".class")))).equals(e.getValue()))throw new IllegalStateException("actor_scene_ladder_release_mismatch:"+e.getKey());}
 }

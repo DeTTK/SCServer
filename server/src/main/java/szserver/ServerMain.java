@@ -25,6 +25,13 @@ public final class ServerMain {
         var automaticCheckpointSettings=szserver.persistence.AutomaticCheckpoint.Settings.configured(p);
         Path root=configPath.toAbsolutePath().getParent();
         Path runtime=Path.of(p.getProperty("client.runtime")),registry=Path.of(p.getProperty("item.registry"));
+        if(p.containsKey("assets.configs")){
+            Path overrides=Path.of(p.getProperty("assets.overrides",root.resolve("resources/overrides").toString()));
+            Path configs=Path.of(p.getProperty("assets.configs"));
+            for(String key:List.of("world.objectResources","world.actorResources"))if(p.containsKey(key))szserver.util.GameResources.mount(Path.of(p.getProperty(key)),configs,overrides.resolve("configs"));
+            if(p.containsKey("assets.boxes"))szserver.util.GameResources.mount(Path.of(p.getProperty("world.collisionBoxesRoot")),Path.of(p.getProperty("assets.boxes")),overrides.resolve("boxes"));
+        }
+
         Path data=root.resolve(p.getProperty("data.directory","var")).normalize();Files.createDirectories(data);
         CountDownLatch stop=new CountDownLatch(1),closed=new CountDownLatch(1);
         var lifecycle=new szserver.util.ServerLifecycle(stop);

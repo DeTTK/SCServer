@@ -102,7 +102,7 @@ impl ChannelManifest {
     pub fn validate(&self, branch: &str) -> Result<()> {
         validate_branch(branch)?;
         ensure!(
-            self.schema_version == 1
+            matches!(self.schema_version, 1 | 2)
                 && self.channel == branch
                 && hex_valid(&self.source_commit, 40)
                 && self.sequence > 0,
@@ -572,6 +572,34 @@ pub fn installed_component(
     Ok(Some(path))
 }
 
+/// One immutable runtime is shared by client and locally hosted server.
+pub fn runtime_root(component: &Path) -> Result<PathBuf> {
+    let base = component_base(component)?;
+    let shared = base
+        .parent()
+        .context("FOUNDATION_PATH")?
+        .join("Bootstrap/runtime");
+    if shared.join("game.jar").is_file() {
+        no_links(&shared)?;
+        return Ok(shared);
+    }
+    component_file(component, "runtime")
+}
+pub fn runtime_part(runtime: &Path, directory: &str) -> PathBuf {
+    let jar = match directory {
+        "classes" => "game.jar",
+        "libs" => "libraries.jar",
+        "bootstrap" => "bootstrap.jar",
+        "imgui-compat" => "imgui-compat.jar",
+        _ => return runtime.join(directory),
+    };
+    if runtime.join(jar).is_file() {
+        runtime.join(jar)
+    } else {
+        runtime.join(directory)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -618,6 +646,22 @@ mod tests {
         assert!(u.contains("%D0"));
         assert!(raw_url("main", "server/server.jar").is_err());
         assert!(raw_url(&"a".repeat(40), "../secret").is_err());
+    }
+    #[test]
+    fn shared_runtime_resolves_through_revision_overlay() {
+        let t = tempfile::tempdir().unwrap();
+        let base = t.path().join("bundle/Client");
+        let runtime = t.path().join("bundle/Bootstrap/runtime");
+        let overlay = t.path().join("revisions/new/Client");
+        fs::create_dir_all(&base).unwrap();
+        fs::create_dir_all(&runtime).unwrap();
+        fs::create_dir_all(&overlay).unwrap();
+        fs::write(runtime.join("game.jar"), b"game").unwrap();
+        fs::write(runtime.join("bootstrap.jar"), b"bootstrap").unwrap();
+        write_json(&overlay.join(".component-base.json"), &relative_base(&overlay, &base).to_string_lossy().into_owned()).unwrap();
+        assert_eq!(runtime_root(&overlay).unwrap(), runtime);
+        assert_eq!(runtime_part(&runtime, "classes"), runtime.join("game.jar"));
+        assert_eq!(runtime_part(&runtime, "bootstrap"), runtime.join("bootstrap.jar"));
     }
     #[test]
     fn overlay_uses_changed_file_and_preserves_foundation() {

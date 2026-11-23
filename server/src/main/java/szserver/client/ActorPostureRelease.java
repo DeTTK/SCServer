@@ -12,7 +12,7 @@ final class ActorPostureRelease {
         "430277821","f10d63fc7159e9a2dd82d363ee14c546ca8a244828c74ccdaac58102b2ebe6ff",
         "573844998","38acbc94612e7079d3fb33f1dbb44b9ae3488d000cf9330338ccf89bd2758e2a");
     static void verify(Path runtime)throws Exception{
-        for(var e:HASHES.entrySet())if(!HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(runtime.resolve("classes").resolve(e.getKey()+".class")))).equals(e.getValue()))throw new IllegalStateException("actor_posture_release_mismatch:"+e.getKey());
+        for(var e:HASHES.entrySet())if(!HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(RuntimeFiles.read(runtime.resolve("classes").resolve(e.getKey()+".class")))).equals(e.getValue()))throw new IllegalStateException("actor_posture_release_mismatch:"+e.getKey());
     }
     static void verifyValues(ClassLoader loader)throws Exception{
         var state=Class.forName("1943200621",true,loader);var poses=Class.forName("430277821",true,loader);

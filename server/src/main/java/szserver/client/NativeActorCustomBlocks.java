@@ -11,10 +11,10 @@ import java.util.*;
  * The original mine callback may query a tile only after its native admission checks. */
 final class NativeActorCustomBlocks {
     static void prepare(Path runtime,Path file,ClassLoader loader,Object unsafe,Method allocate,Object[] blocks)throws Exception{
-        if(Files.size(file)>2*1024*1024)throw new IllegalArgumentException("actor_custom_profiles_size");var root=JsonParser.parseString(Files.readString(file)).getAsJsonObject();
+        if(RuntimeFiles.size(file)>2*1024*1024)throw new IllegalArgumentException("actor_custom_profiles_size");var root=JsonParser.parseString(RuntimeFiles.readString(file)).getAsJsonObject();
         for(var entry:root.getAsJsonObject("nativeClasses").entrySet()){
             if(!entry.getKey().matches("[0-9]+"))throw new IllegalArgumentException("actor_custom_profile_class");
-            String actual=HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(runtime.resolve("classes").resolve(entry.getKey()+".class"))));
+            String actual=HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(RuntimeFiles.read(runtime.resolve("classes").resolve(entry.getKey()+".class"))));
             if(!actual.equals(entry.getValue().getAsString()))throw new IllegalStateException("actor_custom_release:"+entry.getKey());
         }
         Class<?> base=Class.forName("1959919792",true,loader);Field material=base.getField("enum"),identity=base.getField("return");material.setAccessible(true);identity.setAccessible(true);

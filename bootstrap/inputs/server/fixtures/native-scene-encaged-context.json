@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "scope": "Native Encaged crate serialization only; exact crate-map parser slice and native loot presets; no mode, gameplay grants, renderer or external API.",
+  "classesSha256": {
+    "1634824458": "29a0f8271cf52d3a3ac026e0744a6880b311233d08fe9a9e4633bccce050a84e",
+    "651500106": "d9a45c5e6ed27442a47534e52dc0d59de08ac9805ba50a85997777b90577f871",
+    "317956473": "6d7c381d0199fb8c16b00ec37a24af0dbf26950bbd8cdab21003c85ad61a2658",
+    "496016126": "9cb74f0a1b9123a94253e50ab77381b86a5e2f802f4abf1a3fe0fa9c42da4bf0",
+    "1865184146": "d0b02c6a899fa8abec57594602671f4515f74e38d55b175a344f705256bbe1fd",
+    "1036856485": "accc8f3e3e2c758618e8b420df0624af37daec2a69cd46c419394df07ad6d8c1",
+    "10442891": "919e365b8f371e35cf6501dddb39e0017812d0d1d77b38ce9af6ae22f21557da",
+    "1189340399": "f5935936e094cd59ab4cd04d8cc847741b9fd18eff64fc532f44cb977ba43e00",
+    "489960719": "f9cb4a8361871dfd1653a5242ad26b7303a847c26713d09a1ca83411dc6d1bf5",
+    "1997612548": "fecc5df7a698673d0aabd23edf2a7758d0ff17691472ff6d8b27eee3986644ad",
+    "1518398188": "c78fb57ef44c7e4d6c1af1b1c5406432addf182e9afd4125d61222032034e264",
+    "1460119004": "3a1d009bb7c79beb133b59b27cdcd65f2f5f052c9e6e06275b3024f70e6b445d",
+    "887772526": "182c4c2b89a28824a6c8fe9700bbb9975286f2ebbb5691ba3c9d0522c7ed62f6",
+    "313873871": "92a18f48dcfca060647ad49f38d316f22bb706ef0001c24fe225a4331eff90f6"
+  },
+  "sources": [
+    {
+      "path": "../source-resources/encaged.json",
+      "sha256": "42bb767fdaf9669458bd6270d3fc43aa153082c584bde5e2569ec0f9927a32fb"
+    },
+    {
+      "path": "../source-resources/encaged_loot.json",
+      "sha256": "da435bda9c74a93b061efde32046a942f4ce2719e188517dc5cc42692157f352"
+    }
+  ],
+  "parserMethod": "public",
+  "parserDescriptor": "(Ljava/lang/String;)L94498622;",
+  "sliceStart": 2854,
+  "sliceEnd": 3259,
+  "names": {
+    "exp.stun_encage": 20993,
+    "wpn.python_encaged": 9356,
+    "wpn.mts255_encaged": 9353,
+    "mantrap": 20991,
+    "wpn.mosin_encaged": 9352,
+    "wpn.obrezbm16_encaged": 9355,
+    "wpn.r92_encaged": 9357,
+    "med.apt_a": 26002,
+    "wpn.bm16_encaged": 9354,
+    "wpn.winchester1887_encaged": 9363,
+    "wpn.ptrd_encaged": 9351,
+    "melee.sledgehammer_encaged": 9359,
+    "med.stimulyator_encaged": 26106,
+    "med.painblocker_encaged": 26107,
+    "med.epinephrine_encaged": 26104,
+    "med.strike_encaged": 26105,
+    "med.injector": 16427
+  },
+  "nameProvenance": [
+    {
+      "path": "D:\\SZJavaServer\\server\\fixtures\\item-definitions.json",
+      "sha256": "8bfa03fceec3f86dcf9de19acb27a796c61e200ef036ed74a9ee8f09aa8a5bbe"
+    },
+    {
+      "path": "D:\\SZJavaServer\\server\\source-resources\\encaged_items.json",
+      "sha256": "f31cab74c9daac087b3d87c0b3e70691029ac7627ed59e46c5e825737ca86f6a"
+    },
+    {
+      "path": "D:\\SZJavaServer\\server\\source-resources\\items.json",
+      "sha256": "b5b868008b35f1c5159438d82f69b8a3c66d1fa80f0cc5c9d7efffc25e16420f"
+    }
+  ],
+  "derivedSha256": {
+    "crate": "51b956e297f48370d29551bd18b3564a662d8057b9f15ebbe0952bc5babac359",
+    "settings": "a6424f8e02f332e8c71ee94d54d8e1881bf9bbd79e44bf5d85b034e9f0490ae1"
+  }
+}

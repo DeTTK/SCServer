@@ -1,0 +1,372 @@
+{
+	// добавляем сюда новые флаги по необходимости и аккуратно,
+	// нормального механизма удаления/ренейма нет и не планируется.
+	//
+	// менять можно только с полным заливом (код+ассетсы), поскольку нет никакого механизма синхронизации с клиентом
+	//
+	// если добавляем новый фичур флаг, желательно сразу добавить и в конфиг глобала
+
+	// не сетайте здесь в true пожалуйста, для этого есть файл forced_feature_flags
+	"debug": false,
+	"debug_ots": false, // всякие тестовые штуки, которые должны быть только при массовых тестах на ОТС
+	"north/test": false,
+	"kordon/test": false,
+	"modules/ots": false,
+
+	"test/efk_anomalies": "ru, gl",
+
+	//абстрактные флаги для разделения ру и глобала
+	"realm/ru": "ru",
+	"realm/global": "gl",
+
+	// features
+	"feature/clan/legacy-clan-list": "ru, gl",
+	"feature/clan/unit-list": "ru, gl",
+	"feature/clan/unit-creation": "ru, gl",
+	"feature/clan/tournament": "ru, gl",
+	"feature/clan/provision": "ru, gl, tr",
+	"feature/incident": "",
+	"feature/premium": "ru, gl",
+	"feature/lootbox/open": "ru, gl",
+	"feature/stalbucks": "ru",
+	"feature/operations": "ru, gl, tr",
+	"feature/shadows": "ru",
+	"feature/cases": "",
+	"feature/secret_keys": "ru, gl",
+	"feature/location-reservation": "ru, gl",
+	"test/anomaly_nodes": "ru, gl",
+	"feature/spawners": "",
+	"feature/cursed_delivery": "",
+	"feature/overcharge_airdrop": "ru, gl, tr",
+	"feature/proximity_voice_chat": "gl",
+
+	"feature/areal_markers_visibility": "ru, gl",
+	"feature/areal_inventory_merge": "ru, gl",
+
+	"feature/auction_system_category": "ru, gl",
+	"feature/demo_gun": "ru, gl",
+	"feature/gossip": "ru, gl, tr", //проект слухи
+	"feature/gossip2": "ru, gl, tr", //проект слухи север
+
+	"feature/arsenal2": "ru, gl, tr", //Арсенал итерация 2
+	"feature/old_limansk_teleports": "", //Старые пузыри Лиманска
+	"location/limansk_update": "ru, gl, tr", //Апдейт Лиманска
+	"location/labirint_update": "", //Апдейт Лиманска
+	//"feature/newHealthRestore": "ru, gl", // Новый алгоритм восстановления здоровья. Не вешать на сущности. Будет выпилен после донастройки.
+
+
+	// weather and lighting
+	"feature/snow": "", //Снег и зимняя погода
+	"weather/spring": "", //Весенняя погода
+	"settings/lights": "ru, gl", //Поинтлайты
+
+
+	// locations
+	"location/limansk": "ru, gl, tr",
+	"location/zaton": "ru, gl, tr",
+	"location/new_bolota": "",
+	"location/wnorth": "ru, gl, tr",
+
+	// events
+	"event/new_year": "",
+	"event/new_year_26_mistery": "", //загадки для нового года
+	"event/new_year_26_players_feedback": "", //ВЫКЛЮЧЕН - тут диалоги с Вивом комунити-менеджеры хотят, чтобы игроки им на почту НГ пожелания отправляли.
+	"feature/new_looting": "ru, gl, tr", // новый лутинг на юге - релизится вместе с НГ контентом - необходим для НГ загадок
+	"event/blizzard": "",
+	"event/inside": "", // событие изнанки после выброса
+	"event/insideout": "",// эпизод изнанки 2026
+	"event/ravent": "",
+	"event/dmz": "",  //ивент ДМЗ + мейн квесты
+	"event/dmz2026": "",  //ивент ДМЗ 2026 + мейн квесты
+	"event/dmz2026_winter": "",  //зимний декор дмз 2026
+	"event/reichstag": "",
+	"event/24_spring": "",
+	"event/streambattle": "",
+	"event/snowstorm": "", // включает метель во время зимнего ивента
+	"event/parts_remove": "", // Удаление деталей
+	"event/25_summer_warming": "ru, gl, tr",
+	"event/frontline": "",
+	"event/25_scaries_first_camp": "",
+	"event/25_scaries_second_camp": "",
+	"event/encaged": "",
+	"event/dmz_tanks": "ru",
+	"event/26_inside_disabled_we": "ru, gl",//выключить при активной изнанке
+	"event/ssop_help": "", //ивент помощи ссоп
+	"event/26_electro_storm": "",
+	"event/autumn26_tainiki": "ru, gl, tr",
+
+	"event_trader/exchanger": "ru, gl",
+	"event_trader/smuggler": "",
+
+	"gear/kordon/starterpacks": "gl",
+
+	"other/old_achievements": "ru",
+	"trader/compensation": "ru",
+
+	"locations/low_mid_united": "ru, gl", // объединение лоу и мид
+	"feature/inside/rating": "ru, gl", // рейтинговая система для Изнанке
+
+	"feature/frontline/warmup": "ru, gl",
+
+	// Синтетические флаги для привязки декора в убежище к пресетам погоды
+	// Эти флаги должны быть всегда включены. Связанные объекты активируются и деактивируются костыльной логикой в режиме убежища.
+	"hideout/weather/default": "ru, gl",
+	"hideout/weather/reichstag": "ru, gl",
+
+	//banners
+	"feature/blizzard_promo": "", // показывается промо баннер о буране
+	"banner/rebalance_2023": "",
+	"banner/summer_2023": "",
+	"banner/ravent_item_pack_2023": "",
+	"banner/dmz_2023": "",
+	"banner/dmz_2023/item_pack_1": "",
+	"banner/dmz_2023/item_pack_2": "",
+	"banner/2024_barter_upgrade_compensation": "",
+
+	"feature/stalcraftShop": "", // включает информирование о магазине в главном меню
+
+	// gear
+	"gear/bar_sever/4th": "ru, gl",
+	"gear/bar_sever/5th": "ru, gl",
+	"gear/bar_sever/6th": "ru, gl",
+	"gear/bar_sever/7th": "ru, gl",
+
+	// alliances
+	"alliance/anomalous_serum": "",
+	"alliance/anomalous_serum_dayx": "ru, gl, tr",
+
+	//tutorial
+	"tutorial/LOnB": "ru, gl, tr",
+
+	//decor
+	"decor/new_year25/ru": "",
+	"decor/new_year25/global": "",
+	"decor/new_year25/general": "",
+	"decor/spring25_inside": "", // Сезонный декор изнанки весная 2025 оформление сейвзон
+	"decor/summer-2025-birthday" : "",
+	"decor/new_year26/ru": "",
+	"decor/new_year26/global": "",
+	"decor/new_year26/general": "",
+	"decor/autumn26/season-props": "ru, gl, tr",
+	"decor/autumn26/halloween": "",
+
+	// weekly
+	"weekly/old": "",
+	"weekly/new": "",
+
+	//other
+	"other/golden_ticket": "ru, gl, tr", // НПС с золотым билетом
+	"other/anomaly_disable": "ru, gl", //ФФ, который отключает некоторые аномалии. Включить после ивента
+	"other/hideout_entrance": "ru, gl, tr", // Выход из убежища в опен
+	"other/ziv_quotes": "ru, gl, tr", // 365 фраз Зива почему он не даст награду за золотой билет
+	"other/story_competition24": "", // конкурс рассказов 2024 - РУ
+	"other/story_competition24eng": "", // конкурс рассказов 2024 - Глобал
+	"other/picture_competition24": "ru", // конкурс рисунков 2024 - РУ
+	"other/picture_competition24eng": "gl", // конкурс рисунков 2024 - Глобал
+	"other/picture_competition25": "ru", // конкурс рисунков 2025 - РУ
+	"other/picture_competition25eng": "gl", // конкурс рисунков 2025 - Глобал
+	"other/story_competition25": "ru", // конкурс рассказов 2025 - РУ
+	"other/story_competition25eng": "gl", // конкурс рассказов 2025 - Глобал
+	"other/summer25_1week_radio": "", // Радиопереговоры первой недели летнего сезона 2025
+	"other/summer25_2week_radio": "", // Радиопереговоры второй недели летнего сезона 2025
+	"other/summer25_3week_radio": "", // Радиопереговоры третьей недели летнего сезона 2025
+	"other/summer25_4week_radio": "", // Радиопереговоры четвертой недели летнего сезона 2025
+	"other/summer25_main_radio": "", // Радиопереговоры 2025 общий
+	"other/summer26_qr_codes": "ru, gl", // QR коды 5к пси
+	"other/NPCAnim": "ru, gl", // Анимации на СЗ
+
+
+	// daily
+	"daily/premium/next/release": "ru, gl",
+
+	//quests
+	//event's_quests
+	"quest/new-year24_quest": "", // первый квест нг24
+	"quest/new-year24_quest_2": "", // второй квест нг24
+	"quest/ravent24_quest1": "", // первый квест равен24 Сказка на Арене
+	"quest/ravent24_quest2": "", // второй квест равен24 Богатырская удаль
+	"quest/ravent24_quest3": "", // третий квест равен24 Арена страданий
+	"quest/season24/black_market": "", // квест старта осеннего сезона 2024 Интервенция
+	"quest/operation/polygon3": "", // тизер операций. Временный квест
+	"quest/new_year25/snegyrka_records": "", // аудиодневники снегурочки
+	"quest/new_year25/snowman_riddles": "", // загадки снеговиков со снежками
+	"quest/new_year25/cataclysm": "", // Катаклизм? квест-обучение бурану
+	"quest/inside25/fragile_beginning": "", // Хрупкое начало изнанка прогрев 2025
+	"quest/inside25/save_mockingbird": "", // Спасти пересмешника Изнанка 2025
+	"quest/inside25/echo_inside": "", // Эхо Изнанки 2025, Нина
+	"quest/summer25/freedom": "", // прогревочный квест лето25 заря
+	"quest/summer25/duty": "", // прогревочный квест лето25 рубеж
+	"quest/summer25/covenant": "", // прогревочный квест лето25 завет
+	"quest/summer25/merc": "", // прогревочный квест лето25 наемники
+	"quest/summer25/second_week": "", // вторая неделя прогревочных квестов
+	"quest/dmz26/secret": "", // секретный квест на дмз 2026
+	"quest/dmz26/tankiWatch": "", // квест для ачивки ДМЗ
+	"quest/spring26/signal_fever": "", // квест сигнальная лихорадка
+	"quest/lesta/trucks_of_the_past": "", // квест Траки былого Леста 26
+	"quest/lesta26/armor_piercing_sky": "", // бронебойное небо леста 2026
+    "quest/spring26/percolation_of_the_inside": "", // квест Перколяция Изнанки
+	"quest/summer26/double_game": "ru, gl, tr", // двойная игра наемники лето 2026
+	"quest/summer26/gods_providence": "ru, gl, tr", // божий промысел завет лето 2026
+	"quest/summer26/inside_out_zone": "ru, gl, tr", // зона наизнанку заря лето 2026
+	"quest/summer26/field_trials": "ru, gl, tr", // полевые испытания рубеж лето 2026
+	"quest/pg/currency_exchange": "", // обмен валют для ПГ США и Кореи
+	"quest/pg/iron_mountain": "", // Железная гора
+	"quest/pg/flag_na_eu": "", // Испытание флагов
+	//other
+	"quest/other/zen": "ru, gl, tr", // диалоги Дзена
+	"quest/prestige/bread-crumbs": "ru, gl, tr", // Десять хлебных крошек квест престижка
+	//operation
+	"quest/operation/breakdown": "ru, gl, tr", // Операция пробой Лето 2025
+	//north
+	//main plot
+	"quest/freedom_main": "ru, gl, tr", //сюжет зари
+	"quest/duty_main": "ru, gl, tr", //сюжет рубежа
+	"quest/mercenary_main": "ru, gl, tr", //сюжет наемников
+	"quest/covenant_main": "ru, gl, tr", //сюжет завета
+	"quest/freedom_side": "ru, gl, tr", //подсюжет зари
+	"quest/duty_side": "ru, gl, tr", //подсюжет рубежа
+	"quest/mercenary_side": "ru, gl, tr", //подсюжет наемников
+	"quest/covenant_side": "ru, gl, tr", //подсюжет завета
+	//side quests
+	"quest/freedom_recorders": "ru, gl, tr", //аудиодневники зари
+	"quest/duty_recorders": "ru, gl, tr", //аудиодневники рубежа
+	"quest/mercenary_recorders": "ru, gl, tr", //аудиодневники наемников
+	"quest/covenant_recorders": "ru, gl, tr", //аудиодневники завета
+	"quest/apocalypse_not_today": "ru, gl, tr", //Апокалипсис не сегодня
+	"quest/apocalypse_not_today_part_1": "ru, gl, tr", //Апокалипсис не сегодня часть 1
+	"quest/apocalypse_not_today_part_2": "", //Апокалипсис не сегодня часть 2
+	"quest/apocalypse_not_today_part_3": "", //Апокалипсис не сегодня часть 3
+	"quest/apocalypse_not_today_part_4": "ru", //Апокалипсис не сегодня часть 4
+	"quest/apocalypse_not_today_part_5": "", //Апокалипсис не сегодня часть 5
+	"quest/apocalypse_not_today_part_6": "", //Апокалипсис не сегодня часть 6
+	"quest/freedom_hookah": "ru, gl, tr", //Плотная забивочка
+	"quest/duty_bond": "ru, gl", //Бонд
+	"quest/mercenary_suspect": "ru, gl", //Подозреваемый
+	"quest/covenant_exorcism": "ru, gl, tr", //Экзорцизм
+	"quest/you_cant_go_here": "tr", //Сюда нельзя - ВЫРЕЗАН ПОД НОЛЬ, фф оставил на случай, мало ли
+	"quest/devil_corner": "ru, gl", //Чертов угол
+	"quest/wild_north": "ru, gl, tr", //Дикий Север
+	"quest/runa2": "ru, gl, tr", //Руна 2.0
+	"quest/tutorial_2": "ru, gl, tr", //новое обучение
+	"quest/bolota_tutorial_2026": "ru, gl, tr", //новое обучение
+	"quest/summer2026_collectibles": "ru, gl, tr", //Коллектблсы с лета 2026
+    "quest/the_shock_wave": "ru, gl, tr", //ударная волна
+    "quest/the_shock_wave_part_2": "tr", //ударная волна часть 2
+	//lesta
+	"quest/covenant_leviathan": "ru, gl, tr", //Левиафан
+	"quest/freedom_unnamed_deep": "ru, gl, tr", //На безымянной глубине
+	"event/lesta/whirlpool": "ru, gl, tr", //квест для коллабы с Лестой Водоворот
+	"event/lesta/point_of_no_return": "ru, gl, tr", //квест для коллабы с Лестой Точка невозврата
+    "quest/mushroom_epic": "ru, gl, tr", //Грибная былина часть 1
+    "quest/mushroom_epic_2": "ru, gl, tr", //Грибная былина часть 2
+    "quest/mushroom_epic_3": "ru, gl, tr", //Грибная былина часть 3
+	//fools day
+	"quest/fools_day_2026": "", //Смешной текст.txt
+
+	//south
+	//main plot
+	"quest/plot_south/dungeon_base_sanitar_1": "ru, gl, tr",
+	"quest/plot_south/dungeon_toxic_dogout": "ru, gl, tr",
+	"quest/plot_south/dungeon_dyrokol": "ru, gl, tr",
+	"quest/plot_south/dungeon_dyrokol_new": "", //  Новый данж Дырокола
+
+	//side quests
+	//bolota
+	//stalkers
+	"quest/bolota_club_bolotnikov": "", //Клуб Болотников
+	"quest/bolota_ghoul_stalkers": "ru, gl, tr", // Упырь (сталкеры)
+	"quest/bolota_frimen_stalkers": "ru, gl, tr", // Посылка Фримена (сталкеры)
+	"quest/bolota_echo_stalkers": "ru, gl, tr", // Эхо прошлого (сталкеры)
+	"quest/bolota_otbor": "ru, gl, tr", // Естественный отбор
+	"quest/bolota_rest_in_peace": "ru, gl, tr", // Покойся с миром
+	"quest/bolota_swamp_spirit": "", //Болотный дух
+	//bandits
+	"quest/bolota_ghoul_bandits": "ru, gl, tr", // Упырь (бандиты)
+	"quest/bolota_frimen_bandits": "ru, gl, tr", // Посылка Фримена (бандиты)
+	"quest/bolota_echo_bandits": "ru, gl, tr", // Эхо прошлого (бандиты)
+	"quest/bolota_travnik": "ru, gl, tr", // Травник
+	"quest/bolota_komar": "ru, gl, tr", // Комар
+	"quest/bolota_dog_man's_friend": "", // Собака друг человека
+	"quest/bolota_trade_and_fight": "", // Торгуй и воюй
+
+	//kordon
+	//stalkers
+	"quest/kordon/what_the_doctor_ordered": "ru, gl, tr", // То, что доктор прописал (Доктор вертейко)
+	"quest/kordon/what_the_doctor_ordered_old": "", // То, что доктор прописал (Доктор вертейко) СТАРЫЙ КВЕСТ!
+	"quest/kordon/dangerous_thoughts": "ru, gl, tr", // Опасные мысли
+	"quest/kordon/happy_machine": "", // Машина счастья
+	"quest/kordon/cherchez_la_femme": "ru, gl, tr", // Шерше ля Фам
+	"quest/kordon/reseller": "ru, gl, tr", // Перекупщик
+	"quest/kordon/sleepy_story": "ru, gl, tr", // Сонная история
+	"quest/kordon/trading_business_stalkers": "ru, gl, tr", // Торговые дела
+	//bandits
+	"quest/kordon/smell_the_gunpowder": "", // Пороху понюхай
+	"quest/kordon/dead_dont_tell_fairytales": "ru, gl, tr", // Мертвецы не рассказывают сказки
+	"quest/kordon/documentation": "ru, gl, tr", // Документация
+	"quest/kordon/trading_business_bandits": "ru, gl, tr", // Торговые дела
+	"quest/kordon/safety_above_all_else": "ru, gl, tr", // Безопасность превыше всего
+	"quest/kordon/postman": "ru, gl, tr", // Почтальон
+	"quest/kordon/boar_business": "tr", // Кабаньи дела
+	//all
+	"quest/kordon/rubaka": "ru, gl, tr", // Руби! Руби! Рубака!
+
+	//agroprom
+	//stalkers
+	"quest/agroprom/cycle_of_events": "", // Круговорот событий
+
+	//svalka
+	//stalkers
+	"quest/svalka/science_in_the_trash": "", // Наука на помойке
+	"quest/svalka/don't_do_good": "", // Не делай добра
+	//bandits
+	"quest/svalka/undesirable_element": "", // Нежелательный элемент
+	"quest/svalka/temperature_failure": "", // Температурный сбой
+
+	//limansk
+	"quest/limansk/loop_reward_ru": "ru", // Награда за квест "Петля", заточка 9-го уровня
+	"quest/limansk/loop_reward_global": "gl", // Награда за квест "Петля", заточка 5-го уровня
+
+	//bar
+	//stalkers
+	"quest/bar/compot_na_poldnik": "ru, gl, tr", // Компот на полдник
+	"quest/bar/get_up_and_go": "ru, gl, tr", // Встань и иди! (Марафонец)
+	"quest/bar/get_up_and_go_old": "", // Встань и иди! (Марафонец) СТАРЫЙ КВЕСТ!
+	"quest/armsklad/brothers_in_arms": "ru, gl, tr", // Братья по оружию
+	"quest/bar/black_market_baron": "ru, gl, tr", // Барон Черного Рынка. Первый квест, посвященный DMZ Черный Рынок
+	"quest/bar/black_market_storm": "ru, gl, tr", // Шепот Бури. Второй квест, посвященный DMZ Черный Рынок
+	//bandits
+	"quest/bar/evacuation": "", //Эвакуация
+	//all
+	"quest/bar/holy_spring": "ru, gl, tr", // Святой источник
+	"quest/bar/reporter": "",
+	"quest/sever/secret": "", // Секрет. НЕ ТРОГАТЬ!!!
+	"quest/bar/inside/morok_and_hassle": "ru, gl, tr", // Морок и Морока, посвященный Изнанке 2025, постоянный
+
+	//seasonpass
+	"seasonpass/spring24/events": "", // ивенты БП
+	"seasonpass/summer24/events": "", // ивенты БП
+	"seasonpass/autumn24/events": "", // ивенты БП
+	"seasonpass/winter25/events": "", // ивенты БП
+	"seasonpass/spring25/events": "", // ивенты БП
+	"seasonpass/summer25/events": "", // ивенты БП
+	"seasonpass/autumn25/events": "", // ивенты БП
+	"seasonpass/winter26/events": "", // ивенты БП
+
+	// старые фф ивентовых квестов, не трогаем вообще
+	"event/blizzard_quests": "", //привязывается к агитплакату и к схеме и отключает старт квестов бурана2023
+	"event/blizzard_quests_part_2": "", //включает второй и третий квесты бурана
+	"event/blizzard_quests_reward_ru": "", //костыль для наград и плаката на ру
+	"event/blizzard_quests_reward_global": "", //костыль для наград и плаката на глобале
+	"event/dmz_quest_1": "", //первая неделя квестов ДМЗ + дейлики
+	"event/dmz_quest_2": "", //вторая неделя квестов ДМЗ
+	"event/raven_arena_quest": "", // первый квест арены ворона
+	"event/raven_arena_quest_part_2": "", // второй квест арены ворона
+	"event/raven_arena_quest_part_3": "", // третий квест арены ворона БОЛЬШЕ НЕ ТРОГАТЬ Чемпионская разминка
+
+	"event/wnorth": "", // дикие северные локации
+
+	"feature/modules/high_level_only": false, // Модули. Если True - их можно поставить только на пушки с 15 заточкойLo
+
+	"feature/sbattle26": "ru" // отображение уведомления о начале битвы стримеров
+
+}

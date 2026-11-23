@@ -27,8 +27,8 @@ final class NativeActorCarousel {
     private static Field field(Class<?> type,String name)throws Exception{var f=type.getDeclaredField(name);f.setAccessible(true);return f;}
     private static void prepareSettings(ClassLoader loader,Path resources)throws Exception {
         Class<?> settings=Class.forName("132688950",true,loader);if(settings.getField("new").get(null)!=null)return;
-        Path path=resources.resolve("assets/anomalies/anomaly_config.json");if(Files.size(path)>65536)throw new IllegalArgumentException("actor_anomaly_settings_size");
-        var rows=JsonParser.parseString(Files.readString(path)).getAsJsonArray();if(rows.size()!=1)throw new IllegalArgumentException("actor_anomaly_settings_rows");
+        Path path=resources.resolve("assets/anomalies/anomaly_config.json");if(RuntimeFiles.size(path)>65536)throw new IllegalArgumentException("actor_anomaly_settings_size");
+        var rows=JsonParser.parseString(RuntimeFiles.readString(path)).getAsJsonArray();if(rows.size()!=1)throw new IllegalArgumentException("actor_anomaly_settings_rows");
         Class<?> parser=Class.forName("com.google.gson.JsonParser",true,loader),json=Class.forName("com.google.gson.JsonObject",true,loader),input=Class.forName("690713104",true,loader);
         Object parsed=parser.getMethod("parseString",String.class).invoke(null,rows.get(0).toString());parsed=parsed.getClass().getMethod("getAsJsonObject").invoke(parsed);
         Object nativeSettings=settings.getConstructor().newInstance();settings.getMethod("enum",input).invoke(nativeSettings,input.getConstructor(String.class,json).newInstance("server_anomaly_settings",parsed));

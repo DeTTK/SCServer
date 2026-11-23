@@ -14,5 +14,5 @@ final class ActorLocomotionRelease {
         Map.entry("478901502","7b0ba678e8387f5ee1335b3e4c0761df3cf4a60e05059f476cd35bb62d6cefb8"),
         Map.entry("158575574","cd971e5634e24a17863fb62ccd5a2b24956aa1c443208e99da4fe00a1571996b"),
         Map.entry("570877235","6f4d92c720ab0597a2dd08e4574b94617a61bf9295b88d9c79952b888bfd18d9"));
-    static void verify(Path runtime)throws Exception{for(var e:HASHES.entrySet())if(!HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(runtime.resolve("classes").resolve(e.getKey()+".class")))).equals(e.getValue()))throw new IllegalStateException("actor_locomotion_release_mismatch:"+e.getKey());}
+    static void verify(Path runtime)throws Exception{for(var e:HASHES.entrySet())if(!HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(RuntimeFiles.read(runtime.resolve("classes").resolve(e.getKey()+".class")))).equals(e.getValue()))throw new IllegalStateException("actor_locomotion_release_mismatch:"+e.getKey());}
 }

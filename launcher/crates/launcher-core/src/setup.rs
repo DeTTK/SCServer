@@ -103,9 +103,14 @@ impl Setup {
             ]
             .into_iter()
             .find(|p| match name {
-                "Client" => p
-                    .join("runtime/bootstrap/StandardJvmBootstrap.class")
-                    .is_file(),
+                "Client" => {
+                    p.join("runtime/bootstrap/StandardJvmBootstrap.class")
+                        .is_file()
+                        || (p.is_dir()
+                            && p.parent().is_some_and(|r| {
+                                r.join("Bootstrap/runtime/bootstrap.jar").is_file()
+                            }))
+                }
                 "Server" => p.join("server.jar").is_file(),
                 _ => p.join("registry.json").is_file() && p.join("region").is_dir(),
             })
@@ -123,11 +128,6 @@ impl Setup {
             (
                 client,
                 &[
-                    "runtime/bootstrap/StandardJvmBootstrap.class",
-                    "runtime/classes",
-                    "runtime/dependencies",
-                    "runtime/libs",
-                    "runtime/natives",
                     "compat/game-resource-compat.jar",
                     "compat/startup-guard.jar",
                     "compat/weapon-events.jar",
@@ -139,15 +139,19 @@ impl Setup {
                     "server.jar",
                     "server.template.properties",
                     "lib/gson-2.13.2.jar",
-                    "runtime/dependencies/zstd-jni-1.5.0-5.jar",
-                    "runtime/classes",
                 ][..],
             ),
         ] {
             no_links(root)?;
-            for n in names {
-                if !component_file(root, n)?.exists() {
-                    bail!("BUNDLE_INCOMPLETE: missing {n}")
+            for name in names {
+                if !component_file(root, name)?.exists() {
+                    bail!("BUNDLE_INCOMPLETE: missing {name}");
+                }
+            }
+            let runtime = runtime_root(root)?;
+            for name in ["classes", "bootstrap", "libs", "dependencies"] {
+                if !runtime_part(&runtime, name).exists() {
+                    bail!("BUNDLE_INCOMPLETE: missing runtime {name}");
                 }
             }
         }

@@ -1,0 +1,111 @@
+{
+  "version": 1,
+  "source": "installed_native_storage_config",
+  "pages": [
+    {
+      "index": 0,
+      "displayIndex": 0,
+      "rows": 100,
+      "width": 8,
+      "kind": "DEFAULT"
+    },
+    {
+      "index": 1,
+      "displayIndex": 1,
+      "rows": 100,
+      "width": 8,
+      "kind": "DEFAULT"
+    },
+    {
+      "index": 2,
+      "displayIndex": 2,
+      "rows": 100,
+      "width": 8,
+      "kind": "DEFAULT"
+    },
+    {
+      "index": 3,
+      "displayIndex": 3,
+      "rows": 100,
+      "width": 8,
+      "kind": "DEFAULT"
+    },
+    {
+      "index": 4,
+      "displayIndex": 4,
+      "rows": 100,
+      "width": 8,
+      "kind": "DEFAULT"
+    },
+    {
+      "index": 5,
+      "displayIndex": 5,
+      "rows": 100,
+      "width": 8,
+      "kind": "DEFAULT"
+    },
+    {
+      "index": 6,
+      "displayIndex": 6,
+      "rows": 100,
+      "width": 8,
+      "kind": "DEFAULT"
+    },
+    {
+      "index": 7,
+      "displayIndex": 7,
+      "rows": 100,
+      "width": 8,
+      "kind": "DEFAULT"
+    },
+    {
+      "index": 8,
+      "displayIndex": 8,
+      "rows": 100,
+      "width": 8,
+      "kind": "DEFAULT"
+    },
+    {
+      "index": 9,
+      "displayIndex": 11,
+      "rows": 100,
+      "width": 8,
+      "kind": "PREMIUM"
+    },
+    {
+      "index": 10,
+      "displayIndex": 12,
+      "rows": 100,
+      "width": 8,
+      "kind": "PREMIUM"
+    },
+    {
+      "index": 11,
+      "displayIndex": 13,
+      "rows": 100,
+      "width": 8,
+      "kind": "PREMIUM"
+    },
+    {
+      "index": 12,
+      "displayIndex": 14,
+      "rows": 1000,
+      "width": 8,
+      "kind": "PURCHASES"
+    },
+    {
+      "index": 13,
+      "displayIndex": 9,
+      "rows": 100,
+      "width": 8,
+      "kind": "DEFAULT"
+    },
+    {
+      "index": 14,
+      "displayIndex": 10,
+      "rows": 100,
+      "width": 8,
+      "kind": "DEFAULT"
+    }
+  ]
+}

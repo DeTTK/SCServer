@@ -12,7 +12,7 @@ public final class NativeWeatherCatalog implements AutoCloseable {
     private final Constructor<?> constructor;
     private final Method read,write;
     public NativeWeatherCatalog(Path runtime)throws Exception {
-        List<URL> urls=new ArrayList<>();for(String folder:List.of("classes","bootstrap","libs"))urls.add(runtime.resolve(folder).toUri().toURL());
+        List<URL> urls=new ArrayList<>();for(String folder:List.of("classes","bootstrap","libs"))urls.add(RuntimeFiles.location(runtime.resolve(folder)).toUri().toURL());
         try(var files=Files.list(runtime.resolve("dependencies"))){for(Path p:files.filter(p->p.toString().endsWith(".jar")).sorted().toList())urls.add(p.toUri().toURL());}
         urls.add(NativeWeatherCatalog.class.getProtectionDomain().getCodeSource().getLocation());
         loader=new ClientSceneCodec.Loader(urls.toArray(URL[]::new));

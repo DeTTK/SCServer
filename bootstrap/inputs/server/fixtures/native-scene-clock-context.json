@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "scope": "Production isolated scene clock boundary only; no installed class writes, no side initialization. Native seconds conversion plus bounded exact historical epoch retention.",
+  "classesSha256": {
+    "805719214": "1b2c008ffb277ffacd7ecff7d1d2fffa999421ab430b1fc207c04c7504eabf46",
+    "1231017137": "c12921760ffb18a48c576ec4af68246ff591720307e453e2a39878db12385c93",
+    "1553688601": "d5725aeac8b0317935c36ca0e6d2729d3c968f82b2e68488e3b4a0d33b6519c5",
+    "1046176253": "7f85ef4c47654d79b7821d428542f3f745fa67884e90e10a580d1a1c3ebe09cb",
+    "963945232": "9a26f4979616fd2719f3e97533eb4524c8929b85c629130fb2f838a541211f2f",
+    "1366800141": "94f14ec8c4ac992b20763969bae2b6ee2bb151ca9eb16e79fac10b46c6453dba",
+    "617636862": "e347c358e0f4620a52611f4ddb58fd7a8ff71d944b53c62708b132885c61f301",
+    "774306880": "1ec77a5d3eae3a0839f03e8020e83bc64210015d589f126b215ee4b9b2c26f1e"
+  },
+  "repairItemSource": {
+    "path": "../source-resources/barter_new.json",
+    "sha256": "d4ab42b175b55eeb5f13b24ad28f37456801b0f4f26dafde6081743e9fc3325e",
+    "name": "brt.les.mob",
+    "id": 31041
+  }
+}

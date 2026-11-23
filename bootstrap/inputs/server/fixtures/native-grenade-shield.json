@@ -1,0 +1,21 @@
+{
+  "items": [
+    12377,
+    12416
+  ],
+  "durability": 425,
+  "policy": "shared_area_native_aabb_rifle_barrier",
+  "classHashes": {
+    "25911724": "ea9311f18fce57cd37a5e770ed91e13c669970af393906877dadc599ce9bcc0b",
+    "1520486269": "80655ac90e7b5ce2de5b49d22f00747af0bef4811050dd4318b7e91b8c473b1b",
+    "825934803": "58013068a3a910896d7285bab6d1588adb94187f946ed213982bb53beb4e8090",
+    "161952527": "4a3c083ebb16e110e1c2e8bb3d8cdec565e97c45f42765311a03cc23827ae25d",
+    "1281655698": "6355104be7405660f6dd673656eac6098bd8b1d790864159fac868ba2734f169",
+    "1080895182": "ae4071642aa67d94a0172a4e25cc0ce295c823f6298ba84d04060fcb0f7784c2",
+    "303048901": "fdb2e3e9440203be8910d33e065d66ce01fbce4cac730b6c40debcb3b44d2aa2"
+  },
+  "resourceHashes": {
+    "E:\\\u041f\u0440\u043e\u0435\u043a\u0442\u044b\\SZCustomServer\\var\\registries\\current-boxes\\assets\\weapons\\models\\weapons\\grenades\\aoe\\shield.aabb": "0498560567397149d8846fc22882749dadd47a663235d6e85981c47689bb2556",
+    "D:\\StalcraftCustom\\server-java\\fixtures\\item-definitions.json": "9a0bd993105021a293ea28bac113ef8adcf92a14f51f0e48a97e5000c058fe1a"
+  }
+}

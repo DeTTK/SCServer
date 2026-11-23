@@ -1,0 +1,21 @@
+{
+  "items": [
+    12400,
+    12401
+  ],
+  "policy": "native_start_speed_10_bounded_server_velocity_200_first_eligible_contact",
+  "classHashes": {
+    "824243370": "f9481ef18287d3c280e41876dcef0b6751ce23bdcef5fdcb6410e639813a861e",
+    "267674355": "f2a04ec214eb35fb7e9819830b9ae0297939ab6a054783be90305a5ec5fd3fca",
+    "1471738856": "ba8cea3f48227365196136f98fc6faa2ef28ed5171601c10cc24808506cea0aa",
+    "1510484702": "c2971cba603bc213c8aaca2ca8104c3cd4c3e99cfadcaab24a15ff360debe388",
+    "1246769498": "2acba0c710551fbe03ec99aed038a1e6db5eb0f016f63d37371ba4a6b9406053",
+    "1155277618": "52f1529df1d5a287bbb381c4c3a2ea848cd0c02b0f95210473f6a6faefbf0bd6",
+    "850786143": "6a94498e82efc0f6c863396cf75e62290218d2c94f0a9f314764228f84b0426f",
+    "456314467": "b14a1389d098275c603e041f174e85bd1a7152249d12f948127f579ae6c23ac8"
+  },
+  "resourceHashes": {
+    "D:\\StalcraftCustom\\server-java\\fixtures\\item-definitions.json": "9a0bd993105021a293ea28bac113ef8adcf92a14f51f0e48a97e5000c058fe1a"
+  },
+  "nativeWholeTickOracle": false
+}

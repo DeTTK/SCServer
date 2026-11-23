@@ -29,7 +29,7 @@ public final class SceneRegistry {
         this(map,targetRegistry,codecs,null);
     }
     public SceneRegistry(Path map,Path targetRegistry,Path codecs,Path configuredResources)throws Exception{
-        resources=configuredResources==null?null:configuredResources.toRealPath();defaultCodecs=codecs.toRealPath();
+        resources=configuredResources==null?null:szserver.util.GameResources.real(configuredResources);defaultCodecs=codecs.toRealPath();
         Path sourcePath=sourceRegistry(map);
         if(Files.isDirectory(map.resolve("region")))map=map.resolve("region");
         source=load(sourcePath);targetPath=targetRegistry.toRealPath();target=load(targetPath);provenance=map.resolve("object-registry-provenance");compatibility=new SceneCompatibility(codecPath(map,defaultCodecs),target);

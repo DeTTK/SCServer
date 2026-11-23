@@ -1,0 +1,233 @@
+{
+  "encaged_medicine": [
+    [
+      {"stack": {"id": "med.apt_a", "stackSize": 1, "tag": {"non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}}},"weight": 6},
+      {"stack": {"id": "med.epinephrine_encaged", "stackSize": 1, "tag": {"non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}}},"weight": 3},
+      {"stack": {"id": "med.stimulyator_encaged", "stackSize": 1, "tag": {"non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}}},"weight": 2},
+      {"stack": {"id": "med.painblocker_encaged", "stackSize": 1, "tag": {"non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}}},"weight": 2},
+      {"stack": {"id": "med.strike_encaged", "stackSize": 1, "tag": {"non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}}},"weight": 3},
+      {"stack": {"id": "med.injector", "stackSize": 1, "tag": {"non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}}},"weight": 2}
+    ]
+
+  ],
+  "encaged_combat": [
+    [
+      {"stack": {"id": "wpn.r92_encaged", "stackSize": 1, "tag": {
+        "non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1},
+        "bulletId": {"type": "integer","value": 12700},
+        "bulletTag": {"type": "compound", "value": {"locitem": {"type": "byte", "value": 1}}},
+        "numBullets": {"type": "integer","value": 4}}}, "weight": 9},
+      {"stack": {"id": "exp.stun_encage", "stackSize": 1, "tag": {"non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}}},"weight": 9},
+      {"stack": {"id": "wpn.bm16_encaged", "stackSize": 1, "tag": {
+        "non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1},
+        "bulletId": {"type": "integer","value": 12710},
+        "bulletTag": {"type": "compound", "value": {"locitem": {"type": "byte", "value": 1}}},
+        "numBullets": {"type": "integer","value": 2}}}, "weight": 2},
+      {"stack": {"id": "wpn.python_encaged", "stackSize": 1, "tag": {
+        "non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1},
+        "bulletId": {"type": "integer","value": 12700},
+        "bulletTag": {"type": "compound", "value": {"locitem": {"type": "byte", "value": 1}}},
+        "numBullets": {"type": "integer","value": 4}}}, "weight": 2},
+      {"stack": {"id": "wpn.mts255_encaged", "stackSize": 1, "tag": {
+        "non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1},
+        "bulletId": {"type": "integer","value": 12710},
+        "bulletTag": {"type": "compound", "value": {"locitem": {"type": "byte", "value": 1}}},
+        "numBullets": {"type": "integer","value": 4}}}, "weight": 1},
+	    {"stack": {"id": "wpn.winchester1887_encaged", "stackSize": 1, "tag": {
+		    "non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1},
+		    "bulletId": {"type": "integer","value": 12710},
+		    "bulletTag": {"type": "compound", "value": {"locitem": {"type": "byte", "value": 1}}},
+		    "numBullets": {"type": "integer","value": 2}}}, "weight": 1},
+      {"stack": {"id": "mantrap", "stackSize": 1, "tag": {"non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}}},"weight": 9},
+      {"stack": {"id": "wpn.mosin_encaged", "stackSize": 1, "tag": {
+        "non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1},
+        "bulletId": {"type": "integer","value": 12725},
+        "bulletTag": {"type": "compound", "value": {"locitem": {"type": "byte", "value": 1}}},
+        "numBullets": {"type": "integer","value": 4}}}, "weight": 1},
+      {"stack": {"id": "wpn.obrezbm16_encaged", "stackSize": 1, "tag": {
+        "non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1},
+        "bulletId": {"type": "integer","value": 12710},
+        "bulletTag": {"type": "compound", "value": {"locitem": {"type": "byte", "value": 1}}},
+        "numBullets": {"type": "integer","value": 2}}}, "weight": 3}
+    ]
+  ],
+  "encaged_common": [
+    [
+      {"stack": {"id": "med.apt_a", "stackSize": 2, "tag": {"non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}}},"weight": 2}
+    ],
+    [
+      {"stack": {"id": "wpn.bm16_encaged", "stackSize": 1, "tag": {
+        "non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1},
+        "bulletId": {"type": "integer","value": 12710},
+        "bulletTag": {"type": "compound", "value": {"locitem": {"type": "byte", "value": 1}}},
+        "numBullets": {"type": "integer","value": 2}}}, "weight": 5},
+      {"stack": {"id": "wpn.winchester1887_encaged", "stackSize": 1, "tag": {
+        "non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1},
+        "bulletId": {"type": "integer","value": 12710},
+        "bulletTag": {"type": "compound", "value": {"locitem": {"type": "byte", "value": 1}}},
+        "numBullets": {"type": "integer","value": 2}}}, "weight": 1},
+      {"stack": {"id": "wpn.python_encaged", "stackSize": 1, "tag": {
+        "non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1},
+        "bulletId": {"type": "integer","value": 12700},
+        "bulletTag": {"type": "compound", "value": {"locitem": {"type": "byte", "value": 1}}},
+        "numBullets": {"type": "integer","value": 4}}}, "weight": 5},
+      {"stack": {"id": "wpn.ptrd_encaged", "stackSize": 1, "tag": {
+        "non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1},
+        "bulletId": {"type": "integer","value": 12733},
+        "bulletTag": {"type": "compound", "value": {"locitem": {"type": "byte", "value": 1}}},
+        "numBullets": {"type": "integer","value": 1}}}, "weight": 1},
+      {"stack": {"id": "melee.sledgehammer_encaged", "stackSize": 1, "tag": {"non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}}},"weight": 1}
+    ],
+    [
+      {"stack": {"id": "med.stimulyator_encaged", "stackSize": 1, "tag": {"non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}}},"weight": 1},
+      {"stack": {"id": "med.painblocker_encaged", "stackSize": 1, "tag": {"non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}}},"weight": 1},
+      {"stack": {"id": "med.apt_a", "stackSize": 2, "tag": {"non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}}},"weight": 2}
+    ]
+  ],
+  "encaged_medicine_medic": [
+    [
+      {"stack": {"id": "med.apt_a", "stackSize": 3, "tag": {"non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}}},"weight": 7},
+      {"stack": {"id": "med.epinephrine_encaged", "stackSize": 2, "tag": {"non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}}},"weight": 3},
+      {"stack": {"id": "med.stimulyator_encaged", "stackSize": 1, "tag": {"non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}}},"weight": 3},
+      {"stack": {"id": "med.painblocker_encaged", "stackSize": 1, "tag": {"non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}}},"weight": 3},
+      {"stack": {"id": "med.strike_encaged", "stackSize": 2, "tag": {"non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}}},"weight": 3},
+      {"stack": {"id": "med.injector", "stackSize": 1, "tag": {"non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}}},"weight": 2}
+    ]
+  ],
+  "encaged_medicine_scout": [
+    [
+      {"stack": {"id": "med.apt_a", "stackSize": 1, "tag": {"non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}}},"weight": 9},
+      {"stack": {"id": "med.epinephrine_encaged", "stackSize": 1, "tag": {"non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}}},"weight": 2},
+      {"stack": {"id": "med.stimulyator_encaged", "stackSize": 1, "tag": {"non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}}},"weight": 1},
+      {"stack": {"id": "med.painblocker_encaged", "stackSize": 1, "tag": {"non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}}},"weight": 1},
+      {"stack": {"id": "med.strike_encaged", "stackSize": 1, "tag": {"non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}}},"weight": 2},
+      {"stack": {"id": "med.injector", "stackSize": 1, "tag": {"non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}}},"weight": 1}
+    ]
+  ],
+  "encaged_medicine_soldier": [
+    [
+      {"stack": {"id": "med.apt_a", "stackSize": 1, "tag": {"non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}}},"weight": 10},
+      {"stack": {"id": "med.painblocker_encaged", "stackSize": 1, "tag": {"non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}}},"weight": 1},
+      {"stack": {"id": "med.strike_encaged", "stackSize": 1, "tag": {"non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}}},"weight": 2},
+      {"stack": {"id": "med.injector", "stackSize": 1, "tag": {"non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}}},"weight": 1}
+    ]
+  ],
+  "encaged_medicine_engineer": [
+    [
+      {"stack": {"id": "med.apt_a", "stackSize": 1, "tag": {"non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}}},"weight": 6},
+      {"stack": {"id": "med.epinephrine_encaged", "stackSize": 1, "tag": {"non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}}},"weight": 3},
+      {"stack": {"id": "med.stimulyator_encaged", "stackSize": 1, "tag": {"non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}}},"weight": 2},
+      {"stack": {"id": "med.painblocker_encaged", "stackSize": 1, "tag": {"non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}}},"weight": 2},
+      {"stack": {"id": "med.strike_encaged", "stackSize": 1, "tag": {"non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}}},"weight": 3},
+      {"stack": {"id": "med.injector", "stackSize": 1, "tag": {"non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}}},"weight": 2}
+    ]
+  ],
+  "encaged_combat_medic": [
+    [
+      {"stack": {"id": "wpn.r92_encaged", "stackSize": 1, "tag": {
+        "non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1},
+        "bulletId": {"type": "integer","value": 12700},
+        "bulletTag": {"type": "compound", "value": {"locitem": {"type": "byte", "value": 1}}},
+        "numBullets": {"type": "integer","value": 4}}}, "weight": 12},
+      {"stack": {"id": "wpn.python_encaged", "stackSize": 1, "tag": {
+        "non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1},
+        "bulletId": {"type": "integer","value": 12700},
+        "bulletTag": {"type": "compound", "value": {"locitem": {"type": "byte", "value": 1}}},
+        "numBullets": {"type": "integer","value": 2}}}, "weight": 2},
+      {"stack": {"id": "wpn.mts255_encaged", "stackSize": 1, "tag": {
+        "non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1},
+        "bulletId": {"type": "integer","value": 12710},
+        "bulletTag": {"type": "compound", "value": {"locitem": {"type": "byte", "value": 1}}},
+        "numBullets": {"type": "integer","value": 2}}}, "weight": 1},
+      {"stack": {"id": "mantrap", "stackSize": 1, "tag": {"non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}}},"weight": 12},
+      {"stack": {"id": "wpn.mosin_encaged", "stackSize": 1, "tag": {
+        "non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1},
+        "bulletId": {"type": "integer","value": 12725},
+        "bulletTag": {"type": "compound", "value": {"locitem": {"type": "byte", "value": 1}}},
+        "numBullets": {"type": "integer","value": 3}}}, "weight": 1},
+      {"stack": {"id": "wpn.obrezbm16_encaged", "stackSize": 1, "tag": {
+        "non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1},
+        "bulletId": {"type": "integer","value": 12710},
+        "bulletTag": {"type": "compound", "value": {"locitem": {"type": "byte", "value": 1}}},
+        "numBullets": {"type": "integer","value": 1}}}, "weight": 3}
+    ]
+  ],
+  "encaged_combat_scout": [
+    [
+      {"stack": {"id": "wpn.r92_encaged", "stackSize": 1, "tag": {
+        "non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1},
+        "bulletId": {"type": "integer","value": 12700},
+        "bulletTag": {"type": "compound", "value": {"locitem": {"type": "byte", "value": 1}}},
+        "numBullets": {"type": "integer","value": 4}}}, "weight": 9},
+      {"stack": {"id": "exp.stun_encage", "stackSize": 1, "tag": {"non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}}},"weight": 12},
+      {"stack": {"id": "wpn.python_encaged", "stackSize": 1, "tag": {
+        "non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1},
+        "bulletId": {"type": "integer","value": 12700},
+        "bulletTag": {"type": "compound", "value": {"locitem": {"type": "byte", "value": 1}}},
+        "numBullets": {"type": "integer","value": 4}}}, "weight": 2},
+      {"stack": {"id": "mantrap", "stackSize": 3, "tag": {"non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}}},"weight": 12},
+      {"stack": {"id": "wpn.mosin_encaged", "stackSize": 1, "tag": {
+        "non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1},
+        "bulletId": {"type": "integer","value": 12725},
+        "bulletTag": {"type": "compound", "value": {"locitem": {"type": "byte", "value": 1}}},
+        "numBullets": {"type": "integer","value": 4}}}, "weight": 1}
+    ]
+  ],
+  "encaged_combat_soldier": [
+    [
+      {"stack": {"id": "wpn.r92_encaged", "stackSize": 1, "tag": {
+        "non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1},
+        "bulletId": {"type": "integer","value": 12700},
+        "bulletTag": {"type": "compound", "value": {"locitem": {"type": "byte", "value": 1}}},
+        "numBullets": {"type": "integer","value": 5}}}, "weight": 6},
+      {"stack": {"id": "exp.stun_encage", "stackSize": 1, "tag": {"non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}}},"weight": 6},
+      {"stack": {"id": "wpn.python_encaged", "stackSize": 1, "tag": {
+        "non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1},
+        "bulletId": {"type": "integer","value": 12700},
+        "bulletTag": {"type": "compound", "value": {"locitem": {"type": "byte", "value": 1}}},
+        "numBullets": {"type": "integer","value": 4}}}, "weight": 2},
+      {"stack": {"id": "wpn.mts255_encaged", "stackSize": 1, "tag": {
+        "non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1},
+        "bulletId": {"type": "integer","value": 12710},
+        "bulletTag": {"type": "compound", "value": {"locitem": {"type": "byte", "value": 1}}},
+        "numBullets": {"type": "integer","value": 4}}}, "weight": 1},
+      {"stack": {"id": "mantrap", "stackSize": 1, "tag": {"non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}}},"weight": 6},
+      {"stack": {"id": "wpn.mosin_encaged", "stackSize": 1, "tag": {
+        "non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1},
+        "bulletId": {"type": "integer","value": 12725},
+        "bulletTag": {"type": "compound", "value": {"locitem": {"type": "byte", "value": 1}}},
+        "numBullets": {"type": "integer","value": 4}}}, "weight": 1},
+      {"stack": {"id": "wpn.obrezbm16_encaged", "stackSize": 1, "tag": {
+        "non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1},
+        "bulletId": {"type": "integer","value": 12710},
+        "bulletTag": {"type": "compound", "value": {"locitem": {"type": "byte", "value": 1}}},
+        "numBullets": {"type": "integer","value": 2}}}, "weight": 3}
+    ]
+  ],
+  "encaged_combat_engineer": [
+    [
+      {"stack": {"id": "exp.stun_encage", "stackSize": 2, "tag": {"non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}}},"weight": 9},
+      {"stack": {"id": "wpn.python_encaged", "stackSize": 1, "tag": {
+        "non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1},
+        "bulletId": {"type": "integer","value": 12700},
+        "bulletTag": {"type": "compound", "value": {"locitem": {"type": "byte", "value": 1}}},
+        "numBullets": {"type": "integer","value": 4}}}, "weight": 2},
+      {"stack": {"id": "wpn.mts255_encaged", "stackSize": 1, "tag": {
+        "non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1},
+        "bulletId": {"type": "integer","value": 12710},
+        "bulletTag": {"type": "compound", "value": {"locitem": {"type": "byte", "value": 1}}},
+        "numBullets": {"type": "integer","value": 4}}}, "weight": 1},
+      {"stack": {"id": "mantrap", "stackSize": 1, "tag": {"non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}}},"weight": 9},
+      {"stack": {"id": "wpn.mosin_encaged", "stackSize": 1, "tag": {
+        "non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1},
+        "bulletId": {"type": "integer","value": 12725},
+        "bulletTag": {"type": "compound", "value": {"locitem": {"type": "byte", "value": 1}}},
+        "numBullets": {"type": "integer","value": 4}}}, "weight": 1},
+      {"stack": {"id": "wpn.obrezbm16_encaged", "stackSize": 1, "tag": {
+        "non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1},
+        "bulletId": {"type": "integer","value": 12710},
+        "bulletTag": {"type": "compound", "value": {"locitem": {"type": "byte", "value": 1}}},
+        "numBullets": {"type": "integer","value": 2}}}, "weight": 3}
+    ]
+  ]
+}

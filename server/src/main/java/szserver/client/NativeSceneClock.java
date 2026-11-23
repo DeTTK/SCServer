@@ -16,11 +16,11 @@ final class NativeSceneClock {
     private final Method enter,exit;
     private final long started=System.nanoTime();
     NativeSceneClock(ClientSceneCodec.Loader loader,Path runtime,Path manifest)throws Exception{
-        if(Files.size(manifest)>64*1024)throw new IOException("scene_clock_manifest_limit");
-        JsonObject spec=JsonParser.parseString(Files.readString(manifest)).getAsJsonObject();if(spec.get("version").getAsInt()!=1)throw new IOException("scene_clock_manifest_version");
+        if(RuntimeFiles.size(manifest)>64*1024)throw new IOException("scene_clock_manifest_limit");
+        JsonObject spec=JsonParser.parseString(RuntimeFiles.readString(manifest)).getAsJsonObject();if(spec.get("version").getAsInt()!=1)throw new IOException("scene_clock_manifest_version");
         Map<String,byte[]> classes=new HashMap<>();
         for(var entry:spec.getAsJsonObject("classesSha256").entrySet()){
-            String name=entry.getKey();if(!name.matches("[0-9]+"))throw new IOException("scene_clock_class_name");byte[] raw=Files.readAllBytes(runtime.resolve("classes/"+name+".class"));
+            String name=entry.getKey();if(!name.matches("[0-9]+"))throw new IOException("scene_clock_class_name");byte[] raw=RuntimeFiles.read(runtime.resolve("classes/"+name+".class"));
             if(!HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(raw)).equals(entry.getValue().getAsString()))throw new IOException("scene_clock_native_release_changed:"+name);classes.put(name,raw);
         }
         for(String required:List.of("805719214","1231017137","1553688601","1046176253","963945232"))if(!classes.containsKey(required))throw new IOException("scene_clock_unpinned_class:"+required);

@@ -37,7 +37,7 @@ public final class ClientStateAdapter implements AutoCloseable {
             return super.loadClass(name,resolve);
         }
         Class<?> define(String name,byte[] bytes){return defineClass(name,bytes,0,bytes.length);}
-        void resources(Path directory)throws IOException{addURL(directory.toRealPath().toUri().toURL());}
+        void resources(Path directory)throws IOException{addURL(szserver.util.GameResources.url(directory));}
     }
     private final NativeLoader loader;
     private final Map<String,Constructor<?>> factories=new HashMap<>();
@@ -47,20 +47,20 @@ public final class ClientStateAdapter implements AutoCloseable {
 
     public ClientStateAdapter(Path runtime) throws Exception {
         runtime = runtime.toRealPath();NativeItemRulesRelease.verify(runtime);
-        if (!Files.isDirectory(runtime.resolve("classes")))
+        if (!Files.exists(RuntimeFiles.location(runtime.resolve("classes"))))
             throw new IOException("Missing canonical runtime classes: " + runtime);
         // Array call-site guards are tied to reviewed bytecode. Refuse a changed
         // release before using offsets; never weaken a guard on unknown classes.
         for(var entry:Map.of("58006653","fd64415a9bbb69216ee7c3619ccf2968807d55f9bdf8f7d50161fca475b3b600","1046176253","7f85ef4c47654d79b7821d428542f3f745fa67884e90e10a580d1a1c3ebe09cb").entrySet()){
-            String digest=HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(runtime.resolve("classes").resolve(entry.getKey()+".class"))));
+            String digest=HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(RuntimeFiles.read(runtime.resolve("classes").resolve(entry.getKey()+".class"))));
             if(!digest.equals(entry.getValue()))throw new IOException("native_input_guard_release_changed:"+entry.getKey());
         }
         List<URL> urls = new ArrayList<>();
-        urls.add(runtime.resolve("classes").toUri().toURL());
+        urls.add(RuntimeFiles.location(runtime.resolve("classes")).toUri().toURL());
         // Promoted native serialization references the installed FPV packet helper.
         // Loading this classpath does not invoke the client launcher.
-        urls.add(runtime.resolve("bootstrap").toUri().toURL());
-        urls.add(runtime.resolve("libs").toUri().toURL());
+        urls.add(RuntimeFiles.location(runtime.resolve("bootstrap")).toUri().toURL());
+        urls.add(RuntimeFiles.location(runtime.resolve("libs")).toUri().toURL());
         Path dependencies = runtime.resolve("dependencies");
         if (Files.isDirectory(dependencies)) {
             try (var paths = Files.list(dependencies)) {

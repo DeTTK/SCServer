@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "scope": "Real supply constructor names and nine genuine state factories only. No mode selection, renderer, item grant or live object data.",
+  "sources": [
+    {
+      "path": "D:\\StalcraftCustom\\server-java\\fixtures\\item-definitions.json",
+      "sha256": "8bfa03fceec3f86dcf9de19acb27a796c61e200ef036ed74a9ee8f09aa8a5bbe"
+    },
+    {
+      "path": "E:\\\u041f\u0440\u043e\u0435\u043a\u0442\u044b\\SZCustomServer\\var\\registries\\client-current-item-states.json",
+      "sha256": "6c6a6571c978a5acbd0e855e15c3243b4a3238f3015a8b2cdefa5a7fa5d0a61f"
+    },
+    {
+      "path": "E:\\\u041f\u0440\u043e\u0435\u043a\u0442\u044b\\SZCustomServer\\var\\registries\\client-current-item-state-overrides.json",
+      "sha256": "366c389a34a288f1043aa2b498ba5585face629c6cde3d6641a5af9dec52f3de"
+    }
+  ],
+  "runtimeSha256": {
+    "classes/154675812.class": "a6b8b0781cc3c70458df45b8e3892676c512c496daf89f2fc88113b76751ca0e",
+    "classes/1386193703.class": "fe5f2744686cc4b17ad7b07e7c290b260db5f828f73e1e8f042411b515dbd3b3",
+    "classes/211097523.class": "4a9a19a8416399a0a331d3f9ac430c44c00609c9cdf1a503f0d2649c7b12194a",
+    "classes/1366800141.class": "94f14ec8c4ac992b20763969bae2b6ee2bb151ca9eb16e79fac10b46c6453dba",
+    "classes/1058640360.class": "142ba6dc6810cf7d8bac5b08e3e331b752646841e1cda64c0e3bea316be125b6",
+    "classes/283770507.class": "f765de6c5c00dc0c97ec9841e01f2a732af07181d13b0f4d5b9d7f279fb02ac0",
+    "classes/1675043475.class": "4a89df032a9d51facf15be2e269410dde42b349575dc55287b42f2dab9085088",
+    "classes/1536302723.class": "5458231897b4237f175cc23c1f4ffa2aaea43289bfa8c90ddb0f808b0c47d9f6",
+    "classes/1798539107.class": "f6600d5d1e29f4d96acf525c1c4e348f7de5b1f867f0dcd3cf5b7fbfe3c7f3e5",
+    "classes/964863275.class": "0424232b838e6ed4a2b6cce8e7d05b49da2c102e2953914bd41d788b3427ccd7",
+    "classes/1924679062.class": "2bfa58b451c7d850a9824c6cb55db774e986e12ae292678b6332f7522ed9e4e8",
+    "classes/1535556086.class": "f0b08aa3b2143e38d1d37e04d967c079f324e6d74a70d8e217c7be578e38f7c6",
+    "classes/342965638.class": "167a6bd9929a519ae16448f9294625125f2a1654734c696f9920bd7d1ad5d995",
+    "classes/623024217.class": "03ecc7a6cf6c90301dd512a9618480d31be6308a555e29e2eb8d8c594a19c23e",
+    "dependencies/kotlin-stdlib-2.0.20.jar": "fb169596659a518357c4b2c16f43dc75ab1c4980565ed4b4a317a050e5e39006"
+  },
+  "names": {
+    "wpn.arx160": 20110,
+    "wpn.6p62_calldown": 9252,
+    "wpn.flamethrower_calldown": 9250,
+    "wpn.m249_calldown": 9251,
+    "wpn.rg6_calldown": 9255,
+    "wpn.rpg7_calldown": 9253
+  },
+  "states": {
+    "9250": "1535556086",
+    "9251": "1535556086",
+    "9252": "1535556086",
+    "9253": "1535556086",
+    "9255": "1535556086",
+    "17009": "342965638",
+    "20110": "1535556086",
+    "21802": "623024217",
+    "21811": "623024217"
+  }
+}

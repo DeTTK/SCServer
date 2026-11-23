@@ -9,7 +9,7 @@ public final class FpvExplosion {
     public static final String PACKET="1155277618";
     private final byte[] properties;
     public FpvExplosion(Path fixture)throws Exception{
-        properties=Files.readAllBytes(fixture);
+        properties=RuntimeFiles.read(fixture);
         String hash=HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(properties));
         if(!hash.equals("dd2dd9065a8e83300e8a09350db26e0743d3649ba32d9412ee2c9282eac3653b"))throw new IllegalArgumentException("fpv_explosion_profile_changed");
     }

@@ -15,5 +15,5 @@ final class ActorFeedbackRelease {
         "903809321","3ea4f98c116b5c98c9e23a0fbf2b9ec83f00686b393d711782659bb31f8660eb",
         "802519513","e711975fe03e008a0b4b4d937fc8b118d38ecdcd7fd1a0563df4c5a70101984d",
         "1583660016","96b141e39020b07af74631f384eae94c62e232d44564f0a618de9a42506fc2b8");
-    static void verify(Path runtime)throws Exception{for(var e:HASHES.entrySet())if(!HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(runtime.resolve("classes").resolve(e.getKey()+".class")))).equals(e.getValue()))throw new IllegalStateException("actor_feedback_release_mismatch:"+e.getKey());}
+    static void verify(Path runtime)throws Exception{for(var e:HASHES.entrySet())if(!HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(RuntimeFiles.read(runtime.resolve("classes").resolve(e.getKey()+".class")))).equals(e.getValue()))throw new IllegalStateException("actor_feedback_release_mismatch:"+e.getKey());}
 }

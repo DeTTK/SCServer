@@ -11,5 +11,5 @@ final class ActorCarouselRelease {
   "415006645","4cc6952c568a4bcdce6b505c0e29f54d9362710d4be682e94da57684dea6ebc3",
   "1770021764","9f2a3251b0cdf6e414fe61f43122142669b1fc571ac73749b3962e97652b8c60",
   "304663057","fc4084793ab607839724ea4ae6cb3367a2e1200928372c36282df0a71873c562");
- static void verify(Path runtime)throws Exception{for(var e:HASHES.entrySet())if(!HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(runtime.resolve("classes").resolve(e.getKey()+".class")))).equals(e.getValue()))throw new IllegalStateException("actor_carousel_release_mismatch:"+e.getKey());}
+ static void verify(Path runtime)throws Exception{for(var e:HASHES.entrySet())if(!HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(RuntimeFiles.read(runtime.resolve("classes").resolve(e.getKey()+".class")))).equals(e.getValue()))throw new IllegalStateException("actor_carousel_release_mismatch:"+e.getKey());}
 }

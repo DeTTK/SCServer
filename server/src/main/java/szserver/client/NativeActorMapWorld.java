@@ -40,11 +40,11 @@ final class NativeActorMapWorld {
         }
         private Class<?> type(String name)throws ClassNotFoundException{return Class.forName(name,true,loader);}
         private void prepareBlocks(Path runtime,Path path,BiFunction<String,byte[],Class<?>> define)throws Exception {
-            if(Files.size(path)>2*1024*1024)throw new IllegalArgumentException("actor_map_profiles_size");
-            var data=com.google.gson.JsonParser.parseString(Files.readString(path)).getAsJsonObject();
+            if(RuntimeFiles.size(path)>2*1024*1024)throw new IllegalArgumentException("actor_map_profiles_size");
+            var data=com.google.gson.JsonParser.parseString(RuntimeFiles.readString(path)).getAsJsonObject();
             for(var row:data.getAsJsonObject("nativeClasses").entrySet()){
                 if(!row.getKey().matches("[0-9]+"))throw new IllegalArgumentException("actor_map_profile_class");
-                var file=runtime.resolve("classes").resolve(row.getKey()+".class");String actual=HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(file)));
+                var file=runtime.resolve("classes").resolve(row.getKey()+".class");String actual=HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(RuntimeFiles.read(file)));
                 if(!actual.equals(row.getValue().getAsString()))throw new IllegalStateException("actor_map_profile_release:"+row.getKey());
             }
             Class<?> material=type("393979275"),special=type("683052146");Object stone=material.getField("this").get(null);

@@ -53,7 +53,7 @@ final class NativeDeveloperItemsRelease {
         Map.entry("810711645","c1a1bab9445870d6ad293b359b772fc06b2858fb7e707c2a04d7e6e7743540da"),
         Map.entry("815517369","441980294bf71513b7252232280a37e76e52f193a0cc045f534cfddfd84d78f2"),
         Map.entry("895541180","bd180b1fd6157ab982dea7cbb824ec3ba13fd037899d842ec4e3ab8835438771"));
-    private static String sha(Path p)throws Exception{return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(p)));}
+    private static String sha(Path p)throws Exception{return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(RuntimeFiles.read(p)));}
     static void verifyRuntime(Path runtime)throws Exception{for(var row:HASHES.entrySet())if(!sha(runtime.resolve("classes").resolve(row.getKey()+".class")).equals(row.getValue()))throw new IllegalStateException("native_developer_item_release_changed:"+row.getKey());}
     static void verifyDefinitions(Path fixtures)throws Exception{if(!sha(fixtures.resolve("native-developer-item-definitions.json")).equals("9c6ca78f12b7b9578b20c94f613c7b28d3c01e76cb6f6545cfb45fd4434fbadb"))throw new IllegalStateException("native_developer_item_definitions_changed");}
     private NativeDeveloperItemsRelease(){}

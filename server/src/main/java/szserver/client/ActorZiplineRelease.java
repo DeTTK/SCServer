@@ -32,5 +32,5 @@ final class ActorZiplineRelease {
         Map.entry("873944585","f4843893b0326bef628a0ec927ff7b4bfd3605c12417727f67729a7644246e1c"),
         Map.entry("1046176253","7f85ef4c47654d79b7821d428542f3f745fa67884e90e10a580d1a1c3ebe09cb")
     );
-    static void verify(Path runtime)throws Exception{for(var e:HASHES.entrySet())if(!HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(runtime.resolve("classes").resolve(e.getKey()+".class")))).equals(e.getValue()))throw new IllegalStateException("actor_zipline_release_mismatch:"+e.getKey());}
+    static void verify(Path runtime)throws Exception{for(var e:HASHES.entrySet())if(!HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(RuntimeFiles.read(runtime.resolve("classes").resolve(e.getKey()+".class")))).equals(e.getValue()))throw new IllegalStateException("actor_zipline_release_mismatch:"+e.getKey());}
 }

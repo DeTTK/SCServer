@@ -1,0 +1,20 @@
+{
+  "item": 12405,
+  "policy": "once_per_character_projectile_profile",
+  "nativeHealValue": 15,
+  "nativeDurationSeconds": 7,
+  "nativeTarget": "ALLIES",
+  "classHashes": {
+    "1208863283": "fcc64a8f4dd4f53c5d2c92e6dd20fd72ff1a36d7e80dcfb1b1be56ee770f8de7",
+    "1034632910": "8632950869a0f9209b81313bce893040e1cab30077e878c041dd4999db81a245",
+    "1520486269": "80655ac90e7b5ce2de5b49d22f00747af0bef4811050dd4318b7e91b8c473b1b",
+    "1080895182": "ae4071642aa67d94a0172a4e25cc0ce295c823f6298ba84d04060fcb0f7784c2",
+    "456314467": "b14a1389d098275c603e041f174e85bd1a7152249d12f948127f579ae6c23ac8",
+    "850786143": "6a94498e82efc0f6c863396cf75e62290218d2c94f0a9f314764228f84b0426f",
+    "1471738856": "ba8cea3f48227365196136f98fc6faa2ef28ed5171601c10cc24808506cea0aa",
+    "1745055709": "7686dacd05cc52c5a7b22a67b145f0422fde49ed94ce7322f017e4f51c67f358"
+  },
+  "resourceHashes": {
+    "D:\\StalcraftCustom\\server-java\\fixtures\\item-definitions.json": "9a0bd993105021a293ea28bac113ef8adcf92a14f51f0e48a97e5000c058fe1a"
+  }
+}

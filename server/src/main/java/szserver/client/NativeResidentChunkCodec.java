@@ -42,7 +42,7 @@ public final class NativeResidentChunkCodec implements ResidentChunks.Codec<Nati
     NativeResidentChunkCodec(Path runtime,ClassLoader loader,Class<?> host,Object world)throws Exception {
         this.world=Objects.requireNonNull(world);
         for(var entry:HASHES.entrySet()){
-            byte[] bytes=Files.readAllBytes(runtime.resolve("classes").resolve(entry.getKey()+".class"));
+            byte[] bytes=RuntimeFiles.read(runtime.resolve("classes").resolve(entry.getKey()+".class"));
             if(!HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes)).equals(entry.getValue()))throw new IllegalStateException("resident_native_release_changed:"+entry.getKey());
         }
         Class<?> chunk=Class.forName("812508934",true,loader),section=Class.forName("368005700",true,loader),nibble=Class.forName("1425466732",true,loader),worldType=Class.forName("1500514786",true,loader);

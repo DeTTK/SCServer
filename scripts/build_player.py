@@ -1,0 +1,111 @@
+"""Build the complete player payload from a Git checkout and pinned Maven tools.
+
+No installed game, old release bundle, build branch or developer workspace is read.
+The proprietary game ABI and original assets are declared immutable Git inputs;
+all of our Java modules are compiled here from source.
+"""
+from pathlib import Path, PurePosixPath
+import argparse,hashlib,importlib.util,json,os,shutil,subprocess,sys,zipfile
+import build as tools
+
+ROOT=tools.ROOT
+EXPORT='--add-exports=java.base/jdk.internal.org.objectweb.asm=ALL-UNNAMED'
+
+def safe(name):
+    if not name or '\\' in name or ':' in name or any(x in ('','.','..') for x in name.split('/')):raise ValueError('Unsafe input path: '+name)
+    return PurePosixPath(name)
+
+def restore(directory):
+    manifest=json.loads((ROOT/'bootstrap/input-manifest.json').read_text('utf8'))
+    referenced=set()
+    for name,row in manifest['objects'].items():
+        safe(name);target=directory/name;target.parent.mkdir(parents=True,exist_ok=True)
+        digest=hashlib.sha256();size=0
+        with target.open('wb') as out:
+            for part in row['parts']:
+                safe(part)
+                if not part.startswith(('bootstrap/inputs/','map/data/')):raise ValueError('Input prefix')
+                item=manifest['files'][part];body=(ROOT/part).read_bytes();referenced.add(part)
+                if len(body)!=item['size'] or hashlib.sha256(body).hexdigest()!=item['sha256']:raise ValueError('Git input checksum: '+part)
+                out.write(body);digest.update(body);size+=len(body)
+        if size!=row['size'] or digest.hexdigest()!=row['sha256']:raise ValueError('Reconstructed input checksum: '+name)
+    if referenced!=set(manifest['files']):raise ValueError('Unreferenced Git input')
+    return manifest
+
+def copy(source,target):
+    target.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(source,target)
+
+def entries(classes):return {p.relative_to(classes).as_posix():p.read_bytes() for p in classes.rglob('*.class')}
+
+def jar(path,values):
+    path.parent.mkdir(parents=True,exist_ok=True)
+    with zipfile.ZipFile(path,'w',zipfile.ZIP_DEFLATED) as out:
+        for name,body in sorted(values.items()):
+            safe(name);entry=zipfile.ZipInfo(name,(2020,1,1,0,0,0));entry.compress_type=zipfile.ZIP_DEFLATED;out.writestr(entry,body)
+
+def compile_internal(name,sources,build_root):
+    output=build_root/(name+'-classes');output.mkdir(parents=True,exist_ok=False)
+    subprocess.run([tools.tool('javac'),'-source','17','-target','17',EXPORT,'-proc:none','-encoding','UTF-8','-d',str(output),*map(str,sorted(sources))],check=True)
+    return output
+
+def build(output):
+    output=output.resolve()
+    if not output.is_relative_to(ROOT/'build') or output.exists():raise ValueError('Use a new output directory inside checkout/build')
+    output.mkdir(parents=True);inputs=output/'inputs';manifest=restore(inputs)
+    player=output/'player';runtime=player/'Bootstrap/runtime'
+    shutil.copytree(inputs/'runtime',runtime)
+    shutil.copytree(inputs/'java17',player/'Bootstrap/java17')
+    shutil.copytree(inputs/'map',player/'Map')
+    shutil.copytree(inputs/'server',player/'Server')
+    shutil.copytree(inputs/'assets',player/'Server/resources')
+    shutil.copytree(inputs/'asset-overrides',player/'Server/resources/overrides')
+    for p in (inputs/'server-resources').rglob('*'):
+        if p.is_file():copy(p,ROOT/'.local/server-resources'/p.relative_to(inputs/'server-resources'))
+    tools.server(True);tools.completion()
+    copy(ROOT/'build/server.jar',player/'Server/server.jar')
+    copy(ROOT/'desktop/server.template.properties',player/'Server/server.template.properties')
+    for dep in tools.dependencies():copy(dep,player/'Server/lib'/dep.name)
+    copy(ROOT/'build/command-completion.jar',player/'Client/mods/command-completion.jar')
+    libraries=[runtime/'game.jar',runtime/'libraries.jar',*sorted((runtime/'dependencies').glob('*.jar'))]
+    boot=tools.compile_java('player-bootstrap',[*(ROOT/'client/bootstrap').glob('*.java'),*(ROOT/'client/mod-runtime/src').rglob('*.java')],libraries)
+    jar(runtime/'bootstrap.jar',entries(boot))
+    imgui={}
+    for dependency in (runtime/'dependencies').glob('imgui-java-*-1.82.2.jar'):
+        with zipfile.ZipFile(dependency) as z:
+            for name in z.namelist():
+                if name.startswith('imgui/') and name.endswith('.class'):imgui[name]=z.read(name)
+    if not imgui:raise ValueError('Missing pinned ImGui ABI')
+    jar(runtime/'imgui-compat.jar',imgui)
+    lock=json.loads((ROOT/'bootstrap/base.lock.json').read_text('utf8'))
+    spec=importlib.util.spec_from_file_location('delivery',ROOT/'scripts/delivery.py');delivery=importlib.util.module_from_spec(spec);spec.loader.exec_module(delivery)
+    asm,tree,kotlin=[delivery.pinned(lock[name]) for name in ('asm','asmTree','kotlin')]
+    subprocess.run([sys.executable,str(ROOT/'client/startup/build.py'),'--asm',str(asm)],check=True)
+    subprocess.run([sys.executable,str(ROOT/'client-compat/character-scale/build.py')],check=True)
+    for name in ('startup-guard','character-scale'):copy(ROOT/'build'/(name+'.jar'),player/'Client/compat'/(name+'.jar'))
+    spec=importlib.util.spec_from_file_location('compat',ROOT/'client/resource-compat/build.py');compat=importlib.util.module_from_spec(spec);spec.loader.exec_module(compat)
+    classes=tools.compile_java('player-resource-compat',(ROOT/'client/resource-compat/src').rglob('*.java'),[asm,tree,kotlin,*libraries,*tools.dependencies()])
+    cp=os.pathsep.join(map(str,[classes,inputs/'agent-resources',asm,tree,*libraries]))
+    subprocess.run([tools.tool('java'),'-cp',cp,'gamecompat.ResourceSchemaTransformer',str(classes/'gamecompat/MultisetArtefact.class')],check=True)
+    values={n:compat.shade(body) for n,body in entries(classes).items()}
+    for p in (inputs/'agent-resources').rglob('*'):
+        if p.is_file():values[p.relative_to(inputs/'agent-resources').as_posix()]=p.read_bytes()
+    for library in [asm,tree]:
+        with zipfile.ZipFile(library) as z:
+            for n in z.namelist():
+                if n.startswith('org/objectweb/asm/') and n.endswith('.class'):values[n.replace('org/objectweb/asm','gamecompat/shaded/asm')]=compat.shade(z.read(n))
+    values['META-INF/MANIFEST.MF']=b'Manifest-Version: 1.0\nPremain-Class: gamecompat.ResourceCompatibilityAgent\n\n'
+    values['META-INF/LICENSE-ASM.txt']=(ROOT/'client/resource-compat/ASM-LICENSE.txt').read_bytes()
+    jar(player/'Client/compat/game-resource-compat.jar',values)
+    weapon=compile_internal('player-weapon-events',(ROOT/'client/weapon-events/src').glob('*.java'),output);values=entries(weapon)
+    values['META-INF/MANIFEST.MF']=b'Manifest-Version: 1.0\nPremain-Class: ReloadEventAgent\nAgent-Class: MeleeBodyAgent\nCan-Retransform-Classes: true\n\n'
+    jar(player/'Client/compat/weapon-events.jar',values)
+    bridge=compile_internal('player-bridge',(ROOT/'launcher/modules/bridge/src').rglob('*.java'),output);values=entries(bridge)
+    values['META-INF/MANIFEST.MF']=(ROOT/'launcher/modules/bridge/manifest.mf').read_bytes();jar(player/'Bootstrap/bscp-bridge.jar',values)
+    files=[p for p in player.rglob('*') if p.is_file()]
+    if any(p.suffix in ('.class','.ref','.aabb') and 'overrides' not in p.parts for p in files):raise ValueError('Loose research/extracted runtime in payload')
+    report={'runtimeLayout':manifest['runtimeLayout'],'minimumLauncherVersion':'0.4.1','files':len(files),'bytes':sum(p.stat().st_size for p in files),'gitInputFiles':len(manifest['files']),'outsideWorkspaceInputs':False,'prebuiltLocalGameBundles':False}
+    (output/'build-report.json').write_text(json.dumps(report,indent=2)+'\n',encoding='utf8');print(json.dumps(report,indent=2),flush=True)
+    return player
+
+if __name__=='__main__':
+    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--output',type=Path,default=ROOT/'build/player-git');args=parser.parse_args();build(args.output)

@@ -14,10 +14,10 @@ public final class LauncherPackets {
         verifyManifest(root,runtime,"native-launcher.json");
     }
     public static void verifyManifest(Path root,Path runtime,String fixture)throws Exception{
-        var pins=com.google.gson.JsonParser.parseString(Files.readString(root.resolve("fixtures/"+fixture))).getAsJsonObject();
+        var pins=com.google.gson.JsonParser.parseString(RuntimeFiles.readString(root.resolve("fixtures/"+fixture))).getAsJsonObject();
         for(var entry:pins.getAsJsonObject("classHashes").entrySet()){
             String name=entry.getKey();if(!name.matches("[0-9]+"))throw new IOException("launcher_release_class");
-            String hash=HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(runtime.resolve("classes").resolve(name+".class"))));
+            String hash=HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(RuntimeFiles.read(runtime.resolve("classes").resolve(name+".class"))));
             if(!hash.equals(entry.getValue().getAsString()))throw new IOException("launcher_native_release_changed:"+name);
         }
     }

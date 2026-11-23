@@ -1,0 +1,4789 @@
+[
+	{
+		"item_id": 4200,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.bandits",
+		"item_texture": "customisation/backgrounds/background_bandits",
+		"collection": "item.customisation.collection.factions",
+		"image": "stalker:textures/gui/customisation/backgrounds/faction/bandits.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4201,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.stalkers",
+		"item_texture": "customisation/backgrounds/background_stalkers",
+		"collection": "item.customisation.collection.factions",
+		"image": "stalker:textures/gui/customisation/backgrounds/faction/stalkers.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4202,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.merc",
+		"item_texture": "customisation/backgrounds/background_merc",
+		"collection": "item.customisation.collection.factions",
+		"image": "stalker:textures/gui/customisation/backgrounds/faction/merc.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4203,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.duty",
+		"item_texture": "customisation/backgrounds/background_duty",
+		"collection": "item.customisation.collection.factions",
+		"image": "stalker:textures/gui/customisation/backgrounds/faction/duty.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4204,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.freedom",
+		"item_texture": "customisation/backgrounds/background_freedom",
+		"collection": "item.customisation.collection.factions",
+		"image": "stalker:textures/gui/customisation/backgrounds/faction/freedom.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4205,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.covenant",
+		"item_texture": "customisation/backgrounds/background_covenant",
+		"collection": "item.customisation.collection.factions",
+		"image": "stalker:textures/gui/customisation/backgrounds/faction/covenant.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4207,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.summer24",
+		"item_texture": "customisation/backgrounds/background_summer24",
+		"collection": "item.customisation.collection.summer24",
+		"image": "stalker:textures/gui/customisation/backgrounds/season/summer24.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4208,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.autumn24",
+		"collection": "item.customisation.collection.autumn24",
+		"item_texture": "customisation/backgrounds/background_autumn24",
+		"image": "stalker:textures/gui/customisation/backgrounds/season/autumn24.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4209,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.winter25",
+		"collection": "item.customisation.collection.winter25",
+		"item_texture": "customisation/backgrounds/background_winter25",
+		"image": "stalker:textures/gui/customisation/backgrounds/season/winter25.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4210,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.spring25",
+		"collection": "item.customisation.collection.spring25",
+		"item_texture": "customisation/backgrounds/background_spring25",
+		"image": "stalker:textures/gui/customisation/backgrounds/season/spring25.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4211,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.summer25",
+		"collection": "item.customisation.collection.summer25",
+		"item_texture": "customisation/backgrounds/background_summer25",
+		"image": "stalker:textures/gui/customisation/backgrounds/season/summer25.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4212,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.autumn25",
+		"collection": "item.customisation.collection.autumn25",
+		"item_texture": "customisation/backgrounds/background_autumn25",
+		"image": "stalker:textures/gui/customisation/backgrounds/season/autumn25.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4213,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.encaged_1",
+		//"rank": "VETERAN",
+		"collection": "item.customisation.collection.encaged",
+		"item_texture": "customisation/backgrounds/background_encaged_1",
+		"image": "stalker:textures/gui/customisation/backgrounds/event/encaged_1.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4214,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.encaged_2",
+		//"rank": "VETERAN",
+		"collection": "item.customisation.collection.encaged",
+		"item_texture": "customisation/backgrounds/background_encaged_2",
+		"image": "stalker:textures/gui/customisation/backgrounds/event/encaged_2.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4215,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.encaged_3",
+		//"rank": "VETERAN",
+		"collection": "item.customisation.collection.encaged",
+		"item_texture": "customisation/backgrounds/background_encaged_3",
+		"image": "stalker:textures/gui/customisation/backgrounds/event/encaged_3.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4216,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.master_zone",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.storyline",
+		"item_texture": "customisation/backgrounds/background_master_zone",
+		"image": "stalker:textures/gui/customisation/backgrounds/background_master_zone.dds",
+		"image_width": 2120,
+		"image_height": 320,
+		"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4217,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.operations_rat",
+		"rank": "STALKER",
+		"collection": "item.customisation.collection.operations",
+		"item_texture": "customisation/backgrounds/operations/background_operations_rat",
+		"image": "stalker:textures/gui/customisation/backgrounds/operations/background_operations_rat.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4218,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.operations_sniper",
+		"rank": "MASTER",
+		"collection": "item.customisation.collection.operations",
+		"item_texture": "customisation/backgrounds/operations/background_operations_sniper",
+		"image": "stalker:textures/gui/customisation/backgrounds/operations/background_operations_sniper.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4219,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.morgue",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.storyline",
+		"item_texture": "customisation/backgrounds/background_morgue",
+		"image": "stalker:textures/gui/customisation/backgrounds/background_morgue.dds",
+		"image_width": 2120,
+		"image_height": 320,
+		"hidden": true,
+
+		"weight": 0
+	},
+
+	{
+		"item_id": 4220,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.shaman",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.storyline",
+		"item_texture": "customisation/backgrounds/background_shaman",
+		"image": "stalker:textures/gui/customisation/backgrounds/background_shaman.dds",
+		"image_width": 2120,
+		"image_height": 320,
+		"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4221,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.winter26",
+		"collection": "item.customisation.collection.winter26",
+		"item_texture": "customisation/backgrounds/background_winter26",
+		"image": "stalker:textures/gui/customisation/backgrounds/season/winter26.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4222,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.grinch",
+		"rank": "MASTER",
+		"collection": "item.customisation.collection.newyear",
+		"item_texture": "customisation/backgrounds/event/grinch",
+		"image": "stalker:textures/gui/customisation/backgrounds/event/grinch.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4223,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.snegurka",
+		"rank": "STALKER",
+		"collection": "item.customisation.collection.newyear",
+		"item_texture": "customisation/backgrounds/event/snegurka",
+		"image": "stalker:textures/gui/customisation/backgrounds/event/snegurka.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4224,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.coldline",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.newyear",
+		"item_texture": "customisation/backgrounds/event/coldline",
+		"image": "stalker:textures/gui/customisation/backgrounds/event/coldline.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4225,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.dmz26_1",
+		"rank": "MASTER",
+		"collection": "item.customisation.collection.dmz26",
+		"item_texture": "customisation/backgrounds/dmz26/background_dmz26_1",
+		"image": "stalker:textures/gui/customisation/backgrounds/dmz26/background_dmz26_1.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4226,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.dmz26_2",
+		"rank": "STALKER",
+		"collection": "item.customisation.collection.dmz26",
+		"item_texture": "customisation/backgrounds/dmz26/background_dmz26_2",
+		"image": "stalker:textures/gui/customisation/backgrounds/dmz26/background_dmz26_2.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4227,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.dmz26_3",
+		"collection": "item.customisation.collection.dmz26",
+		"rank": "MASTER",
+		"item_texture": "customisation/backgrounds/dmz26/background_dmz26_3",
+		"image": "stalker:textures/gui/customisation/backgrounds/dmz26/background_dmz26_3.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4228,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.dmz26_4",
+		"rank": "STALKER",
+		"collection": "item.customisation.collection.dmz26",
+		"item_texture": "customisation/backgrounds/dmz26/background_dmz26_4",
+		"image": "stalker:textures/gui/customisation/backgrounds/dmz26/background_dmz26_4.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4229,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.spring26",
+		"rank": "STALKER",
+		"collection": "item.customisation.collection.spring26",
+		"item_texture": "customisation/backgrounds/background_spring26",
+		"image": "stalker:textures/gui/customisation/backgrounds/season/spring26.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4230,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.operations_drone",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.operations",
+		"item_texture": "customisation/backgrounds/operations/background_operations_drone",
+		"image": "stalker:textures/gui/customisation/backgrounds/operations/background_operations_drone.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+
+	{
+		"item_id": 4231,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.mk_burelom",
+		"rank": "MASTER",
+		"collection": "item.customisation.collection.mk",
+		"item_texture": "customisation/backgrounds/mk/burelom",
+		"image": "stalker:textures/gui/customisation/backgrounds/mk/burelom.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4232,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.mk_torpeda",
+		"rank": "STALKER",
+		"collection": "item.customisation.collection.mk",
+		"item_texture": "customisation/backgrounds/mk/torpeda",
+		"image": "stalker:textures/gui/customisation/backgrounds/mk/torpeda.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4233,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.blitz_trucks",
+		"rank": "VETERAN",
+		//"collection": "item.customisation.collection.blitz",
+		"item_texture": "customisation/backgrounds/blitz/trucks",
+		"image": "stalker:textures/gui/customisation/backgrounds/blitz/trucks.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4234,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.blitz_fight",
+		"name": "item.plc.background.blitz_fights.name",
+		"rank": "VETERAN",
+		//"collection": "item.customisation.collection.blitz",
+		"item_texture": "customisation/backgrounds/blitz/fight",
+		"image": "stalker:textures/gui/customisation/backgrounds/blitz/fight.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4235,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.mt_map",
+		"rank": "VETERAN",
+		//"collection": "item.customisation.collection.blitz",
+		"item_texture": "customisation/backgrounds/mt/map",
+		"image": "stalker:textures/gui/customisation/backgrounds/mt/map.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4236,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.mt_field",
+		"rank": "MASTER",
+		//"collection": "item.customisation.collection.blitz",
+		"item_texture": "customisation/backgrounds/mt/field",
+		"image": "stalker:textures/gui/customisation/backgrounds/mt/field.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+
+	{
+		"item_id": 4237,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.mt_wood",
+		"rank": "VETERAN",
+		//"collection": "item.customisation.collection.blitz",
+		"item_texture": "customisation/backgrounds/mt/wood",
+		"image": "stalker:textures/gui/customisation/backgrounds/mt/wood.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4238,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.cosplay_veteran",
+		"rank": "VETERAN",
+		"item_texture": "customisation/backgrounds/cosplay_contest/violet",
+		"image": "stalker:textures/gui/customisation/backgrounds/cosplay_contest/violet.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4239,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.cosplay_master",
+		"rank": "MASTER",
+		"item_texture": "customisation/backgrounds/cosplay_contest/red",
+		"image": "stalker:textures/gui/customisation/backgrounds/cosplay_contest/red.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4240,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.cosplay_legend",
+		"rank": "LEGEND",
+		"item_texture": "customisation/backgrounds/cosplay_contest/golden",
+		"image": "stalker:textures/gui/customisation/backgrounds/cosplay_contest/golden.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4241,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.summer26",
+		"rank": "STALKER",
+		"collection": "item.customisation.collection.summer26",
+		"item_texture": "customisation/backgrounds/summer26",
+		"image": "stalker:textures/gui/customisation/backgrounds/season/summer26.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4242,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.autumn26",
+		"rank": "NEWBIE",
+		"collection": "item.customisation.collection.autumn26",
+		"item_texture": "customisation/backgrounds/background_autumn26",
+		"image": "stalker:textures/gui/customisation/backgrounds/season/autumn26.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4300,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.premium_1",
+		"name": "item.plc.background.premium.name",
+		"rank": "LEGEND",
+		"collection": "item.customisation.collection.premium",
+		//"item_texture": "customisation/backgrounds/background_premium_1",
+		"image": "stalker:textures/gui/customisation/backgrounds/background_premium_1.dds",
+		"image_width": 2120,
+		"image_height": 320,
+		"ownership_type": "premium",
+
+		"weight": 0
+	},
+	{
+		"item_id": 4301,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.premium_2",
+		"name": "item.plc.background.premium.name",
+		"rank": "LEGEND",
+		"collection": "item.customisation.collection.premium",
+		//"item_texture": "customisation/backgrounds/background_premium_2",
+		"image": "stalker:textures/gui/customisation/backgrounds/background_premium_2.dds",
+		"image_width": 2120,
+		"image_height": 320,
+		"ownership_type": "premium",
+
+		"weight": 0
+	},
+	{
+		"item_id": 4302,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.premium_3",
+		"name": "item.plc.background.premium.name",
+		"rank": "LEGEND",
+		"collection": "item.customisation.collection.premium",
+		//"item_texture": "customisation/backgrounds/background_premium_3",
+		"image": "stalker:textures/gui/customisation/backgrounds/background_premium_3.dds",
+		"image_width": 2120,
+		"image_height": 320,
+		"ownership_type": "premium",
+
+		"weight": 0
+	},
+	{
+		"item_id": 4303,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.murzya",
+		"rank": "STALKER",
+		"collection": "item.customisation.collection.newyear",
+		"item_texture": "customisation/backgrounds/event/murzya",
+		"image": "stalker:textures/gui/customisation/backgrounds/event/murzya.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4304,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.newyear26_1",
+		"collection": "item.customisation.collection.newyear",
+		"item_texture": "customisation/backgrounds/event/newyear26_1",
+		"image": "stalker:textures/gui/customisation/backgrounds/event/newyear26_1.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+
+	{
+		"item_id": 4305,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.newyear26_2",
+		"collection": "item.customisation.collection.newyear",
+		"item_texture": "customisation/backgrounds/event/newyear26_2",
+		"image": "stalker:textures/gui/customisation/backgrounds/event/newyear26_2.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+
+	{
+		"item_id": 4306,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.newyear26_3",
+		"collection": "item.customisation.collection.newyear",
+		"item_texture": "customisation/backgrounds/event/newyear26_3",
+		"image": "stalker:textures/gui/customisation/backgrounds/event/newyear26_3.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4307,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.na_flag",
+		"rank": "MASTER",
+		//"collection": "item.customisation.collection.na",
+		"item_texture": "customisation/backgrounds/na/flag",
+		"image": "stalker:textures/gui/customisation/backgrounds/na/flag.dds",
+		"image_width": 2120,
+		"image_height": 320,
+		"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4308,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.triumph26_bar",
+		"rank": "MASTER",
+		"collection": "item.customisation.collection.triumph26",
+		"item_texture": "customisation/backgrounds/triumph26/bar",
+		"image": "stalker:textures/gui/customisation/backgrounds/triumph26/bar.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+
+	{
+		"item_id": 4309,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.nea_flag",
+		"rank": "VETERAN",
+		//"collection": "item.customisation.collection.na",
+		"item_texture": "customisation/backgrounds/nea/flag",
+		"image": "stalker:textures/gui/customisation/backgrounds/nea/flag.dds",
+		"image_width": 2120,
+		"image_height": 320,
+		"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4310,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.nea_flower",
+		"rank": "MASTER",
+		//"collection": "item.customisation.collection.na",
+		"item_texture": "customisation/backgrounds/nea/flower",
+		"image": "stalker:textures/gui/customisation/backgrounds/nea/flower.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4311,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.prestige_wall",
+		"rank": "MASTER",
+		"collection": "item.customisation.collection.prestige",
+		"item_texture": "customisation/backgrounds/prestige/wall",
+		"image": "stalker:textures/gui/customisation/backgrounds/prestige/wall.dds",
+		"image_width": 2120,
+		"image_height": 320,
+		"weight": 0
+	},
+	{
+		"item_id": 4312,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.prestige_horror",
+		"rank": "MASTER",
+		"collection": "item.customisation.collection.prestige",
+		"item_texture": "customisation/backgrounds/prestige/horror",
+		"image": "stalker:textures/gui/customisation/backgrounds/prestige/horror.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4313,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.prestige_chill",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.prestige",
+		"item_texture": "customisation/backgrounds/prestige/chill",
+		"image": "stalker:textures/gui/customisation/backgrounds/prestige/chill.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4314,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.prestige_son",
+		"rank": "NEWBIE",
+		"collection": "item.customisation.collection.prestige",
+		"item_texture": "customisation/backgrounds/prestige/son",
+		"image": "stalker:textures/gui/customisation/backgrounds/prestige/son.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+
+	{
+		"item_id": 4315,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.electroshtorm",
+		"rank": "MASTER",
+		"collection": "item.customisation.collection.electroshtorm",
+		"item_texture": "customisation/backgrounds/electroshtorm26/electroshtorm_bg",
+		"image": "stalker:textures/gui/customisation/backgrounds/electroshtorm26/electroshtorm_bg.dds",
+		"image_width": 2120,
+		"image_height": 320,
+		"weight": 0
+	},
+	{
+		"item_id": 4316,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.bureau26",
+		"rank": "STALKER",
+		"collection": "item.customisation.collection.bureau",
+		"item_texture": "customisation/backgrounds/bureau/background_bureau26",
+		"image": "stalker:textures/gui/customisation/backgrounds/bureau/background_bureau26.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4317,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.prestige_crimson_raid",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.prestige",
+		"item_texture": "customisation/backgrounds/prestige/crimson_raid",
+		"image": "stalker:textures/gui/customisation/backgrounds/prestige/crimson_raid.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4318,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.prestige_golden_raid",
+		"rank": "MASTER",
+		"collection": "item.customisation.collection.prestige",
+		"item_texture": "customisation/backgrounds/prestige/golden_raid",
+		"image": "stalker:textures/gui/customisation/backgrounds/prestige/golden_raid.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4319,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.arena_raven26",
+		"item_texture": "customisation/backgrounds/arena_raven26/lamb_bg",
+		"image": "stalker:textures/gui/customisation/backgrounds/arena_raven26/lamb_bg.dds",
+		"image_width": 2120,
+		"image_height": 320,
+		"weight": 0
+	},
+
+	{
+		"item_id": 4320,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.scstore_a26_merc",
+		"description": "item.plc.scstore_a26.description",
+		"collection": "item.customisation.collection.scstore",
+		"item_texture": "customisation/backgrounds/scstore/scstore_a26_merc",
+		"image": "stalker:textures/gui/customisation/backgrounds/scstore/scstore_a26_merc.dds",
+		"image_width": 2120,
+		"image_height": 320,
+		"weight": 0
+	},
+	{
+		"item_id": 4321,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.scstore_a26_duty",
+		"description": "item.plc.scstore_a26.description",
+		"collection": "item.customisation.collection.scstore",
+		"item_texture": "customisation/backgrounds/scstore/scstore_a26_duty",
+		"image": "stalker:textures/gui/customisation/backgrounds/scstore/scstore_a26_duty.dds",
+		"image_width": 2120,
+		"image_height": 320,
+		"weight": 0
+	},
+	{
+		"item_id": 4322,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.scstore_a26_freedom",
+		"description": "item.plc.scstore_a26.description",
+		"collection": "item.customisation.collection.scstore",
+		"item_texture": "customisation/backgrounds/scstore/scstore_a26_freedom",
+		"image": "stalker:textures/gui/customisation/backgrounds/scstore/scstore_a26_freedom.dds",
+		"image_width": 2120,
+		"image_height": 320,
+		"weight": 0
+	},
+	{
+		"item_id": 4323,
+		"type": "player_card/background",
+		"unlocalized_name": "plc.background.scstore_a26_covenant",
+		"description": "item.plc.scstore_a26.description",
+		"collection": "item.customisation.collection.scstore",
+		"item_texture": "customisation/backgrounds/scstore/scstore_a26_covenant",
+		"image": "stalker:textures/gui/customisation/backgrounds/scstore/scstore_a26_covenant.dds",
+		"image_width": 2120,
+		"image_height": 320,
+		"weight": 0
+	},
+	// ==================== patterns
+	{
+		"item_id": 4500,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.bandits",
+		"collection": "item.customisation.collection.factions",
+		"item_texture": "customisation/patterns/pattern_bandits",
+		"image": "stalker:textures/gui/customisation/patterns/faction/bandits.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"default_style": "bandits",
+		"can_apply_styles": true,
+		"compatible_styles": ["bandits","black"],
+
+		"weight": 0
+	},
+	{
+		"item_id": 4501,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.stalkers",
+		"collection": "item.customisation.collection.factions",
+		"item_texture": "customisation/patterns/pattern_stalkers",
+		"image": "stalker:textures/gui/customisation/patterns/faction/stalkers.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"default_style": "stalkers",
+		"can_apply_styles": true,
+		"compatible_styles": ["stalkers","white", "black"],
+
+		"weight": 0
+	},
+	{
+		"item_id": 4502,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.merc",
+		"rank": "NEWBIE",
+		"collection": "item.customisation.collection.factions",
+		"item_texture": "customisation/patterns/pattern_merc",
+		"image": "stalker:textures/gui/customisation/patterns/faction/merc.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"default_style": "merc",
+		"can_apply_styles": true,
+		"compatible_styles": ["merc", "white", "black"],
+
+		"weight": 0
+	},
+	{
+		"item_id": 4503,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.duty",
+		"rank": "NEWBIE",
+		"collection": "item.customisation.collection.factions",
+		"item_texture": "customisation/patterns/pattern_duty",
+		"image": "stalker:textures/gui/customisation/patterns/faction/duty.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"default_style": "duty",
+		"can_apply_styles": true,
+		"compatible_styles": ["duty","white", "black"],
+
+		"weight": 0
+	},
+	{
+		"item_id": 4504,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.freedom",
+		"rank": "NEWBIE",
+		"collection": "item.customisation.collection.factions",
+		"item_texture": "customisation/patterns/pattern_freedom",
+		"image": "stalker:textures/gui/customisation/patterns/faction/freedom.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"default_style": "freedom",
+		"can_apply_styles": true,
+		"compatible_styles": ["freedom","white", "black"],
+
+		"weight": 0
+	},
+	{
+		"item_id": 4505,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.covenant",
+		"rank": "NEWBIE",
+		"collection": "item.customisation.collection.factions",
+		"item_texture": "customisation/patterns/pattern_covenant",
+		"image": "stalker:textures/gui/customisation/patterns/faction/covenant.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"default_style": "covenant",
+		"can_apply_styles": true,
+		"compatible_styles": ["covenant","white", "black"],
+
+		"weight": 0
+	},
+	{
+		"item_id": 4507,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.summer24",
+		"rank": "STALKER",
+		"collection": "item.customisation.collection.summer24",
+		"item_texture": "customisation/patterns/pattern_summer24",
+		"image": "stalker:textures/gui/customisation/patterns/season/summer24.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"default_style": "summer24_base",
+		"can_apply_styles": true,
+		"compatible_styles": ["summer24_base", "black", "white"],
+
+		"weight": 0
+	},
+	{
+		"item_id": 4508,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.autumn24",
+		"rank": "STALKER",
+		"collection": "item.customisation.collection.autumn24",
+		"item_texture": "customisation/patterns/pattern_autumn24",
+		"image": "stalker:textures/gui/customisation/patterns/season/autumn24.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4509,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.winter25",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.winter25",
+		"item_texture": "customisation/patterns/pattern_winter25",
+		"image": "stalker:textures/gui/customisation/patterns/season/winter25.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4510,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.spring25",
+		"rank": "STALKER",
+		"collection": "item.customisation.collection.spring25",
+		"item_texture": "customisation/patterns/pattern_spring25",
+		"image": "stalker:textures/gui/customisation/patterns/season/spring25.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"default_style": "spring25_base",
+		"can_apply_styles": true,
+		"compatible_styles": ["spring25_base","spring25_variant"/*, "white"*/],
+
+		"weight": 0
+	},
+	{
+		"item_id": 4511,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.summer25",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.summer25",
+		"item_texture": "customisation/patterns/pattern_summer25",
+		"image": "stalker:textures/gui/customisation/patterns/season/summer25.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4512,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.autumn25",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.autumn25",
+		"item_texture": "customisation/patterns/pattern_autumn25",
+		"image": "stalker:textures/gui/customisation/patterns/season/autumn25.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4513,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.encaged_1",
+		"rank": "NEWBIE",
+		"collection": "item.customisation.collection.encaged",
+		"item_texture": "customisation/patterns/pattern_encaged_1",
+		"image": "stalker:textures/gui/customisation/patterns/event/encaged_1.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4514,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.encaged_2",
+		"rank": "STALKER",
+		"collection": "item.customisation.collection.encaged",
+		"item_texture": "customisation/patterns/pattern_encaged_2",
+		"image": "stalker:textures/gui/customisation/patterns/event/encaged_2.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},/*
+	{
+		"item_id": 4515,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.encaged_3",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.encaged",
+		"item_texture": "customisation/patterns/pattern_encaged_3",
+		"image": "stalker:textures/gui/customisation/patterns/event/encaged_3.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},*/
+	{
+		"item_id": 4516,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.master_zone",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.storyline",
+		"item_texture": "customisation/patterns/pattern_master_zone",
+		"image": "stalker:textures/gui/customisation/patterns/pattern_master_zone.dds",
+		"image_width": 2120,
+		"image_height": 320,
+		"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4517,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.operations_rat",
+		"rank": "STALKER",
+		"collection": "item.customisation.collection.operations",
+		"item_texture": "customisation/patterns/operations/pattern_operations_rat",
+		"image": "stalker:textures/gui/customisation/patterns/operations/pattern_operations_rat.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4518,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.operations_sniper",
+		"rank": "STALKER",
+		"collection": "item.customisation.collection.operations",
+		"item_texture": "customisation/patterns/operations/pattern_operations_sniper",
+		"image": "stalker:textures/gui/customisation/patterns/operations/pattern_operations_sniper.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+
+	{
+		"item_id": 4519,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.morgue",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.storyline",
+		"item_texture": "customisation/patterns/pattern_morgue",
+		"image": "stalker:textures/gui/customisation/patterns/pattern_morgue.dds",
+		"image_width": 2120,
+		"image_height": 320,
+		"hidden": true,
+
+		"weight": 0
+	},
+
+	{
+		"item_id": 4520,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.shaman",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.storyline",
+		"item_texture": "customisation/patterns/pattern_shaman",
+		"image": "stalker:textures/gui/customisation/patterns/pattern_shaman.dds",
+		"image_width": 2120,
+		"image_height": 320,
+		"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4521,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.winter26",
+		"rank": "STALKER",
+		"collection": "item.customisation.collection.winter26",
+		"item_texture": "customisation/patterns/pattern_winter26",
+		"image": "stalker:textures/gui/customisation/patterns/season/winter26.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4522,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.grinch",
+		"rank": "STALKER",
+		"collection": "item.customisation.collection.newyear",
+		"item_texture": "customisation/patterns/event/grinch",
+		"image": "stalker:textures/gui/customisation/patterns/event/grinch.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+
+	{
+		"item_id": 4523,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.snegurka",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.newyear",
+		"item_texture": "customisation/patterns/event/snegurka",
+		"image": "stalker:textures/gui/customisation/patterns/event/snegurka.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+
+	{
+		"item_id": 4524,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.coldline",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.newyear",
+		"item_texture": "customisation/patterns/event/coldline",
+		"image": "stalker:textures/gui/customisation/patterns/event/coldline.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4525,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.dmz26_1",
+		"rank": "MASTER",
+		"collection": "item.customisation.collection.dmz26",
+		"item_texture": "customisation/patterns/dmz26/pattern_dmz26_1",
+		"image": "stalker:textures/gui/customisation/patterns/dmz26/pattern_dmz26_1.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4526,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.dmz26_2",
+		"rank": "MASTER",
+		"collection": "item.customisation.collection.dmz26",
+		"item_texture": "customisation/patterns/dmz26/pattern_dmz26_2",
+		"image": "stalker:textures/gui/customisation/patterns/dmz26/pattern_dmz26_2.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4527,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.dmz26_3",
+		"rank": "MASTER",
+		"collection": "item.customisation.collection.dmz26",
+		"item_texture": "customisation/patterns/dmz26/pattern_dmz26_3",
+		"image": "stalker:textures/gui/customisation/patterns/dmz26/pattern_dmz26_3.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4528,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.dmz26_4",
+		"rank": "MASTER",
+		"collection": "item.customisation.collection.dmz26",
+		"item_texture": "customisation/patterns/dmz26/pattern_dmz26_4",
+		"image": "stalker:textures/gui/customisation/patterns/dmz26/pattern_dmz26_4.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4529,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.spring26",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.spring26",
+		"item_texture": "customisation/patterns/pattern_spring26",
+		"image": "stalker:textures/gui/customisation/patterns/season/spring26.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4530,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.operations_drone",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.operations",
+		"item_texture": "customisation/patterns/operations/pattern_operations_drone",
+		"image": "stalker:textures/gui/customisation/patterns/operations/pattern_operations_drone.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+
+	{
+		"item_id": 4531,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.mk_burelom",
+		"rank": "MASTER",
+		"collection": "item.customisation.collection.mk",
+		"item_texture": "customisation/patterns/mk/burelom",
+		"image": "stalker:textures/gui/customisation/patterns/mk/burelom.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+
+	{
+		"item_id": 4532,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.mk_torpeda",
+		"rank": "STALKER",
+		"collection": "item.customisation.collection.mk",
+		"item_texture": "customisation/patterns/mk/torpeda",
+		"image": "stalker:textures/gui/customisation/patterns/mk/torpeda.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4533,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.blitz_trucks",
+		"rank": "STALKER",
+		//"collection": "item.customisation.collection.blitz",
+		"item_texture": "customisation/patterns/blitz/trucks",
+		"image": "stalker:textures/gui/customisation/patterns/blitz/trucks.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+
+	{
+		"item_id": 4534,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.blitz_fight",
+		"name": "item.plc.pattern.blitz_fights.name",
+		"rank": "MASTER",
+		//"collection": "item.customisation.collection.blitz",
+		"item_texture": "customisation/patterns/blitz/fight",
+		"image": "stalker:textures/gui/customisation/patterns/blitz/fight.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4535,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.mt_maneuvers",
+		"rank": "VETERAN",
+		//"collection": "item.customisation.collection.blitz",
+		"item_texture": "customisation/patterns/mt/maneuvers",
+		"image": "stalker:textures/gui/customisation/patterns/mt/maneuvers.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4536,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.mt_rain",
+		"rank": "STALKER",
+		//"collection": "item.customisation.collection.blitz",
+		"item_texture": "customisation/patterns/mt/rain",
+		"image": "stalker:textures/gui/customisation/patterns/mt/rain.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4537,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.mt_grass",
+		"rank": "VETERAN",
+		//"collection": "item.customisation.collection.blitz",
+		"item_texture": "customisation/patterns/mt/grass",
+		"image": "stalker:textures/gui/customisation/patterns/mt/grass.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	
+	{
+		"item_id": 4538,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.cosplay_veteran",
+		"rank": "VETERAN",
+		"item_texture": "customisation/patterns/cosplay_contest/violet",
+		"image": "stalker:textures/gui/customisation/patterns/cosplay_contest/violet.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4539,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.cosplay_master",
+		"rank": "MASTER",
+		"item_texture": "customisation/patterns/cosplay_contest/red",
+		"image": "stalker:textures/gui/customisation/patterns/cosplay_contest/red.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4540,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.cosplay_legend",
+		"rank": "LEGEND",
+		"item_texture": "customisation/patterns/cosplay_contest/golden",
+		"image": "stalker:textures/gui/customisation/patterns/cosplay_contest/golden.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4541,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.summer26",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.summer26",
+		"item_texture": "customisation/patterns/summer26",
+		"image": "stalker:textures/gui/customisation/patterns/season/summer26.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4542,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.autumn26",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.autumn26",
+		"item_texture": "customisation/patterns/pattern_autumn26",
+		"image": "stalker:textures/gui/customisation/patterns/season/autumn26.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+
+
+	{
+		"item_id": 4600,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.premium_1",
+		"name": "item.plc.pattern.premium.name",
+		"rank": "LEGEND",
+		"collection": "item.customisation.collection.premium",
+		//"item_texture": "customisation/patterns/pattern_premium_1",
+		"image": "stalker:textures/gui/customisation/patterns/pattern_premium_1.dds",
+		"image_width": 2120,
+		"image_height": 320,
+		"ownership_type": "premium",
+
+		"strokes": [
+			{
+				"type": "horizontal-gradient",
+				"thickness": 3,
+				"start": "FF4E3012",
+				"center": "FFB3874A",
+				"end": "FF4E3012"
+			},
+			{
+				"type": "vertical-gradient",
+				"thickness": 1.5,
+				"start": "FFFFC26E",
+				"center": "FFA27740",
+				"end": "FF3F270F"
+			}
+		],
+
+		"weight": 0
+	},
+	{
+		"item_id": 4601,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.premium_2",
+		"name": "item.plc.pattern.premium.name",
+		"rank": "LEGEND",
+		"collection": "item.customisation.collection.premium",
+		//"item_texture": "customisation/patterns/pattern_premium_2",
+		"image": "stalker:textures/gui/customisation/patterns/pattern_premium_2.dds",
+		"image_width": 2120,
+		"image_height": 320,
+		"ownership_type": "premium",
+
+		"strokes": [
+			{
+				"type": "horizontal-gradient",
+				"thickness": 3,
+				"start": "FF4E3012",
+				"center": "FFB3874A",
+				"end": "FF4E3012"
+			},
+			{
+				"type": "vertical-gradient",
+				"thickness": 1.5,
+				"start": "FFFFC26E",
+				"center": "FFA27740",
+				"end": "FF3F270F"
+			}
+		],
+
+		"weight": 0
+	},
+	{
+		"item_id": 4602,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.premium_3",
+		"name": "item.plc.pattern.premium.name",
+		"rank": "LEGEND",
+		"collection": "item.customisation.collection.premium",
+		//"item_texture": "customisation/patterns/pattern_premium_3",
+		"image": "stalker:textures/gui/customisation/patterns/pattern_premium_3.dds",
+		"image_width": 2120,
+		"image_height": 320,
+		"ownership_type": "premium",
+
+		"strokes": [
+			{
+				"type": "horizontal-gradient",
+				"thickness": 3,
+				"start": "FF4E3012",
+				"center": "FFB3874A",
+				"end": "FF4E3012"
+			},
+			{
+				"type": "vertical-gradient",
+				"thickness": 1.5,
+				"start": "FFFFC26E",
+				"center": "FFA27740",
+				"end": "FF3F270F"
+			}
+		],
+
+		"weight": 0
+	},
+	{
+		"item_id": 4603,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.premium_4",
+		"name": "item.plc.pattern.premium.name",
+		"rank": "LEGEND",
+		"collection": "item.customisation.collection.premium",
+		//"item_texture": "customisation/patterns/pattern_premium_4",
+		"image": "stalker:textures/gui/customisation/patterns/pattern_premium_4.dds",
+		"image_width": 2120,
+		"image_height": 320,
+		"ownership_type": "premium",
+
+		"strokes": [
+			{
+				"type": "horizontal-gradient",
+				"thickness": 3,
+				"start": "FF4E3012",
+				"center": "FFB3874A",
+				"end": "FF4E3012"
+			},
+			{
+				"type": "vertical-gradient",
+				"thickness": 1.5,
+				"start": "FFFFC26E",
+				"center": "FFA27740",
+				"end": "FF3F270F"
+			}
+		],
+
+		"weight": 0
+	},
+	{
+		"item_id": 4604,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.premium_5",
+		"name": "item.plc.pattern.premium.name",
+		"rank": "LEGEND",
+		"collection": "item.customisation.collection.premium",
+		//"item_texture": "customisation/patterns/pattern_premium_5",
+		"image": "stalker:textures/gui/customisation/patterns/pattern_premium_5.dds",
+		"image_width": 2120,
+		"image_height": 320,
+		//"ownership_type": "premium",
+		"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4605,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.murzya",
+		"rank": "STALKER",
+		"collection": "item.customisation.collection.newyear",
+		"item_texture": "customisation/patterns/event/murzya",
+		"image": "stalker:textures/gui/customisation/patterns/event/murzya.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+
+	{
+		"item_id": 4606,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.newyear26_1",
+		"rank": "STALKER",
+		"collection": "item.customisation.collection.newyear",
+		"item_texture": "customisation/patterns/event/newyear26_1",
+		"image": "stalker:textures/gui/customisation/patterns/event/newyear26_1.dds",
+		"image_width": 2120,
+		"image_height": 320,
+		"hidden": true,
+
+		"strokes": [
+			{
+				"type": "horizontal-gradient",
+				"thickness": 3,
+				"start": "FFFEE3BE",
+				"center": "FFFEE3BE",
+				"end": "FFFEE3BE"
+			},
+			{
+				"type": "vertical-gradient",
+				"thickness": 1.5,
+				"start": "FF343E6E",
+				"center": "FF343E6E",
+				"end": "FF343E6E"
+			}
+		],
+
+		"weight": 0
+	},
+	{
+		"item_id": 4607,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.newyear26_2",
+		"rank": "STALKER",
+		"collection": "item.customisation.collection.newyear",
+		"item_texture": "customisation/patterns/event/newyear26_2",
+		"image": "stalker:textures/gui/customisation/patterns/event/newyear26_2.dds",
+		"image_width": 2120,
+		"image_height": 320,
+		"hidden": true,
+
+		"strokes": [
+			{
+				"type": "horizontal-gradient",
+				"thickness": 6,
+				"start": "FFFEE3BE",
+				"center": "FFFEE3BE",
+				"end": "FFFEE3BE"
+			},
+			{
+				"type": "horizontal-gradient",
+				"thickness": 3,
+				"start": "FF7EA67E",
+				"center": "FF7EA67E",
+				"end": "FF7EA67E"
+			}
+		],
+
+		"weight": 0
+	},
+
+	{
+		"item_id": 4608,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.newyear26_3",
+		"rank": "STALKER",
+		"collection": "item.customisation.collection.newyear",
+		"item_texture": "customisation/patterns/event/newyear26_3",
+		"image": "stalker:textures/gui/customisation/patterns/event/newyear26_3.dds",
+		"image_width": 2120,
+		"image_height": 320,
+		"hidden": true,
+
+		"strokes": [
+			{
+				"type": "horizontal-gradient",
+				"thickness": 6,
+				"start": "FFFEE3BE",
+				"center": "FFFEE3BE",
+				"end": "FFFEE3BE"
+			},
+			{
+				"type": "horizontal-gradient",
+				"thickness": 3,
+				"start": "FF343E6E",
+				"center": "FF343E6E",
+				"end": "FF343E6E"
+			}
+		],
+
+		"weight": 0
+	},
+	{
+		"item_id": 4609,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.newyear26_4",
+		"rank": "STALKER",
+		"collection": "item.customisation.collection.newyear",
+		"item_texture": "customisation/patterns/event/newyear26_4",
+		"image": "stalker:textures/gui/customisation/patterns/event/newyear26_4.dds",
+		"image_width": 2120,
+		"image_height": 320,
+		"hidden": true,
+		"strokes": [
+			{
+				"type": "horizontal-gradient",
+				"thickness": 6,
+				"start": "FFFEE3BE",
+				"center": "FFFEE3BE",
+				"end": "FFFEE3BE"
+			},
+			{
+				"type": "horizontal-gradient",
+				"thickness": 3,
+				"start": "FF343E6E",
+				"center": "FF343E6E",
+				"end": "FF343E6E"
+			}
+		],
+
+		"weight": 0
+	},
+	{
+		"item_id": 4610,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.newyear26_5",
+		"rank": "STALKER",
+		"collection": "item.customisation.collection.newyear",
+		"item_texture": "customisation/patterns/event/newyear26_5",
+		"image": "stalker:textures/gui/customisation/patterns/event/newyear26_5.dds",
+		"image_width": 2120,
+		"image_height": 320,
+		"hidden": true,
+
+		"strokes": [
+			{
+				"type": "horizontal-gradient",
+				"thickness": 6,
+				"start": "FFFDE2BD",
+				"center": "FFFDE2BD",
+				"end": "FFFDE2BD"
+			},
+			{
+				"type": "horizontal-gradient",
+				"thickness": 3,
+				"start": "FF567656",
+				"center": "FF567656",
+				"end": "FF567656"
+			}
+		],
+
+
+		"weight": 0
+	},
+	{
+		"item_id": 4611,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.newyear26_6",
+		"rank": "STALKER",
+		"collection": "item.customisation.collection.newyear",
+		"item_texture": "customisation/patterns/event/newyear26_6",
+		"image": "stalker:textures/gui/customisation/patterns/event/newyear26_6.dds",
+		"image_width": 2120,
+		"image_height": 320,
+		"hidden": true,
+
+		"strokes": [
+			{
+				"type": "horizontal-gradient",
+				"thickness": 6,
+				"start": "FF396356",
+				"center": "FF396356",
+				"end": "FF396356"
+			},
+			{
+				"type": "horizontal-gradient",
+				"thickness": 3,
+				"start": "FF7EA67E",
+				"center": "FF7EA67E",
+				"end": "FF7EA67E"
+			}
+		],
+
+		"weight": 0
+	},
+	{
+		"item_id": 4612,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.newyear26_7",
+		"rank": "STALKER",
+		"collection": "item.customisation.collection.newyear",
+		"item_texture": "customisation/patterns/event/newyear26_7",
+		"image": "stalker:textures/gui/customisation/patterns/event/newyear26_7.dds",
+		"image_width": 2120,
+		"image_height": 320,
+		"hidden": true,
+
+		"strokes": [
+			{
+				"type": "horizontal-gradient",
+				"thickness": 6,
+				"start": "FF7EA67E",
+				"center": "FF7EA67E",
+				"end": "FF7EA67E"
+			},
+			{
+				"type": "horizontal-gradient",
+				"thickness": 3,
+				"start": "FF343E6E",
+				"center": "FF343E6E",
+				"end": "FF343E6E"
+			}
+		],
+
+
+
+		"weight": 0
+	},
+	{
+		"item_id": 4613,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.newyear26_8",
+		"rank": "STALKER",
+		"collection": "item.customisation.collection.newyear",
+		"item_texture": "customisation/patterns/event/newyear26_8",
+		"image": "stalker:textures/gui/customisation/patterns/event/newyear26_8.dds",
+		"image_width": 2120,
+		"image_height": 320,
+		"hidden": true,
+
+		"strokes": [
+			{
+				"type": "horizontal-gradient",
+				"thickness": 6,
+				"start": "FFFDE3BE",
+				"center": "FFFDE3BE",
+				"end": "FFFDE3BE"
+			},
+			{
+				"type": "horizontal-gradient",
+				"thickness": 3,
+				"start": "FF343E6E",
+				"center": "FF343E6E",
+				"end": "FF343E6E"
+			}
+		],
+
+
+		"weight": 0
+	},
+	{
+		"item_id": 4614,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.na_stripes",
+		"rank": "VETERAN",
+		//"collection": "item.customisation.collection.na",
+		"item_texture": "customisation/patterns/na/stripes",
+		"image": "stalker:textures/gui/customisation/patterns/na/stripes.dds",
+		"image_width": 2120,
+		"image_height": 320,
+		"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4615,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.na_guns",
+		"rank": "VETERAN",
+		//"collection": "item.customisation.collection.na",
+		"item_texture": "customisation/patterns/na/guns",
+		"image": "stalker:textures/gui/customisation/patterns/na/guns.dds",
+		"image_width": 2120,
+		"image_height": 320,
+		"hidden": true,
+
+		"weight": 0
+	},
+	
+	{
+		"item_id": 4616,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.triumph26_cross",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.triumph26",
+		"item_texture": "customisation/patterns/triumph26/cross",
+		"image": "stalker:textures/gui/customisation/patterns/triumph26/cross.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4617,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.nea_ornament",
+		"rank": "VETERAN",
+		//"collection": "item.customisation.collection.na",
+		"item_texture": "customisation/patterns/nea/ornament",
+		"image": "stalker:textures/gui/customisation/patterns/nea/ornament.dds",
+		"image_width": 2120,
+		"image_height": 320,
+		"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4618,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.nea_leaves",
+		"rank": "VETERAN",
+		//"collection": "item.customisation.collection.na",
+		"item_texture": "customisation/patterns/nea/leaves",
+		"image": "stalker:textures/gui/customisation/patterns/nea/leaves.dds",
+		"image_width": 2120,
+		"image_height": 320,
+		"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4619,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.prestige_man",
+		"rank": "MASTER",
+		"collection": "item.customisation.collection.prestige",
+		"item_texture": "customisation/patterns/prestige/man",
+		"image": "stalker:textures/gui/customisation/patterns/prestige/man.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4620,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.prestige_eye",
+		"rank": "MASTER",
+		"collection": "item.customisation.collection.prestige",
+		"item_texture": "customisation/patterns/prestige/eye",
+		"image": "stalker:textures/gui/customisation/patterns/prestige/eye.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+
+	{
+		"item_id": 4621,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.prestige_arrows",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.prestige",
+		"item_texture": "customisation/patterns/prestige/arrows",
+		"image": "stalker:textures/gui/customisation/patterns/prestige/arrows.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+
+	{
+		"item_id": 4622,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.prestige_chill",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.prestige",
+		"item_texture": "customisation/patterns/prestige/chill",
+		"image": "stalker:textures/gui/customisation/patterns/prestige/chill.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4623,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.bureau26",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.bureau",
+		"item_texture": "customisation/patterns/bureau/pattern_bureau26",
+		"image": "stalker:textures/gui/customisation/patterns/bureau/pattern_bureau26.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+
+	{
+		"item_id": 4624,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.electroshtorm",
+		"rank": "MASTER",
+		"collection": "item.customisation.collection.electroshtorm",
+		"item_texture": "customisation/patterns/electroshtorm26/electroshtorm2026_pattern",
+		"image": "stalker:textures/gui/customisation/patterns/electroshtorm26/electroshtorm2026_pattern.dds",
+		"image_width": 2120,
+		"image_height": 320,
+		"weight": 0 //,
+
+		//"duplicate_currency": "summer_26_electrostorm_episode",
+		//"duplicate_amount": 4000,
+		//"duplicate_mail_text": "mail.message.customization.duplicate_compensation.title"
+	},
+	{
+		"item_id": 4625,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.prestige_interference",
+		"rank": "MASTER",
+		"collection": "item.customisation.collection.prestige",
+		"item_texture": "customisation/patterns/prestige/interference",
+		"image": "stalker:textures/gui/customisation/patterns/prestige/interference.dds",
+		"image_width": 2120,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4626,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.arena_raven26",
+		"item_texture": "customisation/patterns/arena_raven26/lamb_pattern",
+		"image": "stalker:textures/gui/customisation/patterns/arena_raven26/lamb_pattern.dds",
+		"image_width": 2120,
+		"image_height": 320,
+		"weight": 0
+	},
+	{
+		"item_id": 4627,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.scstore_a26_merc",
+		"description": "item.plc.scstore_a26.description",
+		"collection": "item.customisation.collection.scstore",
+		"item_texture": "customisation/patterns/scstore/scstore_a26_merc",
+		"image": "stalker:textures/gui/customisation/patterns/scstore/scstore_a26_merc.dds",
+		"image_width": 2120,
+		"image_height": 320,
+		"weight": 0
+	},
+	{
+		"item_id": 4628,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.scstore_a26_duty",
+		"description": "item.plc.scstore_a26.description",
+		"collection": "item.customisation.collection.scstore",
+		"item_texture": "customisation/patterns/scstore/scstore_a26_duty",
+		"image": "stalker:textures/gui/customisation/patterns/scstore/scstore_a26_duty.dds",
+		"image_width": 2120,
+		"image_height": 320,
+		"weight": 0
+	},
+	{
+		"item_id": 4629,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.scstore_a26_freedom",
+		"description": "item.plc.scstore_a26.description",
+		"collection": "item.customisation.collection.scstore",
+		"item_texture": "customisation/patterns/scstore/scstore_a26_freedom",
+		"image": "stalker:textures/gui/customisation/patterns/scstore/scstore_a26_freedom.dds",
+		"image_width": 2120,
+		"image_height": 320,
+		"weight": 0
+	},
+	{
+		"item_id": 4630,
+		"type": "player_card/pattern",
+		"unlocalized_name": "plc.pattern.scstore_a26_covenant",
+		"description": "item.plc.scstore_a26.description",
+		"collection": "item.customisation.collection.scstore",
+		"item_texture": "customisation/patterns/scstore/scstore_a26_covenant",
+		"image": "stalker:textures/gui/customisation/patterns/scstore/scstore_a26_covenant.dds",
+		"image_width": 2120,
+		"image_height": 320,
+		"weight": 0
+	},
+	// =========== stickers
+	{
+		"item_id": 4800,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.bandits",
+		"collection": "item.customisation.collection.factions",
+		"item_texture": "customisation/stickers/sticker_bandits",
+		"image": "stalker:textures/gui/customisation/stickers/faction/bandits.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"default_style": "bandits",
+		"can_apply_styles": true,
+		"compatible_styles": ["bandits"],
+
+		"weight": 0
+	},
+	{
+		"item_id": 4801,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.stalkers",
+		"collection": "item.customisation.collection.factions",
+		"item_texture": "customisation/stickers/sticker_stalkers",
+		"image": "stalker:textures/gui/customisation/stickers/faction/stalkers.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"default_style": "stalkers",
+		"can_apply_styles": true,
+		"compatible_styles": ["stalkers","white"],
+
+		"weight": 0
+	},
+	{
+		"item_id": 4802,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.merc",
+		"rank": "NEWBIE",
+		"collection": "item.customisation.collection.factions",
+		"item_texture": "customisation/stickers/sticker_merc",
+		"image": "stalker:textures/gui/customisation/stickers/faction/merc.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"default_style": "merc",
+		"can_apply_styles": true,
+		"compatible_styles": ["merc","white"],
+
+		"weight": 0
+	},
+	{
+		"item_id": 4803,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.duty",
+		"rank": "NEWBIE",
+		"collection": "item.customisation.collection.factions",
+		"item_texture": "customisation/stickers/sticker_duty",
+		"image": "stalker:textures/gui/customisation/stickers/faction/duty.dds",
+		"image_width": 320,
+		"image_height": 320 ,
+
+		"default_style": "duty",
+		"can_apply_styles": true,
+		"compatible_styles": ["duty","white"],
+
+		"weight": 0
+	},
+	{
+		"item_id": 4804,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.freedom",
+		"rank": "NEWBIE",
+		"collection": "item.customisation.collection.factions",
+		"item_texture": "customisation/stickers/sticker_freedom",
+		"image": "stalker:textures/gui/customisation/stickers/faction/freedom.dds",
+		"image_width": 320,
+		"image_height": 320 ,
+
+		"default_style": "freedom",
+		"can_apply_styles": true,
+		"compatible_styles": ["freedom","white"],
+
+		"weight": 0
+	},
+	{
+		"item_id": 4805,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.covenant",
+		"rank": "NEWBIE",
+		"collection": "item.customisation.collection.factions",
+		"item_texture": "customisation/stickers/sticker_covenant",
+		"image": "stalker:textures/gui/customisation/stickers/faction/covenant.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"default_style": "covenant",
+		"can_apply_styles": true,
+		"compatible_styles": ["covenant","white"],
+
+		"weight": 0
+	},
+	{
+		"item_id": 4807,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.summer24",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.summer24",
+		"item_texture": "customisation/stickers/sticker_summer24",
+		"image": "stalker:textures/gui/customisation/stickers/season/summer24.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"default_style": "summer24_base",
+		"can_apply_styles": true,
+		"compatible_styles": ["summer24_base","white"],
+
+		"weight": 0
+	},
+	{
+		"item_id": 4808,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.autumn24",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.autumn24",
+		"item_texture": "customisation/stickers/sticker_autumn24",
+		"image": "stalker:textures/gui/customisation/stickers/season/autumn24.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"default_style": "autumn24_base",
+		"can_apply_styles": true,
+		"compatible_styles": ["autumn24_base","white"],
+
+		"weight": 0
+	},
+	{
+		"item_id": 4809,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.winter25",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.winter25",
+		"item_texture": "customisation/stickers/sticker_winter25",
+		"image": "stalker:textures/gui/customisation/stickers/season/winter25.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"default_style": "winter25_base",
+		"can_apply_styles": true,
+		"compatible_styles": ["winter25_base","white"],
+
+		"weight": 0
+	},
+	{
+		"item_id": 4810,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.spring25",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.spring25",
+		"item_texture": "customisation/stickers/sticker_spring25",
+		"image": "stalker:textures/gui/customisation/stickers/season/spring25.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"default_style": "spring25_base",
+		"can_apply_styles": true,
+		"compatible_styles": ["spring25_base","spring25_variant","white"],
+
+		"weight": 0
+	},
+	{
+		"item_id": 4811,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.summer25",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.summer25",
+		"item_texture": "customisation/stickers/sticker_summer25",
+		"image": "stalker:textures/gui/customisation/stickers/season/summer25.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"default_style": "summer25_base",
+		"can_apply_styles": true,
+		"compatible_styles": ["summer25_base","white"],
+
+		"weight": 0
+	},
+	{
+		"item_id": 4812,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.autumn25",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.autumn25",
+		"item_texture": "customisation/stickers/sticker_autumn25",
+		"image": "stalker:textures/gui/customisation/stickers/season/autumn25.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4813,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.encaged_hunter",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.encaged",
+		"item_texture": "customisation/stickers/sticker_encaged_1",
+		"image": "stalker:textures/gui/customisation/stickers/event/encaged_1.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4814,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.encaged_sucker",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.encaged",
+		"item_texture": "customisation/stickers/sticker_encaged_2",
+		"image": "stalker:textures/gui/customisation/stickers/event/encaged_2.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4815,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.encaged_lock",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.encaged",
+		"item_texture": "customisation/stickers/sticker_encaged_3",
+		"image": "stalker:textures/gui/customisation/stickers/event/encaged_3.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4816,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.master_zone",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.storyline",
+		"item_texture": "customisation/stickers/sticker_master_zone",
+		"image": "stalker:textures/gui/customisation/stickers/sticker_master_zone.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4817,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.operations_rat",
+		"rank": "STALKER",
+		"collection": "item.customisation.collection.operations",
+		"item_texture": "customisation/stickers/operations/sticker_operations_rat",
+		"image": "stalker:textures/gui/customisation/stickers/operations/sticker_operations_rat.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4818,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.operations_sniper",
+		"rank": "STALKER",
+		"collection": "item.customisation.collection.operations",
+		"item_texture": "customisation/stickers/operations/sticker_operations_sniper",
+		"image": "stalker:textures/gui/customisation/stickers/operations/sticker_operations_sniper.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"weight": 0
+	},
+
+	{
+		"item_id": 4819,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.morgue",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.storyline",
+		"item_texture": "customisation/stickers/sticker_morgue",
+		"image": "stalker:textures/gui/customisation/stickers/sticker_morgue.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4820,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.shaman",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.storyline",
+		"item_texture": "customisation/stickers/sticker_shaman",
+		"image": "stalker:textures/gui/customisation/stickers/sticker_shaman.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"hidden": true,
+		"weight": 0
+	},
+	{
+		"item_id": 4821,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.winter26",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.winter26",
+		"item_texture": "customisation/stickers/sticker_winter26",
+		"image": "stalker:textures/gui/customisation/stickers/season/winter26.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4822,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.grinch",
+		"rank": "MASTER",
+		"collection": "item.customisation.collection.newyear",
+		"item_texture": "customisation/stickers/event/grinch",
+		"image": "stalker:textures/gui/customisation/stickers/event/grinch.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4823,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.snegurka",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.newyear",
+		"item_texture": "customisation/stickers/event/snegurka",
+		"image": "stalker:textures/gui/customisation/stickers/event/snegurka.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4824,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.coldline",
+		"rank": "MASTER",
+		"collection": "item.customisation.collection.newyear",
+		"item_texture": "customisation/stickers/event/coldline",
+		"image": "stalker:textures/gui/customisation/stickers/event/coldline.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4825,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.dmz26_1",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.dmz26",
+		"item_texture": "customisation/stickers/dmz26/sticker_dmz26_1",
+		"image": "stalker:textures/gui/customisation/stickers/dmz26/sticker_dmz26_1.dds",
+		"image_width": 320,
+		"image_height": 320,
+		//"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4826,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.dmz26_2",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.dmz26",
+		"item_texture": "customisation/stickers/dmz26/sticker_dmz26_2",
+		"image": "stalker:textures/gui/customisation/stickers/dmz26/sticker_dmz26_2.dds",
+		"image_width": 320,
+		"image_height": 320,
+		//"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4827,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.dmz26_3_heli",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.dmz26",
+		"item_texture": "customisation/stickers/dmz26/sticker_dmz26_3_heli",
+		"image": "stalker:textures/gui/customisation/stickers/dmz26/sticker_dmz26_3_heli.dds",
+		"image_width": 320,
+		"image_height": 320,
+		//"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4828,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.dmz26_4",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.dmz26",
+		"item_texture": "customisation/stickers/dmz26/sticker_dmz26_4",
+		"image": "stalker:textures/gui/customisation/stickers/dmz26/sticker_dmz26_4.dds",
+		"image_width": 320,
+		"image_height": 320,
+		//"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4829,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.spring26",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.spring26",
+		"item_texture": "customisation/stickers/sticker_spring26",
+		"image": "stalker:textures/gui/customisation/stickers/season/spring26.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4830,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.operations_drone",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.operations",
+		"item_texture": "customisation/stickers/operations/operations_drone",
+		"image": "stalker:textures/gui/customisation/stickers/operations/operations_drone.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4831,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.mk_burelom",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.mk",
+		"item_texture": "customisation/stickers/mk/burelom",
+		"image": "stalker:textures/gui/customisation/stickers/mk/burelom.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"weight": 0
+	},
+
+	{
+		"item_id": 4832,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.mk_torpeda",
+		"rank": "STALKER",
+		"collection": "item.customisation.collection.mk",
+		"item_texture": "customisation/stickers/mk/torpeda",
+		"image": "stalker:textures/gui/customisation/stickers/mk/torpeda.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4833,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.blitz_trucks",
+		"rank": "STALKER",
+		//"collection": "item.customisation.collection.blitz",
+		"item_texture": "customisation/stickers/blitz/tank",
+		"image": "stalker:textures/gui/customisation/stickers/blitz/tank.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"weight": 0
+	},
+
+	{
+		"item_id": 4834,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.blitz_fight",
+		"name": "item.plc.sticker.blitz_fights.name",
+		"rank": "STALKER",
+		//"collection": "item.customisation.collection.blitz",
+		"item_texture": "customisation/stickers/blitz/duck",
+		"image": "stalker:textures/gui/customisation/stickers/blitz/duck.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"weight": 0
+	},
+
+	{
+		"item_id": 4835,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.mt_arrow",
+		"rank": "STALKER",
+		"item_texture": "customisation/stickers/mt/arrow",
+		"image": "stalker:textures/gui/customisation/stickers/mt/arrow.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4836,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.mt_tank",
+		"rank": "STALKER",
+		"item_texture": "customisation/stickers/mt/tank",
+		"image": "stalker:textures/gui/customisation/stickers/mt/tank.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4837,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.mt_mushroom",
+		"rank": "STALKER",
+		"item_texture": "customisation/stickers/mt/mushroom",
+		"image": "stalker:textures/gui/customisation/stickers/mt/mushroom.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4838,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.cosplay_sign",
+		"rank": "STALKER",
+		"item_texture": "customisation/stickers/cosplay_contest/sign",
+		"image": "stalker:textures/gui/customisation/stickers/cosplay_contest/sign.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4841,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.summer26_1",
+		"name": "item.plc.sticker.summer26.name",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.summer26",
+		"item_texture": "customisation/stickers/summer26_1",
+		"image": "stalker:textures/gui/customisation/stickers/season/summer26_1.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"weight": 0
+	},
+
+	{
+		"item_id": 4842,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.autumn26",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.autumn26",
+		"item_texture": "customisation/stickers/autumn26",
+		"image": "stalker:textures/gui/customisation/stickers/season/autumn26.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4900,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.arcade_1",
+		"rank": "PICKLOCK",
+		"collection": "item.customisation.collection.battlefields",
+		"item_texture": "customisation/stickers/sticker_arcade_1",
+		"image": "stalker:textures/gui/customisation/stickers/arcade/arcade_1.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4901,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.arcade_5",
+		"rank": "PICKLOCK",
+		"collection": "item.customisation.collection.battlefields",
+		"item_texture": "customisation/stickers/sticker_arcade_5",
+		"image": "stalker:textures/gui/customisation/stickers/arcade/arcade_5.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4902,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.arcade_15",
+		"rank": "NEWBIE",
+		"collection": "item.customisation.collection.battlefields",
+		"item_texture": "customisation/stickers/sticker_arcade_15",
+		"image": "stalker:textures/gui/customisation/stickers/arcade/arcade_15.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4903,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.arcade_35",
+		"rank": "STALKER",
+		"collection": "item.customisation.collection.battlefields",
+		"item_texture": "customisation/stickers/sticker_arcade_35",
+		"image": "stalker:textures/gui/customisation/stickers/arcade/arcade_35.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4904,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.arcade_75",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.battlefields",
+		"item_texture": "customisation/stickers/sticker_arcade_75",
+		"image": "stalker:textures/gui/customisation/stickers/arcade/arcade_75.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4905,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.arcade_150",
+		"rank": "MASTER",
+		"collection": "item.customisation.collection.battlefields",
+		"item_texture": "customisation/stickers/sticker_arcade_150",
+		"image": "stalker:textures/gui/customisation/stickers/arcade/arcade_150.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4906,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.arcade_220",
+		"rank": "MASTER",
+		"collection": "item.customisation.collection.battlefields",
+		"item_texture": "customisation/stickers/sticker_arcade_220",
+		"image": "stalker:textures/gui/customisation/stickers/arcade/arcade_220.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4907,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.arcade_300",
+		"rank": "LEGEND",
+		"collection": "item.customisation.collection.battlefields",
+		"item_texture": "customisation/stickers/sticker_arcade_300",
+		"image": "stalker:textures/gui/customisation/stickers/arcade/arcade_300.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4908,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.square",
+		"item_texture": "customisation/stickers/sticker_square",
+		"image": "stalker:textures/gui/customisation/stickers/sticker_square.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"can_apply_styles": true,
+		"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4909,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.rectangle",
+		"item_texture": "customisation/stickers/sticker_rectangle",
+		"image": "stalker:textures/gui/customisation/stickers/sticker_rectangle.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"can_apply_styles": true,
+		"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4910,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.sphere",
+		"item_texture": "customisation/stickers/sticker_sphere",
+		"image": "stalker:textures/gui/customisation/stickers/sticker_sphere.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"can_apply_styles": true,
+		"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4911,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.triangle",
+		"item_texture": "customisation/stickers/sticker_triangle",
+		"image": "stalker:textures/gui/customisation/stickers/sticker_triangle.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"can_apply_styles": true,
+		"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4912,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.line",
+		"item_texture": "customisation/stickers/sticker_line",
+		"image": "stalker:textures/gui/customisation/stickers/sticker_line.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"can_apply_styles": true,
+		"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4913,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.youtube",
+		"collection": "item.customisation.collection.media",
+		"item_texture": "customisation/stickers/sticker_youtube",
+		"image": "stalker:textures/gui/customisation/stickers/media/youtube.dds",
+		"image_width": 320,
+		"image_height": 320,
+		//"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4914,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.vk",
+		"collection": "item.customisation.collection.media",
+		"item_texture": "customisation/stickers/sticker_vk",
+		"image": "stalker:textures/gui/customisation/stickers/media/vk.dds",
+		"image_width": 320,
+		"image_height": 320,
+		//"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4915,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.twitch",
+		"collection": "item.customisation.collection.media",
+		"item_texture": "customisation/stickers/sticker_twitch",
+		"image": "stalker:textures/gui/customisation/stickers/media/twitch.dds",
+		"image_width": 320,
+		"image_height": 320,
+		//"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4916,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.blackraid_picklock",
+		"collection": "item.customisation.collection.blackraid",
+		"additional_stats_tip": "item.plc.not_avaible.additional_stats_tip",
+		"item_texture": "customisation/stickers/sticker_blackraid_picklock",
+		"image": "stalker:textures/gui/customisation/stickers/event/blackraid_picklock.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4917,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.blackraid_newbie",
+		"rank": "NEWBIE",
+		"additional_stats_tip": "item.plc.not_avaible.additional_stats_tip",
+		"collection": "item.customisation.collection.blackraid",
+		"item_texture": "customisation/stickers/sticker_blackraid_newbie",
+		"image": "stalker:textures/gui/customisation/stickers/event/blackraid_newbie.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4918,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.blackraid_stalker",
+		"rank": "STALKER",
+		"additional_stats_tip": "item.plc.not_avaible.additional_stats_tip",
+		"collection": "item.customisation.collection.blackraid",
+		"item_texture": "customisation/stickers/sticker_blackraid_stalker",
+		"image": "stalker:textures/gui/customisation/stickers/event/blackraid_stalker.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4919,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.blackraid_veteran",
+		"rank": "VETERAN",
+		"additional_stats_tip": "item.plc.not_avaible.additional_stats_tip",
+		"collection": "item.customisation.collection.blackraid",
+		"item_texture": "customisation/stickers/sticker_blackraid_veteran",
+		"image": "stalker:textures/gui/customisation/stickers/event/blackraid_veteran.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4920,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.blackraid_master",
+		"rank": "MASTER",
+		"additional_stats_tip": "item.plc.not_avaible.additional_stats_tip",
+		"collection": "item.customisation.collection.blackraid",
+		"item_texture": "customisation/stickers/sticker_blackraid_master",
+		"image": "stalker:textures/gui/customisation/stickers/event/blackraid_master.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4921,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.blackraid_legend",
+		"rank": "LEGEND",
+		"additional_stats_tip": "item.plc.not_avaible.additional_stats_tip",
+		"collection": "item.customisation.collection.blackraid",
+		"item_texture": "customisation/stickers/sticker_blackraid_legend",
+		"image": "stalker:textures/gui/customisation/stickers/event/blackraid_legend.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4923,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.premium",
+		"rank": "LEGEND",
+		"collection": "item.customisation.collection.premium",
+		"item_texture": "customisation/stickers/sticker_premium",
+		"image": "stalker:textures/gui/customisation/stickers/sticker_premium.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"ownership_type": "premium",
+
+		"weight": 0
+	},
+	{
+		"item_id": 4924,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.inside_picklock",
+		"collection": "item.customisation.collection.inside",
+		"additional_stats_tip": "item.plc.not_avaible.additional_stats_tip",
+		"item_texture": "customisation/stickers/sticker_inside_picklock",
+		"image": "stalker:textures/gui/customisation/stickers/event/inside_picklock.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4925,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.inside_newbie",
+		"rank": "NEWBIE",
+		"additional_stats_tip": "item.plc.not_avaible.additional_stats_tip",
+		"collection": "item.customisation.collection.inside",
+		"item_texture": "customisation/stickers/sticker_inside_newbie",
+		"image": "stalker:textures/gui/customisation/stickers/event/inside_newbie.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4926,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.inside_stalker",
+		"rank": "STALKER",
+		"additional_stats_tip": "item.plc.not_avaible.additional_stats_tip",
+		"collection": "item.customisation.collection.inside",
+		"item_texture": "customisation/stickers/sticker_inside_stalker",
+		"image": "stalker:textures/gui/customisation/stickers/event/inside_stalker.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4927,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.inside_veteran",
+		"rank": "VETERAN",
+		"additional_stats_tip": "item.plc.not_avaible.additional_stats_tip",
+		"collection": "item.customisation.collection.inside",
+		"item_texture": "customisation/stickers/sticker_inside_veteran",
+		"image": "stalker:textures/gui/customisation/stickers/event/inside_veteran.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4928,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.inside_master",
+		"rank": "MASTER",
+		"additional_stats_tip": "item.plc.not_avaible.additional_stats_tip",
+		"collection": "item.customisation.collection.inside",
+		"item_texture": "customisation/stickers/sticker_inside_master",
+		"image": "stalker:textures/gui/customisation/stickers/event/inside_master.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4929,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.inside_legend",
+		"rank": "LEGEND",
+		"additional_stats_tip": "item.plc.not_avaible.additional_stats_tip",
+		"collection": "item.customisation.collection.inside",
+		"item_texture": "customisation/stickers/sticker_inside_legend",
+		"image": "stalker:textures/gui/customisation/stickers/event/inside_legend.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4930,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.tiktok",
+		"collection": "item.customisation.collection.media",
+		"item_texture": "customisation/stickers/sticker_tiktok",
+		"image": "stalker:textures/gui/customisation/stickers/media/tiktok.dds",
+		"image_width": 320,
+		"image_height": 320,
+		//"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4931,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.scstore_elbrus",
+		"collection": "item.customisation.collection.scstore",
+		"item_texture": "customisation/stickers/scstore/elbrus",
+		"image": "stalker:textures/gui/customisation/stickers/scstore/elbrus.dds",
+		"image_width": 320,
+		"image_height": 320,
+		//"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4932,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.scstore_jiden",
+		"collection": "item.customisation.collection.scstore",
+		"item_texture": "customisation/stickers/scstore/jiden",
+		"image": "stalker:textures/gui/customisation/stickers/scstore/jiden.dds",
+		"image_width": 320,
+		"image_height": 320,
+		//"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4933,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.scstore_kisel",
+		"collection": "item.customisation.collection.scstore",
+		"item_texture": "customisation/stickers/scstore/kisel",
+		"image": "stalker:textures/gui/customisation/stickers/scstore/kisel.dds",
+		"image_width": 320,
+		"image_height": 320,
+		//"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4934,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.scstore_protector",
+		"collection": "item.customisation.collection.scstore",
+		"item_texture": "customisation/stickers/scstore/protector",
+		"image": "stalker:textures/gui/customisation/stickers/scstore/protector.dds",
+		"image_width": 320,
+		"image_height": 320,
+		//"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4935,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.scstore_sosal",
+		"collection": "item.customisation.collection.scstore",
+		"item_texture": "customisation/stickers/scstore/sosal",
+		"image": "stalker:textures/gui/customisation/stickers/scstore/sosal.dds",
+		"image_width": 320,
+		"image_height": 320,
+		//"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4936,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.newyeartree_snow",
+		"rank": "PICKLOCK",
+		"collection": "item.customisation.collection.newyeartree",
+		"item_texture": "customisation/stickers/event/newyear_snow",
+		"image": "stalker:textures/gui/customisation/stickers/event/newyear_snow.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4937,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.newyeartree_wooden",
+		"rank": "NEWBIE",
+		"collection": "item.customisation.collection.newyeartree",
+		"item_texture": "customisation/stickers/event/newyear_wooden",
+		"image": "stalker:textures/gui/customisation/stickers/event/newyear_wooden.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4938,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.newyeartree_bronze",
+		"rank": "STALKER",
+		"collection": "item.customisation.collection.newyeartree",
+		"item_texture": "customisation/stickers/event/newyear_bronze",
+		"image": "stalker:textures/gui/customisation/stickers/event/newyear_bronze.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4939,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.newyeartree_silver",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.newyeartree",
+		"item_texture": "customisation/stickers/event/newyear_silver",
+		"image": "stalker:textures/gui/customisation/stickers/event/newyear_silver.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4940,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.newyeartree_golden",
+		"rank": "MASTER",
+		"collection": "item.customisation.collection.newyeartree",
+		"item_texture": "customisation/stickers/event/newyear_golden",
+		"image": "stalker:textures/gui/customisation/stickers/event/newyear_golden.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4941,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.newyeartree_ice",
+		"rank": "LEGEND",
+		"collection": "item.customisation.collection.newyeartree",
+		"item_texture": "customisation/stickers/event/newyear_ice",
+		"image": "stalker:textures/gui/customisation/stickers/event/newyear_ice.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4942,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.murzya_1",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.newyear",
+		"item_texture": "customisation/stickers/event/murzya_1",
+		"image": "stalker:textures/gui/customisation/stickers/event/murzya_1.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"hidden": true,
+
+		"weight": 0
+	},
+
+	{
+		"item_id": 4943,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.murzya_2",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.newyear",
+		"item_texture": "customisation/stickers/event/murzya_2",
+		"image": "stalker:textures/gui/customisation/stickers/event/murzya_2.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"hidden": true,
+
+		"weight": 0
+	},
+
+	{
+		"item_id": 4944,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.murzya_3",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.newyear",
+		"item_texture": "customisation/stickers/event/murzya_3",
+		"image": "stalker:textures/gui/customisation/stickers/event/murzya_3.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4945,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.coldline_2",
+		"rank": "MASTER",
+		"collection": "item.customisation.collection.newyear",
+		"item_texture": "customisation/stickers/event/coldline_2",
+		"image": "stalker:textures/gui/customisation/stickers/event/coldline_2.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4946,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.newyear_2026",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.newyear",
+		"item_texture": "customisation/stickers/event/newyear_2026",
+		"image": "stalker:textures/gui/customisation/stickers/event/newyear_2026.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"hidden": true,
+
+		"default_style": "newyear2026_2",
+		"can_apply_styles": true,
+		"compatible_styles": ["newyear2026_1", "newyear2026_2", "newyear2026_3", "newyear2026_4", "newyear2026_5", "newyear2026_6", "newyear2026_7"],
+
+		"weight": 0
+	},
+	{
+		"item_id": 4947,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.telegram",
+		"collection": "item.customisation.collection.media",
+		"item_texture": "customisation/stickers/sticker_tg",
+		"image": "stalker:textures/gui/customisation/stickers/media/tg.dds",
+		"image_width": 320,
+		"image_height": 320,
+		//"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4948,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.dmz26_boral",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.dmz26",
+		"item_texture": "customisation/stickers/dmz26/chevron_dmz26_boral",
+		"image": "stalker:textures/gui/customisation/stickers/dmz26/chevron_dmz26_boral.dds",
+		"image_width": 320,
+		"image_height": 320,
+		//"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4949,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.dmz26_grenade",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.dmz26",
+		"item_texture": "customisation/stickers/dmz26/chevron_dmz26_grenade",
+		"image": "stalker:textures/gui/customisation/stickers/dmz26/chevron_dmz26_grenade.dds",
+		"image_width": 320,
+		"image_height": 320,
+		//"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4950,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.dmz26_pacifist",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.dmz26",
+		"item_texture": "customisation/stickers/dmz26/chevron_dmz26_pacifist",
+		"image": "stalker:textures/gui/customisation/stickers/dmz26/chevron_dmz26_pacifist.dds",
+		"image_width": 320,
+		"image_height": 320,
+		//"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4951,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.dmz26_to_boral",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.dmz26",
+		"item_texture": "customisation/stickers/dmz26/chevron_dmz26_to_boral",
+		"image": "stalker:textures/gui/customisation/stickers/dmz26/chevron_dmz26_to_boral.dds",
+		"image_width": 320,
+		"image_height": 320,
+		//"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4952,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.dmz26_caption",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.dmz26",
+		"item_texture": "customisation/stickers/dmz26/sticker_dmz26_3_caption",
+		"image": "stalker:textures/gui/customisation/stickers/dmz26/sticker_dmz26_3_caption.dds",
+		"image_width": 320,
+		"image_height": 320,
+		//"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4953,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.bureau_jiden_1",
+		"rank": "STALKER",
+		"collection": "item.customisation.collection.bureau",
+		"item_texture": "customisation/stickers/bureau/jiden_1",
+		"image": "stalker:textures/gui/customisation/stickers/bureau/jiden_1.dds",
+		"image_width": 320,
+		"image_height": 320,
+		//"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4954,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.bureau_jiden_2",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.bureau",
+		"item_texture": "customisation/stickers/bureau/jiden_2",
+		"image": "stalker:textures/gui/customisation/stickers/bureau/jiden_2.dds",
+		"image_width": 320,
+		"image_height": 320,
+		//"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4955,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.bureau_jiden_3",
+		"rank": "MASTER",
+		"collection": "item.customisation.collection.bureau",
+		"item_texture": "customisation/stickers/bureau/jiden_3",
+		"image": "stalker:textures/gui/customisation/stickers/bureau/jiden_3.dds",
+		"image_width": 320,
+		"image_height": 320,
+		//"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4956,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.bureau_jiden_ultra",
+		"rank": "LEGEND",
+		"collection": "item.customisation.collection.bureau",
+		"item_texture": "customisation/stickers/bureau/jiden_4",
+		"image": "stalker:textures/gui/customisation/stickers/bureau/jiden_animated.dds",
+		"image_width": 1600,
+		"image_height": 640,
+		"flipbook": {
+			"frames": 10,
+			"rows": 2,
+			"columns": 5,
+			"fps": 10,
+			"frame_blending": true,
+			"ping_pong": false
+		},
+
+		"weight": 0
+	},
+	{
+		"item_id": 4957,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.stream_battle",
+		"item_texture": "customisation/stickers/sticker_stream_battle",
+		"image": "stalker:textures/gui/customisation/stickers/sticker_stream_battle.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4958,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.spring26_text",
+		"name": "item.plc.sticker.spring26.name",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.spring26",
+		"item_texture": "customisation/stickers/sticker_spring26_text",
+		"image": "stalker:textures/gui/customisation/stickers/season/spring26_text.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4959,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.mk_anchor",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.mk",
+		"item_texture": "customisation/stickers/mk/anchor",
+		"image": "stalker:textures/gui/customisation/stickers/mk/anchor.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4960,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.mk_bubbles",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.mk",
+		"item_texture": "customisation/stickers/mk/bubbles",
+		"image": "stalker:textures/gui/customisation/stickers/mk/bubbles_animated.dds",
+		"image_width": 1280,
+		"image_height": 640,
+		"flipbook": {
+			"frames": 8,
+			"rows": 2,
+			"columns": 4,
+			"fps": 10,
+			"frame_blending": false,
+			"ping_pong": false
+		},
+
+		"weight": 0
+	},
+	{
+		"item_id": 4961,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.blitz_flash",
+		"name": "item.plc.sticker.blitz_fights.name",
+		"rank": "VETERAN",
+		//"collection": "item.customisation.collection.blitz",
+		"item_texture": "customisation/stickers/blitz/flash",
+		"image": "stalker:textures/gui/customisation/stickers/blitz/flash_animated.dds",
+		"image_width": 1280,
+		"image_height": 1280,
+		"flipbook": {
+			"frames": 16,
+			"rows": 4,
+			"columns": 4,
+			"fps": 10,
+			"frame_blending": false,
+			"ping_pong": false
+		},
+
+		"weight": 0
+	},
+	{
+		"item_id": 4962,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.ops_rating_first_league",
+		"rank": "LEGEND",
+		"collection": "item.customisation.collection.ops_rating",
+		"item_texture": "customisation/stickers/operations/rating_s0/first_league",
+		"image": "stalker:textures/gui/customisation/stickers/operations/rating_s0/first_league.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"weight": 0
+	},
+	{
+		"item_id": 4963,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.ops_rating_second_league",
+		"rank": "MASTER",
+		"collection": "item.customisation.collection.ops_rating",
+		"item_texture": "customisation/stickers/operations/rating_s0/second_league",
+		"image": "stalker:textures/gui/customisation/stickers/operations/rating_s0/second_league.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"weight": 0
+	},
+	{
+		"item_id": 4964,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.ops_rating_third_league",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.ops_rating",
+		"item_texture": "customisation/stickers/operations/rating_s0/third_league",
+		"image": "stalker:textures/gui/customisation/stickers/operations/rating_s0/third_league.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"weight": 0
+	},
+	{
+		"item_id": 4965,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.ops_rating_fourth_league",
+		"rank": "STALKER",
+		"collection": "item.customisation.collection.ops_rating",
+		"item_texture": "customisation/stickers/operations/rating_s0/fourth_league",
+		"image": "stalker:textures/gui/customisation/stickers/operations/rating_s0/fourth_league.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"weight": 0
+	},
+	{
+		"item_id": 4966,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.ops_rating_fifth_league",
+		"rank": "NEWBIE",
+		"collection": "item.customisation.collection.ops_rating",
+		"item_texture": "customisation/stickers/operations/rating_s0/fifth_league",
+		"image": "stalker:textures/gui/customisation/stickers/operations/rating_s0/fifth_league.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"weight": 0
+	},
+	{
+		"item_id": 4967,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.reichstag_engineer",
+		"rank": "VETERAN",
+		"item_texture": "customisation/stickers/reichstag/sticker_reichstag_engineer",
+		"image": "stalker:textures/gui/customisation/stickers/reichstag/sticker_reichstag_engineer.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4968,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.reichstag_assault",
+		"rank": "VETERAN",
+		"item_texture": "customisation/stickers/reichstag/sticker_reichstag_assault",
+		"image": "stalker:textures/gui/customisation/stickers/reichstag/sticker_reichstag_assault.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4969,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.reichstag_gunner",
+		"rank": "VETERAN",
+		"item_texture": "customisation/stickers/reichstag/sticker_reichstag_gunner",
+		"image": "stalker:textures/gui/customisation/stickers/reichstag/sticker_reichstag_gunner.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4970,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.reichstag_scout",
+		"rank": "VETERAN",
+		"item_texture": "customisation/stickers/reichstag/sticker_reichstag_scout",
+		"image": "stalker:textures/gui/customisation/stickers/reichstag/sticker_reichstag_scout.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4971,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.reichstag_1",
+		"rank": "VETERAN",
+		"item_texture": "customisation/stickers/reichstag/sticker_reichstag_1",
+		"image": "stalker:textures/gui/customisation/stickers/reichstag/sticker_reichstag_1.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4972,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.reichstag_2",
+		"rank": "VETERAN",
+		"item_texture": "customisation/stickers/reichstag/sticker_reichstag_2",
+		"image": "stalker:textures/gui/customisation/stickers/reichstag/sticker_reichstag_2.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4973,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.summer26_2",
+		"name": "item.plc.sticker.summer26.name",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.summer26",
+		"item_texture": "customisation/stickers/summer26_2",
+		"image": "stalker:textures/gui/customisation/stickers/season/summer26_2.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4974,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.na_route67",
+		"rank": "VETERAN",
+		//"collection": "item.customisation.collection.na",
+		"item_texture": "customisation/stickers/na/route67",
+		"image": "stalker:textures/gui/customisation/stickers/na/route67.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4975,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.na_cowgirl",
+		"rank": "VETERAN",
+		//"collection": "item.customisation.collection.na",
+		"item_texture": "customisation/stickers/na/cowgirl",
+		"image": "stalker:textures/gui/customisation/stickers/na/cowgirl.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4976,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.na_kilometer",
+		"rank": "VETERAN",
+		//"collection": "item.customisation.collection.na",
+		"item_texture": "customisation/stickers/na/kilometer",
+		"image": "stalker:textures/gui/customisation/stickers/na/kilometer.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4977,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.scstore_nina",
+		"rank": "MASTER",
+		"collection": "item.customisation.collection.scstore",
+		"item_texture": "customisation/stickers/scstore/nina",
+		"image": "stalker:textures/gui/customisation/stickers/scstore/nina.dds",
+		"image_width": 320,
+		"image_height": 320,
+		//"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4978,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.scstore_murzya",
+		"rank": "MASTER",
+		"collection": "item.customisation.collection.scstore",
+		"item_texture": "customisation/stickers/scstore/murzya",
+		"image": "stalker:textures/gui/customisation/stickers/scstore/murzya.dds",
+		"image_width": 320,
+		"image_height": 320,
+		//"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4979,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.scstore_snegurka",
+		"rank": "MASTER",
+		"collection": "item.customisation.collection.scstore",
+		"item_texture": "customisation/stickers/scstore/snegurka",
+		"image": "stalker:textures/gui/customisation/stickers/scstore/snegurka.dds",
+		"image_width": 320,
+		"image_height": 320,
+		//"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4980,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.triumph26_bubble",
+		"rank": "STALKER",
+		"collection": "item.customisation.collection.triumph26",
+		"item_texture": "customisation/stickers/triumph26/bubble",
+		"image": "stalker:textures/gui/customisation/stickers/triumph26/bubble.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	
+	{
+		"item_id": 4981,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.triumph26_stalker",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.triumph26",
+		"item_texture": "customisation/stickers/triumph26/stalker",
+		"image": "stalker:textures/gui/customisation/stickers/triumph26/stalker.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4982,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.triumph26_faction_race",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.triumph26",
+		"item_texture": "customisation/stickers/triumph26/faction_race",
+		"image": "stalker:textures/gui/customisation/stickers/triumph26/faction_race.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"default_style": "white",
+		"can_apply_styles": true,
+		"compatible_styles": ["white", "duty", "freedom", "covenant", "merc"],
+
+		"weight": 0
+	},
+
+	{
+		"item_id": 4983,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.nea_aist",
+		"rank": "STALKER",
+		//"collection": "item.customisation.collection.na",
+		"item_texture": "customisation/stickers/nea/aist",
+		"image": "stalker:textures/gui/customisation/stickers/nea/aist.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4984,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.nea_turtle",
+		"rank": "STALKER",
+		//"collection": "item.customisation.collection.na",
+		"item_texture": "customisation/stickers/nea/turtle",
+		"image": "stalker:textures/gui/customisation/stickers/nea/turtle.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4985,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.nea_tiger",
+		"rank": "STALKER",
+		//"collection": "item.customisation.collection.na",
+		"item_texture": "customisation/stickers/nea/tiger",
+		"image": "stalker:textures/gui/customisation/stickers/nea/tiger.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4986,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.nea_symbol",
+		"rank": "VETERAN",
+		//"collection": "item.customisation.collection.na",
+		"item_texture": "customisation/stickers/nea/symbol",
+		"image": "stalker:textures/gui/customisation/stickers/nea/symbol.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4987,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.nea_leaves",
+		"rank": "VETERAN",
+		//"collection": "item.customisation.collection.na",
+		"item_texture": "customisation/stickers/nea/leaves",
+		"image": "stalker:textures/gui/customisation/stickers/nea/leaves.dds",
+		"image_width": 1280,
+		"image_height": 1280,
+		"flipbook": {
+			"frames": 16,
+			"rows": 4,
+			"columns": 4,
+			"fps": 10,
+			"frame_blending": false,
+			"ping_pong": false
+		},
+		"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4988,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.chzzk",
+		"collection": "item.customisation.collection.media",
+		"item_texture": "customisation/stickers/chzzk",
+		"image": "stalker:textures/gui/customisation/stickers/media/chzzk.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"hidden": true,
+
+		"weight": 0
+	},
+
+	{
+		"item_id": 4989,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.soop",
+		"collection": "item.customisation.collection.media",
+		"item_texture": "customisation/stickers/soop",
+		"image": "stalker:textures/gui/customisation/stickers/media/soop.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"hidden": true,
+
+		"weight": 0
+	},
+
+	{
+		"item_id": 4990,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.nea_military",
+		"rank": "VETERAN",
+		//"collection": "item.customisation.collection.na",
+		"item_texture": "customisation/stickers/nea/military",
+		"image": "stalker:textures/gui/customisation/stickers/nea/military.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4991,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.prestige_burya",
+		"collection": "item.customisation.collection.prestige",
+		"item_texture": "customisation/stickers/prestige/burya",
+		"image": "stalker:textures/gui/customisation/stickers/prestige/burya.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"rank": "MASTER",
+
+		"weight": 0
+	},
+
+	{
+		"item_id": 4992,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.prestige_skill_issue",
+		"collection": "item.customisation.collection.prestige",
+		"item_texture": "customisation/stickers/prestige/skill_issue",
+		"image": "stalker:textures/gui/customisation/stickers/prestige/skill_issue.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"rank": "MASTER",
+
+		"weight": 0
+	},
+	{
+		"item_id": 4993,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.prestige_picklock",
+		"collection": "item.customisation.collection.prestige",
+		//"additional_stats_tip": "item.plc.not_avaible.additional_stats_tip",
+		"item_texture": "customisation/stickers/prestige/prestige_picklock",
+		"image": "stalker:textures/gui/customisation/stickers/prestige/prestige_picklock.dds",
+		"image_width": 320,
+		"image_height": 320,
+		//"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4994,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.prestige_newbie",
+		"rank": "NEWBIE",
+		//"additional_stats_tip": "item.plc.not_avaible.additional_stats_tip",
+		"collection": "item.customisation.collection.prestige",
+		"item_texture": "customisation/stickers/prestige/prestige_newbie",
+		"image": "stalker:textures/gui/customisation/stickers/prestige/prestige_newbie.dds",
+		"image_width": 320,
+		"image_height": 320,
+		//"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4995,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.prestige_stalker",
+		"rank": "STALKER",
+		//"additional_stats_tip": "item.plc.not_avaible.additional_stats_tip",
+		"collection": "item.customisation.collection.prestige",
+		"item_texture": "customisation/stickers/prestige/prestige_stalker",
+		"image": "stalker:textures/gui/customisation/stickers/prestige/prestige_stalker.dds",
+		"image_width": 320,
+		"image_height": 320,
+		//"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4996,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.prestige_veteran",
+		"rank": "VETERAN",
+		//"additional_stats_tip": "item.plc.not_avaible.additional_stats_tip",
+		"collection": "item.customisation.collection.prestige",
+		"item_texture": "customisation/stickers/prestige/prestige_veteran",
+		"image": "stalker:textures/gui/customisation/stickers/prestige/prestige_veteran.dds",
+		"image_width": 320,
+		"image_height": 320,
+		//"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4997,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.prestige_master",
+		"rank": "MASTER",
+		//"additional_stats_tip": "item.plc.not_avaible.additional_stats_tip",
+		"collection": "item.customisation.collection.prestige",
+		"item_texture": "customisation/stickers/prestige/prestige_master",
+		"image": "stalker:textures/gui/customisation/stickers/prestige/prestige_master.dds",
+		"image_width": 320,
+		"image_height": 320,
+		//"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4998,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.prestige_legend",
+		"rank": "LEGEND",
+		//"additional_stats_tip": "item.plc.not_avaible.additional_stats_tip",
+		"collection": "item.customisation.collection.prestige",
+		"item_texture": "customisation/stickers/prestige/prestige_legend",
+		"image": "stalker:textures/gui/customisation/stickers/prestige/prestige_legend.dds",
+		"image_width": 320,
+		"image_height": 320,
+		//"hidden": true,
+
+		"weight": 0
+	},
+	{
+		"item_id": 4999,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.prestige_damn",
+		"collection": "item.customisation.collection.prestige",
+		"item_texture": "customisation/stickers/prestige/damn",
+		"image": "stalker:textures/gui/customisation/stickers/prestige/damn.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"rank": "MASTER",
+
+		"weight": 0
+	},
+
+	{
+		"item_id": 5000,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.prestige_dead_arbiter",
+		"collection": "item.customisation.collection.prestige",
+		"item_texture": "customisation/stickers/prestige/dead_arbiter",
+		"image": "stalker:textures/gui/customisation/stickers/prestige/dead_arbiter.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"rank": "MASTER",
+
+		"weight": 0
+	},
+	{
+		"item_id": 5001,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.prestige_patience",
+		"collection": "item.customisation.collection.prestige",
+		"item_texture": "customisation/stickers/prestige/patience",
+		"image": "stalker:textures/gui/customisation/stickers/prestige/patience.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"rank": "MASTER",
+
+		"weight": 0
+	},
+	{
+		"item_id": 5002,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.prestige_chill",
+		"collection": "item.customisation.collection.prestige",
+		"item_texture": "customisation/stickers/prestige/chill",
+		"image": "stalker:textures/gui/customisation/stickers/prestige/chill.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"rank": "MASTER",
+
+		"weight": 0
+	},
+	{
+		"item_id": 5003,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.prestige_flowers",
+		"collection": "item.customisation.collection.prestige",
+		"item_texture": "customisation/stickers/prestige/flowers",
+		"image": "stalker:textures/gui/customisation/stickers/prestige/flowers.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"rank": "MASTER",
+
+		"weight": 0
+	},
+	{
+		"item_id": 5004,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.prestige_son",
+		"collection": "item.customisation.collection.prestige",
+		"item_texture": "customisation/stickers/prestige/son",
+		"image": "stalker:textures/gui/customisation/stickers/prestige/son.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"rank": "MASTER",
+
+		"weight": 0
+	},
+	{
+		"item_id": 5005,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.prestige_strong",
+		"collection": "item.customisation.collection.prestige",
+		"item_texture": "customisation/stickers/prestige/strong",
+		"image": "stalker:textures/gui/customisation/stickers/prestige/strong.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"rank": "MASTER",
+
+		"weight": 0
+	},
+	{
+		"item_id": 5006,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.electroshtorm_1",
+		"collection": "item.customisation.collection.electroshtorm",
+		"item_texture": "customisation/stickers/electroshtorm26/electroshtorm_1",
+		"image": "stalker:textures/gui/customisation/stickers/electroshtorm26/electroshtorm_1.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"rank": "NEWBIE",
+
+		"weight": 0
+	},
+	{
+		"item_id": 5007,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.electroshtorm_2",
+		"collection": "item.customisation.collection.electroshtorm",
+		"item_texture": "customisation/stickers/electroshtorm26/electroshtorm_2",
+		"image": "stalker:textures/gui/customisation/stickers/electroshtorm26/electroshtorm_2.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"rank": "STALKER",
+
+		"weight": 0
+	},
+	{
+		"item_id": 5008,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.electroshtorm_3",
+		"collection": "item.customisation.collection.electroshtorm",
+		"item_texture": "customisation/stickers/electroshtorm26/electroshtorm_3",
+		"image": "stalker:textures/gui/customisation/stickers/electroshtorm26/electroshtorm_3.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"rank": "VETERAN",
+
+		"weight": 0
+	},
+	{
+		"item_id": 5009,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.electroshtorm_4",
+		"collection": "item.customisation.collection.electroshtorm",
+		"item_texture": "customisation/stickers/electroshtorm26/electroshtorm_4",
+		"image": "stalker:textures/gui/customisation/stickers/electroshtorm26/electroshtorm_4.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"rank": "MASTER",
+
+		"weight": 0
+	},
+	{
+		"item_id": 5010,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.bureau26_1",
+		"rank": "STALKER",
+		"collection": "item.customisation.collection.bureau",
+		"item_texture": "customisation/stickers/bureau/sticker_bureau_1",
+		"image": "stalker:textures/gui/customisation/stickers/bureau/sticker_bureau_1.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 5011,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.bureau26_2",
+		"rank": "VETERAN",
+		"collection": "item.customisation.collection.bureau",
+		"item_texture": "customisation/stickers/bureau/sticker_bureau_2",
+		"image": "stalker:textures/gui/customisation/stickers/bureau/sticker_bureau_2.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 5012,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.bureau26_3",
+		"rank": "MASTER",
+		"collection": "item.customisation.collection.bureau",
+		"item_texture": "customisation/stickers/bureau/sticker_bureau_3",
+		"image": "stalker:textures/gui/customisation/stickers/bureau/sticker_bureau_3.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 5013,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.bureau26_4",
+		"rank": "LEGEND",
+		"collection": "item.customisation.collection.bureau",
+		"item_texture": "customisation/stickers/bureau/sticker_bureau_4",
+		"image": "stalker:textures/gui/customisation/stickers/bureau/sticker_bureau_4.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 5014,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.prestige_night_hunter",
+		"rank": "MASTER",
+		"collection": "item.customisation.collection.prestige",
+		"item_texture": "customisation/stickers/prestige/night_hunter",
+		"image": "stalker:textures/gui/customisation/stickers/prestige/night_hunter.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 5015,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.prestige_headshot",
+		"rank": "MASTER",
+		"collection": "item.customisation.collection.prestige",
+		"item_texture": "customisation/stickers/prestige/headshot",
+		"image": "stalker:textures/gui/customisation/stickers/prestige/headshot.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"weight": 0
+	},
+	{
+		"item_id": 5016,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.prestige_head_trauma",
+		"rank": "MASTER",
+		"collection": "item.customisation.collection.prestige",
+		"item_texture": "customisation/stickers/prestige/head_trauma",
+		"image": "stalker:textures/gui/customisation/stickers/prestige/head_trauma.dds",
+		"image_width": 320,
+		"image_height": 320,
+
+		"weight": 0
+	},
+
+	{
+		"item_id": 5017,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.raven26_heart_1",
+		"rank": "NEWBIE",
+		"item_texture": "customisation/stickers/raven26/heart_1",
+		"image": "stalker:textures/gui/customisation/stickers/arena_raven26/heart_1.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"weight": 0
+	},
+	{
+		"item_id": 5018,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.raven26_heart_2",
+		"rank": "STALKER",
+		"item_texture": "customisation/stickers/raven26/heart_2",
+		"image": "stalker:textures/gui/customisation/stickers/arena_raven26/heart_2.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"weight": 0
+	},
+	{
+		"item_id": 5019,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.raven26_heart_3",
+		"rank": "VETERAN",
+		"item_texture": "customisation/stickers/raven26/heart_3",
+		"image": "stalker:textures/gui/customisation/stickers/arena_raven26/heart_3.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"weight": 0
+	},
+	{
+		"item_id": 5020,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.raven26_heart_4",
+		"rank": "MASTER",
+		"item_texture": "customisation/stickers/raven26/heart_4",
+		"image": "stalker:textures/gui/customisation/stickers/arena_raven26/heart_4.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"weight": 0
+	},
+	{
+		"item_id": 5021,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.raven26_heart_5",
+		"rank": "MASTER",
+		"item_texture": "customisation/stickers/raven26/heart_5",
+		"image": "stalker:textures/gui/customisation/stickers/arena_raven26/heart_5.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"weight": 0
+	},
+	{
+		"item_id": 5022,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.raven26_heart_6",
+		"rank": "LEGEND",
+		"item_texture": "customisation/stickers/raven26/heart_6",
+		"image": "stalker:textures/gui/customisation/stickers/arena_raven26/heart_6.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"weight": 0
+	},
+	{
+		"item_id": 5023,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.raven26_heart_animated",
+		"rank": "LEGEND",
+		"item_texture": "customisation/stickers/raven26/heart_animated",
+		"image": "stalker:textures/gui/customisation/stickers/arena_raven26/heart_animated.dds",
+		"image_width": 640,
+		"image_height": 640,
+		"weight": 0,
+		"flipbook": {
+			"frames": 4,
+			"rows": 2,
+			"columns": 2,
+			"fps": 4,
+			"frame_blending": false,
+			"ping_pong": false
+		}
+	},
+	{
+		"item_id": 5024,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.scstore_a26_merc_1",
+		"description": "item.plc.scstore_a26.description",
+		"collection": "item.customisation.collection.scstore",
+		"item_texture": "customisation/stickers/scstore/scstore_a26_merc_1",
+		"image": "stalker:textures/gui/customisation/stickers/scstore/scstore_a26_merc_1.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"weight": 0
+	},
+	{
+		"item_id": 5025,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.scstore_a26_merc_2",
+		"description": "item.plc.scstore_a26.description",
+		"collection": "item.customisation.collection.scstore",
+		"item_texture": "customisation/stickers/scstore/scstore_a26_merc_2",
+		"image": "stalker:textures/gui/customisation/stickers/scstore/scstore_a26_merc_2.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"weight": 0
+	},
+	{
+		"item_id": 5026,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.scstore_a26_duty_1",
+		"description": "item.plc.scstore_a26.description",
+		"collection": "item.customisation.collection.scstore",
+		"item_texture": "customisation/stickers/scstore/scstore_a26_duty_1",
+		"image": "stalker:textures/gui/customisation/stickers/scstore/scstore_a26_duty_1.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"weight": 0
+	},
+	{
+		"item_id": 5027,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.scstore_a26_duty_2",
+		"description": "item.plc.scstore_a26.description",
+		"collection": "item.customisation.collection.scstore",
+		"item_texture": "customisation/stickers/scstore/scstore_a26_duty_2",
+		"image": "stalker:textures/gui/customisation/stickers/scstore/scstore_a26_duty_2.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"weight": 0
+	},
+	{
+		"item_id": 5028,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.scstore_a26_freedom_1",
+		"description": "item.plc.scstore_a26.description",
+		"collection": "item.customisation.collection.scstore",
+		"item_texture": "customisation/stickers/scstore/scstore_a26_freedom_1",
+		"image": "stalker:textures/gui/customisation/stickers/scstore/scstore_a26_freedom_1.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"weight": 0
+	},
+	{
+		"item_id": 5029,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.scstore_a26_freedom_2",
+		"description": "item.plc.scstore_a26.description",
+		"collection": "item.customisation.collection.scstore",
+		"item_texture": "customisation/stickers/scstore/scstore_a26_freedom_2",
+		"image": "stalker:textures/gui/customisation/stickers/scstore/scstore_a26_freedom_2.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"weight": 0
+	},
+	{
+		"item_id": 5030,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.scstore_a26_covenant_1",
+		"description": "item.plc.scstore_a26.description",
+		"collection": "item.customisation.collection.scstore",
+		"item_texture": "customisation/stickers/scstore/scstore_a26_covenant_1",
+		"image": "stalker:textures/gui/customisation/stickers/scstore/scstore_a26_covenant_1.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"weight": 0
+	},
+	{
+		"item_id": 5031,
+		"type": "player_card/sticker",
+		"unlocalized_name": "plc.sticker.scstore_a26_covenant_2",
+		"description": "item.plc.scstore_a26.description",
+		"collection": "item.customisation.collection.scstore",
+		"item_texture": "customisation/stickers/scstore/scstore_a26_covenant_2",
+		"image": "stalker:textures/gui/customisation/stickers/scstore/scstore_a26_covenant_2.dds",
+		"image_width": 320,
+		"image_height": 320,
+		"weight": 0
+	},
+
+	// =========== tags
+	{
+		"item_id": 5300,
+		"type": "player_card/tag",
+		"unlocalized_name": "plc.tag.mrcool",
+		"hidden": true
+	},
+	{
+		"item_id": 5301,
+		"type": "player_card/tag",
+		"unlocalized_name": "plc.tag.prestige_nichie",
+		"collection": "item.customisation.collection.prestige",
+		"additional_stats_tip": "item.plc.tag.prestige_nichie.additional_stats_tip",
+		"rank": "LEGEND",
+		"weight": 0
+	},
+	// =========== packs
+	{
+		"item_id": 15051,
+		"type": "customisation_pack",
+		"item_texture": "stalcraft:customisation/stickers/sticker_winter26",
+		"unlocalized_name": "plc.customisation_pack.winter26",
+		"rank": "VETERAN",
+		"bind_state": "no_drop",
+		"preview_scene": "season_reward_winter26",
+		"included_elements": [
+			"plc.background.winter26",
+			"plc.pattern.winter26",
+			"plc.sticker.winter26"
+		],
+		"weight": 0
+	},
+	{
+		"item_id": 5500,
+		"type": "customisation_pack",
+		"item_texture": "stalcraft:customisation/coldline",
+		"unlocalized_name": "plc.customisation_pack.coldline",
+		"rank": "MASTER",
+		"bind_state": "no_drop",
+		"included_elements": [
+			"plc.background.coldline",
+			"plc.pattern.coldline",
+			"plc.sticker.coldline",
+			"plc.sticker.coldline_2"
+		],
+		"weight": 0
+	},
+	{
+		"item_id": 5501,
+		"type": "customisation_pack",
+		"item_texture": "stalcraft:customisation/snegurka",
+		"unlocalized_name": "plc.customisation_pack.snegurka",
+		"rank": "MASTER",
+		"bind_state": "no_drop",
+		"included_elements": [
+			"plc.background.snegurka",
+			"plc.pattern.snegurka",
+			"plc.sticker.snegurka"
+		],
+		"weight": 0
+	},
+	{
+		"item_id": 5502,
+		"type": "customisation_pack",
+		"item_texture": "stalcraft:customisation/murzya",
+		"unlocalized_name": "plc.customisation_pack.murzya",
+		"rank": "MASTER",
+		"bind_state": "no_drop",
+		"included_elements": [
+			"plc.background.murzya",
+			"plc.pattern.murzya",
+			"plc.sticker.murzya_1",
+			"plc.sticker.murzya_2",
+			"plc.sticker.murzya_3"
+		],
+		"weight": 0
+	},
+	{
+		"item_id": 5503,
+		"type": "customisation_pack",
+		"item_texture": "stalcraft:customisation/ny26_pack_1",
+		"unlocalized_name": "plc.customisation_pack.ny26_pack_1",
+		"name": "item.plc.customisation_pack.ny26.name",
+		"rank": "VETERAN",
+		"bind_state": "no_drop",
+		"included_elements": [
+			"plc.background.newyear26_1",
+			"plc.sticker.newyear_2026",
+			"plc.pattern.newyear26_1"
+		],
+		"weight": 0
+	},
+	{
+		"item_id": 5504,
+		"type": "customisation_pack",
+		"item_texture": "stalcraft:customisation/ny26_pack_2",
+		"unlocalized_name": "plc.customisation_pack.ny26_pack_2",
+		"name": "item.plc.customisation_pack.ny26.name",
+		"rank": "VETERAN",
+		"bind_state": "no_drop",
+		"included_elements": [
+			"plc.background.newyear26_2",
+			"plc.sticker.newyear_2026",
+			"plc.pattern.newyear26_2"
+		],
+		"weight": 0
+	},
+	{
+		"item_id": 5505,
+		"type": "customisation_pack",
+		"item_texture": "stalcraft:customisation/ny26_pack_3",
+		"unlocalized_name": "plc.customisation_pack.ny26_pack_3",
+		"name": "item.plc.customisation_pack.ny26.name",
+		"rank": "VETERAN",
+		"bind_state": "no_drop",
+		"included_elements": [
+			"plc.background.newyear26_1",
+			"plc.sticker.newyear_2026",
+			"plc.pattern.newyear26_3"
+		],
+		"weight": 0
+	},
+	{
+		"item_id": 5506,
+		"type": "customisation_pack",
+		"item_texture": "stalcraft:customisation/ny26_pack_4",
+		"unlocalized_name": "plc.customisation_pack.ny26_pack_4",
+		"name": "item.plc.customisation_pack.ny26.name",
+		"rank": "VETERAN",
+		"bind_state": "no_drop",
+		"included_elements": [
+			"plc.background.newyear26_1",
+			"plc.sticker.newyear_2026",
+			"plc.pattern.newyear26_4"
+		],
+		"weight": 0
+	},
+	{
+		"item_id": 5507,
+		"type": "customisation_pack",
+		"item_texture": "stalcraft:customisation/ny26_pack_5",
+		"unlocalized_name": "plc.customisation_pack.ny26_pack_5",
+		"name": "item.plc.customisation_pack.ny26.name",
+		"rank": "VETERAN",
+		"bind_state": "no_drop",
+		"included_elements": [
+			"plc.background.newyear26_3",
+			"plc.sticker.newyear_2026",
+			"plc.pattern.newyear26_5"
+		],
+		"weight": 0
+	},
+	{
+		"item_id": 5508,
+		"type": "customisation_pack",
+		"item_texture": "stalcraft:customisation/ny26_pack_6",
+		"unlocalized_name": "plc.customisation_pack.ny26_pack_6",
+		"name": "item.plc.customisation_pack.ny26.name",
+		"rank": "VETERAN",
+		"bind_state": "no_drop",
+		"included_elements": [
+			"plc.background.newyear26_2",
+			"plc.sticker.newyear_2026",
+			"plc.pattern.newyear26_6"
+		],
+		"weight": 0
+	},
+	{
+		"item_id": 5509,
+		"type": "customisation_pack",
+		"item_texture": "stalcraft:customisation/ny26_pack_7",
+		"unlocalized_name": "plc.customisation_pack.ny26_pack_7",
+		"name": "item.plc.customisation_pack.ny26.name",
+		"rank": "VETERAN",
+		"bind_state": "no_drop",
+		"included_elements": [
+			"plc.background.newyear26_1",
+			"plc.sticker.newyear_2026",
+			"plc.pattern.newyear26_7"
+		],
+		"weight": 0
+	},
+	{
+		"item_id": 5510,
+		"type": "customisation_pack",
+		"item_texture": "stalcraft:customisation/ny26_pack_8",
+		"unlocalized_name": "plc.customisation_pack.ny26_pack_8",
+		"name": "item.plc.customisation_pack.ny26.name",
+		"rank": "VETERAN",
+		"bind_state": "no_drop",
+		"included_elements": [
+			"plc.background.newyear26_1",
+			"plc.sticker.newyear_2026",
+			"plc.pattern.newyear26_8"
+		],
+		"weight": 0
+	},
+	{
+		"item_id": 5511,
+		"type": "customisation_pack",
+		"item_texture": "stalcraft:customisation/dmz26_pack_1",
+		"unlocalized_name": "plc.customisation_pack.dmz26_1",
+		"name": "item.plc.customisation_pack.dmz26_1.name",
+		"rank": "MASTER",
+		"bind_state": "no_drop",
+		"included_elements": [
+			"plc.background.dmz26_1",
+			"plc.sticker.dmz26_1",
+			"plc.pattern.dmz26_1"
+		],
+		"weight": 0
+	},
+	{
+		"item_id": 5512,
+		"type": "customisation_pack",
+		"item_texture": "stalcraft:customisation/dmz26_pack_2",
+		"unlocalized_name": "plc.customisation_pack.dmz26_2",
+		"name": "item.plc.customisation_pack.dmz26_2.name",
+		"rank": "MASTER",
+		"bind_state": "no_drop",
+		"included_elements": [
+			"plc.background.dmz26_2",
+			"plc.sticker.dmz26_2",
+			"plc.pattern.dmz26_2"
+		],
+		"weight": 0
+	},
+	{
+		"item_id": 5513,
+		"type": "customisation_pack",
+		"item_texture": "stalcraft:customisation/dmz26_pack_3",
+		"unlocalized_name": "plc.customisation_pack.dmz26_pack_3",
+		"name": "item.plc.customisation_pack.dmz26_3.name",
+		"rank": "MASTER",
+		"bind_state": "no_drop",
+		"included_elements": [
+			"plc.background.dmz26_3",
+			"plc.sticker.dmz26_3_heli",
+			"plc.sticker.dmz26_caption",
+			"plc.pattern.dmz26_3"
+		],
+		"weight": 0
+	},
+	{
+		"item_id": 5514,
+		"type": "customisation_pack",
+		"item_texture": "stalcraft:customisation/dmz26_pack_4",
+		"unlocalized_name": "plc.customisation_pack.dmz26_4",
+		"name": "item.plc.customisation_pack.dmz26_4.name",
+		"rank": "MASTER",
+		"bind_state": "no_drop",
+		"included_elements": [
+			"plc.background.dmz26_4",
+			"plc.sticker.dmz26_4",
+			"plc.pattern.dmz26_4"
+		],
+		"weight": 0
+	},
+	{
+		"item_id": 5515,
+		"type": "customisation_pack",
+		"item_texture": "stalcraft:customisation/stickers/sticker_spring26",
+		"unlocalized_name": "plc.customisation_pack.spring26",
+		"rank": "VETERAN",
+		"bind_state": "no_drop",
+		"preview_scene": "season_reward_spring26",
+		"included_elements": [
+			"plc.background.spring26",
+			"plc.pattern.spring26",
+			"plc.sticker.spring26",
+			"plc.sticker.spring26_text"
+		],
+		"weight": 0
+	},
+	{
+		"item_id": 5516,
+		"type": "customisation_pack",
+		"item_texture": "stalcraft:customisation/stickers/summer26_1",
+		"unlocalized_name": "plc.customisation_pack.summer26",
+		"rank": "VETERAN",
+		"bind_state": "no_drop",
+		"preview_scene": "season_reward_summer26",
+		"included_elements": [
+			"plc.background.summer26",
+			"plc.pattern.summer26",
+			"plc.sticker.summer26_1",
+			"plc.sticker.summer26_2"
+		],
+		"weight": 0
+	},
+	{
+		"item_id": 5517,
+		"type": "customisation_pack",
+		"item_texture": "stalcraft:customisation/stickers/prestige/burya",
+		"unlocalized_name": "plc.customisation_pack.prestige_skill_issue",
+		"rank": "MASTER",
+		"bind_state": "no_drop",
+		"included_elements": [
+			"plc.background.prestige_wall",
+			"plc.pattern.prestige_man",
+			"plc.sticker.prestige_skill_issue",
+			"plc.sticker.prestige_burya"
+		],
+		"weight": 0
+	},
+	{
+		"item_id": 5518,
+		"type": "customisation_pack",
+		"item_texture": "stalcraft:customisation/stickers/prestige/dead_arbiter",
+		"unlocalized_name": "plc.customisation_pack.prestige_horror",
+		"rank": "MASTER",
+		"bind_state": "no_drop",
+		"included_elements": [
+			"plc.background.prestige_horror",
+			"plc.pattern.prestige_eye",
+			"plc.sticker.prestige_damn",
+			"plc.sticker.prestige_dead_arbiter",
+			"plc.sticker.prestige_patience"
+		],
+		"weight": 0
+	},
+	{
+		"item_id": 5519,
+		"type": "customisation_pack",
+		"item_texture": "stalcraft:customisation/stickers/autumn26",
+		"unlocalized_name": "plc.customisation_pack.autumn26",
+		"rank": "VETERAN",
+		"bind_state": "no_drop",
+		"preview_scene": "season_reward_autumn26",
+		"included_elements": [
+			"plc.background.autumn26",
+			"plc.pattern.autumn26",
+			"plc.sticker.autumn26"
+		],
+		"weight": 0
+	},
+	{
+		"item_id": 5521,
+		"type": "customisation_pack",
+		"item_texture": "stalcraft:customisation/stickers/prestige/night_hunter",
+		"unlocalized_name": "plc.customisation_pack.prestige_golden_raid",
+		"rank": "MASTER",
+		"bind_state": "no_drop",
+		"included_elements": [
+			"plc.background.prestige_golden_raid",
+			"plc.pattern.prestige_interference",
+			"plc.sticker.prestige_night_hunter",
+			"plc.sticker.prestige_headshot",
+			"plc.sticker.prestige_head_trauma"
+		],
+		"weight": 0
+	}
+]

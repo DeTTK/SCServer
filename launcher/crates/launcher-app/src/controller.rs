@@ -707,6 +707,11 @@ pub fn bind(ui: &AppWindow, layout: Layout) -> Binding {
                 ));
                 ui.set_client_running(view.client_running);
                 ui.set_server_state(view.detail.clone().into());
+                if view.state == "Updating" && ui.get_busy() {
+                    ui.set_progress_text(view.detail.clone().into());
+                    ui.set_status("Обновляем игровые файлы…".into());
+                }
+
                 ui.set_server_address(address.into());
                 ui.set_server_uptime("Нет данных".into());
                 ui.set_server_memory("Нет данных".into());

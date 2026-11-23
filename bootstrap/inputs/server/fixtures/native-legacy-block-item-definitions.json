@@ -1,0 +1,85 @@
+{
+  "items": {
+    "1529": {
+      "definition_source": "installed_native_factory",
+      "item_id": 1529,
+      "slot_size": "1x1",
+      "stack_size": 100,
+      "type": "native_builtin",
+      "weight": 0.0
+    },
+    "3118": {
+      "definition_source": "installed_native_factory",
+      "item_id": 3118,
+      "slot_size": "1x1",
+      "stack_size": 100,
+      "type": "native_builtin",
+      "weight": 0.0
+    },
+    "3119": {
+      "definition_source": "installed_native_factory",
+      "item_id": 3119,
+      "slot_size": "1x1",
+      "stack_size": 100,
+      "type": "native_builtin",
+      "weight": 0.0
+    },
+    "3140": {
+      "definition_source": "installed_native_factory",
+      "item_id": 3140,
+      "slot_size": "1x1",
+      "stack_size": 100,
+      "type": "native_builtin",
+      "weight": 0.0
+    },
+    "3877": {
+      "definition_source": "installed_native_factory",
+      "item_id": 3877,
+      "slot_size": "1x1",
+      "stack_size": 100,
+      "type": "native_builtin",
+      "weight": 0.0
+    },
+    "3928": {
+      "definition_source": "installed_native_factory",
+      "item_id": 3928,
+      "slot_size": "1x1",
+      "stack_size": 100,
+      "type": "native_builtin",
+      "weight": 0.0
+    },
+    "4012": {
+      "definition_source": "installed_native_factory",
+      "item_id": 4012,
+      "slot_size": "1x1",
+      "stack_size": 100,
+      "type": "native_builtin",
+      "weight": 0.0
+    },
+    "4025": {
+      "definition_source": "installed_native_factory",
+      "item_id": 4025,
+      "slot_size": "1x1",
+      "stack_size": 100,
+      "type": "native_builtin",
+      "weight": 0.0
+    },
+    "4026": {
+      "definition_source": "installed_native_factory",
+      "item_id": 4026,
+      "slot_size": "1x1",
+      "stack_size": 100,
+      "type": "native_builtin",
+      "weight": 0.0
+    },
+    "4095": {
+      "definition_source": "installed_native_factory",
+      "item_id": 4095,
+      "slot_size": "1x1",
+      "stack_size": 100,
+      "type": "native_builtin",
+      "weight": 0.0
+    }
+  },
+  "version": 1
+}

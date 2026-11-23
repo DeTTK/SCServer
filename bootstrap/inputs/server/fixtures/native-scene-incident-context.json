@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "scope": "Isolated serialization context only: genuine native spider settings constructor slice and native PKP factory; no incident mode, renderer, Region API or server AI simulation.",
+  "classesSha256": {
+    "348115930": "4a70ad013e223d44ae3775f44c783e29506f617fd5053cfc4574dbadd0ee1112",
+    "913250395": "91cf5e3b72d3b428cda5e4b5a7a1b29bf06de7bc055f4b7562c173ba8b89d6e3",
+    "1788962927": "b5fe957dad7e7ff5a180c9be1f519a4373ecd389dffde364e4e9e366f19233cb",
+    "1183683657": "6d58afac79d67fbf2ff1db989ef53fc4ecc63deb54afda1f302547d5de2049d5",
+    "1994198637": "8d0b9df7407ff5412dc02f515e474f1029067752edd7cddb84c92a92c419b6b8",
+    "313873871": "92a18f48dcfca060647ad49f38d316f22bb706ef0001c24fe225a4331eff90f6",
+    "1745367406": "d456665e126411fd18ef84489b4bc2e69bd243f6bfcb92e6e2e3f6d7eb4927ae",
+    "211097523": "4a9a19a8416399a0a331d3f9ac430c44c00609c9cdf1a503f0d2649c7b12194a",
+    "1660905315": "8e9302627f44a18286ee1e5cf6c1957fa85166411846df68459b59d862c26835",
+    "1205255287": "7992ea7bcd5ede8037b081e3db24b814a4be6917d451ca011243046dd471f7da"
+  },
+  "sources": [
+    {
+      "path": "../source-resources/incident.json",
+      "sha256": "a57967c0f23e18470d11c8fb03fd0196ae55bb7064f1784ef07ef03aa7585cae"
+    },
+    {
+      "path": "native-scene-incident-weapon.json",
+      "sha256": "f414cd6ef12b3bba4d22f5936584579e5dc1afd89d3c3e5e24f192cfaf2019b2"
+    }
+  ],
+  "parserMethod": "implements",
+  "parserDescriptor": "()L1198776129;",
+  "sliceStart": 2581,
+  "sliceEnd": 3254,
+  "weaponProvenance": {
+    "path": "D:\\SZJavaServer\\server\\fixtures\\item-definitions.json",
+    "sha256": "8bfa03fceec3f86dcf9de19acb27a796c61e200ef036ed74a9ee8f09aa8a5bbe"
+  }
+}

@@ -1,0 +1,1150 @@
+{
+  "language": "en", // язык треклиста
+  "speaker": [
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_1"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_2"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_4"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_5"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_6"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_7"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_8"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_9"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_10"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_11"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_12"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_13"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_14"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_15"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_16"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_17"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_18"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_19"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_20"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_21"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_22"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_23"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_24"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_25"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_26"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_27"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_28"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_29"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_30"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_31"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_32"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_33"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_34"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_35"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_36"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_37"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_38"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_39"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_40"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_41"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_42"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_43"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_44"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_45"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_46"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_48"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_49"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_50"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_51"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_52"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_53"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_54"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_55"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_56"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_57"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_58"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_59"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_60"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_61"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_62"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_63"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_64"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_65"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_66"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_67"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_68"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_69"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_70"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_71"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_72"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_73"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_74"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_75"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_76"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_77"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_78"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_79"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_80"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_81"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_82"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_83"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_84"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_85"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_86"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_87"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_88"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_89"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_90"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_91"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_92"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_93"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_94"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_95"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_96"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_97"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_98"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_99"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_100"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_200"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_201"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_202"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_203"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_204"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_205"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_206"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_207"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_208"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_209"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.en_radio_host_210"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.Festivity_Sermon-006"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.Festivity_Sermon-007"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.Festivity_Sermon-008"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.Festivity_Sermon-009"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.Festivity_Sermon-010"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.Festivity_Story-001"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.Festivity_Story-002"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.Festivity_Story-003"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.Festivity_Story-004"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.Festivity_Story-005"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.Festivity_Story-006"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.Festivity_Story-007"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.Festivity_Story-009"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.en.Festivity_Story-010"
+    }
+  ],
+  "music": [
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_1"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_2"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_3"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_4"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_5"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_6"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_7"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_8"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_9"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_10"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_11"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_12"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_13"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_14"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_15"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_16"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_18"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_19"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_20"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_21"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_22"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_23"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_24"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_25"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_26"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_27"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_28"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_29"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_30"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_31"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_32"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_33"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_34"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_35"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_36"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_37"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_38"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_39"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_40"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_41"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_42"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_43"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_44"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_45"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_46"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_47"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_48"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_49"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_50"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_51"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_52"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_53"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_54"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_55"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_56"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_57"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_58"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_59"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_60"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_61"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_62"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_63"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_64"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_65"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_66"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_67"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_68"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_69"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_70"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_71"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_72"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_73"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_74"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_75"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_76"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_77"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_78"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_79"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_80"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_81"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_82"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_83"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_84"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_85"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_86"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_87"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_88"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_89"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_90"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_91"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_92"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_93"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_94"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_95"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_96"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_97"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_98"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_99"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_100"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_101"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_102"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_103"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_104"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_105"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_106"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_107"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_108"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_109"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_110"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_111"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_112"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_113"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_114"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_115"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_116"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_117"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_118"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_119"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_120"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_121"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_122"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_123"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_124"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_125"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_126"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_127"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_128"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_129"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_130"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_131"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_132"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_133"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_134"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_135"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_136"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_137"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_138"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_139"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_140"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_141"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_142"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_143"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_144"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_145"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_146"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_147"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_148"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_149"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_150"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_151"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_152"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_153"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_154"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_155"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_156"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_157"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_158"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_159"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_160"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_161"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_162"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_163"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_164"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_165"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_166"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_167"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_168"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_169"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_170"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_171"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_172"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_173"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_174"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_175"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_176"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_177"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_178"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_179"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_180"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_181"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_182"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_183"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_184"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_185"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_186"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_187"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_188"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_189"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_190"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_191"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_192"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_193"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_194"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_195"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_196"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_197"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_198"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_199"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_200"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_201"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_202"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_203"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_204"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_205"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_206"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_207"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_208"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_209"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_210"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_211"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_212"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_213"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_214"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_215"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_216"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_217"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_218"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_219"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_220"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_221"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_222"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_223"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_224"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_225"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_226"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_227"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_228"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_229"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_230"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_231"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_232"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_233"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_234"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_235"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_236"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_237"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_238"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_239"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_240"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_241"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_242"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_243"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_244"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_245"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_246"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_247"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_248"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_249"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_250"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_251"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_252"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_253"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_254"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_255"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_256"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_257"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_258"
+    },
+    {
+      "path": "stalkersounds:radio.rock1_radio.ru.ru_radiorock_song_259"
+    }
+  ]
+}

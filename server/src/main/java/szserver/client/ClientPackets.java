@@ -21,7 +21,7 @@ public final class ClientPackets implements AutoCloseable {
     private final URLClassLoader loader;
     private record Codec(Constructor<?> constructor,Method read,Method write){}
     private final Map<String,Codec> codecs=new HashMap<>();
-    public ClientPackets(Path runtime)throws Exception{List<URL> urls=new ArrayList<>();urls.add(runtime.resolve("classes").toUri().toURL());urls.add(runtime.resolve("bootstrap").toUri().toURL());urls.add(runtime.resolve("libs").toUri().toURL());try(var files=Files.list(runtime.resolve("dependencies"))){for(Path p:files.filter(p->p.toString().endsWith(".jar")).sorted().toList())urls.add(p.toUri().toURL());}loader=new ClientSceneCodec.Loader(urls.toArray(URL[]::new));locomotionRegistry();}
+    public ClientPackets(Path runtime)throws Exception{List<URL> urls=new ArrayList<>();urls.add(RuntimeFiles.location(runtime.resolve("classes")).toUri().toURL());urls.add(RuntimeFiles.location(runtime.resolve("bootstrap")).toUri().toURL());urls.add(RuntimeFiles.location(runtime.resolve("libs")).toUri().toURL());try(var files=Files.list(runtime.resolve("dependencies"))){for(Path p:files.filter(p->p.toString().endsWith(".jar")).sorted().toList())urls.add(p.toUri().toURL());}loader=new ClientSceneCodec.Loader(urls.toArray(URL[]::new));locomotionRegistry();}
     /** Register only native movement-event codecs, without starting the graphical bootstrap. */
     private void locomotionRegistry()throws Exception{
         Class<?> registry=Class.forName("510237502",true,loader),annotation=Class.forName("1928695070",true,loader);

@@ -84,5 +84,5 @@ final class ActorDispatcherRelease {
   Map.entry("1896152185","f4e17fc821e310fd4f5e566600905e6e6c98db8600464689ab97b0c6af0b95c9"),
   Map.entry("921590923","b27f8c8b014426cba93f9a021966a87ebd1c70ff9cc8b1383ae3a9b30de7d80b"));
  static String fingerprint()throws Exception{var digest=MessageDigest.getInstance("SHA-256");for(var e:new TreeMap<>(HASHES).entrySet())digest.update((e.getKey()+":"+e.getValue()+"\n").getBytes(java.nio.charset.StandardCharsets.UTF_8));return HexFormat.of().formatHex(digest.digest());}
- static void verify(Path runtime)throws Exception{for(var e:HASHES.entrySet())if(!HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(runtime.resolve("classes").resolve(e.getKey()+".class")))).equals(e.getValue()))throw new IllegalStateException("actor_dispatch_release_mismatch:"+e.getKey());}
+ static void verify(Path runtime)throws Exception{for(var e:HASHES.entrySet())if(!HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(RuntimeFiles.read(runtime.resolve("classes").resolve(e.getKey()+".class")))).equals(e.getValue()))throw new IllegalStateException("actor_dispatch_release_mismatch:"+e.getKey());}
 }

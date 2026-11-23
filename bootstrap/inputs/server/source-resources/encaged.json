@@ -1,0 +1,712 @@
+{
+  "variables": {},
+  "matchmaking": {
+    "locationName": "encaged",
+    "timeUntilMaintenanceForMatchmakingStop": "PT20M",
+    "accessBlockLeaveInPreparation": "PT0S",
+    "accessBlockLeaveInProgress": "PT5M",
+    "matchmakingInitialWindow": 1000,
+    "matchmakingWindowExpansionPerMinute": 30,
+    "matchmakingWindowExpansionBase": 1.2,
+    "matchmakingRecentGameDebuff": 0,
+    "matchmakingDifferentQueueTypeDebuff": 0,
+    "matchmakingRecentGamesAmount": 20,
+    "matchmakingSlidingPowerDifferenceDebuff": 0
+  },
+  // "enabled" - ui is displayed and mode is playable
+  // "disabled" - ui displayed but mode is not playable (no Play button, backend doesn't start session)
+  "modeActivity": "disabled",
+  "survivorsCount": 4,
+  "huntersCount": 1,
+  "fullPartyAllow": true,
+  "premadeMatchPlayersCount": 5,
+
+  "sessionDuration": "PT15M",
+  //На старте выбирается один из пресетов главных задач
+  "primaryMissionsPresets": [
+    "encaged/encaged_1",
+    "encaged/encaged_2"
+  ],
+  "secondaryMissionsPresets": [
+    "encaged/encaged_secondary_1",
+    "encaged/encaged_secondary_2",
+    "encaged/encaged_secondary_3",
+    "encaged/encaged_secondary_4",
+    "encaged/encaged_secondary_5"
+  ],
+  "evacuationMissionPreset":{
+    "mission_id": "encaged/encaged_evacuate",
+    "evacuate_spots": [
+      {
+        "tag": "btn.escape_door.1",
+        "button_object_id": "encaged_evac_button",
+        "buttons_count": 2,
+        "lights_spawn_tag": "encaged_evac_spot1_lights",
+        "light_on_object": "d_lamp_2_svet2",
+        "light_off_object": "d_lamp_2",
+        "min_bounds": [-432, 62, -4286],
+        "max_bounds": [-437, 68, -4290]
+      },
+      {
+        "tag": "btn.escape_door.2",
+        "button_object_id": "encaged_evac_button",
+        "buttons_count": 2,
+        "lights_spawn_tag": "encaged_evac_spot2_lights",
+        "light_on_object": "d_lamp_2_svet2",
+        "light_off_object": "d_lamp_2",
+        "min_bounds": [-375, 70, -4255],
+        "max_bounds": [-371, 74, -4259]
+      },
+      {
+        "tag": "btn.escape_door.3",
+        "button_object_id": "encaged_evac_button",
+        "buttons_count": 2,
+        "lights_spawn_tag": "encaged_evac_spot3_lights",
+        "light_on_object": "d_lamp_2_svet2",
+        "light_off_object": "d_lamp_2",
+        "min_bounds": [-315, 65, -4230],
+        "max_bounds": [-310, 70, -4234]
+      },
+      {
+        "tag": "btn.escape_door.4",
+        "button_object_id": "encaged_evac_button",
+        "buttons_count": 2,
+        "lights_spawn_tag": "encaged_evac_spot4_lights",
+        "light_on_object": "d_lamp_2_svet2",
+        "light_off_object": "d_lamp_2",
+        "min_bounds": [-454, 71, -4158],
+        "max_bounds": [-450, 66, -4163]
+      },
+      {
+        "tag": "btn.escape_door.5",
+        "button_object_id": "encaged_evac_button",
+        "buttons_count": 2,
+        "lights_spawn_tag": "encaged_evac_spot5_lights",
+        "light_on_object": "d_lamp_2_svet2",
+        "light_off_object": "d_lamp_2",
+        "min_bounds": [-355, 69, -4156],
+        "max_bounds": [-363, 73, -4151]
+      }
+    ],
+    "max_spots": 2,
+    "evacuation_spot_sound": {
+      "path": "stalker:encaged.exit_siren",
+      "min_dst": 32,
+      "max_dst": 128
+    }
+  },
+  "hunterMissionPreset": "encaged/hunter",
+  "spawnPoints": [
+    //На карте может быть несколько спавн пресетов
+    {
+      "hunter": "hunterSpawnSpotTag1",
+      "survivors": "survivorsSpawnSpotTag1"
+    },
+    {
+      "hunter": "hunterSpawnSpotTag2",
+      "survivors": "survivorsSpawnSpotTag2"
+    },
+    {
+      "hunter": "hunterSpawnSpotTag3",
+      "survivors": "survivorsSpawnSpotTag3"
+    }],
+  "consoleRepairMission": {
+    "buttonsCount": 5,
+    "levelsCount": 5,
+    "flickDuration": 1.0,
+    "flickDelay": 0.5,
+    "sequenceRepeatDelay": 2.5,
+    "cooldownDuration": 15,
+    "spawn_in_rooms_config": [
+      "encaged_consoles_1",
+      "encaged_consoles_2",
+      "encaged_consoles_3",
+      "encaged_consoles_4",
+      "encaged_consoles_5",
+      "encaged_consoles_6",
+      "encaged_consoles_7"
+    ],
+    "pointsConfig": "$import/bundle:levels/encaged/repair_console_config"
+  },
+
+  "actor_default_properties": {
+   "bleeding_protection": 99999,
+   "bleeding_damage_protection": 99999,
+   "toxic_protection": 99999,
+   "toxic_damage_protection": 99999,
+   "regeneration_bonus": -2.5
+  },
+
+  "afterHitSpeedModifiers": {
+    "survival": 15,
+    "survivalDuration": "PT3s",
+    "hunterSuccess": -30,
+    "hunterMiss": 0,
+    "hunterDuration": "PT2s"
+  },
+
+  "doorOpenDuration": "PT2s",
+  "soundTrapTrackingDuration": "PT3s",
+  "stamina_consume_modifier": 1000,
+  "knockout_speed_modifier": -80,
+
+  "voiceChat": {
+   // дистанция максимальной громкости войсчата
+   "minDistance": 5,
+   // дистанция неслышимости звука войсчата
+   "maxDistance": 50
+  },
+
+  "hunterSetup": {
+    "health_bonus": 1500,
+    "speed": 15,
+    "stamina_bonus": -100,
+    "enableMovement": false,
+    "mantrapDeactivateDuration": "PT1s",
+
+    "inventory": [],
+    "armor": {"id": "arm.puppeteer_encaged", "stackSize": 1, "tag": {"no_drop": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}, "item_dequip_locked": {"type": "byte", "value": 1}}},
+    "primary_weapon": {"id": "melee.kukri_encaged", "stackSize": 1, "tag": {"no_drop": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}, "item_dequip_locked": {"type": "byte", "value": 1}}},
+    "skin": {"id": "skin.encaged_hunter", "stackSize": 1, "tag": {"no_drop": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}, "item_dequip_locked": {"type": "byte", "value": 1}}},
+    "abilities": [
+      "encaged_hunter_charge",
+      "encaged_hunter_infect",
+      "encaged_hunter_tranquil",
+      "encaged_hunter_rage",
+      "encaged_hunter_trap_spawner",
+      "encaged_hunter_wallhack_near_timeout"
+    ],
+    "infectionDuration": "PT3s",
+    "vfx": "effects:particles/anomalies/psiop/psiop2.efkefc",
+    "melee_attack_speed_default": -25,
+    "wallhack_off_distance": 15,
+    "last_survival_wh": false,
+    "disable_fall_damage": true
+  },
+
+  "hunterNearbyPresenceSetup": {
+    "min_vignette_intensity": 0,
+    "max_vignette_intensity":  0.5,
+    "min_vignette_extend": 0,
+    "max_vignette_extend": 0.5,
+    "creep_sound": "stalker:closeenvironment.metallowcreak.metallow_creak",
+    "creep_sound_min_dist": 3.0,
+    "creep_sound_max_dist": 20.0
+  },
+
+  "survivorsSetup": {
+    "medic": {
+      "health_bonus": -25,
+      "stamina_bonus": 40,
+      "speed": -2,
+      "enableMovement": true,
+      "mantrapDeactivateDuration": "PT5s",
+
+      "inventory": [
+        {"id": "med.apt_a", "stackSize": 2, "tag": {"non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}}},
+        {"id": "med.painblocker_encaged", "stackSize": 1, "tag": {"non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}}},
+        {"id": "med.stimulyator_encaged", "stackSize": 1, "tag": {"non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}}}
+      ],
+      "armor": {"id": "arm.topaz_encaged", "stackSize": 1, "tag": {"no_drop": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}, "item_dequip_locked": {"type": "byte", "value": 1}}},
+      "primary_weapon": {},
+      "disable_fall_damage": true,
+      "grenade_stamina_modifier": -100,
+      "jump_stamina_modifier": -60
+    },
+    "scout": {
+      "health_bonus": -15,
+      "stamina_bonus": 60,
+      "speed": 0,
+      "enableMovement": true,
+      "mantrapDeactivateDuration": "PT1s",
+
+      "inventory": [
+        {"id": "mantrap", "stackSize": 1, "tag": {"non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}}}
+      ],
+      "armor": {"id": "arm.albatros_scout_encaged", "stackSize": 1, "tag": {"no_drop": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}, "item_dequip_locked": {"type": "byte", "value": 1}}},
+      "primary_weapon": {},
+      "disable_fall_damage": true,
+      "grenade_stamina_modifier": -100,
+      "jump_stamina_modifier": -60
+    },
+    "soldier": {
+      "health_bonus": 20,
+      "stamina_bonus": 40,
+      "speed": -2,
+      "enableMovement": true,
+      "mantrapDeactivateDuration": "PT5s",
+
+      "inventory": [
+        {"id": "med.injector", "stackSize": 1, "tag": {"non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}}}
+      ],
+      "armor": {"id": "arm.heavyaltyn_encaged", "stackSize": 1, "tag": {"no_drop": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}, "item_dequip_locked": {"type": "byte", "value": 1}}},
+      "primary_weapon": {"id": "wpn.obrezbm16_encaged", "stackSize": 1, "tag": {
+        "non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1},
+        "bulletId": {"type": "integer","value": 12710},
+        "bulletTag": {"type": "compound", "value": {"locitem": {"type": "byte", "value": 1}}},
+        "numBullets": {"type": "integer","value": 2}}},
+      "disable_fall_damage": true,
+      "grenade_stamina_modifier": -100,
+      "jump_stamina_modifier": -60
+    },
+    "engineer": {
+      "health_bonus": 0,
+      "stamina_bonus": 30,
+      "speed": -2,
+      "enableMovement": true,
+      "mantrapDeactivateDuration": "PT2s",
+
+      "inventory": [
+      ],
+      "armor": {"id": "arm.kz2_encaged", "stackSize": 1, "tag": {"no_drop": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}, "item_dequip_locked": {"type": "byte", "value": 1}}},
+      "primary_weapon": {"id": "exp.stun_encage", "stackSize": 3, "tag": {"non_personal": {"type": "byte","value": 1}, "locitem": {"type": "byte", "value": 1}}},
+      "disable_fall_damage": true,
+      "grenade_stamina_modifier": -100,
+      "jump_stamina_modifier": -60
+    }
+  },
+
+  "classesSetup": {
+    "medic": {
+      "name": "encaged.class.medic.name",
+      "knockoutHelpDuration": "PT2s",
+      "encageHelpDuration": "PT3s",
+      "dodgeTraps": false,
+      "lootDuration": "PT5s",
+      "evacuationUsageDuration": "PT20s",
+      "saveRepairProgress": false
+    },
+    "scout": {
+      "name": "encaged.class.scout.name",
+      "knockoutHelpDuration":"PT3s",
+      "encageHelpDuration":"PT8s",
+      "dodgeTraps": true,
+      "lootDuration":"PT5s",
+      "evacuationUsageDuration":"PT15s",
+      "saveRepairProgress": false
+    },
+    "soldier": {
+      "name": "encaged.class.soldier.name",
+      "knockoutHelpDuration":"PT3s",
+      "encageHelpDuration":"PT10s",
+      "dodgeTraps": false,
+      "lootDuration":"PT5s",
+      "evacuationUsageDuration":"PT20s",
+      "saveRepairProgress": false
+    },
+    "engineer": {
+      "knockoutHelpDuration":"PT3s",
+      "encageHelpDuration":"PT8s",
+      "dodgeTraps": false,
+      "lootDuration":"PT2s",
+      "evacuationUsageDuration":"PT10s",
+      "saveRepairProgress": true
+    }
+  },
+  "encagingSetup": {
+    "applyDuration": "PT3s",
+    "dying_durations": [
+     "PT120s",
+     "PT60s",
+     "PT30s"
+    ],
+    "death_after_last": false,
+    "cage_object_id": "encaged_cage_0"
+  },
+  "reviveBuffs": {
+    "effects": {
+      "receive_damage_modifier": -90,
+      "speed_modifier": 50
+    },
+    "effects_duration": "PT5s",
+    "stamina_normalized": 1.0
+  },
+  "scoringPreset": {
+    "scoreAction": {
+      "SURVIVALS_COMPLETE_MAIN_TASK": {
+        "value": 500,
+        "loc_key": "encaged.score_action.survivals_complete_main_task"
+      },
+      "SURVIVALS_KILL_HUNTER": {
+        "value": 4000,
+        "loc_key": "encaged.score_action.survivals_kill_hunter"
+      },
+      "HUNTER_MELEE_HIT": {
+        "value": 25,
+        "max_per_user": 625,
+        "loc_key": "encaged.score_action.hunter_melee_hit"
+      },
+      "HUNTER_CHARGE_HIT_SURVIVOR": {
+        "value": 20,
+        "max_per_user": 400,
+        "loc_key": "encaged.score_action.hunter_charge_hit_survivor"
+      },
+      "HUNTER_TRANQUIL_SURVIVOR": {
+        "value": 30,
+        "max_per_user": 150,
+        "loc_key": "encaged.score_action.hunter_tranquil_survivor"
+      },
+      "HUNTER_TRAPPED_SURVIVOR": {
+        "value": 35,
+        "max_per_user": 105,
+        "loc_key": "encaged.score_action.hunter_trapped_survivor"
+      },
+      "HUNTER_KNOCKOUT_SURVIVOR": {
+        "value": 200,
+        "max_per_user": 200,
+        "loc_key": "encaged.score_action.hunter_knockout_survivor"
+      },
+      "HUNTER_ENCAGED_SURVIVOR": {
+        "value": 250,
+        "max_per_user": 250,
+        "loc_key": "encaged.score_action.hunter_encaged_survivor"
+      },
+      "HUNTER_KILLED_ENCAGED": {
+        "value": 1000,
+        "max_per_user": 4000,
+        "loc_key": "encaged.score_action.hunter_killed_encaged"
+      },
+      "HUNTER_INTERRUPTS_REPAIR_TASK": {
+        "value": 45,
+        "max_per_user": 225,
+        "loc_key": "encaged.score_action.hunter_interrupts_repair_task"
+      },
+      "HUNTER_INFECTS_FOLDER": {
+        "value": 25,
+        "max_per_user": 250,
+        "loc_key": "encaged.score_action.hunter_infects_folder"
+      },
+      "HUNTER_INFECT_FOLDER_PICKING": {
+        "value": 25,
+        "max_per_user": 250,
+        "loc_key": "encaged.score_action.hunter_infect_folder_picking"
+      },
+      "HUNTER_ELIMINATED_SURVIVORS": {
+        "value": 2000,
+        "loc_key": "encaged.score_action.hunter_eliminated_survivors"
+      },
+      "HUNTER_TIMER_ELAPSED": {
+        "value": 1000,
+        "loc_key": "encaged.score_action.hunter_timer_elapsed"
+      },
+      "SURVIVOR_MELEE_HIT": {
+        "value": 25,
+        "max_per_user": 250,
+        "loc_key": "encaged.score_action.survivor_melee_hit"
+      }, //limited by hunter health
+      "SURVIVOR_FIREARM_HIT": {
+        "value": 50,
+        "max_per_user": 500,
+        "loc_key": "encaged.score_action.survivor_firearm_hit"
+      },
+      "SURVIVOR_PICK_FOLDER": {
+        "value": 50,
+        "max_per_user": 500,
+        "loc_key": "encaged.score_action.survivor_pick_folder"
+      },
+      "SURVIVOR_COMPLETE_REPAIR": {
+        "value": 500,
+        "max_per_user": 2000,
+        "loc_key": "encaged.score_action.survivor_complete_repair"
+      },
+      "SURVIVOR_KNOCKOUT_HELP": {
+        "value": 300,
+        "max_per_user": 300,
+        "loc_key": "encaged.score_action.survivor_knockout_help"
+      },
+      "SURVIVOR_ENCAGED_HELP": {
+        "value": 300,
+        "max_per_user": 300,
+        "loc_key": "encaged.score_action.survivor_encaged_help"
+      },
+      "SURVIVOR_FLASH_HUNTER": {
+        "value": 45,
+        "max_per_user": 225,
+        "loc_key": "encaged.score_action.survivor_flash_hunter"
+      },
+      "SURVIVOR_USE_CONSUMABLE": {
+        "value": 30,
+        "max_per_user": 300,
+        "loc_key": "encaged.score_action.survivor_use_consumable"
+      },
+      "SURVIVOR_ENABLE_EVACUATION_POINT": {
+        "value": 600,
+        "max_per_user": 1200,
+        "loc_key": "encaged.score_action.survivor_enable_evacuation_point"
+      },
+      "SURVIVOR_KITE_HUNTER": {
+       "value": 50,
+       "loc_key": "encaged.score_action.survivor_kite_hunter",
+       "max_per_user": 600 //per survivor
+      },
+      "SURVIVOR_EVACUATE": {
+       "value": 3500,
+       "loc_key": "encaged.score_action.survivor_evacuate"
+     }
+    },
+    "additional_task_multiplier": 1.5,
+    "score_to_money_multiplier": 6,
+    "score_to_currency_multiplier": 0.4,
+    "random_role_multiplier": 1.2,
+    "kite_radius_xz": 15,
+    "kite_radius_y": 15,
+    "kite_cooldown": "PT5s"
+  },
+  "cratesSpawnSetup": [
+    {
+      "spawn_tag": "loot.common",
+      "crate_id": "encaged_safe",
+      "probability": 1,
+      "unlock_after_repair_task": true
+    },
+    {
+      "spawn_tag": "loot.medicine",
+      "crate_id": "encaged_medic_crate",
+      "probability": 0.33
+    },
+    {
+      "spawn_tag": "loot.combat",
+      "crate_id": "encaged_combat_crate",
+      "probability": 0.4
+    }
+  ],
+  "crateLootPreset": {
+    "common": {
+     "medic": "encaged_common",
+     "scout": "encaged_common",
+     "soldier": "encaged_common",
+     "engineer": "encaged_common"
+    },
+    "medicine": {
+     "medic": "encaged_medicine_medic",
+     "scout": "encaged_medicine_scout",
+     "soldier": "encaged_medicine_soldier",
+     "engineer": "encaged_medicine_engineer"
+    },
+    "combat": {
+     "medic": "encaged_combat_medic",
+     "scout": "encaged_combat_scout",
+     "soldier": "encaged_combat_soldier",
+     "engineer": "encaged_combat_engineer"
+    }
+  },
+
+ "currency": "encaged_currency",
+ "event_currency_item_id": 15971,
+ "collectibleChallengeConfig": {
+  "spawn_spot_tag": "enc.c_collectible",
+  "object_id": "encaged_challenge_collectible",
+  "spawn_count": 5,
+  "tracked_item_id": 20994,
+  "effect_radius_sq": 400, //20 m
+  "speed_modifier_per_tracked_around": [
+   0,0.0,
+   1,5.0,
+   2,8.0,
+   5,10.0,
+   10,15.0,
+   20,25.0
+  ],
+  "currency_per_item": 100
+ },
+ "afk_config": {
+  "enabled": true,
+  "detection": "PT30s",
+  "kick": "PT15s"
+ },
+ "tracking_sounds": {
+  "hunter_detection": "stalker:encaged.notif_positive_",
+  "survival_notify": "stalker:encaged.notif_negative",
+  "cooldown": "PT3s",
+  "max_tracking_sound_distance": 100
+ },
+
+  "caseProgression": [
+    {
+      "caseItemId": "lootbox.encaged_1",
+      "requiredOpenCases": 0,
+      "cost": 500
+    },
+    {
+      "caseItemId": "lootbox.encaged_2",
+      "requiredOpenCases": 5, // необходимое количество открытых т1 кейсов
+      "cost": 700
+    },
+    {
+      "caseItemId": "lootbox.encaged_3",
+      "requiredOpenCases": 15, // необходимое количество открытых т2 кейсов
+      "cost": 900
+    },
+    {
+      "caseItemId": "lootbox.encaged_4",
+      "requiredOpenCases": 50, // необходимое количество открытых т3 кейсов
+      "cost": 1000
+    }
+  ],
+
+  "ui": {
+   "notification_positive_sound": "stalker:encaged.notif_positive_",
+   "notification_negative_sound": "stalker:encaged.notif_negative",
+    "survivors.help_cards": [
+      {
+        "image": "stalker:textures/gui/encaged/encaged_help_card_select_class.png",
+        "width": 350,
+        "height": 444,
+        "title_key": "gui.encaged.survivors.cards.select_class.title",
+        "desc_key": "gui.encaged.survivors.cards.select_class.desc"
+      },
+      {
+        "image": "stalker:textures/gui/encaged/encaged_help_card_complete_missions.png",
+        "width": 350,
+        "height": 444,
+        "title_key": "gui.encaged.survivors.cards.missions.title",
+        "desc_key": "gui.encaged.survivors.cards.missions.desc"
+      },
+      {
+        "image": "stalker:textures/gui/encaged/encaged_help_card_survivals_hunter.png",
+        "width": 350,
+        "height": 444,
+        "title_key": "gui.encaged.survivors.cards.survivals_hunter.title",
+        "desc_key": "gui.encaged.survivors.cards.survivals_hunter.desc"
+      },
+      {
+        "image": "stalker:textures/gui/encaged/encaged_help_card_evacuate.png",
+        "width": 350,
+        "height": 444,
+        "title_key": "gui.encaged.survivors.cards.evacuate.title",
+        "desc_key": "gui.encaged.survivors.cards.evacuate.desc"
+      }
+    ],
+    "hunters.help_cards": [
+      {
+        "image": "stalker:textures/gui/encaged/encaged_help_card_encage.png",
+        "width": 350,
+        "height": 444,
+        "title_key": "gui.encaged.hunters.cards.encage.title",
+        "desc_key": "gui.encaged.hunters.cards.encage.desc"
+      },
+      {
+        "image": "stalker:textures/gui/encaged/encaged_help_card_hunter_prevent_missions.png",
+        "width": 350,
+        "height": 444,
+        "title_key": "gui.encaged.hunters.cards.prevent_missions.title",
+        "desc_key": "gui.encaged.hunters.cards.prevent_missions.desc"
+      },
+      {
+        "image": "stalker:textures/gui/encaged/encaged_help_card_find_survivals.png",
+        "width": 350,
+        "height": 444,
+        "title_key": "gui.encaged.hunters.cards.find_survivals.title",
+        "desc_key": "gui.encaged.hunters.cards.find_survivals.desc"
+      },
+     {
+      "image": "stalker:textures/gui/encaged/encaged_help_card_no_one_escape.png",
+      "width": 350,
+      "height": 444,
+      "title_key": "gui.encaged.hunters.cards.no_one_escape.title",
+      "desc_key": "gui.encaged.hunters.cards.no_one_escape.desc"
+     }
+    ],
+    "role_selection_card": {
+      "survivors": {
+        "image": "stalker:textures/gui/encaged/encaged_card_survivors.png",
+        "width": 320,
+        "height": 494
+      },
+      "hunters": {
+        "image": "stalker:textures/gui/encaged/encaged_card_hunter.png",
+        "width": 320,
+        "height": 494
+      },
+      "random": {
+       "image": "stalker:textures/gui/encaged/encaged_card_random.png",
+       "width": 320,
+       "height": 494
+      }
+    },
+    "hunter_about": [
+     {
+      "positive": true,
+      "text_key": "gui.encaged.hunter_desc.fast_walk"
+     },
+     {
+      "positive": false,
+      "text_key": "gui.encaged.hunter_desc.no_regen"
+     },
+     {
+      "positive": true,
+      "text_key": "gui.encaged.hunter_desc.wh"
+     }
+    ],
+    "classes": {
+      "medic": {
+        "image": "stalker:textures/gui/encaged/encaged_card_medic.png",
+        "width": 494,
+        "height": 320,
+        "name": "encaged.class.medic.name",
+        "about": [
+         {
+          "positive": true,
+          "text_key": "gui.encaged.class_desc.fast_revive_help"
+         },
+         {
+          "positive": true,
+          "text_key": "gui.encaged.class_desc.more_meds"
+         },
+         {
+          "positive": false,
+          "text_key": "gui.encaged.class_desc.less_health"
+         }
+        ]
+      },
+      "soldier": {
+        "image": "stalker:textures/gui/encaged/encaged_card_soldier.png",
+        "width": 494,
+        "height": 320,
+        "name": "encaged.class.soldier.name",
+        "about": [
+         {
+          "positive": true,
+          "text_key": "gui.encaged.class_desc.more_weapons"
+         },
+         {
+          "positive": true,
+          "text_key": "gui.encaged.class_desc.more_health"
+         }
+        ]
+      },
+      "scout": {
+        "image": "stalker:textures/gui/encaged/encaged_card_scout.png",
+        "width": 494,
+        "height": 320,
+        "name": "encaged.class.scout.name",
+        "about": [
+         {
+          "positive": true,
+          "text_key": "gui.encaged.class_desc.more_stamina"
+         },
+         {
+          "positive": true,
+          "text_key": "gui.encaged.class_desc.dodge_traps"
+         }
+       ]
+      },
+      "engineer": {
+        "image": "stalker:textures/gui/encaged/encaged_card_engineer.png",
+        "width": 494,
+        "height": 320,
+        "name": "encaged.class.engineer.name",
+        "about": [
+         {
+          "positive": true,
+          "text_key": "gui.encaged.class_desc.fast_looting"
+         },
+         {
+          "positive": true,
+          "text_key": "gui.encaged.class_desc.safety_repair"
+         }
+       ]
+      }
+    }
+  }
+}

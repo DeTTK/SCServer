@@ -33,14 +33,14 @@ public final class NativeCreatureModel implements AutoCloseable {
 
     public NativeCreatureModel(Path root,Path resources)throws Exception {
         SceneCollision.worker();
-        Path runtime=root.getParent().resolve("runtime");var manifest=JsonParser.parseString(Files.readString(root.resolve("fixtures/native-creature-model.json"))).getAsJsonObject();
+        Path runtime=root.getParent().resolve("runtime");var manifest=JsonParser.parseString(RuntimeFiles.readString(root.resolve("fixtures/native-creature-model.json"))).getAsJsonObject();
         if(manifest.get("version").getAsInt()!=1)throw new IOException("creature_release_version");
         for(var e:manifest.getAsJsonObject("classesSha256").entrySet()){
             if(!e.getKey().matches("[0-9]+"))throw new IOException("creature_release_class");
-            byte[] raw=Files.readAllBytes(runtime.resolve("classes/"+e.getKey()+".class"));
+            byte[] raw=RuntimeFiles.read(runtime.resolve("classes/"+e.getKey()+".class"));
             if(!HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(raw)).equals(e.getValue().getAsString()))throw new IOException("creature_release_changed:"+e.getKey());
         }
-        var urls=new ArrayList<URL>();for(String directory:List.of("classes","bootstrap","libs"))urls.add(runtime.resolve(directory).toUri().toURL());
+        var urls=new ArrayList<URL>();for(String directory:List.of("classes","bootstrap","libs"))urls.add(RuntimeFiles.location(runtime.resolve(directory)).toUri().toURL());
         try(var files=Files.list(runtime.resolve("dependencies"))){for(var f:files.filter(p->p.toString().endsWith(".jar")).toList())urls.add(f.toUri().toURL());}urls.add(resources.toUri().toURL());
         loader=new ClientSceneCodec.Loader(urls.toArray(URL[]::new));
         try{

@@ -23,7 +23,7 @@ public final class SceneItemValues implements AutoCloseable {
     public SceneItemValues(Path runtime,Path registry,Path manifest)throws Exception{
         forbidOwner();this.runtime=runtime.toRealPath();this.registry=registry.toRealPath();this.manifest=manifest==null?null:manifest.toRealPath();Map<Path,String> hashes=new LinkedHashMap<>();hashes.put(this.registry,sha(this.registry));Path overrides=this.registry.resolveSibling("client-current-item-state-overrides.json");if(Files.isRegularFile(overrides))hashes.put(overrides,sha(overrides));if(this.manifest!=null)hashes.put(this.manifest,sha(this.manifest));sourceHashes=Map.copyOf(hashes);if(!ACTIVE.compareAndSet(null,this))throw new IllegalStateException("scene_item_values_already_bound");
     }
-    private static String sha(Path path)throws Exception{if(Files.size(path)>32L*1024*1024)throw new IOException("scene_item_source_limit");return HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(path)));}
+    private static String sha(Path path)throws Exception{if(RuntimeFiles.size(path)>32L*1024*1024)throw new IOException("scene_item_source_limit");return HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(RuntimeFiles.read(path)));}
     private void verifySources()throws Exception{for(var entry:sourceHashes.entrySet())if(!sha(entry.getKey()).equals(entry.getValue()))throw new IOException("scene_item_source_changed:"+entry.getKey().getFileName());}
     private static void forbidOwner(){String name=Thread.currentThread().getName();if(name.equals("world-tick")||name.equals("native-game-owner"))throw new IllegalArgumentException("scene_item_owner_thread");}
     private Context context()throws Exception{

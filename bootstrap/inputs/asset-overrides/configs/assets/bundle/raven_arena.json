@@ -1,0 +1,6262 @@
+{
+	"accessRules": [{
+		"type": "requiredFactionLevel",
+		"faction": "settlement_rostok",
+		"level": 2,
+		"description": {
+			"key": "ravent.message.matchmaking.bar_level_required",
+			"args": {"level": 2}
+		}
+	}],
+
+	"leave": {
+		"ban_progression_reset_time": "PT72H",
+		"ban_progression": {
+			"2": "PT5M",
+			"3": "PT20M",
+			"4": "PT1H",
+			"5": "PT3H",
+			"6": "PT6H",
+			"7": "PT12H"
+		}
+	},
+
+	"matchmaking_casual": {
+		"locationName": "arena_raven",
+		// время доступа аналогично мертвому времени, опционально
+		"accessTime": null,
+
+		"accessBlockLeaveInPreparation": "PT5M",
+		"accessBlockLeaveInProgress": "PT60M",
+
+		"minGearscore": 0,
+
+		// matchmaking
+		"matchmakingInitialWindow": 1000,
+		"matchmakingWindowExpansionPerMinute": 30,
+		"matchmakingWindowExpansionBase": 1.2,
+		"matchmakingRecentGameDebuff": 200,
+		"matchmakingRecentGamesAmount": 20
+	},
+	"matchmaking_rating": {
+		"locationName": "arena_raven",
+		"matchmakingStartTime": {
+			"$region/RU": "2026-11-04T11:00:00",
+			"$region/EU": "2026-11-04T09:00:00",
+			"$region/NA": "2026-11-04T04:00:00",
+			"$region/SEA": "2026-11-04T16:00:00",
+			"$region/NEA": "2026-11-04T17:00:00"
+		},
+		// время доступа аналогично мертвому времени, опционально
+		"accessTime": [["10:00", "00:00"]],
+
+		"accessBlockLeaveInPreparation": "PT5M",
+		"accessBlockLeaveInProgress": "PT60M",
+
+		"minGearscore": 0,
+		"minPlaytime": "PT2H",
+
+		// matchmaking
+		"matchmakingInitialWindow": {
+			"$region/RU": 500,
+			"$region/EU": 700,
+			"$region/*": 1000
+		},
+		"matchmakingWindowExpansionPerMinute": 30,
+		"matchmakingWindowExpansionBase": 1.2,
+		"matchmakingRecentGameDebuff": 200,
+		"matchmakingRecentGamesAmount": 20
+	},
+
+	"how_to_play_data": [
+		{
+			"tab_name": "gui.ravent.howtoplay.tab.arena",
+			"cards": [
+				{
+					"caption": "gui.ravent.howtoplay.tip.1.title",
+					"desc": "gui.ravent.howtoplay.tip.1.description",
+					"image": {"path": "stalker:textures/gui/ravent/howto/core_main_object_pve.png", "width": 350, "height": 450}
+				},
+				{
+					"caption": "gui.ravent.howtoplay.tip.2.title",
+					"desc": "gui.ravent.howtoplay.tip.2.description",
+					"image": {"path": "stalker:textures/gui/ravent/howto/core_shop.png", "width": 350, "height": 450}
+				},
+				{
+					"caption": "gui.ravent.howtoplay.tip.3.title",
+					"desc": "gui.ravent.howtoplay.tip.3.description",
+					"image": {"path": "stalker:textures/gui/ravent/howto/core_main_object_pvp.png", "width": 350, "height": 450}
+				},
+				{
+					"caption": "gui.ravent.howtoplay.tip.4.title",
+					"desc": "gui.ravent.howtoplay.tip.4.description",
+					"image": {"path": "stalker:textures/gui/ravent/howto/core_win_or_loose.png", "width": 350, "height": 450}
+				}
+			]
+		},
+		{
+			"tab_name": "gui.ravent.howtoplay.tab.sets",
+			"cards": [
+				{
+					"caption": "gui.ravent.howtoplay.sets.artefacts.title",
+					"desc": "gui.ravent.howtoplay.sets.artefacts.description",
+					"image": {"path": "stalker:textures/gui/ravent/howto/sets_artefacts.png", "width": 350, "height": 450}
+				},
+				{
+					"caption": "gui.ravent.howtoplay.sets.bonuses.title",
+					"desc": "gui.ravent.howtoplay.sets.bonuses.description",
+					"image": {"path": "stalker:textures/gui/ravent/howto/sets_category.png", "width": 350, "height": 450}
+				},
+				{
+					"caption": "gui.ravent.howtoplay.sets.upgrades.title",
+					"desc": "gui.ravent.howtoplay.sets.upgrades.description",
+					"image": {"path": "stalker:textures/gui/ravent/howto/sets_combining.png", "width": 350, "height": 450}
+				},
+				{
+					"caption": "gui.ravent.howtoplay.sets.multiset.title",
+					"desc": "gui.ravent.howtoplay.sets.multiset.description",
+					"image": {"path": "stalker:textures/gui/ravent/howto/sets_multiset.png", "width": 350, "height": 450}
+				}
+			]
+		}
+	],
+
+	"teamSize": 5,
+
+	"episodeID": "arena26_episode",
+
+	// индекс - кол-во жетонов, значение - множитель изменения рейтинга.
+	"ratingBetMultipliers": [2.0, 2.6, 3.0],
+
+	"betCoinsShopLink": "shop://page/special/arena26_rating_coins",
+
+	// Нулевая лига, пять фиксированных лиг, топ-10% и топ-250.
+	// Стартовые значения прогрессии; иконки-заглушки экспортированы из Figma в PNG x3.
+	// Временные тестовые награды для проверки интерфейса: до 10 предметов разных рангов.
+	// gradient: [] — стандартный фон, [цвет] — заливка, [центр, край] — радиальный градиент (#AARRGGBB).
+	// gradientFalloffStrength: положительный множитель радиуса затухания; по умолчанию 1.0.
+	// borderGradient: top/bottom слева направо, left/right сверху вниз; цвета общих углов должны совпадать.
+	// Сторона — массив цветов или {position: 0..1, color: "#AARRGGBB"}; первая позиция 0, последняя 1.
+	// rounding — радиус углов в dp (по умолчанию 1), толщина обводки 1 dp.
+	// innerShadow: color, blur и необязательные offsetX/offsetY в dp; используется штатное затухание UI.
+	// leagueRewardAt: момент выдачи в ISO-8601 с часовым поясом; null скрывает дату до настройки.
+	// rewardImage: изображение наград лиги; null скрывает картинку.
+	// winPointsPerRound / lossPointsPerRound: optional arrays, first element is round 1.
+	// Missing rounds use win_points / loss_points; forfeits keep their default penalty.
+	"leagues": [
+		{
+			"name": "gui.ravent.rating.league.0",
+			"fixedLeague": true,
+			"required_progress": 0,
+			"win_points": 50,
+			"loss_points": 15,
+			"winPointsPerRound": [0, 0, 0, 0, 0, 0, 0, 2, 5, 10, 15, 15, 20, 25, 50],
+			"lossPointsPerRound": [0, 0, 0, 0, 0, 0, 0, 1, 2, 4, 6, 6, 8, 10, 15],
+			"leagueReward": [],
+			"milestones": [
+				{
+					"progress": 50,
+					"milestoneReward": [
+						{"id": "crt.arena26", "stackSize": 1000, "tag": {"personal_on_get": {"type": "byte", "value": 1}}}
+					]
+				},
+				{
+					"progress": 150,
+					"milestoneReward": [
+						{"id": "crt.arena26", "stackSize": 1000, "tag": {"personal_on_get": {"type": "byte", "value": 1}}}
+					]
+				},
+				{
+					"progress": 200,
+					"milestoneReward": [
+						{"id": "crt.arena26", "stackSize": 1000, "tag": {"personal_on_get": {"type": "byte", "value": 1}}}
+					]
+				}
+			],
+			"icon": {"path": "stalker:textures/gui/ravent/rating/league_0.png", "width": 96, "height": 96},
+			"iconStatistics": {"path": "stalker:textures/gui/ravent/rating/league_0_XL.png", "width": 473, "height": 473},
+			"rewardImage": null,
+			"gradient": ["#007E8189", "#337E8189"]
+		},
+		{
+			"name": "gui.ravent.rating.league.1",
+			"fixedLeague": true,
+			"required_progress": 200,
+			"win_points": 50,
+			"loss_points": 15,
+            "winPointsPerRound": [0, 0, 0, 0, 0, 0, 0, 2, 5, 10, 15, 15, 20, 25, 50],
+            "lossPointsPerRound": [0, 0, 0, 0, 0, 0, 0, 1, 2, 4, 6, 6, 8, 10, 15],
+			"leagueReward": [
+				{"id": "plc.sticker.raven26_heart_1", "stackSize": 1, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "camo.arm.arena26_skin_1", "stackSize": 1, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "camo.wpn.arena26_skin_1", "stackSize": 1, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "charm.autumn26_maskeddoll_1", "stackSize": 1, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "lootbox.arena26", "stackSize": 1, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "crt.arena26", "stackSize": 5000, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "upg.protector_2", "stackSize": 10, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "upg.tools_2", "stackSize": 10, "tag": {"personal_on_get": {"type": "byte", "value": 1}}}
+			],
+			"milestones": [
+				{
+					"progress": 250,
+					"milestoneReward": [
+						{"id": "crt.arena26", "stackSize": 1500, "tag": {"personal_on_get": {"type": "byte", "value": 1}}}
+					]
+				},
+				{
+					"progress": 300,
+					"milestoneReward": [
+						{"id": "crt.arena26", "stackSize": 1500, "tag": {"personal_on_get": {"type": "byte", "value": 1}}}
+					]
+				},
+				{
+					"progress": 350,
+					"milestoneReward": [
+						{"id": "crt.arena26", "stackSize": 1500, "tag": {"personal_on_get": {"type": "byte", "value": 1}}}
+					]
+				}
+			],
+			"icon": {"path": "stalker:textures/gui/ravent/rating/league_1.png", "width": 96, "height": 96},
+			"iconStatistics": {"path": "stalker:textures/gui/ravent/rating/league_1_XL.png", "width": 473, "height": 473},
+			"rewardImage": {"image": "stalker:textures/gui/shop/content/autumn26/arena26/league_rewards/reward_submission.dds", "imageWidth": 804, "imageHeight": 884},
+			"gradient": ["#007DEF7D", "#337DEF7D"]
+		},
+		{
+			"name": "gui.ravent.rating.league.2",
+			"fixedLeague": true,
+			"required_progress": 400,
+			"win_points": 50,
+			"loss_points": 15,
+            "winPointsPerRound": [0, 0, 0, 0, 0, 0, 0, 2, 5, 10, 15, 15, 20, 25, 50],
+            "lossPointsPerRound": [0, 0, 0, 0, 0, 0, 0, 1, 2, 4, 6, 6, 8, 10, 15],
+			"leagueReward": [
+				{"id": "plc.sticker.raven26_heart_2", "stackSize": 1, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "camo.arm.arena26_skin_2", "stackSize": 1, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "camo.wpn.arena26_skin_2", "stackSize": 1, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "charm.autumn26_maskeddoll_2", "stackSize": 1, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "lootbox.arena26", "stackSize": 1, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "crt.arena26", "stackSize": 10000, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "upg.protector_2", "stackSize": 20, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "upg.tools_2", "stackSize": 20, "tag": {"personal_on_get": {"type": "byte", "value": 1}}}
+			],
+			"milestones": [
+				{
+					"progress": 500,
+					"milestoneReward": [
+						{"id": "crt.arena26", "stackSize": 2500, "tag": {"personal_on_get": {"type": "byte", "value": 1}}}
+					]
+				},
+				{
+					"progress": 600,
+					"milestoneReward": [
+						{"id": "crt.arena26", "stackSize": 2500, "tag": {"personal_on_get": {"type": "byte", "value": 1}}}
+					]
+				},
+				{
+					"progress": 700,
+					"milestoneReward": [
+						{"id": "crt.arena26", "stackSize": 2500, "tag": {"personal_on_get": {"type": "byte", "value": 1}}}
+					]
+				}
+			],
+			"icon": {"path": "stalker:textures/gui/ravent/rating/league_2.png", "width": 96, "height": 96},
+			"iconStatistics": {"path": "stalker:textures/gui/ravent/rating/league_2_XL.png", "width": 473, "height": 473},
+			"rewardImage": {"image": "stalker:textures/gui/shop/content/autumn26/arena26/league_rewards/reward_acceptance.dds", "imageWidth": 804, "imageHeight": 884},
+			"gradient": ["#008D8DFF", "#338D8DFF"]
+		},
+		{
+			"name": "gui.ravent.rating.league.3",
+			"fixedLeague": true,
+			"required_progress": 800,
+			"win_points": 50,
+			"loss_points": 15,
+            "winPointsPerRound": [0, 0, 0, 0, 0, 0, 0, 2, 5, 10, 15, 15, 20, 25, 50],
+            "lossPointsPerRound": [0, 0, 0, 0, 0, 0, 0, 1, 2, 4, 6, 6, 8, 10, 15],
+			"leagueReward": [
+				{"id": "plc.sticker.raven26_heart_3", "stackSize": 1, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "camo.arm.arena26_skin_3", "stackSize": 1, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "camo.wpn.arena26_skin_3", "stackSize": 1, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "charm.autumn26_maskeddoll_3", "stackSize": 1, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "lootbox.arena26", "stackSize": 3, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "crt.arena26", "stackSize": 15000, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "upg.protector", "stackSize": 10, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "upg.tools_3", "stackSize": 5, "tag": {"personal_on_get": {"type": "byte", "value": 1}}}
+			],
+			"milestones": [
+				{
+					"progress": 950,
+					"milestoneReward": [
+						{"id": "crt.arena26", "stackSize": 4000, "tag": {"personal_on_get": {"type": "byte", "value": 1}}}
+					]
+				},
+				{
+					"progress": 1100,
+					"milestoneReward": [
+						{"id": "crt.arena26", "stackSize": 4000, "tag": {"personal_on_get": {"type": "byte", "value": 1}}}
+					]
+				},
+				{
+					"progress": 1250,
+					"milestoneReward": [
+						{"id": "crt.arena26", "stackSize": 4000, "tag": {"personal_on_get": {"type": "byte", "value": 1}}}
+					]
+				}
+			],
+			"icon": {"path": "stalker:textures/gui/ravent/rating/league_3.png", "width": 96, "height": 96},
+			"iconStatistics": {"path": "stalker:textures/gui/ravent/rating/league_3_XL.png", "width": 473, "height": 473},
+			"rewardImage": {"image": "stalker:textures/gui/shop/content/autumn26/arena26/league_rewards/reward_stability.dds", "imageWidth": 804, "imageHeight": 884},
+			"gradient": ["#00D968C4", "#33D968C4"]
+		},
+		{
+			"name": "gui.ravent.rating.league.4",
+			"fixedLeague": true,
+			"required_progress": 1400,
+			"win_points": 50,
+			"loss_points": 15,
+            "winPointsPerRound": [0, 0, 0, 0, 0, 0, 0, 2, 5, 10, 15, 15, 20, 25, 50],
+            "lossPointsPerRound": [0, 0, 0, 0, 0, 0, 0, 1, 2, 4, 6, 6, 8, 10, 15],
+			"leagueReward": [
+				{"id": "plc.sticker.raven26_heart_4", "stackSize": 1, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "camo.arm.arena26_skin_4", "stackSize": 1, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "camo.wpn.arena26_skin_4", "stackSize": 1, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "charm.autumn26_maskeddoll_4", "stackSize": 1, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "lootbox.arena26", "stackSize": 5, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "crt.arena26", "stackSize": 25000, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "upg.protector", "stackSize": 20, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "upg.tools_3", "stackSize": 10, "tag": {"personal_on_get": {"type": "byte", "value": 1}}}
+			],
+			"milestones": [
+				{
+					"progress": 1550,
+					"milestoneReward": [
+						{"id": "crt.arena26", "stackSize": 6000, "tag": {"personal_on_get": {"type": "byte", "value": 1}}}
+					]
+				},
+				{
+					"progress": 1700,
+					"milestoneReward": [
+						{"id": "crt.arena26", "stackSize": 6000, "tag": {"personal_on_get": {"type": "byte", "value": 1}}}
+					]
+				},
+				{
+					"progress": 1850,
+					"milestoneReward": [
+						{"id": "crt.arena26", "stackSize": 6000, "tag": {"personal_on_get": {"type": "byte", "value": 1}}}
+					]
+				}
+			],
+			"icon": {"path": "stalker:textures/gui/ravent/rating/league_4.png", "width": 96, "height": 96},
+			"iconStatistics": {"path": "stalker:textures/gui/ravent/rating/league_4_XL.png", "width": 473, "height": 473},
+			"rewardImage": {"image": "stalker:textures/gui/shop/content/autumn26/arena26/league_rewards/reward_battle.dds", "imageWidth": 804, "imageHeight": 884},
+			"gradient": ["#00FF5767", "#33FF5767"]
+		},
+		{
+			"name": "gui.ravent.rating.league.5",
+			"fixedLeague": true,
+			"required_progress": 2000,
+			"win_points": 50,
+			"loss_points": 15,
+            "winPointsPerRound": [0, 0, 0, 0, 0, 0, 0, 2, 5, 10, 15, 15, 20, 25, 50],
+            "lossPointsPerRound": [0, 0, 0, 0, 0, 0, 0, 1, 2, 4, 6, 6, 8, 10, 15],
+			"leagueReward": [
+				{"id": "plc.sticker.raven26_heart_5", "stackSize": 1, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "camo.arm.arena26_skin_5", "stackSize": 1, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "camo.wpn.arena26_skin_5", "stackSize": 1, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "charm.autumn26_maskeddoll_5", "stackSize": 1, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "lootbox.arena26", "stackSize": 10, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "crt.arena26", "stackSize": 50000, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "upg.protector", "stackSize": 50, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "upg.tools_3", "stackSize": 25, "tag": {"personal_on_get": {"type": "byte", "value": 1}}}
+			],
+			"milestones": [],
+			"icon": {"path": "stalker:textures/gui/ravent/rating/league_5.png", "width": 96, "height": 96},
+			"iconStatistics": {"path": "stalker:textures/gui/ravent/rating/league_5_XL.png", "width": 473, "height": 473},
+			"rewardImage": {"image": "stalker:textures/gui/shop/content/autumn26/arena26/league_rewards/reward_revelation.dds", "imageWidth": 804, "imageHeight": 884},
+			"gradient": ["#00FFDD66", "#33FFDD66"]
+		},
+		{
+			"name": "gui.ravent.rating.league.6",
+			"fixedLeague": false,
+			"leagueRewardAt": "2026-11-18T11:00:00+03:00",
+			"required_position": 10,
+			"is_position_percent": true,
+			"win_points": 50,
+			"loss_points": -50,
+			"leagueReward": [
+				{"id": "tool.bell", "stackSize": 1, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "plc.sticker.raven26_heart_6", "stackSize": 1, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "plc.background.arena_raven26", "stackSize": 1, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "plc.pattern.arena_raven26", "stackSize": 1, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "camo.arm.arena26_skin_6", "stackSize": 1, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "camo.wpn.arena26_skin_6", "stackSize": 1, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "charm.autumn26_maskeddoll_6", "stackSize": 1, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "coupon.master_armor_50", "stackSize": 1, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "coupon.master_weapon_50", "stackSize": 1, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "lootbox.arena26_styles", "stackSize": 1, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "crt.arena26", "stackSize": 150000, "tag": {"personal_on_get": {"type": "byte", "value": 1}}}
+			],
+			"icon": {"path": "stalker:textures/gui/ravent/rating/league_6.png", "width": 96, "height": 96},
+			"iconStatistics": {"path": "stalker:textures/gui/ravent/rating/league_6_XL.png", "width": 473, "height": 473},
+			"rewardImage": {"image": "stalker:textures/gui/shop/content/autumn26/arena26/league_rewards/reward_epiphany.dds", "imageWidth": 804, "imageHeight": 884},
+			"gradient": ["#00111111", "#33FFFFFF"],
+			"gradientFalloffStrength": 1.7,
+			"borderGradient": {
+				"rounding": 1,
+				"top": [
+					{"position": 0, "color": "#FF46545F"},
+					{"position": 0.0480958, "color": "#FF46545F"},
+					{"position": 0.4175505, "color": "#FF7E8082"},
+					{"position": 0.6946416, "color": "#FF6A7279"},
+					{"position": 1, "color": "#FF838586"}
+				],
+				"right": [
+					{"position": 0, "color": "#FF838586"},
+					{"position": 0.0521123, "color": "#FF888888"},
+					{"position": 0.279993, "color": "#FF73787B"},
+					{"position": 0.5947417, "color": "#FF5E676D"},
+					{"position": 0.9094903, "color": "#FF666E74"},
+					{"position": 1, "color": "#FF666E74"}
+				],
+				"bottom": [
+					{"position": 0, "color": "#FF848585"},
+					{"position": 0.2018023, "color": "#FF73787B"},
+					{"position": 0.5507318, "color": "#FF5E676D"},
+					{"position": 0.8996612, "color": "#FF666E74"},
+					{"position": 1, "color": "#FF666E74"}
+				],
+				"left": [
+					{"position": 0, "color": "#FF46545F"},
+					{"position": 0.0433844, "color": "#FF46545F"},
+					{"position": 0.3766476, "color": "#FF7E8082"},
+					{"position": 0.6265951, "color": "#FF6A7279"},
+					{"position": 0.9541532, "color": "#FF888888"},
+					{"position": 1, "color": "#FF848585"}
+				]
+			}
+		},
+		{
+			"name": "gui.ravent.rating.league.7",
+			"fixedLeague": false,
+			"leagueRewardAt": "2026-11-18T11:00:00+03:00",
+			"required_position": {
+				"$region/RU": 250,
+				"$region/EU": 90,
+				"$region/NA": 15,
+				"$region/SEA": 10,
+				"$region/NEA": 10
+			},
+			"is_position_percent": false,
+			"win_points": 50,
+			"loss_points": -50,
+			"leagueReward": [
+				{"id": "tool.bell", "stackSize": 1, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "plc.sticker.raven26_heart_animated", "stackSize": 1, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "plc.background.arena_raven26", "stackSize": 1, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "plc.pattern.arena_raven26", "stackSize": 1, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "camo.arm.arena26_skin_7", "stackSize": 1, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "camo.wpn.arena26_skin_7", "stackSize": 1, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "charm.autumn26_maskeddoll_6", "stackSize": 1, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "coupon.master_armor_99", "stackSize": 1, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "coupon.master_weapon_99", "stackSize": 1, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "lootbox.arena26_styles", "stackSize": 1, "tag": {"personal_on_get": {"type": "byte", "value": 1}}},
+				{"id": "lootbox.arena26_styles", "stackSize": 1, "tag": {"no_drop": {"type": "byte","value": 1}}},
+				{"id": "crt.arena26", "stackSize": 300000, "tag": {"personal_on_get": {"type": "byte", "value": 1}}}
+			],
+			"icon": {"path": "stalker:textures/gui/ravent/rating/league_7.png", "width": 96, "height": 96},
+			"iconStatistics": {"path": "stalker:textures/gui/ravent/rating/league_7_XL.png", "width": 473, "height": 473},
+			"rewardImage": {"image": "stalker:textures/gui/shop/content/autumn26/arena26/league_rewards/reward_deliverance.dds", "imageWidth": 804, "imageHeight": 884},
+			"gradient": ["#00111111", "#33EEC24D"],
+			"gradientFalloffStrength": 1.5,
+			"borderGradient": {
+				"rounding": 1,
+				"top": [
+					{"position": 0, "color": "#FF856220"},
+					{"position": 0.3104044, "color": "#FF856220"},
+					{"position": 0.7023065, "color": "#FFF4E683"},
+					{"position": 1, "color": "#FFC39842"}
+				],
+				"right": [
+					{"position": 0, "color": "#FFC39842"},
+					{"position": 0.0226852, "color": "#FFBF923D"},
+					{"position": 0.3747929, "color": "#FF4E341B"},
+					{"position": 0.7269006, "color": "#FFF1EA82"},
+					{"position": 1, "color": "#FFF1EA82"}
+				],
+				"bottom": [
+					{"position": 0, "color": "#FFC1953F"},
+					{"position": 0.0111193, "color": "#FFBF923D"},
+					{"position": 0.367394, "color": "#FF4E341B"},
+					{"position": 0.7236686, "color": "#FFF1EA82"},
+					{"position": 1, "color": "#FFF1EA82"}
+				],
+				"left": [
+					{"position": 0, "color": "#FF856220"},
+					{"position": 0.3067739, "color": "#FF856220"},
+					{"position": 0.6940923, "color": "#FFF4E683"},
+					{"position": 1, "color": "#FFC1953F"}
+				]
+			}
+		}
+	],
+
+	"artSlots": {
+		"1": {
+			"level": "1",
+			"backpack": {"id": 12070}
+		},
+		"2": {
+			"level": "3",
+			"backpack": {"id": 12071}
+		},
+		"3": {
+			"level": "6",
+			"backpack": {"id": 12072}
+		},
+		"4": {
+			"level": "8",
+			"backpack": {"id": 12073}
+		}
+	},
+
+	"shopLevels": {
+		"1": 0, //уровень: стоимость перехода
+		"2": 2,
+		"3": 4,
+		"4": 6,
+		"5": 8,
+		"6": 10,
+		"7": 15,
+		"8": 20,
+        "9": 25
+    },
+	"startShopLevel": "1", //начальный уровень магазина
+	"buyShopExp": { //настройка покупки опыта магазина
+		"price": 20, //стоимость в монетах
+		"amount": 1 //сколько опыта дадут
+	},
+	"shopTypeWeightPerLevel": "bundle:ravent/raven_shop_type_weights.csv",
+	"shopRarityWeightPerLevel": {
+		"weapon": "bundle:ravent/raven_weapon_rarity_weights.csv",
+		"armor": "bundle:ravent/raven_armor_rarity_weights.csv",
+        "extra_weapon": "bundle:ravent/raven_extra_weapon_rarity_weights.csv",
+		"artefacts": "bundle:ravent/raven_artefacts_rarity_weights.csv",
+        "artefacts_special": "bundle:ravent/raven_artefacts_rarity_weights.csv"
+    },
+	"blueprintsForCraft": 3, // нужно 3 одинаковых чертежа для крафта любого предмета
+	"blueprintUpgradeSteps": { //шаг должен быть больше 0
+		"picklock": 5,
+		"newbie": 5,
+		"stalker": 5,
+		"veteran": 5,
+		"master": 5
+	},
+	"artefactUpgradeStep": 15,
+	"artefactMultisetAmountStats": 1,
+	"sets": {
+		"multiset": {
+			"icon": "stalker:textures/gui/ravent/shop/multiset.svg",
+			"name": "gui.ravent.shop.multiset",
+			"items": ["ravent_yat"],
+			"buffs": {}
+		},
+		"set1": {
+			"icon": "stalker:textures/gui/ravent/shop/set1.svg",
+			"name": "gui.ravent.shop.set1",
+			"items": [
+				"ravent_mislite",
+				"ravent_buki",
+				"ravent_veche"
+			],
+			"buffs": {
+				"2": {
+					"wall_jump": 150,
+					"stamina_bonus": 30,
+					"stamina_regeneration_bonus": 3,
+					"sprint_speed_modifier": 2.5
+				},
+				"3": {
+					"wall_jump": 150,
+					"double_jump": 150,
+					"stamina_bonus": 50,
+					"stamina_regeneration_bonus": 9,
+					"sprint_speed_modifier": 2.5,
+					"speed_modifier": 4.2
+				}
+			}
+		},
+		"set2": {
+			"icon": "stalker:textures/gui/ravent/shop/set2.svg",
+			"name": "gui.ravent.shop.set2",
+			"items": [
+				"ravent_tverdo",
+				"ravent_zhivete",
+				"ravent_eyvaz"
+			],
+			"buffs": {
+				"2": {
+					"npc_attack_damage_modifier": 60
+				},
+				"3": {
+					"npc_attack_damage_modifier": 100,
+					"damage_bonus": 5.0
+				}
+			}
+		},
+		"set3": {
+			"icon": "stalker:textures/gui/ravent/shop/set3.svg",
+			"name": "gui.ravent.shop.set3",
+			"items": [
+				"ravent_dobro",
+				"ravent_lyudi",
+				"ravent_uruz"
+			],
+			"buffs": {
+				"2": {
+					"vampirism_bonus": 12
+				},
+				"3": {
+					"vampirism_bonus": 25
+				}
+			}
+		},
+		"set4": {
+			"icon": "stalker:textures/gui/ravent/shop/set4.svg",
+			"name": "gui.ravent.shop.set4",
+			"items": [
+				"ravent_zemlya",
+				"ravent_izhe",
+				"ravent_otal"
+			],
+			"buffs": {
+				"2": {
+					"raven_coins_bonus": 25
+				},
+				"3": {
+					"raven_coins_bonus": 50
+				}
+			}
+		}
+	},
+
+	"type": "long",
+	"value": -5483545168066023589,
+	"rating": {
+		"ratingCalibrationGameCount": 10,
+		"maxRatingDuringCalibration": 2100.0
+	},
+
+	"videoClip": "arena26",
+
+	// gameplay
+
+	"battle_pass_points_daily_bonus_pool": {
+		//"2024-03-18": 3000,
+	},
+	// стартовые комнаты/команды - кооррдинаты появления для каждой команды и опционально материал для брони чтобы различать команды - как в Мертвом времени
+	"teams": [
+		{
+			"spawnPoints": [
+				[9481.9, 77, -2866.6],
+				[9479.9, 77, -2869.3],
+				[9477.3, 77, -2871.3],
+				[9473.7, 77, -2872.9]
+			],
+			"armorMaterialId": "skin_chainmail_cursed",
+			"name": "gui.ravent.team.pagans",
+			"playerIcon": "stalker:textures/gui/ravent/hud/pvp_pagans.svg",
+			"allyRoundIcon": "stalker:textures/gui/ravent/hud/round_pagans_blue.svg",
+			"enemyRoundIcon": "stalker:textures/gui/ravent/hud/round_pagans_red.svg",
+			"usernames": ["gui.ravent.team1.player1", "gui.ravent.team1.player2", "gui.ravent.team1.player3", "gui.ravent.team1.player4", "gui.ravent.team1.player5"],
+			//айди объекта, который стоит в комнате команд и по которому будет прилетать урон. наверно должен иметь какое-то свое поведение ну или я хз
+			"pvpSpawnPosition": {"pos": [9472.5, 76, -2885.5], "yaw": 180},
+			"spawnRoom": [
+				9490.5, 88, -2889.5,
+				9462.5, 50, -2879.5
+			],
+			"spectatePositions": [
+				{"pos": [9483.5, 85, -2861.5], "yaw": 85.6013, "pitch": 47.0368},
+				{"pos": [9453.5, 85, -2861.5], "yaw": 273.3665, "pitch": 39.4239},
+				{"pos": [9487.5, 87, -2844.5], "yaw": 133.2643, "pitch": 34.4254}
+			]
+		},
+		{
+			"spawnPoints": [
+				[9482.5, 77, -2979.5],
+				[9479.5, 77, -2965.5],
+				[9482.5, 77, -2969.5],
+				[9483.5, 77, -2974.5]
+			],
+			"armorMaterialId": "skin_chainmail_cold",
+			"name": "gui.ravent.team.faithful",
+			"playerIcon": "stalker:textures/gui/ravent/hud/pvp_faithful.svg",
+			"allyRoundIcon": "stalker:textures/gui/ravent/hud/round_faithful_blue.svg",
+			"enemyRoundIcon": "stalker:textures/gui/ravent/hud/round_faithful_red.svg",
+			"usernames": ["gui.ravent.team2.player1", "gui.ravent.team2.player2", "gui.ravent.team2.player3", "gui.ravent.team2.player4", "gui.ravent.team2.player5"],
+			"pvpSpawnPosition": {"pos": [9471.5, 75, -2952.5], "yaw": 0},
+			"spawnRoom": [
+				9462.5, 88, -2954.5,
+				9490.5, 50, -2945.5
+			],
+			"spectatePositions": [
+				{"pos": [9478.5, 82, -2959.5], "yaw": 150.2551, "pitch": 34.3015},
+				{"pos": [9471.5, 87, -2987.5], "yaw": 4.0856, "pitch": 48.7418},
+				{"pos": [9486.5, 83, -2973.5], "yaw": 90.0, "pitch": 36.8699}
+			]
+		}
+	],
+	"restrictedCuboids": [],
+
+	"duelSpectatorPositions": [
+		{"pos": [9472.5, 85, -2923.5], "yaw": 90, "pitch": 22}
+	],
+
+	"world_modifiers_amount": { // round -> modifiers amount
+		"1":  0,
+		"5":  1,
+		"10": 2,
+		"20": 3
+	},
+
+	"mobScoreFactors": { //множитель очков сущностей
+		"arena26_boss_discord": 15,
+		"summer23_raven_tushkan": 0.05,
+		"summer23_raven_tushkan_d9": 0.05,
+		"summer23_raven_tushkan_d16": 0.05,
+		"summer23_raven_spirit": 0.05,
+		"summer23_raven_dog": 0.15,
+		"summer23_raven_pseudodog": 0.25,
+		"summer23_raven_pseudodog_d9": 0.25,
+		"summer23_raven_pseudodog_d16": 0.25,
+		"summer23_raven_flesh": 0.25,
+		"summer23_raven_flesh_d9": 0.25,
+		"summer23_raven_flesh_d16": 0.25,
+		"summer23_raven_boar": 0.5,
+		"summer23_raven_boar_d9": 0.5,
+		"summer23_raven_boar_d16": 0.5,
+		"summer23_raven_snork": 0.4,
+		"summer23_raven_snork_d9": 0.4,
+		"summer23_raven_snork_d16": 0.4,
+		"summer23_raven_krovosos": 0.75,
+		"summer23_raven_krovosos_d9": 0.75,
+		"summer23_raven_krovosos_d16": 0.75,
+		"summer23_raven_pseudogigant": 15,
+		"summer23_raven_pseudogigant_d9": 15,
+		"summer23_raven_pseudogigant_d16": 15,
+		"summer23_raven_chimera": 15,
+		"summer23_raven_chimera_d9": 15,
+		"summer23_raven_chimera_d16": 15,
+		"[ИВЕНТ] Зомбированный (нож арена)": 0.35,
+		"[ИВЕНТ] Зомбированный (автомат арена)": 1.0,
+		"[ИВЕНТ] Зомбированный (снайпер арена)": 1.0,
+		"[ИВЕНТ] Зомбированный (шахид арена)": 2.0,
+		"[ИВЕНТ] Зомбированный (пулемет арена)": 3.0
+	},
+
+	//волны - указывается  перечень спотов откуда будут набегать сущности и список возможных сущностей для каждого спота. волны идут в указанном порядке
+	"waveTypes": {
+		"first_base_1": { //mutants
+			"waveWeight": 1,//вес волны для рандома в раунде, где в пулле больше 1-й волны
+			"waveDuration": "PT40S",   //таймеры волны
+			"mobSpawnDuration": "PT35S",//время, в течение которого могут спавниться мобы
+			"flagMaxDamage": 765, //максимальный урон, который может быть нанесен за волну мобами
+			"despawnOnTimer": false,//деспавнится ли мобы по таймеру
+			"waveName": "ravent.waveTypes.first_base_1.name",  //ключ локализации отображаемого названия волны
+			"waveEnum": "base",    //тип волны
+
+			"goTagsToOpen": ["base"],
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs" : {
+
+				//ограничитель макс количества сущностей в первой волне, если где-то в спотах не поставят ограничитель "max"
+				"mobEntries": [
+					{"mutant": "summer23_raven_flesh", "spot": "mob", "maxAmount": 6},
+					{"mutant": "summer23_raven_tushkan", "spot": "small_mob", "maxAmount": 11}
+				]
+			},
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT8S",
+				//типо куллдаун после которого спавнится эта волна повторна. если не указан - не появляется повторно
+				"mobEntries": [
+					{"mutant": "summer23_raven_flesh", "spot": "mob", "maxAmount": 6},
+					{"mutant": "summer23_raven_tushkan", "spot": "small_mob", "maxAmount": 11}
+				]
+			}
+		},
+		"first_base_2": { //mutants + npc melee
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.first_base_2.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base"],
+
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"npc": "[ИВЕНТ] Зомбированный (нож арена)", "spot": "npc_melee",  "maxAmount": 10},
+					{"mutant": "summer23_raven_spirit", "spot": "spirit", "maxAmount": 11}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT8S",
+				"mobEntries": [
+					{"npc": "[ИВЕНТ] Зомбированный (нож арена)", "spot": "npc_melee",  "maxAmount": 10},
+					{"mutant": "summer23_raven_spirit", "spot": "spirit", "maxAmount": 11}
+				]
+			}
+		},
+		"first_base_3": { //mutants + npc shooter
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.first_base_3.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base", "barricade"],
+
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"npc": "[ИВЕНТ] Зомбированный (автомат арена)", "spot": "npc_shooter",  "maxAmount": 4},
+					{"mutant": "summer23_raven_flesh", "spot": "mob", "maxAmount": 6}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT9S",
+				"mobEntries": [
+					{"npc": "[ИВЕНТ] Зомбированный (автомат арена)", "spot": "npc_shooter",  "maxAmount": 4},
+					{"mutant": "summer23_raven_flesh", "spot": "mob", "maxAmount": 6}
+				]
+			}
+		},
+		"first_base_4": { //mutants
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.first_base_4.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base"],
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_raven_dog", "spot": "mob",  "maxAmount": 6},
+					{"mutant": "summer23_raven_snork", "spot": "mob", "maxAmount": 4}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT8S",
+				"mobEntries": [
+					{"mutant": "summer23_raven_dog", "spot": "mob",  "maxAmount": 6},
+					{"mutant": "summer23_raven_snork", "spot": "mob", "maxAmount": 4}
+				]
+			}
+		},
+		"first_base_5": { //npc melee + npc shooter
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.first_base_5.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base", "barricade"],
+
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"npc": "[ИВЕНТ] Зомбированный (нож арена)", "spot": "npc_melee",  "maxAmount": 10},
+					{"npc": "[ИВЕНТ] Зомбированный (автомат арена)", "spot": "npc_shooter",  "maxAmount": 4}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT9S",
+				"mobEntries": [
+					{"npc": "[ИВЕНТ] Зомбированный (нож арена)", "spot": "npc_melee",  "maxAmount": 10},
+					{"npc": "[ИВЕНТ] Зомбированный (автомат арена)", "spot": "npc_shooter",  "maxAmount": 4}
+				]
+			}
+		},
+		"first_base_6": { //mutants
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.first_base_6.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base"],
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_raven_boar", "spot": "mob",  "maxAmount": 5},
+					{"mutant": "summer23_raven_tushkan", "spot": "small_mob",  "maxAmount": 11}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT8S",
+				"mobEntries": [
+					{"mutant": "summer23_raven_boar", "spot": "mob",  "maxAmount": 5},
+					{"mutant": "summer23_raven_tushkan", "spot": "small_mob",  "maxAmount": 11}
+				]
+			}
+		},
+		"first_base_7": { //mutants
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.first_base_7.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base"],
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_raven_pseudodog", "spot": "mob",  "maxAmount": 5},
+					{"mutant": "summer23_raven_spirit", "spot": "spirit", "maxAmount": 11}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT8S",
+				"mobEntries": [
+					{"mutant": "summer23_raven_pseudodog", "spot": "mob",  "maxAmount": 5},
+					{"mutant": "summer23_raven_spirit", "spot": "spirit", "maxAmount": 11}
+				]
+			}
+		},
+
+		// отдельные PvE-пулы для плавного усиления ранних раундов
+		// Раунд 2: примерно +10% к составу 1-го раунда
+		"first_r2_base_1": { //mutants
+			"waveWeight": 1,//вес волны для рандома в раунде, где в пулле больше 1-й волны
+			"waveDuration": "PT40S",   //таймеры волны
+			"mobSpawnDuration": "PT35S",//время, в течение которого могут спавниться мобы
+			"flagMaxDamage": 765, //максимальный урон, который может быть нанесен за волну мобами
+			"despawnOnTimer": false,//деспавнится ли мобы по таймеру
+			"waveName": "ravent.waveTypes.first_r2_base_1.name",  //ключ локализации отображаемого названия волны
+			"waveEnum": "base",    //тип волны
+
+			"goTagsToOpen": ["base"],
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs" : {
+
+				//ограничитель макс количества сущностей в первой волне, если где-то в спотах не поставят ограничитель "max"
+				"mobEntries": [
+					{"mutant": "summer23_raven_flesh", "spot": "mob", "maxAmount": 7},
+					{"mutant": "summer23_raven_tushkan", "spot": "small_mob", "maxAmount": 12}
+				]
+			},
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT8S",
+				//типо куллдаун после которого спавнится эта волна повторна. если не указан - не появляется повторно
+				"mobEntries": [
+					{"mutant": "summer23_raven_flesh", "spot": "mob", "maxAmount": 7},
+					{"mutant": "summer23_raven_tushkan", "spot": "small_mob", "maxAmount": 12}
+				]
+			}
+		},
+		"first_r2_base_2": { //mutants + npc melee
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.first_r2_base_2.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base"],
+
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"npc": "[ИВЕНТ] Зомбированный (нож арена)", "spot": "npc_melee",  "maxAmount": 11},
+					{"mutant": "summer23_raven_spirit", "spot": "spirit", "maxAmount": 12}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT8S",
+				"mobEntries": [
+					{"npc": "[ИВЕНТ] Зомбированный (нож арена)", "spot": "npc_melee",  "maxAmount": 11},
+					{"mutant": "summer23_raven_spirit", "spot": "spirit", "maxAmount": 12}
+				]
+			}
+		},
+		"first_r2_base_3": { //mutants + npc shooter
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.first_r2_base_3.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base", "barricade"],
+
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"npc": "[ИВЕНТ] Зомбированный (автомат арена)", "spot": "npc_shooter",  "maxAmount": 4},
+					{"mutant": "summer23_raven_flesh", "spot": "mob", "maxAmount": 7}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT9S",
+				"mobEntries": [
+					{"npc": "[ИВЕНТ] Зомбированный (автомат арена)", "spot": "npc_shooter",  "maxAmount": 4},
+					{"mutant": "summer23_raven_flesh", "spot": "mob", "maxAmount": 7}
+				]
+			}
+		},
+		"first_r2_base_4": { //mutants
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.first_r2_base_4.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base"],
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_raven_dog", "spot": "mob",  "maxAmount": 6},
+					{"mutant": "summer23_raven_snork", "spot": "mob", "maxAmount": 5}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT8S",
+				"mobEntries": [
+					{"mutant": "summer23_raven_dog", "spot": "mob",  "maxAmount": 6},
+					{"mutant": "summer23_raven_snork", "spot": "mob", "maxAmount": 5}
+				]
+			}
+		},
+		"first_r2_base_5": { //npc melee + npc shooter
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.first_r2_base_5.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base", "barricade"],
+
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"npc": "[ИВЕНТ] Зомбированный (нож арена)", "spot": "npc_melee",  "maxAmount": 11},
+					{"npc": "[ИВЕНТ] Зомбированный (автомат арена)", "spot": "npc_shooter",  "maxAmount": 4}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT9S",
+				"mobEntries": [
+					{"npc": "[ИВЕНТ] Зомбированный (нож арена)", "spot": "npc_melee",  "maxAmount": 11},
+					{"npc": "[ИВЕНТ] Зомбированный (автомат арена)", "spot": "npc_shooter",  "maxAmount": 4}
+				]
+			}
+		},
+		"first_r2_base_6": { //mutants
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.first_r2_base_6.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base"],
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_raven_boar", "spot": "mob",  "maxAmount": 6},
+					{"mutant": "summer23_raven_tushkan", "spot": "small_mob",  "maxAmount": 12}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT8S",
+				"mobEntries": [
+					{"mutant": "summer23_raven_boar", "spot": "mob",  "maxAmount": 6},
+					{"mutant": "summer23_raven_tushkan", "spot": "small_mob",  "maxAmount": 12}
+				]
+			}
+		},
+		"first_r2_base_7": { //mutants
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.first_r2_base_7.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base"],
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_raven_pseudodog", "spot": "mob",  "maxAmount": 6},
+					{"mutant": "summer23_raven_spirit", "spot": "spirit", "maxAmount": 12}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT8S",
+				"mobEntries": [
+					{"mutant": "summer23_raven_pseudodog", "spot": "mob",  "maxAmount": 6},
+					{"mutant": "summer23_raven_spirit", "spot": "spirit", "maxAmount": 12}
+				]
+			}
+		},
+		// Раунд 3: примерно +19% к составу 1-го раунда
+		"first_r3_base_1": { //mutants
+			"waveWeight": 1,//вес волны для рандома в раунде, где в пулле больше 1-й волны
+			"waveDuration": "PT40S",   //таймеры волны
+			"mobSpawnDuration": "PT35S",//время, в течение которого могут спавниться мобы
+			"flagMaxDamage": 765, //максимальный урон, который может быть нанесен за волну мобами
+			"despawnOnTimer": false,//деспавнится ли мобы по таймеру
+			"waveName": "ravent.waveTypes.first_r3_base_1.name",  //ключ локализации отображаемого названия волны
+			"waveEnum": "base",    //тип волны
+
+			"goTagsToOpen": ["base"],
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs" : {
+
+				//ограничитель макс количества сущностей в первой волне, если где-то в спотах не поставят ограничитель "max"
+				"mobEntries": [
+					{"mutant": "summer23_raven_flesh", "spot": "mob", "maxAmount": 7},
+					{"mutant": "summer23_raven_tushkan", "spot": "small_mob", "maxAmount": 13}
+				]
+			},
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT8S",
+				//типо куллдаун после которого спавнится эта волна повторна. если не указан - не появляется повторно
+				"mobEntries": [
+					{"mutant": "summer23_raven_flesh", "spot": "mob", "maxAmount": 7},
+					{"mutant": "summer23_raven_tushkan", "spot": "small_mob", "maxAmount": 13}
+				]
+			}
+		},
+		"first_r3_base_2": { //mutants + npc melee
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.first_r3_base_2.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base"],
+
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"npc": "[ИВЕНТ] Зомбированный (нож арена)", "spot": "npc_melee",  "maxAmount": 12},
+					{"mutant": "summer23_raven_spirit", "spot": "spirit", "maxAmount": 13}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT8S",
+				"mobEntries": [
+					{"npc": "[ИВЕНТ] Зомбированный (нож арена)", "spot": "npc_melee",  "maxAmount": 12},
+					{"mutant": "summer23_raven_spirit", "spot": "spirit", "maxAmount": 13}
+				]
+			}
+		},
+		"first_r3_base_3": { //mutants + npc shooter
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.first_r3_base_3.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base", "barricade"],
+
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"npc": "[ИВЕНТ] Зомбированный (автомат арена)", "spot": "npc_shooter",  "maxAmount": 5},
+					{"mutant": "summer23_raven_flesh", "spot": "mob", "maxAmount": 7}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT9S",
+				"mobEntries": [
+					{"npc": "[ИВЕНТ] Зомбированный (автомат арена)", "spot": "npc_shooter",  "maxAmount": 5},
+					{"mutant": "summer23_raven_flesh", "spot": "mob", "maxAmount": 7}
+				]
+			}
+		},
+		"first_r3_base_4": { //mutants
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.first_r3_base_4.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base"],
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_raven_dog", "spot": "mob",  "maxAmount": 6},
+					{"mutant": "summer23_raven_snork", "spot": "mob", "maxAmount": 5}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT8S",
+				"mobEntries": [
+					{"mutant": "summer23_raven_dog", "spot": "mob",  "maxAmount": 6},
+					{"mutant": "summer23_raven_snork", "spot": "mob", "maxAmount": 5}
+				]
+			}
+		},
+		"first_r3_base_5": { //npc melee + npc shooter
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.first_r3_base_5.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base", "barricade"],
+
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"npc": "[ИВЕНТ] Зомбированный (нож арена)", "spot": "npc_melee",  "maxAmount": 12},
+					{"npc": "[ИВЕНТ] Зомбированный (автомат арена)", "spot": "npc_shooter",  "maxAmount": 5}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT9S",
+				"mobEntries": [
+					{"npc": "[ИВЕНТ] Зомбированный (нож арена)", "spot": "npc_melee",  "maxAmount": 12},
+					{"npc": "[ИВЕНТ] Зомбированный (автомат арена)", "spot": "npc_shooter",  "maxAmount": 5}
+				]
+			}
+		},
+		"first_r3_base_6": { //mutants
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.first_r3_base_6.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base"],
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_raven_boar", "spot": "mob",  "maxAmount": 6},
+					{"mutant": "summer23_raven_tushkan", "spot": "small_mob",  "maxAmount": 13}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT8S",
+				"mobEntries": [
+					{"mutant": "summer23_raven_boar", "spot": "mob",  "maxAmount": 6},
+					{"mutant": "summer23_raven_tushkan", "spot": "small_mob",  "maxAmount": 13}
+				]
+			}
+		},
+		"first_r3_base_7": { //mutants
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.first_r3_base_7.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base"],
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_raven_pseudodog", "spot": "mob",  "maxAmount": 6},
+					{"mutant": "summer23_raven_spirit", "spot": "spirit", "maxAmount": 13}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT8S",
+				"mobEntries": [
+					{"mutant": "summer23_raven_pseudodog", "spot": "mob",  "maxAmount": 6},
+					{"mutant": "summer23_raven_spirit", "spot": "spirit", "maxAmount": 13}
+				]
+			}
+		},
+
+		"boss_copypig": { //mutants
+			"waveWeight": 1,
+
+			"waveDuration": "PT60S",
+			"mobSpawnDuration": "PT50S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": true,
+			"waveName": "ravent.waveTypes.first_boss_1.name",
+			"despawnOnTimerRewardFactor": 0.5, //фактор награды если моб задеспавнился по таймеру
+			"waveEnum": "boss",
+
+			"goTagsToOpen": ["boss"],
+
+			"mobScoreWavesCount": 1,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_boss_copyPig", "spot": "boss",  "maxAmount": 1}
+				]
+			}
+		},
+		"boss_stronglove": { //mutants
+			"waveWeight": 1,
+
+			"waveDuration": "PT60S",
+			"mobSpawnDuration": "PT50S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": true,
+			"waveName": "ravent.waveTypes.first_boss_2.name",
+			"despawnOnTimerRewardFactor": 0.5, //фактор награды если моб задеспавнился по таймеру
+			"waveEnum": "boss",
+
+			"goTagsToOpen": ["boss"],
+
+			"mobScoreWavesCount": 1,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_boss_stronglove", "spot": "boss",  "maxAmount": 1}
+				]
+			}
+		},
+
+		"boss_tushkan_king": { //mutants
+			"waveWeight": 1,
+
+			"waveDuration": "PT60S",
+			"mobSpawnDuration": "PT50S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": true,
+			"waveName": "ravent.waveTypes.first_boss_3.name",
+			"despawnOnTimerRewardFactor": 0.5, //фактор награды если моб задеспавнился по таймеру
+			"waveEnum": "boss",
+
+			"goTagsToOpen": ["boss"],
+
+			"mobScoreWavesCount": 1,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_boss_tushkan_king", "spot": "titans",  "maxAmount": 1}
+				]
+			}
+		},
+
+		"boss_kojemyaka": { //mutants + npc
+			"waveWeight": 1,
+
+			"waveDuration": "PT60S",
+			"mobSpawnDuration": "PT50S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": true,
+			"waveName": "ravent.waveTypes.boss_kojemyaka.name",
+			"despawnOnTimerRewardFactor": 0.5, //фактор награды если моб задеспавнился по таймеру
+			"waveEnum": "boss",
+
+			"goTagsToOpen": ["boss"],
+
+			"mobScoreWavesCount": 1,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"npc": "[ИВЕНТ] Босс Никита Кожемяка", "spot": "boss",  "maxAmount": 1}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT8S",
+				"mobEntries": [
+					{"mutant": "raven24_flesh_support_nikita", "spot": "boss",  "maxAmount": 4}
+				]
+			}
+		},
+		"boss_ram": {
+			"waveWeight": 1,
+			"waveDuration": "PT60S",
+			"mobSpawnDuration": "PT50S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": true,
+			"waveName": "ravent.waveTypes.boss_ram.name",
+			"despawnOnTimerRewardFactor": 0.5,
+			"waveEnum": "boss",
+			"goTagsToOpen": ["boss"],
+			"mobScoreWavesCount": 1,
+			"initialMobs": {
+				"mobEntries": [
+					{"mutant": "arena26_boss_ram", "spot": "boss", "maxAmount": 1}
+				]
+			}
+		},
+		"boss_berserk": {
+			"waveWeight": 1,
+			"waveDuration": "PT60S",
+			"mobSpawnDuration": "PT50S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": true,
+			"waveName": "cnps.entity.arena26_berserk.name",
+			"despawnOnTimerRewardFactor": 0.5,
+			"waveEnum": "boss",
+			"goTagsToOpen": [
+				"boss"
+			],
+			"mobScoreWavesCount": 1,
+			"initialMobs": {
+				"mobEntries": [
+					{
+						"npc": "arena26_berserk",
+						"spot": "boss",
+						"maxAmount": 1
+					}
+				]
+			},
+			"supportMobs": {
+				"mobSpawnCooldown": "PT10S",
+				"mobEntries": [
+					{"npc": "arena26_grenader_support_assaulter", "spot": "npc_shooter", "maxAmount": 2}
+				]
+			}
+		},
+		"boss_dogman": {
+			"waveWeight": 1,
+			"waveDuration": "PT60S",
+			"mobSpawnDuration": "PT50S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": true,
+			"waveName": "cnps.entity.arena26_dogman.name",
+			"despawnOnTimerRewardFactor": 0.5,
+			"waveEnum": "boss",
+			"goTagsToOpen": ["boss"],
+			"mobScoreWavesCount": 1,
+			"initialMobs": {
+				"mobEntries": [
+					{"mutant": "arena26_dogman_internet", "spot": "boss", "maxAmount": 1}
+				]
+			}
+		},
+		"boss_grenader": {
+			"waveWeight": 1,
+			"waveDuration": "PT60S",
+			"mobSpawnDuration": "PT50S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": true,
+			"waveName": "ravent.waveTypes.boss_grenader.name",
+			"despawnOnTimerRewardFactor": 0.5,
+			"waveEnum": "boss",
+			"goTagsToOpen": ["boss"],
+			"mobScoreWavesCount": 1,
+			"initialMobs": {
+				"mobEntries": [
+					{"npc": "arena26_boss_grenader", "spot": "boss", "maxAmount": 1}
+				]
+			},
+			"supportMobs": {
+				"mobSpawnCooldown": "PT10S",
+				"mobEntries": [
+					{"npc": "arena26_grenader_support_assaulter", "spot": "npc_shooter", "maxAmount": 2},
+					{"npc": "[ИВЕНТ] Зомбированный (шахид арена)", "spot": "npc_melee", "maxAmount": 1}
+				]
+			}
+		},
+		"boss_zvonar": {
+			"waveWeight": 1,
+			"waveDuration": "PT60S",
+			"mobSpawnDuration": "PT50S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": true,
+			"waveName": "ravent.waveTypes.boss_zvonar.name",
+			"despawnOnTimerRewardFactor": 0.5,
+			"waveEnum": "boss",
+			"goTagsToOpen": ["boss"],
+			"mobScoreWavesCount": 1,
+			"initialMobs": {
+				"mobEntries": [
+					{"mutant": "arena26_zvonar_internet", "spot": "titans", "maxAmount": 1}
+				]
+			}
+		},
+		"boss_crosses": {
+			"waveWeight": 1,
+			"waveDuration": "PT60S",
+			"mobSpawnDuration": "PT50S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": true,
+			"waveName": "ravent.waveTypes.boss_crosses.name",
+			"despawnOnTimerRewardFactor": 0.5,
+			"waveEnum": "boss",
+			"goTagsToOpen": ["boss"],
+			"mobScoreWavesCount": 1,
+			"initialMobs": {
+				"mobEntries": [
+					{"npc": "arena26_boss_crosses", "spot": "boss", "maxAmount": 1}
+				]
+			}
+		},
+		"boss_wolf": { //mutants
+			"waveWeight": 1,
+
+			"waveDuration": "PT60S",
+			"mobSpawnDuration": "PT50S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": true,
+			"waveName": "ravent.waveTypes.boss_wolf.name",
+			"despawnOnTimerRewardFactor": 0.5, //фактор награды если моб задеспавнился по таймеру
+			"waveEnum": "boss",
+
+			"goTagsToOpen": ["boss"],
+
+			"mobScoreWavesCount": 1,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "ra24_wolf", "spot": "boss",  "maxAmount": 1}
+				]
+			}
+		},
+		"boss_kikimora": { //mutants
+			"waveWeight": 1,
+
+			"waveDuration": "PT60S",
+			"mobSpawnDuration": "PT50S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": true,
+			"waveName": "ravent.waveTypes.boss_kikimora.name",
+			"despawnOnTimerRewardFactor": 0.5, //фактор награды если моб задеспавнился по таймеру
+			"waveEnum": "boss",
+
+			"goTagsToOpen": ["boss", "base"],
+
+			"mobScoreWavesCount": 1,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "ra24_kikimora_main", "spot": "boss",  "maxAmount": 1}
+				]
+			}
+		},
+		"boss_durak": { //mutants + npc
+			"waveWeight": 1,
+
+			"waveDuration": "PT60S",
+			"mobSpawnDuration": "PT50S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": true,
+			"waveName": "ravent.waveTypes.boss_durak.name",
+			"despawnOnTimerRewardFactor": 0.5, //фактор награды если моб задеспавнился по таймеру
+			"waveEnum": "boss",
+
+			"goTagsToOpen": ["boss"],
+
+			"mobScoreWavesCount": 1,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"npc": "[ИВЕНТ] Босс Иван Дурак", "spot": "ivan_sniper",  "maxAmount": 1}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT8S",
+				"mobEntries": [
+					{"mutant": "ra24_frog", "spot": "mob",  "maxAmount": 4}
+				]
+			}
+		},
+
+		//второй цикл
+		"second_base_1": { //mutants + npc shooter
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.second_base_1.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base", "barricade"],
+
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_raven_snork", "spot": "jump_mob",  "maxAmount": 7},
+					{"npc": "[ИВЕНТ] Зомбированный (автомат арена)", "spot": "npc_shooter", "maxAmount": 6}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT9S",
+				"mobEntries": [
+					{"mutant": "summer23_raven_snork", "spot": "jump_mob",  "maxAmount": 7},
+					{"npc": "[ИВЕНТ] Зомбированный (автомат арена)", "spot": "npc_shooter", "maxAmount": 6}
+					//{"mutant": "raven24_steal_tushkan", "spot": "small_mob", "maxAmount": 1}
+				]
+			}
+		},
+		"second_base_2": { //mutants
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.second_base_2.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base"],
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_raven_krovosos", "spot": "mob",  "maxAmount": 4},
+					{"mutant": "summer23_raven_tushkan", "spot": "small_mob", "maxAmount": 12},
+					{"mutant": "summer23_raven_flesh", "spot": "mob", "maxAmount": 2},
+					{"mutant": "summer23_raven_boar", "spot": "mob", "maxAmount": 1}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT8S",
+				"mobEntries": [
+					{"mutant": "summer23_raven_krovosos", "spot": "mob",  "maxAmount": 4},
+					{"mutant": "summer23_raven_tushkan", "spot": "small_mob", "maxAmount": 12},
+					{"mutant": "summer23_raven_flesh", "spot": "mob", "maxAmount": 2},
+					{"mutant": "summer23_raven_boar", "spot": "mob", "maxAmount": 1}
+					//{"mutant": "raven24_steal_tushkan", "spot": "small_mob", "maxAmount": 1}
+				]
+			}
+		},
+		"second_base_3": { //mutants + npc shooter
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.second_base_3.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base", "barricade"],
+
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_raven_boar", "spot": "mob",  "maxAmount": 7},
+					{"npc": "[ИВЕНТ] Зомбированный (снайпер арена)", "spot": "npc_shooter", "maxAmount": 6}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT9S",
+				"mobEntries": [
+					{"mutant": "summer23_raven_boar", "spot": "mob",  "maxAmount": 7},
+					{"npc": "[ИВЕНТ] Зомбированный (снайпер арена)", "spot": "npc_shooter", "maxAmount": 6}
+					//{"mutant": "raven24_steal_tushkan", "spot": "small_mob", "maxAmount": 1}
+				]
+			}
+		},
+		"second_base_4": { //mutants + npc melee
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.second_base_4.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base", "barricade"],
+
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"npc": "[ИВЕНТ] Зомбированный (нож арена)", "spot": "npc_melee",  "maxAmount": 10},
+					{"npc": "[ИВЕНТ] Зомбированный (шахид арена)", "spot": "npc_melee", "maxAmount": 3},
+					{"npc": "[ИВЕНТ] Зомбированный (автомат арена)", "spot": "npc_shooter", "maxAmount": 3}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT8S",
+				"mobEntries": [
+					{"npc": "[ИВЕНТ] Зомбированный (нож арена)", "spot": "npc_melee",  "maxAmount": 10},
+					{"npc": "[ИВЕНТ] Зомбированный (шахид арена)", "spot": "npc_melee", "maxAmount": 3},
+					{"npc": "[ИВЕНТ] Зомбированный (автомат арена)", "spot": "npc_shooter", "maxAmount": 3}
+					//{"mutant": "raven24_steal_tushkan", "spot": "small_mob", "maxAmount": 1}
+				]
+			}
+		},
+		"second_base_5": { //mutants + npc shooter
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.second_base_5.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base", "barricade"],
+
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_raven_dog", "spot": "mob",  "maxAmount": 7},
+					{"npc": "[ИВЕНТ] Зомбированный (автомат арена)", "spot": "npc_shooter", "maxAmount": 4}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT9S",
+				"mobEntries": [
+					{"mutant": "summer23_raven_dog", "spot": "mob",  "maxAmount": 7},
+					{"npc": "[ИВЕНТ] Зомбированный (автомат арена)", "spot": "npc_shooter", "maxAmount": 4}
+					//{"mutant": "raven24_steal_tushkan", "spot": "small_mob", "maxAmount": 1}
+				]
+			}
+		},
+		"second_base_6": { //mutants
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.second_base_6.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base"],
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_raven_flesh", "spot": "mob",  "maxAmount": 9},
+					{"mutant": "summer23_raven_boar", "spot": "mob",  "maxAmount": 7}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT8S",
+				"mobEntries": [
+					{"mutant": "summer23_raven_flesh", "spot": "mob",  "maxAmount": 9},
+					{"mutant": "summer23_raven_boar", "spot": "mob",  "maxAmount": 7}
+					//{"mutant": "raven24_steal_tushkan", "spot": "small_mob", "maxAmount": 1}
+				]
+			}
+		},
+		"second_base_7": { //mutants + npc shooter
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.second_base_7.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base", "barricade"],
+
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_raven_flesh", "spot": "mob",  "maxAmount": 9},
+					{"npc": "[ИВЕНТ] Зомбированный (снайпер арена)", "spot": "npc_shooter",  "maxAmount": 4}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT9S",
+				"mobEntries": [
+					{"mutant": "summer23_raven_flesh", "spot": "mob",  "maxAmount": 9},
+					{"npc": "[ИВЕНТ] Зомбированный (снайпер арена)", "spot": "npc_shooter",  "maxAmount": 4}
+					//{"mutant": "raven24_steal_tushkan", "spot": "small_mob", "maxAmount": 1}
+				]
+			}
+		},
+
+		// отдельные PvE-пулы для усиления 7-го и 8-го раундов
+		// Раунд 7: примерно +19% к исходному второму циклу
+		"second_r7_base_1": { //mutants + npc shooter
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.second_r7_base_1.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base", "barricade"],
+
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_raven_snork", "spot": "jump_mob",  "maxAmount": 7},
+					{"npc": "[ИВЕНТ] Зомбированный (автомат арена)", "spot": "npc_shooter", "maxAmount": 6}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT9S",
+				"mobEntries": [
+					{"mutant": "summer23_raven_snork", "spot": "jump_mob",  "maxAmount": 7},
+					{"npc": "[ИВЕНТ] Зомбированный (автомат арена)", "spot": "npc_shooter", "maxAmount": 6}
+					//{"mutant": "raven24_steal_tushkan", "spot": "small_mob", "maxAmount": 1}
+				]
+			}
+		},
+		"second_r7_base_2": { //mutants
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.second_r7_base_2.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base"],
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_raven_krovosos", "spot": "mob",  "maxAmount": 5},
+					{"mutant": "summer23_raven_tushkan", "spot": "small_mob", "maxAmount": 19}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT8S",
+				"mobEntries": [
+					{"mutant": "summer23_raven_krovosos", "spot": "mob",  "maxAmount": 5},
+					{"mutant": "summer23_raven_tushkan", "spot": "small_mob", "maxAmount": 19}
+					//{"mutant": "raven24_steal_tushkan", "spot": "small_mob", "maxAmount": 1}
+				]
+			}
+		},
+		"second_r7_base_3": { //mutants + npc shooter
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.second_r7_base_3.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base", "barricade"],
+
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_raven_boar", "spot": "mob",  "maxAmount": 7},
+					{"npc": "[ИВЕНТ] Зомбированный (снайпер арена)", "spot": "npc_shooter", "maxAmount": 6}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT9S",
+				"mobEntries": [
+					{"mutant": "summer23_raven_boar", "spot": "mob",  "maxAmount": 7},
+					{"npc": "[ИВЕНТ] Зомбированный (снайпер арена)", "spot": "npc_shooter", "maxAmount": 6}
+					//{"mutant": "raven24_steal_tushkan", "spot": "small_mob", "maxAmount": 1}
+				]
+			}
+		},
+		"second_r7_base_4": { //mutants + npc melee
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.second_r7_base_4.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base", "barricade"],
+
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"npc": "[ИВЕНТ] Зомбированный (нож арена)", "spot": "npc_melee",  "maxAmount": 11},
+					{"npc": "[ИВЕНТ] Зомбированный (шахид арена)", "spot": "npc_melee", "maxAmount": 4},
+					{"npc": "[ИВЕНТ] Зомбированный (пулемет арена)", "spot": "npc_shooter", "maxAmount": 3}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT8S",
+				"mobEntries": [
+					{"npc": "[ИВЕНТ] Зомбированный (нож арена)", "spot": "npc_melee",  "maxAmount": 11},
+					{"npc": "[ИВЕНТ] Зомбированный (шахид арена)", "spot": "npc_melee", "maxAmount": 4},
+					{"npc": "[ИВЕНТ] Зомбированный (пулемет арена)", "spot": "npc_shooter", "maxAmount": 3}
+					//{"mutant": "raven24_steal_tushkan", "spot": "small_mob", "maxAmount": 1}
+				]
+			}
+		},
+		"second_r7_base_5": { //mutants + npc shooter
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.second_r7_base_5.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base", "barricade"],
+
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_raven_dog", "spot": "mob",  "maxAmount": 7},
+					{"npc": "[ИВЕНТ] Зомбированный (автомат арена)", "spot": "npc_shooter", "maxAmount": 5}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT9S",
+				"mobEntries": [
+					{"mutant": "summer23_raven_dog", "spot": "mob",  "maxAmount": 7},
+					{"npc": "[ИВЕНТ] Зомбированный (автомат арена)", "spot": "npc_shooter", "maxAmount": 5}
+					//{"mutant": "raven24_steal_tushkan", "spot": "small_mob", "maxAmount": 1}
+				]
+			}
+		},
+		"second_r7_base_6": { //mutants
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.second_r7_base_6.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base"],
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_raven_flesh", "spot": "mob",  "maxAmount": 10},
+					{"mutant": "summer23_raven_boar", "spot": "mob",  "maxAmount": 7}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT8S",
+				"mobEntries": [
+					{"mutant": "summer23_raven_flesh", "spot": "mob",  "maxAmount": 10},
+					{"mutant": "summer23_raven_boar", "spot": "mob",  "maxAmount": 7}
+					//{"mutant": "raven24_steal_tushkan", "spot": "small_mob", "maxAmount": 1}
+				]
+			}
+		},
+		"second_r7_base_7": { //mutants + npc shooter
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.second_r7_base_7.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base", "barricade"],
+
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_raven_flesh", "spot": "mob",  "maxAmount": 10},
+					{"npc": "[ИВЕНТ] Зомбированный (снайпер арена)", "spot": "npc_shooter",  "maxAmount": 5}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT9S",
+				"mobEntries": [
+					{"mutant": "summer23_raven_flesh", "spot": "mob",  "maxAmount": 10},
+					{"npc": "[ИВЕНТ] Зомбированный (снайпер арена)", "spot": "npc_shooter",  "maxAmount": 5}
+					//{"mutant": "raven24_steal_tushkan", "spot": "small_mob", "maxAmount": 1}
+				]
+			}
+		},
+		// Раунд 8: примерно +30% к исходному второму циклу
+		"second_r8_base_1": { //mutants + npc shooter
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.second_r8_base_1.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base", "barricade"],
+
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_raven_snork", "spot": "jump_mob",  "maxAmount": 9},
+					{"npc": "[ИВЕНТ] Зомбированный (автомат арена)", "spot": "npc_shooter", "maxAmount": 6}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT9S",
+				"mobEntries": [
+					{"mutant": "summer23_raven_snork", "spot": "jump_mob",  "maxAmount": 9},
+					{"npc": "[ИВЕНТ] Зомбированный (автомат арена)", "spot": "npc_shooter", "maxAmount": 6}
+					//{"mutant": "raven24_steal_tushkan", "spot": "small_mob", "maxAmount": 1}
+				]
+			}
+		},
+		"second_r8_base_2": { //mutants
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.second_r8_base_2.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base"],
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_raven_krovosos", "spot": "mob",  "maxAmount": 5},
+					{"mutant": "summer23_raven_tushkan", "spot": "small_mob", "maxAmount": 21},
+					{"mutant": "summer23_raven_flesh", "spot": "mob", "maxAmount": 3},
+					{"mutant": "summer23_raven_boar", "spot": "mob", "maxAmount": 2}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT8S",
+				"mobEntries": [
+					{"mutant": "summer23_raven_krovosos", "spot": "mob",  "maxAmount": 5},
+					{"mutant": "summer23_raven_tushkan", "spot": "small_mob", "maxAmount": 21},
+					{"mutant": "summer23_raven_flesh", "spot": "mob", "maxAmount": 3},
+					{"mutant": "summer23_raven_boar", "spot": "mob", "maxAmount": 2}
+					//{"mutant": "raven24_steal_tushkan", "spot": "small_mob", "maxAmount": 1}
+				]
+			}
+		},
+		"second_r8_base_3": { //mutants + npc shooter
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.second_r8_base_3.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base", "barricade"],
+
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_raven_boar", "spot": "mob",  "maxAmount": 9},
+					{"npc": "[ИВЕНТ] Зомбированный (снайпер арена)", "spot": "npc_shooter", "maxAmount": 6}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT9S",
+				"mobEntries": [
+					{"mutant": "summer23_raven_boar", "spot": "mob",  "maxAmount": 9},
+					{"npc": "[ИВЕНТ] Зомбированный (снайпер арена)", "spot": "npc_shooter", "maxAmount": 6}
+					//{"mutant": "raven24_steal_tushkan", "spot": "small_mob", "maxAmount": 1}
+				]
+			}
+		},
+		"second_r8_base_4": { //mutants + npc melee
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.second_r8_base_4.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base", "barricade"],
+
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"npc": "[ИВЕНТ] Зомбированный (нож арена)", "spot": "npc_melee",  "maxAmount": 12},
+					{"npc": "[ИВЕНТ] Зомбированный (шахид арена)", "spot": "npc_melee", "maxAmount": 5},
+					{"npc": "[ИВЕНТ] Зомбированный (пулемет арена)", "spot": "npc_shooter", "maxAmount": 2},
+					{"npc": "[ИВЕНТ] Зомбированный (снайпер арена)", "spot": "npc_shooter", "maxAmount": 1}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT8S",
+				"mobEntries": [
+					{"npc": "[ИВЕНТ] Зомбированный (нож арена)", "spot": "npc_melee",  "maxAmount": 12},
+					{"npc": "[ИВЕНТ] Зомбированный (шахид арена)", "spot": "npc_melee", "maxAmount": 5},
+					{"npc": "[ИВЕНТ] Зомбированный (пулемет арена)", "spot": "npc_shooter", "maxAmount": 2},
+					{"npc": "[ИВЕНТ] Зомбированный (снайпер арена)", "spot": "npc_shooter", "maxAmount": 1}
+					//{"mutant": "raven24_steal_tushkan", "spot": "small_mob", "maxAmount": 1}
+				]
+			}
+		},
+		"second_r8_base_5": { //mutants + npc shooter
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.second_r8_base_5.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base", "barricade"],
+
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_raven_dog", "spot": "mob",  "maxAmount": 8},
+					{"npc": "[ИВЕНТ] Зомбированный (автомат арена)", "spot": "npc_shooter", "maxAmount": 5}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT9S",
+				"mobEntries": [
+					{"mutant": "summer23_raven_dog", "spot": "mob",  "maxAmount": 8},
+					{"npc": "[ИВЕНТ] Зомбированный (автомат арена)", "spot": "npc_shooter", "maxAmount": 5}
+					//{"mutant": "raven24_steal_tushkan", "spot": "small_mob", "maxAmount": 1}
+				]
+			}
+		},
+		"second_r8_base_6": { //mutants
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.second_r8_base_6.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base"],
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_raven_flesh", "spot": "mob",  "maxAmount": 10},
+					{"mutant": "summer23_raven_boar", "spot": "mob",  "maxAmount": 8}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT8S",
+				"mobEntries": [
+					{"mutant": "summer23_raven_flesh", "spot": "mob",  "maxAmount": 10},
+					{"mutant": "summer23_raven_boar", "spot": "mob",  "maxAmount": 8}
+					//{"mutant": "raven24_steal_tushkan", "spot": "small_mob", "maxAmount": 1}
+				]
+			}
+		},
+		"second_r8_base_7": { //mutants + npc shooter
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.second_r8_base_7.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base", "barricade"],
+
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_raven_flesh", "spot": "mob",  "maxAmount": 10},
+					{"npc": "[ИВЕНТ] Зомбированный (снайпер арена)", "spot": "npc_shooter",  "maxAmount": 5}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT9S",
+				"mobEntries": [
+					{"mutant": "summer23_raven_flesh", "spot": "mob",  "maxAmount": 10},
+					{"npc": "[ИВЕНТ] Зомбированный (снайпер арена)", "spot": "npc_shooter",  "maxAmount": 5}
+					//{"mutant": "raven24_steal_tushkan", "spot": "small_mob", "maxAmount": 1}
+				]
+			}
+		},
+
+
+		"boss_lost_major": { //npc shooter
+			"waveWeight": 1,
+
+			"waveDuration": "PT60S",
+			"mobSpawnDuration": "PT50S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": true,
+			"waveName": "ravent.waveTypes.second_boss_1.name",
+			"despawnOnTimerRewardFactor": 0.5, //фактор награды если моб задеспавнился по таймеру
+			"waveEnum": "boss",
+
+			"goTagsToOpen": ["boss"],
+
+			"mobScoreWavesCount": 1,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"npc": "[ИВЕНТ] Зомбированный автоматчик Босс", "spot": "npc_shooter",  "maxAmount": 1}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT10S",
+				"mobEntries": [
+					{"npc": "[ИВЕНТ] Зомбированный автоматчик", "spot": "npc_shooter",  "maxAmount": 2}
+				]
+			}
+		},
+
+		"boss_toxic_snork": { //mutants
+			"waveWeight": 1,
+
+			"waveDuration": "PT60S",
+			"mobSpawnDuration": "PT50S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": true,
+			"waveName": "ravent.waveTypes.second_boss_2.name",
+			"despawnOnTimerRewardFactor": 0.5, //фактор награды если моб задеспавнился по таймеру
+			"waveEnum": "boss",
+
+			"goTagsToOpen": ["boss"],
+
+			"mobScoreWavesCount": 1,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_boss_toxicSnork", "spot": "boss",  "maxAmount": 1}
+				]
+			}
+		},
+
+		"boss_radiance": {
+			"waveWeight": 1,
+			"waveDuration": "PT60S",
+			"mobSpawnDuration": "PT50S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": true,
+			"waveName": "ravent.waveTypes.second_boss_3.name",
+			"despawnOnTimerRewardFactor": 0.5,
+			"waveEnum": "boss",
+			"goTagsToOpen": ["boss"],
+			"mobScoreWavesCount": 1,
+			"initialMobs": {
+				"mobEntries": [
+					{"mutant": "summer23_boss_spirit_rat", "spot": "titans", "maxAmount": 1}
+				]
+			}
+		},
+		"boss_spirit": { //mutants
+			"waveWeight": 1,
+
+			"waveDuration": "PT60S",
+			"mobSpawnDuration": "PT50S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": true,
+			"waveName": "ravent.waveTypes.boss_spirit.name",
+			"despawnOnTimerRewardFactor": 0.5, //фактор награды если моб задеспавнился по таймеру
+			"waveEnum": "boss",
+
+			"goTagsToOpen": ["boss"],
+
+			"mobScoreWavesCount": 1,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_boss_spirit_rat", "spot": "titans",  "maxAmount": 1}
+				]
+			}
+		},
+		"boss_discord": {
+			"waveWeight": 1,
+			"waveDuration": "PT60S",
+			"mobSpawnDuration": "PT50S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": true,
+			"waveName": "ravent.waveTypes.boss_discord.name",
+			"despawnOnTimerRewardFactor": 0.5,
+			"waveEnum": "boss",
+			"goTagsToOpen": ["boss"],
+			"mobScoreWavesCount": 1,
+			"initialMobs": {
+				"mobEntries": [
+					{"mutant": "arena26_boss_discord", "spot": "boss", "maxAmount": 1}
+				]
+			}
+		},
+		"boss_leshiy": { //mutants
+			"waveWeight": 1,
+
+			"waveDuration": "PT60S",
+			"mobSpawnDuration": "PT50S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": true,
+			"waveName": "ravent.waveTypes.boss_leshiy.name",
+			"despawnOnTimerRewardFactor": 0.5, //фактор награды если моб задеспавнился по таймеру
+			"waveEnum": "boss",
+
+			"goTagsToOpen": ["boss"],
+
+			"mobScoreWavesCount": 1,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "ra24_snork_leshiy", "spot": "boss",  "maxAmount": 1}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT8S",
+				"mobEntries": [
+					{"npc": "[ИВЕНТ] Леший зомбированный (автомат арена)", "spot": "npc_shooter",  "maxAmount": 4},
+					{"mutant": "raven24_leshiy_tushkan", "spot": "small_mob",  "maxAmount": 10}
+				]
+			}
+		},
+		"boss_tugarin": { //npc shooter
+			"waveWeight": 1,
+
+			"waveDuration": "PT60S",
+			"mobSpawnDuration": "PT50S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": true,
+			"waveName": "ravent.waveTypes.boss_tugarin.name",
+			"despawnOnTimerRewardFactor": 0.5, //фактор награды если моб задеспавнился по таймеру
+			"waveEnum": "boss",
+
+			"goTagsToOpen": ["base", "boss"],
+
+			"mobScoreWavesCount": 1,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"npc": "[ИВЕНТ] Босс Тугарин Змей", "spot": "boss",  "maxAmount": 1},
+					{"npc": "[ИВЕНТ] Тугарин зомбированный (автомат арена)", "spot": "boss",  "maxAmount": 2}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT10S",
+				"mobEntries": [
+					{"npc": "[ИВЕНТ] Тугарин зомбированный (автомат арена)", "spot": "npc_shooter",  "maxAmount": 2}
+				]
+			}
+		},
+		"boss_fedot": { // npc shooter + npc melee
+			"waveWeight": 1,
+
+			"waveDuration": "PT60S",
+			"mobSpawnDuration": "PT50S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": true,
+			"waveName": "ravent.waveTypes.boss_fedot.name",
+			"despawnOnTimerRewardFactor": 0.5, //фактор награды если моб задеспавнился по таймеру
+			"waveEnum": "boss",
+
+			"goTagsToOpen": ["boss", "base"],
+
+			"mobScoreWavesCount": 1,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"npc": "[ИВЕНТ] Босс Федот Стрелец", "spot": "boss_sniper",  "maxAmount": 1}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT5S",
+				"mobEntries": [
+					{"npc": "[ИВЕНТ] Босс Федот Стрелец СВИТА", "spot": "npc_melee",  "maxAmount": 3}
+				]
+			}
+		},
+
+
+		//третий цикл
+		"third_r13_base_1": {
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.third_base_1.name",
+			"waveEnum": "base",
+			"goTagsToOpen": [
+				"base",
+				"barricade"
+			],
+			"mobScoreWavesCount": 5,
+			"initialMobs": {
+				"mobEntries": [
+					{
+						"mutant": "summer23_raven_boar_d9",
+						"spot": "mob",
+						"maxAmount": 8
+					},
+					{
+						"npc": "[ИВЕНТ] Зомбированный (снайпер арена)",
+						"spot": "npc_shooter",
+						"maxAmount": 5
+					}
+				]
+			},
+			"supportMobs": {
+				"mobSpawnCooldown": "PT9S",
+				"mobEntries": [
+					{
+						"mutant": "summer23_raven_boar_d9",
+						"spot": "mob",
+						"maxAmount": 8
+					},
+					{
+						"npc": "[ИВЕНТ] Зомбированный (снайпер арена)",
+						"spot": "npc_shooter",
+						"maxAmount": 5
+					}
+				]
+			}
+		},
+		"third_r13_base_2": {
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.third_base_2.name",
+			"waveEnum": "base",
+			"goTagsToOpen": [
+				"base"
+			],
+			"mobScoreWavesCount": 5,
+			"initialMobs": {
+				"mobEntries": [
+					{
+						"mutant": "summer23_raven_boar_d9",
+						"spot": "mob",
+						"maxAmount": 7
+					},
+					{
+						"mutant": "summer23_raven_flesh_d9",
+						"spot": "mob",
+						"maxAmount": 8
+					},
+					{
+						"mutant": "summer23_raven_tushkan_d9",
+						"spot": "small_mob",
+						"maxAmount": 16
+					}
+				]
+			},
+			"supportMobs": {
+				"mobSpawnCooldown": "PT8S",
+				"mobEntries": [
+					{
+						"mutant": "summer23_raven_boar_d9",
+						"spot": "mob",
+						"maxAmount": 7
+					},
+					{
+						"mutant": "summer23_raven_flesh_d9",
+						"spot": "mob",
+						"maxAmount": 8
+					},
+					{
+						"mutant": "summer23_raven_tushkan_d9",
+						"spot": "small_mob",
+						"maxAmount": 16
+					}
+				]
+			}
+		},
+		"third_r13_base_3": {
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.third_base_3.name",
+			"waveEnum": "base",
+			"goTagsToOpen": [
+				"base"
+			],
+			"mobScoreWavesCount": 5,
+			"initialMobs": {
+				"mobEntries": [
+					{
+						"mutant": "summer23_raven_krovosos_d9",
+						"spot": "mob",
+						"maxAmount": 5
+					},
+					{
+						"mutant": "summer23_raven_flesh_d9",
+						"spot": "mob",
+						"maxAmount": 13
+					}
+				]
+			},
+			"supportMobs": {
+				"mobSpawnCooldown": "PT8S",
+				"mobEntries": [
+					{
+						"mutant": "summer23_raven_krovosos_d9",
+						"spot": "mob",
+						"maxAmount": 5
+					},
+					{
+						"mutant": "summer23_raven_flesh_d9",
+						"spot": "mob",
+						"maxAmount": 13
+					}
+				]
+			}
+		},
+		"third_r13_base_4": {
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.third_base_4.name",
+			"waveEnum": "base",
+			"goTagsToOpen": [
+				"base"
+			],
+			"mobScoreWavesCount": 5,
+			"initialMobs": {
+				"mobEntries": [
+					{
+						"mutant": "summer23_raven_snork_d9",
+						"spot": "jump_mob",
+						"maxAmount": 9
+					},
+					{
+						"mutant": "summer23_raven_pseudogigant_d9",
+						"spot": "large_mob",
+						"maxAmount": 1
+					}
+				]
+			},
+			"supportMobs": {
+				"mobSpawnCooldown": "PT8S",
+				"mobEntries": [
+					{
+						"mutant": "summer23_raven_snork_d9",
+						"spot": "jump_mob",
+						"maxAmount": 9
+					},
+					{
+						"mutant": "summer23_raven_pseudogigant_d9",
+						"spot": "large_mob",
+						"maxAmount": 1
+					}
+				]
+			}
+		},
+		"third_r13_base_5": {
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.third_base_5.name",
+			"waveEnum": "base",
+			"goTagsToOpen": [
+				"base",
+				"barricade"
+			],
+			"mobScoreWavesCount": 5,
+			"initialMobs": {
+				"mobEntries": [
+					{
+						"mutant": "summer23_raven_pseudodog_d9",
+						"spot": "mob",
+						"maxAmount": 8
+					},
+					{
+						"npc": "[ИВЕНТ] Зомбированный (автомат арена)",
+						"spot": "npc_shooter",
+						"maxAmount": 5
+					}
+				]
+			},
+			"supportMobs": {
+				"mobSpawnCooldown": "PT9S",
+				"mobEntries": [
+					{
+						"mutant": "summer23_raven_pseudodog_d9",
+						"spot": "mob",
+						"maxAmount": 8
+					},
+					{
+						"npc": "[ИВЕНТ] Зомбированный (автомат арена)",
+						"spot": "npc_shooter",
+						"maxAmount": 5
+					}
+				]
+			}
+		},
+		"third_r13_base_6": {
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.third_base_6.name",
+			"waveEnum": "base",
+			"goTagsToOpen": [
+				"base",
+				"barricade"
+			],
+			"mobScoreWavesCount": 5,
+			"initialMobs": {
+				"mobEntries": [
+					{
+						"npc": "[ИВЕНТ] Зомбированный (нож арена)",
+						"spot": "npc_melee",
+						"maxAmount": 21
+					},
+					{
+						"npc": "[ИВЕНТ] Зомбированный (пулемет арена)",
+						"spot": "npc_shooter",
+						"maxAmount": 3
+					}
+				]
+			},
+			"supportMobs": {
+				"mobSpawnCooldown": "PT9S",
+				"mobEntries": [
+					{
+						"npc": "[ИВЕНТ] Зомбированный (нож арена)",
+						"spot": "npc_melee",
+						"maxAmount": 21
+					},
+					{
+						"npc": "[ИВЕНТ] Зомбированный (пулемет арена)",
+						"spot": "npc_shooter",
+						"maxAmount": 3
+					}
+				]
+			}
+		},
+		"third_base_1": { //mutants + npc shooter
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.third_base_1.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base", "barricade"],
+
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_raven_boar_d9", "spot": "mob",  "maxAmount": 7},
+					{"npc": "[ИВЕНТ] Зомбированный (снайпер арена)", "spot": "npc_shooter", "maxAmount": 4}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT9S",
+				"mobEntries": [
+					{"mutant": "summer23_raven_boar_d9", "spot": "mob",  "maxAmount": 7},
+					{"npc": "[ИВЕНТ] Зомбированный (снайпер арена)", "spot": "npc_shooter", "maxAmount": 4}
+					//{"mutant": "raven24_steal_tushkan", "spot": "small_mob", "maxAmount": 3}
+				]
+			}
+		},
+		"third_base_2": { //mutants
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.third_base_2.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base"],
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_raven_boar_d9", "spot": "mob",  "maxAmount": 6},
+					{"mutant": "summer23_raven_flesh_d9", "spot": "mob", "maxAmount": 7},
+					{"mutant": "summer23_raven_tushkan_d9", "spot": "small_mob", "maxAmount": 14}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT8S",
+				"mobEntries": [
+					{"mutant": "summer23_raven_boar_d9", "spot": "mob",  "maxAmount": 6},
+					{"mutant": "summer23_raven_flesh_d9", "spot": "mob", "maxAmount": 7},
+					{"mutant": "summer23_raven_tushkan_d9", "spot": "small_mob", "maxAmount": 14}
+					//{"mutant": "raven24_steal_tushkan", "spot": "small_mob", "maxAmount": 3}
+				]
+			}
+		},
+		"third_base_3": { //mutants
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.third_base_3.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base"],
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_raven_krovosos_d9", "spot": "mob",  "maxAmount": 4},
+					{"mutant": "summer23_raven_flesh_d9", "spot": "mob", "maxAmount": 11}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT8S",
+				"mobEntries": [
+					{"mutant": "summer23_raven_krovosos_d9", "spot": "mob",  "maxAmount": 4},
+					{"mutant": "summer23_raven_flesh_d9", "spot": "mob", "maxAmount": 11}
+					//{"mutant": "raven24_steal_tushkan", "spot": "small_mob", "maxAmount": 3}
+				]
+			}
+		},
+		"third_base_4": { //mutants
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.third_base_4.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base"],
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_raven_snork_d9", "spot": "jump_mob",  "maxAmount": 8},
+					{"mutant": "summer23_raven_pseudogigant_d9", "spot": "large_mob", "maxAmount": 1},
+					{"mutant": "summer23_raven_boar_d9", "spot": "mob", "maxAmount": 3}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT8S",
+				"mobEntries": [
+					{"mutant": "summer23_raven_snork_d9", "spot": "jump_mob",  "maxAmount": 8},
+					{"mutant": "summer23_raven_pseudogigant_d9", "spot": "large_mob", "maxAmount": 1},
+					{"mutant": "summer23_raven_boar_d9", "spot": "mob", "maxAmount": 3}
+					//{"mutant": "raven24_steal_tushkan", "spot": "small_mob", "maxAmount": 3}
+				]
+			}
+		},
+		"third_base_5": { //mutants + npc shooter
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.third_base_5.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base", "barricade"],
+
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_raven_pseudodog_d9", "spot": "mob",  "maxAmount": 7},
+					{"npc": "[ИВЕНТ] Зомбированный (автомат арена)", "spot": "npc_shooter", "maxAmount": 4}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT9S",
+				"mobEntries": [
+					{"mutant": "summer23_raven_pseudodog_d9", "spot": "mob",  "maxAmount": 7},
+					{"npc": "[ИВЕНТ] Зомбированный (автомат арена)", "spot": "npc_shooter", "maxAmount": 4}
+					//{"mutant": "raven24_steal_tushkan", "spot": "small_mob", "maxAmount": 3}
+				]
+			}
+		},
+		"third_base_6": { //npc shooter + npc melee
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.third_base_6.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base", "barricade"],
+
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"npc": "[ИВЕНТ] Зомбированный (нож арена)", "spot": "npc_melee",  "maxAmount": 18},
+					{"npc": "[ИВЕНТ] Зомбированный (пулемет арена)", "spot": "npc_shooter",  "maxAmount": 3}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT9S",
+				"mobEntries": [
+					{"npc": "[ИВЕНТ] Зомбированный (нож арена)", "spot": "npc_melee",  "maxAmount": 18},
+					{"npc": "[ИВЕНТ] Зомбированный (пулемет арена)", "spot": "npc_shooter",  "maxAmount": 3}
+					//{"mutant": "raven24_steal_tushkan", "spot": "small_mob", "maxAmount": 3}
+				]
+			}
+		},
+		"third_base_7": { //mutants + npc shooter
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.third_base_7.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base", "barricade"],
+
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_raven_dog", "spot": "mob",  "maxAmount": 7},
+					{"npc": "[ИВЕНТ] Зомбированный (автомат арена)", "spot": "npc_shooter",  "maxAmount": 3},
+					{"mutant": "summer23_raven_spirit", "spot": "spirit",  "maxAmount": 11}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT9S",
+				"mobEntries": [
+					{"mutant": "summer23_raven_dog", "spot": "mob",  "maxAmount": 7},
+					{"npc": "[ИВЕНТ] Зомбированный (автомат арена)", "spot": "npc_shooter",  "maxAmount": 3},
+					{"mutant": "summer23_raven_spirit", "spot": "spirit",  "maxAmount": 11}
+					//{"mutant": "raven24_steal_tushkan", "spot": "small_mob", "maxAmount": 3}
+				]
+			}
+		},
+
+
+
+		// отдельный PvE-пул для 11-го раунда: дополнительно усилен примерно на +35%
+		"third_r11_base_1": { //mutants + npc shooter
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.third_r11_base_1.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base", "barricade"],
+
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_raven_boar_d9", "spot": "mob",  "maxAmount": 8},
+					{"npc": "[ИВЕНТ] Зомбированный (снайпер арена)", "spot": "npc_shooter", "maxAmount": 2},
+					{"npc": "[ИВЕНТ] Зомбированный (пулемет арена)", "spot": "npc_shooter", "maxAmount": 3}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT9S",
+				"mobEntries": [
+					{"mutant": "summer23_raven_boar_d9", "spot": "mob",  "maxAmount": 8},
+					{"npc": "[ИВЕНТ] Зомбированный (снайпер арена)", "spot": "npc_shooter", "maxAmount": 2},
+					{"npc": "[ИВЕНТ] Зомбированный (пулемет арена)", "spot": "npc_shooter", "maxAmount": 3}
+					//{"mutant": "raven24_steal_tushkan", "spot": "small_mob", "maxAmount": 3}
+				]
+			}
+		},
+		"third_r11_base_2": { //mutants
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.third_r11_base_2.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base"],
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_raven_boar_d9", "spot": "mob",  "maxAmount": 7},
+					{"mutant": "summer23_raven_flesh_d9", "spot": "mob", "maxAmount": 8},
+					{"mutant": "summer23_raven_tushkan_d9", "spot": "small_mob", "maxAmount": 18}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT8S",
+				"mobEntries": [
+					{"mutant": "summer23_raven_boar_d9", "spot": "mob",  "maxAmount": 7},
+					{"mutant": "summer23_raven_flesh_d9", "spot": "mob", "maxAmount": 8},
+					{"mutant": "summer23_raven_tushkan_d9", "spot": "small_mob", "maxAmount": 18}
+					//{"mutant": "raven24_steal_tushkan", "spot": "small_mob", "maxAmount": 3}
+				]
+			}
+		},
+		"third_r11_base_3": { //mutants
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.third_r11_base_3.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base"],
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_raven_krovosos_d9", "spot": "mob",  "maxAmount": 5},
+					{"mutant": "summer23_raven_flesh_d9", "spot": "mob", "maxAmount": 14}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT8S",
+				"mobEntries": [
+					{"mutant": "summer23_raven_krovosos_d9", "spot": "mob",  "maxAmount": 5},
+					{"mutant": "summer23_raven_flesh_d9", "spot": "mob", "maxAmount": 14}
+					//{"mutant": "raven24_steal_tushkan", "spot": "small_mob", "maxAmount": 3}
+				]
+			}
+		},
+		"third_r11_base_4": { //mutants
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.third_r11_base_4.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base"],
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_raven_snork_d9", "spot": "jump_mob",  "maxAmount": 11},
+					{"mutant": "summer23_raven_pseudogigant_d9", "spot": "large_mob", "maxAmount": 1},
+					{"mutant": "summer23_raven_boar_d9", "spot": "mob", "maxAmount": 3}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT8S",
+				"mobEntries": [
+					{"mutant": "summer23_raven_snork_d9", "spot": "jump_mob",  "maxAmount": 11},
+					{"mutant": "summer23_raven_pseudogigant_d9", "spot": "large_mob", "maxAmount": 1},
+					{"mutant": "summer23_raven_boar_d9", "spot": "mob", "maxAmount": 3}
+					//{"mutant": "raven24_steal_tushkan", "spot": "small_mob", "maxAmount": 3}
+				]
+			}
+		},
+		"third_r11_base_5": { //mutants + npc shooter
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.third_r11_base_5.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base", "barricade"],
+
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_raven_pseudodog_d9", "spot": "mob",  "maxAmount": 8},
+					{"npc": "[ИВЕНТ] Зомбированный (автомат арена)", "spot": "npc_shooter", "maxAmount": 5}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT9S",
+				"mobEntries": [
+					{"mutant": "summer23_raven_pseudodog_d9", "spot": "mob",  "maxAmount": 8},
+					{"npc": "[ИВЕНТ] Зомбированный (автомат арена)", "spot": "npc_shooter", "maxAmount": 5}
+					//{"mutant": "raven24_steal_tushkan", "spot": "small_mob", "maxAmount": 3}
+				]
+			}
+		},
+		"third_r11_base_6": { //npc shooter + npc melee
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.third_r11_base_6.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base", "barricade"],
+
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"npc": "[ИВЕНТ] Зомбированный (нож арена)", "spot": "npc_melee",  "maxAmount": 18},
+					{"npc": "[ИВЕНТ] Зомбированный (пулемет арена)", "spot": "npc_shooter",  "maxAmount": 5}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT9S",
+				"mobEntries": [
+					{"npc": "[ИВЕНТ] Зомбированный (нож арена)", "spot": "npc_melee",  "maxAmount": 18},
+					{"npc": "[ИВЕНТ] Зомбированный (пулемет арена)", "spot": "npc_shooter",  "maxAmount": 5}
+					//{"mutant": "raven24_steal_tushkan", "spot": "small_mob", "maxAmount": 3}
+				]
+			}
+		},
+		"third_r11_base_7": { //mutants + npc shooter
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.third_r11_base_7.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base", "barricade"],
+
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_raven_dog", "spot": "mob",  "maxAmount": 8},
+					{"npc": "[ИВЕНТ] Зомбированный (автомат арена)", "spot": "npc_shooter",  "maxAmount": 4},
+					{"mutant": "summer23_raven_spirit", "spot": "spirit",  "maxAmount": 14}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT9S",
+				"mobEntries": [
+					{"mutant": "summer23_raven_dog", "spot": "mob",  "maxAmount": 8},
+					{"npc": "[ИВЕНТ] Зомбированный (автомат арена)", "spot": "npc_shooter",  "maxAmount": 4},
+					{"mutant": "summer23_raven_spirit", "spot": "spirit",  "maxAmount": 14}
+					//{"mutant": "raven24_steal_tushkan", "spot": "small_mob", "maxAmount": 3}
+				]
+			}
+		},
+		"boss_boroda": { //npc
+			"waveWeight": 1,
+
+			"waveDuration": "PT60S",
+			"mobSpawnDuration": "PT50S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": true,
+			"waveName": "ravent.waveTypes.third_boss_1.name",
+			"despawnOnTimerRewardFactor": 0.5, //фактор награды если моб задеспавнился по таймеру
+			"waveEnum": "boss",
+
+			"goTagsToOpen": ["boss", "barricade"],
+
+			"mobScoreWavesCount": 1,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"npc": "[ИВЕНТ] Борода (пулеметчик)", "spot": "boss",  "maxAmount": 1},
+					{"npc": "[ИВЕНТ] Зомбированный автоматчик", "spot": "boss",  "maxAmount": 2}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT8S",
+				"mobEntries": [
+					{"npc": "[ИВЕНТ] Зомбированный автоматчик", "spot": "npc_shooter",  "maxAmount": 3}
+				]
+			}
+		},
+
+		"boss_termovolkodav": { //mutants
+			"waveWeight": 1,
+
+			"waveDuration": "PT60S",
+			"mobSpawnDuration": "PT50S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": true,
+			"waveName": "ravent.waveTypes.third_boss_2.name",
+			"despawnOnTimerRewardFactor": 0.5, //фактор награды если моб задеспавнился по таймеру
+			"waveEnum": "boss",
+
+			"goTagsToOpen": ["boss"],
+
+			"mobScoreWavesCount": 1,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_boss_termovolkodav", "spot": "boss",  "maxAmount": 1}
+				]
+			}
+		},
+		"boss_korsar": { //npc melee
+			"waveWeight": 1,
+
+			"waveDuration": "PT60S",
+			"mobSpawnDuration": "PT50S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": true,
+			"waveName": "ravent.waveTypes.third_boss_3.name",
+			"despawnOnTimerRewardFactor": 0.5, //фактор награды если моб задеспавнился по таймеру
+			"waveEnum": "boss",
+
+			"goTagsToOpen": ["boss"],
+
+			"mobScoreWavesCount": 1,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"npc": "[ИВЕНТ] Зомбированный с ножом", "spot": "boss",  "maxAmount": 4}
+				]
+			}
+		},
+
+		"boss_butcher": { //mutants
+			"waveWeight": 1,
+
+			"waveDuration": "PT60S",
+			"mobSpawnDuration": "PT50S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": true,
+			"waveName": "ravent.waveTypes.third_boss_4.name",
+			"despawnOnTimerRewardFactor": 0.5, //фактор награды если моб задеспавнился по таймеру
+			"waveEnum": "boss",
+
+			"goTagsToOpen": ["boss"],
+
+			"mobScoreWavesCount": 1,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_boss_krovosos", "spot": "boss",  "maxAmount": 1}
+				]
+			}
+		},
+		"boss_adepts": { //npc
+			"waveWeight": 1,
+
+			"waveDuration": "PT60S",
+			"mobSpawnDuration": "PT50S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": true,
+			"waveName": "ravent.waveTypes.boss_adepts.name",
+			"despawnOnTimerRewardFactor": 0.5, //фактор награды если моб задеспавнился по таймеру
+			"waveEnum": "boss",
+
+			"goTagsToOpen": ["boss"],
+
+			"mobScoreWavesCount": 1,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"npc": "[ИВЕНТ] Адепт Громила", "spot": "boss",  "maxAmount": 1},
+					{"npc": "[ИВЕНТ] Адепт Шаман", "spot": "boss",  "maxAmount": 1},
+					{"npc": "[ИВЕНТ] Адепт Охотник", "spot": "boss",  "maxAmount": 1}
+				]
+			}
+		},
+
+		"boss_boar_flesh": { //mutants
+			"waveWeight": 1,
+
+			"waveDuration": "PT60S",
+			"mobSpawnDuration": "PT50S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": true,
+			"waveName": "ravent.waveTypes.boss_boar_flesh.name",
+			"despawnOnTimerRewardFactor": 0.5, //фактор награды если моб задеспавнился по таймеру
+			"waveEnum": "boss",
+
+			"goTagsToOpen": ["boss"],
+
+			"mobScoreWavesCount": 1,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "ra24_flesh_tsarevich", "spot": "boss",  "maxAmount": 1},
+					{"mutant": "ra24_boar_tsarevich", "spot": "boss",  "maxAmount": 1}
+				]
+			}
+		},
+		"boss_werewolf": { //mutants + npc melee
+			"waveWeight": 1,
+
+			"waveDuration": "PT60S",
+			"mobSpawnDuration": "PT50S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": true,
+			"waveName": "ravent.waveTypes.boss_werewolf.name",
+			"despawnOnTimerRewardFactor": 0.5, //фактор награды если моб задеспавнился по таймеру
+			"waveEnum": "boss",
+
+			"goTagsToOpen": ["boss"],
+
+			"mobScoreWavesCount": 1,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"npc": "[ИВЕНТ] Босс Оборотень", "spot": "boss",  "maxAmount": 1}
+				]
+			}
+		},
+		"boss_altushka": { //npc shooter
+			"waveWeight": 1,
+
+			"waveDuration": "PT60S",
+			"mobSpawnDuration": "PT50S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": true,
+			"waveName": "ravent.waveTypes.boss_altushka.name",
+			"despawnOnTimerRewardFactor": 0.5, //фактор награды если моб задеспавнился по таймеру
+			"waveEnum": "boss",
+
+			"goTagsToOpen": ["boss"],
+
+			"mobScoreWavesCount": 1,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"npc": "[ИВЕНТ] Босс Внучка Яги", "spot": "boss",  "maxAmount": 1}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT8S",
+				"mobEntries": [
+					{"npc": "[ИВЕНТ] Яга зомбированный (снайпер арена)", "spot": "npc_shooter",  "maxAmount": 3}
+				]
+			}
+		},
+
+		//четвертый цикл
+		"fourth_base_1": { //mutants + npc shooter
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.fourth_base_1.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base", "barricade"],
+
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_raven_chimera_d16", "spot": "large_mob",  "maxAmount": 1},
+					{"mutant": "summer23_raven_tushkan_d16", "spot": "small_mob", "maxAmount": 6},
+					{"mutant": "summer23_raven_boar_d16", "spot": "mob", "maxAmount": 2},
+					{"mutant": "summer23_raven_flesh_d16", "spot": "mob", "maxAmount": 1},
+					{"npc": "[ИВЕНТ] Зомбированный (снайпер арена)", "spot": "npc_shooter", "maxAmount": 3}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT8S",
+				"mobEntries": [
+					{"mutant": "summer23_raven_chimera_d16", "spot": "large_mob",  "maxAmount": 1},
+					{"mutant": "summer23_raven_tushkan_d16", "spot": "small_mob", "maxAmount": 6},
+					{"mutant": "summer23_raven_boar_d16", "spot": "mob", "maxAmount": 2},
+					{"mutant": "summer23_raven_flesh_d16", "spot": "mob", "maxAmount": 1},
+					{"npc": "[ИВЕНТ] Зомбированный (снайпер арена)", "spot": "npc_shooter", "maxAmount": 3}
+					//{"mutant": "raven24_steal_tushkan", "spot": "small_mob", "maxAmount": 4}
+				]
+			}
+		},
+		"fourth_base_2": { //mutants + npc shooter
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.fourth_base_2.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base", "barricade"],
+
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_raven_krovosos_d16", "spot": "mob",  "maxAmount": 6},
+					{"mutant": "summer23_raven_flesh_d16", "spot": "mob", "maxAmount": 2},
+					{"mutant": "summer23_raven_boar_d16", "spot": "mob", "maxAmount": 1},
+					{"mutant": "summer23_raven_snork_d16", "spot": "jump_mob", "maxAmount": 2},
+					{"npc": "[ИВЕНТ] Зомбированный (снайпер арена)", "spot": "npc_shooter", "maxAmount": 6}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT8S",
+				"mobEntries": [
+					{"mutant": "summer23_raven_krovosos_d16", "spot": "mob",  "maxAmount": 6},
+					{"mutant": "summer23_raven_flesh_d16", "spot": "mob", "maxAmount": 2},
+					{"mutant": "summer23_raven_boar_d16", "spot": "mob", "maxAmount": 1},
+					{"mutant": "summer23_raven_snork_d16", "spot": "jump_mob", "maxAmount": 2},
+					{"npc": "[ИВЕНТ] Зомбированный (снайпер арена)", "spot": "npc_shooter", "maxAmount": 6}
+					//{"mutant": "raven24_steal_tushkan", "spot": "small_mob", "maxAmount": 4}
+				]
+			}
+		},
+		"fourth_base_3": { //mutants
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.fourth_base_3.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base"],
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_raven_chimera", "spot": "large_mob",  "maxAmount": 1},
+					{"mutant": "summer23_raven_flesh", "spot": "mob", "maxAmount": 6},
+					{"mutant": "summer23_raven_spirit", "spot": "spirit", "maxAmount": 11}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT7S",
+				"mobEntries": [
+					{"mutant": "summer23_raven_chimera", "spot": "large_mob",  "maxAmount": 1},
+					{"mutant": "summer23_raven_flesh", "spot": "mob", "maxAmount": 6},
+					{"mutant": "summer23_raven_spirit", "spot": "spirit", "maxAmount": 11}
+					//{"mutant": "raven24_steal_tushkan", "spot": "small_mob", "maxAmount": 4}
+				]
+			}
+		},
+		"fourth_base_4": { //mutants
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.fourth_base_4.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base"],
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_raven_krovosos_d16", "spot": "mob",  "maxAmount": 3},
+					{"mutant": "summer23_raven_boar_d16", "spot": "mob", "maxAmount": 7},
+					{"mutant": "summer23_raven_tushkan_d16", "spot": "small_mob", "maxAmount": 17}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT7S",
+				"mobEntries": [
+					{"mutant": "summer23_raven_krovosos_d16", "spot": "mob",  "maxAmount": 3},
+					{"mutant": "summer23_raven_boar_d16", "spot": "mob", "maxAmount": 7},
+					{"mutant": "summer23_raven_tushkan_d16", "spot": "small_mob", "maxAmount": 17}
+					//{"mutant": "raven24_steal_tushkan", "spot": "small_mob", "maxAmount": 4}
+				]
+			}
+		},
+		"fourth_base_5": { //mutants + npc
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.fourth_base_5.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base", "barricade"],
+
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_raven_boar_d16", "spot": "mob",  "maxAmount": 7},
+					{"npc": "[ИВЕНТ] Зомбированный (автомат арена)", "spot": "npc_shooter", "maxAmount": 3},
+					{"npc": "[ИВЕНТ] Зомбированный (шахид арена)", "spot": "npc_melee", "maxAmount": 3},
+					{"npc": "[ИВЕНТ] Зомбированный (снайпер арена)", "spot": "npc_shooter", "maxAmount": 1},
+					{"npc": "[ИВЕНТ] Зомбированный (пулемет арена)", "spot": "npc_shooter", "maxAmount": 1}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT8S",
+				"mobEntries": [
+					{"mutant": "summer23_raven_boar_d16", "spot": "mob",  "maxAmount": 7},
+					{"npc": "[ИВЕНТ] Зомбированный (автомат арена)", "spot": "npc_shooter", "maxAmount": 3},
+					{"npc": "[ИВЕНТ] Зомбированный (шахид арена)", "spot": "npc_melee", "maxAmount": 3},
+					{"npc": "[ИВЕНТ] Зомбированный (снайпер арена)", "spot": "npc_shooter", "maxAmount": 1},
+					{"npc": "[ИВЕНТ] Зомбированный (пулемет арена)", "spot": "npc_shooter", "maxAmount": 1}
+					//{"mutant": "raven24_steal_tushkan", "spot": "small_mob", "maxAmount": 4}
+				]
+			}
+		},
+		"fourth_base_6": { //mutants
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.fourth_base_6.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base"],
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_raven_pseudogigant_d16", "spot": "large_mob",  "maxAmount": 1},
+					{"mutant": "summer23_raven_snork_d16", "spot": "jump_mob", "maxAmount": 7},
+					{"mutant": "summer23_raven_tushkan_d16", "spot": "small_mob", "maxAmount": 17}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT7S",
+				"mobEntries": [
+					{"mutant": "summer23_raven_pseudogigant_d16", "spot": "large_mob",  "maxAmount": 1},
+					{"mutant": "summer23_raven_snork_d16", "spot": "jump_mob", "maxAmount": 7},
+					{"mutant": "summer23_raven_tushkan_d16", "spot": "small_mob", "maxAmount": 17}
+					//{"mutant": "raven24_steal_tushkan", "spot": "small_mob", "maxAmount": 4}
+				]
+			}
+		},
+		"fourth_base_7": { //mutants + npc shooter
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.fourth_base_7.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base", "barricade"],
+
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_raven_pseudodog_d16", "spot": "mob",  "maxAmount": 9},
+					{"npc": "[ИВЕНТ] Зомбированный (пулемет арена)", "spot": "npc_shooter",  "maxAmount": 3}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT8S",
+				"mobEntries": [
+					{"mutant": "summer23_raven_pseudodog_d16", "spot": "mob",  "maxAmount": 9},
+					{"npc": "[ИВЕНТ] Зомбированный (пулемет арена)", "spot": "npc_shooter",  "maxAmount": 3}
+					//{"mutant": "raven24_steal_tushkan", "spot": "small_mob", "maxAmount": 4}
+				]
+			}
+		},
+		"boss_double_copypig": { //mutants
+			"waveWeight": 1,
+
+			"waveDuration": "PT60S",
+			"mobSpawnDuration": "PT50S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": true,
+			"waveName": "ravent.waveTypes.fourth_boss_1.name",
+			"despawnOnTimerRewardFactor": 0.5, //фактор награды если моб задеспавнился по таймеру
+			"waveEnum": "boss",
+
+			"goTagsToOpen": ["boss"],
+
+			"mobScoreWavesCount": 1,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_boss_doubleCopyPig", "spot": "boss",  "maxAmount": 1}
+				]
+			}
+		},
+
+		"boss_chimera_mother": { //mutants
+			"waveWeight": 1,
+
+			"waveDuration": "PT60S",
+			"mobSpawnDuration": "PT50S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": true,
+			"waveName": "ravent.waveTypes.fourth_boss_2.name",
+			"despawnOnTimerRewardFactor": 0.5, //фактор награды если моб задеспавнился по таймеру
+			"waveEnum": "boss",
+
+			"goTagsToOpen": ["boss"],
+
+			"mobScoreWavesCount": 1,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_boss_chimera_mother", "spot": "boss",  "maxAmount": 1}
+				]
+			}
+		},
+
+		"boss_sniper": { //npc
+			"waveWeight": 1,
+
+			"waveDuration": "PT60S",
+			"mobSpawnDuration": "PT50S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": true,
+			"waveName": "ravent.waveTypes.fourth_boss_3.name",
+			"despawnOnTimerRewardFactor": 0.5, //фактор награды если моб задеспавнился по таймеру
+			"waveEnum": "boss",
+
+			"goTagsToOpen": ["boss"],
+
+			"mobScoreWavesCount": 1,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"npc": "[ИВЕНТ] Босс Снайпер", "spot": "boss_sniper",  "maxAmount": 1}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT5S",
+				"mobEntries": [
+					{"npc": "[ИВЕНТ] Босс Снайпер СВИТА", "spot": "sniper_helper",  "maxAmount": 3}
+				]
+			}
+		},
+
+		"boss_perun": { //mutants + npc
+			"waveWeight": 1,
+
+			"waveDuration": "PT60S",
+			"mobSpawnDuration": "PT50S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": true,
+			"waveName": "ravent.waveTypes.boss_perun.name",
+			"despawnOnTimerRewardFactor": 0.5, //фактор награды если моб задеспавнился по таймеру
+			"waveEnum": "boss",
+
+			"goTagsToOpen": ["boss"],
+
+			"mobScoreWavesCount": 1,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"npc": "[ИВЕНТ] Босс Чемпион Перуна", "spot": "boss",  "maxAmount": 1}
+				]
+			}
+		},
+		"boss_hors": { //mutants + npc
+			"waveWeight": 1,
+
+			"waveDuration": "PT60S",
+			"mobSpawnDuration": "PT50S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": true,
+			"waveName": "ravent.waveTypes.boss_hors.name",
+			"despawnOnTimerRewardFactor": 0.5, //фактор награды если моб задеспавнился по таймеру
+			"waveEnum": "boss",
+
+			"goTagsToOpen": ["boss"],
+
+			"mobScoreWavesCount": 1,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"npc": "[ИВЕНТ] Босс Чемпион Хорса", "spot": "boss",  "maxAmount": 1}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT8S",
+				"mobEntries": [
+					{"mutant": "raven24_horus_dog", "spot": "mob",  "maxAmount": 3}
+				]
+			}
+		},
+		"boss_stribog": { //mutants + npc
+			"waveWeight": 1,
+
+			"waveDuration": "PT60S",
+			"mobSpawnDuration": "PT50S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": true,
+			"waveName": "ravent.waveTypes.boss_stribog.name",
+			"despawnOnTimerRewardFactor": 0.5, //фактор награды если моб задеспавнился по таймеру
+			"waveEnum": "boss",
+
+			"goTagsToOpen": ["boss"],
+
+			"mobScoreWavesCount": 1,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"npc": "[ИВЕНТ] Босс Чемпион Стрибога", "spot": "boss",  "maxAmount": 1}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT8S",
+				"mobEntries": [
+					{"mutant": "raven24_stribog_dog", "spot": "mob",  "maxAmount": 3}
+				]
+			}
+		},
+
+		//пятый цикл
+		"fifth_base_1": { //mutants
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.fifth_base_1.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base"],
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_raven_tushkan_d16", "spot": "small_mob",  "maxAmount": 12},
+					{"mutant": "summer23_raven_flesh_d16", "spot": "mob", "maxAmount": 6},
+					{"mutant": "summer23_raven_boar_d16", "spot": "mob", "maxAmount": 4},
+					{"mutant": "summer23_raven_krovosos_d16", "spot": "mob", "maxAmount": 3},
+					{"mutant": "summer23_raven_snork_d16", "spot": "jump_mob", "maxAmount": 4}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT7S",
+				"mobEntries": [
+					{"mutant": "summer23_raven_tushkan_d16", "spot": "small_mob",  "maxAmount": 12},
+					{"mutant": "summer23_raven_flesh_d16", "spot": "mob", "maxAmount": 6},
+					{"mutant": "summer23_raven_boar_d16", "spot": "mob", "maxAmount": 4},
+					{"mutant": "summer23_raven_krovosos_d16", "spot": "mob", "maxAmount": 3},
+					{"mutant": "summer23_raven_snork_d16", "spot": "jump_mob", "maxAmount": 4}
+					//{"mutant": "raven24_steal_tushkan", "spot": "small_mob", "maxAmount": 4}
+				]
+			}
+		},
+		"fifth_base_2": { //mutans + npc shooter
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.fifth_base_2.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base", "barricade"],
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_raven_pseudogigant_d16", "spot": "large_mob",  "maxAmount": 1},
+					{"mutant": "summer23_raven_snork_d16", "spot": "jump_mob", "maxAmount": 1},
+					{"mutant": "summer23_raven_boar_d16", "spot": "mob", "maxAmount": 2},
+					{"npc": "[ИВЕНТ] Зомбированный (автомат арена)", "spot": "npc_shooter", "maxAmount": 6}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT8S",
+				"mobEntries": [
+					{"mutant": "summer23_raven_pseudogigant_d16", "spot": "large_mob",  "maxAmount": 1},
+					{"mutant": "summer23_raven_snork_d16", "spot": "jump_mob", "maxAmount": 1},
+					{"mutant": "summer23_raven_boar_d16", "spot": "mob", "maxAmount": 2},
+					{"npc": "[ИВЕНТ] Зомбированный (автомат арена)", "spot": "npc_shooter", "maxAmount": 6}
+					//{"mutant": "raven24_steal_tushkan", "spot": "small_mob", "maxAmount": 4}
+				]
+			}
+		},
+		"fifth_base_3": { //npc
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.fifth_base_3.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base", "barricade"],
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"npc": "[ИВЕНТ] Зомбированный (снайпер арена)", "spot": "npc_shooter",  "maxAmount": 3},
+					{"mutant": "summer23_raven_pseudogigant_d16", "spot": "large_mob", "maxAmount": 1},
+					{"mutant": "summer23_raven_boar_d16", "spot": "mob", "maxAmount": 6},
+					{"mutant": "summer23_raven_flesh_d16", "spot": "mob", "maxAmount": 2},
+					{"npc": "[ИВЕНТ] Зомбированный (пулемет арена)", "spot": "npc_shooter", "maxAmount": 3}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT8S",
+				"mobEntries": [
+					{"npc": "[ИВЕНТ] Зомбированный (снайпер арена)", "spot": "npc_shooter",  "maxAmount": 3},
+					{"mutant": "summer23_raven_pseudogigant_d16", "spot": "large_mob", "maxAmount": 1},
+					{"mutant": "summer23_raven_boar_d16", "spot": "mob", "maxAmount": 6},
+					{"mutant": "summer23_raven_flesh_d16", "spot": "mob", "maxAmount": 2},
+					{"npc": "[ИВЕНТ] Зомбированный (пулемет арена)", "spot": "npc_shooter", "maxAmount": 3}
+					//{"mutant": "raven24_steal_tushkan", "spot": "small_mob", "maxAmount": 4}
+				]
+			}
+		},
+		"fifth_base_4": { //mutants + npc shooter
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.fifth_base_4.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base", "barricade"],
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_raven_krovosos", "spot": "mob",  "maxAmount": 4},
+					{"mutant": "summer23_raven_spirit", "spot": "spirit", "maxAmount": 19},
+					{"npc": "[ИВЕНТ] Зомбированный (автомат арена)", "spot": "npc_shooter", "maxAmount": 6}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT8S",
+				"mobEntries": [
+					{"mutant": "summer23_raven_krovosos", "spot": "mob",  "maxAmount": 4},
+					{"mutant": "summer23_raven_spirit", "spot": "spirit", "maxAmount": 19},
+					{"npc": "[ИВЕНТ] Зомбированный (автомат арена)", "spot": "npc_shooter", "maxAmount": 6}
+					//{"mutant": "raven24_steal_tushkan", "spot": "small_mob", "maxAmount": 4}
+				]
+			}
+		},
+		"fifth_base_5": { //mutants
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.fifth_base_5.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base"],
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_raven_chimera", "spot": "large_mob",  "maxAmount": 1},
+					{"mutant": "summer23_raven_pseudodog", "spot": "mob", "maxAmount": 7},
+					{"mutant": "summer23_raven_spirit", "spot": "spirit", "maxAmount": 19}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT7S",
+				"mobEntries": [
+					{"mutant": "summer23_raven_chimera", "spot": "large_mob",  "maxAmount": 1},
+					{"mutant": "summer23_raven_pseudodog", "spot": "mob", "maxAmount": 7},
+					{"mutant": "summer23_raven_spirit", "spot": "spirit", "maxAmount": 19}
+					//{"mutant": "raven24_steal_tushkan", "spot": "small_mob", "maxAmount": 4}
+				]
+			}
+		},
+		"fifth_base_6": { //mutants + npc shooter
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.fifth_base_6.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base", "barricade"],
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_raven_chimera_d16", "spot": "large_mob",  "maxAmount": 1},
+					{"npc": "[ИВЕНТ] Зомбированный (пулемет арена)", "spot": "npc_shooter", "maxAmount": 4}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT8S",
+				"mobEntries": [
+					{"mutant": "summer23_raven_chimera_d16", "spot": "large_mob",  "maxAmount": 1},
+					{"npc": "[ИВЕНТ] Зомбированный (пулемет арена)", "spot": "npc_shooter", "maxAmount": 4}
+					//{"mutant": "raven24_steal_tushkan", "spot": "small_mob", "maxAmount": 4}
+				]
+			}
+		},
+		"fifth_base_7": { //mutants + npc shooter
+			"waveWeight": 1,
+			"waveDuration": "PT40S",
+			"mobSpawnDuration": "PT35S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": false,
+			"waveName": "ravent.waveTypes.fifth_base_7.name",
+			"waveEnum": "base",
+
+			"goTagsToOpen": ["base", "barricade"],
+
+			"mobScoreWavesCount": 5,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_raven_pseudogigant_d16", "spot": "large_mob",  "maxAmount": 1},
+					{"mutant": "summer23_raven_boar_d16", "spot": "mob", "maxAmount": 2},
+					{"mutant": "summer23_raven_chimera_d16", "spot": "large_mob", "maxAmount": 1},
+					{"npc": "[ИВЕНТ] Зомбированный (пулемет арена)", "spot": "npc_shooter",  "maxAmount": 4}
+				]
+			},
+
+			"supportMobs": {
+
+				"mobSpawnCooldown": "PT8S",
+				"mobEntries": [
+					{"mutant": "summer23_raven_pseudogigant_d16", "spot": "large_mob",  "maxAmount": 1},
+					{"mutant": "summer23_raven_boar_d16", "spot": "mob", "maxAmount": 2},
+					{"mutant": "summer23_raven_chimera_d16", "spot": "large_mob", "maxAmount": 1},
+					{"npc": "[ИВЕНТ] Зомбированный (пулемет арена)", "spot": "npc_shooter",  "maxAmount": 4}
+					//{"mutant": "raven24_steal_tushkan", "spot": "small_mob", "maxAmount": 4}
+				]
+			}
+		},
+		"boss_titans": { //mutants
+			"waveWeight": 1,
+
+			"waveDuration": "PT120S",
+			"mobSpawnDuration": "PT110S",
+			"flagMaxDamage": 1200,
+			"despawnOnTimer": true,
+			"waveName": "ravent.waveTypes.fifth_boss_1.name",
+			"despawnOnTimerRewardFactor": 0.5, //фактор награды если моб задеспавнился по таймеру
+			"waveEnum": "boss",
+
+			"goTagsToOpen": ["boss"],
+
+			"mobScoreWavesCount": 1,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "summer23_boss_brothers_rat", "spot": "titans",  "maxAmount": 1}
+				]
+			}
+		},
+		"boss_gorynych": { //mutants
+			"waveWeight": 1,
+
+			"waveDuration": "PT120S",
+			"mobSpawnDuration": "PT110S",
+			"flagMaxDamage": 765,
+			"despawnOnTimer": true,
+			"waveName": "ravent.waveTypes.boss_gorynych.name",
+			"despawnOnTimerRewardFactor": 0.5, //фактор награды если моб задеспавнился по таймеру
+			"waveEnum": "boss",
+
+			"goTagsToOpen": ["boss"],
+
+			"mobScoreWavesCount": 1,
+
+			"initialMobs": {
+
+				"mobEntries": [
+					{"mutant": "ra24_internet_gorynych", "spot": "titans",  "maxAmount": 1},
+					{"mutant": "ra24_fire_gigant_gorynych", "spot": "boss",  "maxAmount": 1},
+					{"mutant": "ra24_frost_gigant_gorynych", "spot": "boss",  "maxAmount": 1},
+					{"mutant": "ra24_new_year_gigant_gorynych", "spot": "boss",  "maxAmount": 1}
+				]
+			}
+		}
+	},
+	"afterWaveRestDuration": "PT18S",
+	"afterPvpRestDuration": "PT20S",
+	"beforePvpRestDuration": "PT35S",
+	"rounds": {
+		//тут для каждоно номера раунда настраивается, что происходит
+		"1": {
+			"waveTypes": ["first_base_1", "first_base_2", "first_base_3", "first_base_4", "first_base_5", "first_base_6", "first_base_7"],
+			"coinsReward": 40,
+			"shopExp": 1,
+			"scoreCap": 16000
+		},
+		"2": {
+			"waveTypes": ["first_r2_base_1", "first_r2_base_2", "first_r2_base_3", "first_r2_base_4", "first_r2_base_5", "first_r2_base_6", "first_r2_base_7"],
+			"coinsReward": 40,
+			"shopExp": 1,
+			"scoreCap": 16000
+		},
+		"3": {
+			"waveTypes": ["first_r3_base_1", "first_r3_base_3", "first_r3_base_4", "first_r3_base_5", "first_r3_base_6"],
+			"coinsReward": 40,
+			"shopExp": 1,
+			"scoreCap": 16000
+		},
+		"4": {
+			"waveTypes": ["boss_ram", "boss_dogman"],
+			"coinsReward": 80,
+			"shopExp": 1,
+			"scoreCap": 16000
+		},
+		"5": {
+			"isPvpRound": true,
+			"coinsReward": 120,
+			"scoreCap": 16000
+		},    //пвп обозначает, что это пвп раунд
+		"6": {
+			"waveTypes": ["second_base_1", "second_base_2", "second_base_3", "second_base_4", "second_base_5", "second_base_6", "second_base_7"],
+			"coinsReward": 70,
+			"shopExp": 1,
+			"scoreCap": 16000
+		},
+		"7": {
+			"waveTypes": ["second_r7_base_1", "second_r7_base_2", "second_r7_base_3", "second_r7_base_4", "second_r7_base_5", "second_r7_base_6", "second_r7_base_7"],
+			"coinsReward": 70,
+			"shopExp": 1,
+			"scoreCap": 16000
+		},
+		"8": {
+			"waveTypes": ["second_r8_base_1", "second_r8_base_2", "second_r8_base_3", "second_r8_base_4", "second_r8_base_5", "second_r8_base_6", "second_r8_base_7"],
+			"coinsReward": 70,
+			"shopExp": 1,
+			"scoreCap": 16000
+		},
+		"9": {
+			"waveTypes": ["boss_leshiy"],
+			"coinsReward": 110,
+			"shopExp": 1,
+			"scoreCap": 16000
+		},
+		"10": {
+			"isPvpRound": true,
+			"coinsReward": 160,
+			"scoreCap": 16000
+		},
+		"11": {
+			"waveTypes": ["third_r11_base_1", "third_r11_base_2", "third_r11_base_3", "third_r11_base_4", "third_r11_base_5", "third_r11_base_6"],
+			"coinsReward": 100,
+			"shopExp": 1,
+			"scoreCap": 18000
+		},
+		"12": {
+			"waveTypes": ["third_base_1", "third_base_2", "third_base_3", "third_base_4", "third_base_5", "third_base_6"],
+			"coinsReward": 100,
+			"shopExp": 1,
+			"scoreCap": 18000
+		},
+		"13": {
+			"waveTypes": ["third_r13_base_1", "third_r13_base_2", "third_r13_base_3", "third_r13_base_4", "third_r13_base_5", "third_r13_base_6"],
+			"coinsReward": 100,
+			"shopExp": 1,
+			"scoreCap": 18000
+		},
+		"14": {
+			"waveTypes": ["boss_grenader", "boss_berserk"],
+			"coinsReward": 220,
+			"shopExp": 1,
+			"scoreCap": 18000
+		},
+		"15": {
+			"isPvpRound": true,
+			"coinsReward": 300,
+			"scoreCap": 18000
+		},
+		"16": {
+			"waveTypes": ["fourth_base_7", "fourth_base_1"],
+			"coinsReward": 130,
+			"shopExp": 1,
+			"scoreCap": 20000
+		},
+		"17": {
+			"waveTypes": ["fourth_base_2", "fourth_base_4"],
+			"coinsReward": 130,
+			"shopExp": 1,
+			"scoreCap": 20000
+		},
+		"18": {
+			"waveTypes": ["fourth_base_5", "fourth_base_6"],
+			"coinsReward": 130,
+			"shopExp": 1,
+			"scoreCap": 20000
+		},
+		"19": {
+			"waveTypes": ["boss_crosses", "boss_radiance"],
+			"coinsReward": 280,
+			"shopExp": 1,
+			"scoreCap": 20000
+		},
+		"20": {
+			"isPvpRound": true,
+			"coinsReward": 400,
+			"scoreCap": 20000
+		},
+		"21": {
+			"waveTypes": ["fifth_base_1", "fifth_base_2"],
+			"coinsReward": 170,
+			"shopExp": 1,
+			"scoreCap": 20000
+		},
+		"22": {
+			"waveTypes": ["fifth_base_3"],
+			"coinsReward": 170,
+			"shopExp": 1,
+			"scoreCap": 20000
+		},
+		"23": {
+			"waveTypes": ["fifth_base_7"],
+			"coinsReward": 170,
+			"shopExp": 1,
+			"scoreCap": 20000
+		},
+		"24": {
+			"waveTypes": ["boss_zvonar"],
+			"coinsReward": 350,
+			"shopExp": 1,
+			"scoreCap": 20000
+		},
+		"25": {
+			"isPvpRound": true,
+			"coinsReward": 0,
+			"scoreCap": 20000
+		}
+	},
+	"pvpRound": {
+		"pvpFlagDamage": 510,									//урон, получаемый объектом команды, нанесшей меньший суммарный урон
+		"pvpDuration": "PT90S",									//длительность пвп раунда
+		"pvpRespawnTime" : "PT7S",								//время ожидания респавна
+		//"pvpWinnerReward": 140,									//награда победителю пвп раунда
+		"pvpWinnerShopExp": 1,								//опыт для победителя пвп раунда
+		//"pvpLoserReward": 70,									//награда проигравшему
+		"pvpLoserShopExp": 1,									//опыт для проигравшего пвп раунда
+		"pvpLoseFactor": 0.75,
+		"pvpComebackDamage": [4875, 7125, 9375, 11250]		//количество урона, наносимое по умолчанию в начале следующего пвп раунда, если предыдущий был проигран
+	},
+
+	"pveDamageTakenBonus":{
+		"1": 0.25,
+		"3": 0.1
+	},
+	"duelRound": {
+		"duelDuration": "PT40S",
+		"spotDuration": "PT10S",
+		"coinsPerOneWin": 40,
+		"coinsPerOneLose": 20
+	},
+
+	// Объект, который стоит в ПВП комнате
+	"pvpFlag": {
+		//прочность
+		"id": "pvp_flag",
+		"flagObjectHealth": 20000,
+		"flagObjectId": "ravent_pvp_flag_2"
+	},
+
+	// Главный объект команды, который они защищают
+	"mainFlags": [
+		{
+			"id": "main_flag_a", //spot_id
+			//прочность
+			"flagObjectHealth": 5100,
+			"flagObjectId": "ravent_main_flag_2"
+		},
+		{
+			"id": "main_flag_b",
+			//прочность
+			"flagObjectHealth": 5100,
+			"flagObjectId": "ravent_main_flag_2"
+		}
+	],
+
+	"additionalRewardFactorPerSurvivor": 0,
+	//допэкоээфициент награды за выжившего игрока
+	"currentCashAdditionalRewardFactor": 0.1,
+	//к награде за волну добавляются 10% от денег, которые имеет на руках игрок
+	"maxCurrentCashAdditionalReward": 30,
+	//максимальная дополнительная сумма, которую можно получить благодаря предыдущему параметру
+
+	//--final scoring--//
+	"winBonus": 120000,
+	// Номера раундов с 1: между границами winBonus линейно растёт от 0% до 100%.
+	// При одинаковых границах полный бонус начисляется начиная с указанного раунда.
+	"winBonusRounds": {
+		"minRound": 9,
+		"maxRound": 15
+	},
+	"scoreToMoneyFactor": 0.24,
+	"scoreToEventMoneyFactor": 0.008,
+	"eventCurrencyItemID": 27250,
+
+	"supplyPacks": {
+		"combat": {
+			// выдаваемы сапплайпак зависит от указанного тут ранга и класса брони
+			"PICKLOCK": "supply_combat_picklock",
+			"NEWBIE": "supply_combat_newbie",
+			"STALKER": "supply_combat_stalker",
+			"VETERAN": "supply_combat_veteran",
+			"MASTER": "supply_combat_master",
+			"LEGEND": "supply_combat_legend"
+		},
+		"hunter": {
+			// выдаваемы сапплайпак зависит от указанного тут ранга и класса брони
+			"PICKLOCK": "supply_combat_picklock",
+			"NEWBIE": "supply_combat_newbie",
+			"STALKER": "supply_combat_stalker",
+			"VETERAN": "supply_combat_veteran",
+			"MASTER": "supply_combat_master",
+			"LEGEND": "supply_combat_legend"
+		},
+		"combined": {
+			"PICKLOCK": "supply_combined_picklock",
+			"NEWBIE": "supply_combined_newbie",
+			"STALKER": "supply_combined_stalker",
+			"VETERAN": "supply_combined_veteran",
+			"MASTER": "supply_combined_master",
+			"LEGEND": "supply_combined_legend"
+		},
+		"scientist": {
+			"PICKLOCK": "supply_scientist_picklock",
+			"NEWBIE": "supply_scientist_newbie",
+			"STALKER": "supply_scientist_stalker",
+			"VETERAN": "supply_scientist_veteran",
+			"MASTER": "supply_scientist_master",
+			"LEGEND": "supply_scientist_legend"
+		}
+	},
+	"defaultSupplyPack": "supply_base",
+	"initialCash": 100,
+	//начальное количество денег
+	"initialLoot": {
+		//начальный лут
+		"secondaryWeapon": {"id": 9556},
+		"meleeWeapon": {"id": 9551},
+		"supplyPack": "supply_base"
+	},
+
+	"stockRerollCost": 10,
+	//стоимость реролла асортимента
+
+	"barter": {
+		"blueprint.wpn.ravent_mr153": {
+			"result": {
+				"id": "wpn.ravent_mr153",
+				"tag": {
+					"attach": {
+						"type": "compound",
+						"value": {
+							"slot_sight_on_mount": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22308},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							}
+						}
+					}
+				}
+			},
+			"offers": [
+				"wpn.ravent_mr133"
+			]
+		},
+		"blueprint.wpn.ravent_saiga": {
+			"result": {
+				"id": "wpn.ravent_saiga",
+				"tag": {
+					"attach": {
+						"type": "compound",
+						"value": {
+							"slot_mount1": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22115},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							},
+							"slot_sight": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22903},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							},
+							"slot_sight_on_mount": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22308},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							}
+						}
+					}
+				}
+			},
+			"offers": [
+				"wpn.ravent_mr153"
+			]
+		},
+		"blueprint.wpn.ravent_komrad": {
+			"result": {
+				"id": "wpn.ravent_komrad",
+				"tag": {
+					"attach": {
+						"type": "compound",
+						"value": {
+							"slot_mount1": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22115},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							},
+							"slot_sight": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22308},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							}
+						}
+					}
+				}
+			},
+			"offers": [
+				"wpn.ravent_saiga"
+			]
+		},
+		"blueprint.wpn.ravent_saiga12": {
+			"result": {
+				"id": "wpn.ravent_saiga12",
+				"tag": {
+					"attach": {
+						"type": "compound",
+						"value": {
+							"slot_mount1": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22115},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							},
+							"slot_sight": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22308},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							}
+						}
+					}
+				}
+			},
+			"offers": [
+				"wpn.ravent_komrad"
+			]
+		},
+
+		"blueprint.wpn.ravent_skst": {
+			"result": {
+				"id": "wpn.ravent_skst",
+				"tag": {
+					"attach": {
+						"type": "compound",
+						"value": {
+							"slot_sight_on_mount": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22351},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							},
+							"slot_barrel": {"type": "compound","value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22577},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							},
+							"slot_mount5": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22115},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							}
+						}
+					}
+				}
+			},
+			"offers": [
+				"wpn.ravent_sks"
+			]
+		},
+		"blueprint.wpn.ravent_spectre": {
+			"result": {
+				"id": "wpn.ravent_spectre",
+				"tag": {
+					"attach": {
+						"type": "compound",
+						"value": {
+							"slot_sight_on_mount": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22308},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							},
+							"slot_barrel": {"type": "compound","value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22522},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							}
+						}
+					}
+				}
+			},
+			"offers": [
+				"wpn.ravent_uzi"
+			]
+		},
+		"blueprint.wpn.ravent_l85-1": {
+			"result": {
+				"id": "wpn.ravent_l85-1",
+				"tag": {
+					"attach": {
+						"type": "compound",
+						"value": {
+							"slot_sight": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22308},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							},
+							"slot_barrel": {"type": "compound","value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22512},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							}
+						}
+					}
+				}
+			},
+			"offers": [
+				"wpn.ravent_m16a3"
+			]
+		},
+		"blueprint.wpn.ravent_akm": {
+			"result": {
+				"id": "wpn.ravent_akm",
+				"tag": {
+					"attach": {
+						"type": "compound",
+						"value": {
+							"slot_sight": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22903},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							},
+							"slot_sight_on_mount": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22308},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							},
+							"slot_barrel": {"type": "compound","value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22536},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							},
+							"slot_mount1": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22115},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							}
+						}
+					}
+				}
+			},
+			"offers": [
+				"wpn.ravent_ak74m"
+			]
+		},
+		"blueprint.wpn.ravent_m1a-1": {
+			"result": {
+				"id": "wpn.ravent_m1a-1",
+				"tag": {
+					"attach": {
+						"type": "compound",
+						"value": {
+							"slot_sight_on_mount": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22308},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							},
+							"slot_barrel": {"type": "compound","value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22558},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							}
+						}
+					}
+				}
+			},
+			"offers": [
+				"wpn.ravent_skst"
+			]
+		},
+		"blueprint.wpn.ravent_ump45": {
+			"result": {
+				"id": "wpn.ravent_ump45",
+				"tag": {
+					"attach": {
+						"type": "compound",
+						"value": {
+							"slot_sight": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22308},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							},
+							"slot_barrel": {"type": "compound","value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22522},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							},
+							"slot_mount1": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22115},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							}
+						}
+					}
+				}
+			},
+			"offers": [
+				"wpn.ravent_spectre"
+			]
+		},
+		"blueprint.wpn.ravent_l85": {
+			"result": {
+				"id": "wpn.ravent_l85",
+				"tag": {
+					"attach": {
+						"type": "compound",
+						"value": {
+							"slot_sight": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22308},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							},
+							"slot_barrel": {"type": "compound","value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22512},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							},
+							"slot_mount1": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22115},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							},
+							"slot_magazine": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22705},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							}
+						}
+					}
+				}
+			},
+			"offers": [
+				"wpn.ravent_l85-1"
+			]
+		},
+		"blueprint.wpn.ravent_ak103": {
+			"result": {
+				"id": "wpn.ravent_ak103",
+				"tag": {
+					"attach": {
+						"type": "compound",
+						"value": {
+							"slot_mount2": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22308},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							},
+							"slot_barrel": {"type": "compound","value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22536},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							},
+							"slot_mount1": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22115},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							},
+							"slot_magazine": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22761},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							}
+						}
+					}
+				}
+			},
+			"offers": [
+				"wpn.ravent_akm"
+			]
+		},
+		"blueprint.wpn.ravent_rpk": {
+			"result": {
+				"id": "wpn.ravent_rpk",
+				"tag": {
+					"attach": {
+						"type": "compound",
+						"value": {
+							"slot_sight": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22903},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							},
+							"slot_sight_on_mount": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22308},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							},
+							"slot_barrel": {"type": "compound","value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22536},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							},
+							"slot_mount1": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22115},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							}
+						}
+					}
+				}
+			},
+			"offers": [
+				"wpn.ravent_dp"
+			]
+		},
+		"blueprint.wpn.ravent_m1a": {
+			"result": {
+				"id": "wpn.ravent_m1a",
+				"tag": {
+					"attach": {
+						"type": "compound",
+						"value": {
+							"slot_sight_on_mount": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22308},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							},
+							"slot_barrel": {"type": "compound","value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22558},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							},
+							"slot_mount1": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22115},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							}
+						}
+					}
+				}
+			},
+			"offers": [
+				"wpn.ravent_m1a-1"
+			]
+		},
+		"blueprint.wpn.ravent_mp5": {
+			"result": {
+				"id": "wpn.ravent_mp5",
+				"tag": {
+					"attach": {
+						"type": "compound",
+						"value": {
+							"slot_sight_on_mount": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22308},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							},
+							"slot_barrel": {"type": "compound","value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22522},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							},
+							"slot_mount1": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22115},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							}
+						}
+					}
+				}
+			},
+			"offers": [
+				"wpn.ravent_ump45"
+			]
+		},
+		"blueprint.wpn.ravent_f2000-1": {
+			"result": {
+				"id": "wpn.ravent_f2000-1",
+				"tag": {
+					"attach": {
+						"type": "compound",
+						"value": {
+							"slot_sight": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22308},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							},
+							"slot_barrel": {"type": "compound","value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22512},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							},
+							"slot_magazine": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22705},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							}
+						}
+					}
+				}
+			},
+			"offers": [
+				"wpn.ravent_l85"
+			]
+		},
+		"blueprint.wpn.ravent_ak203": {
+			"result": {
+				"id": "wpn.ravent_ak203",
+				"tag": {
+					"attach": {
+						"type": "compound",
+						"value": {
+							"slot_sight": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22308},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							},
+							"slot_barrel": {"type": "compound","value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22536},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							},
+							"slot_mount1": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22115},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							},
+							"slot_magazine": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22761},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							}
+						}
+					}
+				}
+			},
+			"offers": [
+				"wpn.ravent_ak103"
+			]
+		},
+		"blueprint.wpn.ravent_rpd": {
+			"result": {
+				"id": "wpn.ravent_rpd",
+				"tag": {
+					"attach": {
+						"type": "compound",
+						"value": {
+							"slot_sight": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22308},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							},
+							"slot_barrel": {"type": "compound","value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22536},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							}
+						}
+					}
+				}
+			},
+			"offers": [
+				"wpn.ravent_rpk"
+			]
+		},
+		"blueprint.wpn.ravent_mk14ebr": {
+			"result": {
+				"id": "wpn.ravent_mk14ebr",
+				"tag": {
+					"attach": {
+						"type": "compound",
+						"value": {
+							"slot_sight": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22308},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							},
+							"slot_barrel": {"type": "compound","value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22558},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							},
+							"slot_mount1": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22115},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							}
+						}
+					}
+				}
+			},
+			"offers": [
+				"wpn.ravent_m1a"
+			]
+		},
+		"blueprint.wpn.ravent_mpx": {
+			"result": {
+				"id": "wpn.ravent_mpx",
+				"tag": {
+					"attach": {
+						"type": "compound",
+						"value": {
+							"slot_sight": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22308},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							},
+							"slot_barrel": {"type": "compound","value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22522},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							},
+							"slot_mount1": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22115},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							}
+						}
+					}
+				}
+			},
+			"offers": [
+				"wpn.ravent_mp5"
+			]
+		},
+		"blueprint.wpn.ravent_f2000": {
+			"result": {
+				"id": "wpn.ravent_f2000",
+				"tag": {
+					"attach": {
+						"type": "compound",
+						"value": {
+							"slot_sight": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22308},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							},
+							"slot_barrel": {"type": "compound","value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22512},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							},
+							"slot_mount1": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22115},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							},
+							"slot_magazine": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22705},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							}
+						}
+					}
+				}
+			},
+			"offers": [
+				"wpn.ravent_f2000-1"
+			]
+		},
+		"blueprint.wpn.ravent_ak15": {
+			"result": {
+				"id": "wpn.ravent_ak15",
+				"tag": {
+					"attach": {
+						"type": "compound",
+						"value": {
+							"slot_sight": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22308},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							},
+							"slot_barrel": {"type": "compound","value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22536},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							},
+							"slot_mount1": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22115},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							},
+							"slot_magazine": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22761},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							}
+						}
+					}
+				}
+			},
+			"offers": [
+				"wpn.ravent_ak203"
+			]
+		},
+		"blueprint.wpn.ravent_pkp": {
+			"result": {
+				"id": "wpn.ravent_pkp",
+				"tag": {
+					"attach": {
+						"type": "compound",
+						"value": {
+							"slot_sight": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22903},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							},
+							"slot_sight_on_mount": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22308},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							},
+							"slot_barrel": {"type": "compound","value": {"Count_i": {"type": "integer", "value": 1},
+								"id": {"type": "short", "value": 22536},
+								"tag": {
+									"type": "compound",
+									"value": {
+										"default_attachment": {"type": "byte", "value": 1}
+									}
+								}
+							}
+							}
+						}
+					}
+				}
+			},
+			"offers": [
+				"wpn.ravent_rpd"
+			]
+		},
+		
+		
+		"blueprint.arm.striker": {
+			"result": {
+				"id": "arm.ravent_striker",
+				"tag": {
+				}
+			},
+			"offers": [
+				"arm.ravent_berill"
+			]
+		},
+		"blueprint.arm.vorsa": {
+			"result": {
+				"id": "arm.ravent_vorsa",
+				"tag": {
+				}
+			},
+			"offers": [
+				"arm.ravent_trapper"
+			]
+		},
+		"blueprint.arm.sokol": {
+			"result": {
+				"id": "arm.ravent_sokol",
+				"tag": {
+				}
+			},
+			"offers": [
+				"arm.ravent_turist"
+			]
+		},
+		"blueprint.arm.ao3": {
+			"result": {
+				"id": "arm.ravent_ao3",
+				"tag": {
+				}
+			},
+			"offers": [
+				"arm.ravent_ao2"
+			]
+		},
+		"blueprint.arm.yantar": {
+			"result": {
+				"id": "arm.ravent_yantar",
+				"tag": {
+				}
+			},
+			"offers": [
+				"arm.ravent_zarya_balon"
+			]
+		},
+		"blueprint.arm.kim85": {
+			"result": {
+				"id": "arm.ravent_kim85",
+				"tag": {
+				}
+			},
+			"offers": [
+				"arm.ravent_ozk"
+			]
+		},
+		"blueprint.arm.goplit": {
+			"result": {
+				"id": "arm.ravent_goplit",
+				"tag": {
+				}
+			},
+			"offers": [
+				"arm.ravent_striker"
+			]
+		},
+		"blueprint.arm.osh": {
+			"result": {
+				"id": "arm.ravent_osh",
+				"tag": {
+				}
+			},
+			"offers": [
+				"arm.ravent_vorsa"
+			]
+		},
+		"blueprint.arm.bulat": {
+			"result": {
+				"id": "arm.ravent_bulat",
+				"tag": {
+				}
+			},
+			"offers": [
+				"arm.ravent_sokol"
+			]
+		},
+		"blueprint.arm.ao4": {
+			"result": {
+				"id": "arm.ravent_ao4",
+				"tag": {
+				}
+			},
+			"offers": [
+				"arm.ravent_ao3"
+			]
+		},
+		"blueprint.arm.kimm": {
+			"result": {
+				"id": "arm.ravent_kimm",
+				"tag": {
+				}
+			},
+			"offers": [
+				"arm.ravent_yantar"
+			]
+		},
+		"blueprint.arm.magnit": {
+			"result": {
+				"id": "arm.ravent_magnit",
+				"tag": {
+				}
+			},
+			"offers": [
+				"arm.ravent_kim85"
+			]
+		},
+		"blueprint.arm.legion": {
+			"result": {
+				"id": "arm.ravent_legion",
+				"tag": {
+				}
+			},
+			"offers": [
+				"arm.ravent_goplit"
+			]
+		},
+		"blueprint.arm.eger": {
+			"result": {
+				"id": "arm.ravent_eger",
+				"tag": {
+				}
+			},
+			"offers": [
+				"arm.ravent_osh"
+			]
+		},
+		"blueprint.arm.skat9m": {
+			"result": {
+				"id": "arm.ravent_skat9m",
+				"tag": {
+				}
+			},
+			"offers": [
+				"arm.ravent_bulat"
+			]
+		},
+		"blueprint.arm.ao5": {
+			"result": {
+				"id": "arm.ravent_ao5",
+				"tag": {
+				}
+			},
+			"offers": [
+				"arm.ravent_ao4"
+			]
+		},
+		"blueprint.arm.seva": {
+			"result": {
+				"id": "arm.ravent_seva",
+				"tag": {
+				}
+			},
+			"offers": [
+				"arm.ravent_kimm"
+			]
+		},
+		"blueprint.arm.tonga": {
+			"result": {
+				"id": "arm.ravent_tonga",
+				"tag": {
+				}
+			},
+			"offers": [
+				"arm.ravent_magnit"
+			]
+		},
+		"blueprint.arm.centurion": {
+			"result": {
+				"id": "arm.ravent_centurion",
+				"tag": {
+				}
+			},
+			"offers": [
+				"arm.ravent_legion"
+			]
+		},
+		"blueprint.arm.zveroboi": {
+			"result": {
+				"id": "arm.ravent_zveroboi",
+				"tag": {
+				}
+			},
+			"offers": [
+				"arm.ravent_eger"
+			]
+		},
+		"blueprint.arm.skat10": {
+			"result": {
+				"id": "arm.ravent_skat10",
+				"tag": {
+				}
+			},
+			"offers": [
+				"arm.ravent_skat9m"
+			]
+		},
+		"blueprint.arm.ao6": {
+			"result": {
+				"id": "arm.ravent_ao6",
+				"tag": {
+				}
+			},
+			"offers": [
+				"arm.ravent_ao5"
+			]
+		},
+		"blueprint.arm.saturn": {
+			"result": {
+				"id": "arm.ravent_saturn",
+				"tag": {
+				}
+			},
+			"offers": [
+				"arm.ravent_seva"
+			]
+		},
+		"blueprint.arm.seva_dayx": {
+			"result": {
+				"id": "arm.ravent_seva_dayx",
+				"tag": {
+				}
+			},
+			"offers": [
+				"arm.ravent_tonga"
+			]
+		}
+
+
+		//для настройки чертежей используется отдельный предмет, который ссылает на блок сверху
+	},
+	"stock": {
+		"guarantee": {
+			"rollStart": 4,
+			"rollEnd": 8,
+			"guaranteedSlots": ["weapon", "armor"],
+			"guaranteedRanks": ["picklock", "newbie", "stalker", "veteran"]
+		},
+		"slots": {
+			"weapon": {
+				"items": {
+					// список предметов конкретного слота для конкретного ранга, роллится третьим (с равным весом)
+					// всего игроки не могут выкупить больше чем N копий каждого из этих предметов (см. shopLimits)
+					"picklock": [
+						{
+							"id": "wpn.ravent_mr133",
+							"tag": {
+								"attach": {
+									"type": "compound",
+									"value": {
+										"slot_sight_on_mount": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+											"id": {"type": "short", "value": 22308},
+											"tag": {
+												"type": "compound",
+												"value": {
+													"default_attachment": {"type": "byte", "value": 1}
+												}
+											}
+										}
+										}
+									}
+								}
+							}
+						},
+						{
+							"id": "wpn.ravent_sks",
+							"tag": {
+								"attach": {
+									"type": "compound",
+									"value": {
+										"slot_barrel": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+												"id": {"type": "short", "value": 22577},
+												"tag": {"type": "compound", "value": {"default_attachment": {"type": "byte", "value": 1}}}}
+										},
+										"slot_sight_on_mount": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+												"id": {"type": "short", "value": 22351},
+												"tag": {"type": "compound", "value": {"default_attachment": {"type": "byte", "value": 1}}}}
+										}
+									}
+								}
+							}
+						},
+						{
+							"id": "wpn.ravent_uzi",
+							"tag": {
+								"attach": {
+									"type": "compound",
+									"value": {
+										"slot_sight_on_mount": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+											"id": {"type": "short", "value": 22308},
+											"tag": {
+												"type": "compound",
+												"value": {
+													"default_attachment": {"type": "byte", "value": 1}
+												}
+											}
+										}
+										},
+										"slot_barrel": {"type": "compound","value": {"Count_i": {"type": "integer", "value": 1},
+											"id": {"type": "short", "value": 22522},
+											"tag": {
+												"type": "compound",
+												"value": {
+													"default_attachment": {"type": "byte", "value": 1}
+												}
+											}
+										}
+										}
+									}
+								}
+							}
+						},
+						{
+							"id": "wpn.ravent_m16a3",
+							"tag": {"attach": {
+								"type": "compound",
+								"value": {
+									"slot_sight": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+										"id": {"type": "short", "value": 22308},
+										"tag": {
+											"type": "compound",
+											"value": {
+												"default_attachment": {"type": "byte", "value": 1}
+											}
+										}
+									}
+									},
+									"slot_barrel": {"type": "compound","value": {"Count_i": {"type": "integer", "value": 1},
+										"id": {"type": "short", "value": 22512},
+										"tag": {
+											"type": "compound",
+											"value": {
+												"default_attachment": {"type": "byte", "value": 1}
+											}
+										}
+									}
+									}
+								}
+							}
+							}
+
+						},
+						{
+							"id": "wpn.ravent_ak74m",
+							"tag": {
+								"attach": {
+									"type": "compound",
+									"value": {
+										"slot_sight": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+											"id": {"type": "short", "value": 22903},
+											"tag": {
+												"type": "compound",
+												"value": {
+													"default_attachment": {"type": "byte", "value": 1}
+												}
+											}
+										}
+										},
+										"slot_sight_on_mount": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+											"id": {"type": "short", "value": 22308},
+											"tag": {
+												"type": "compound",
+												"value": {
+													"default_attachment": {"type": "byte", "value": 1}
+												}
+											}
+										}
+										},
+										"slot_barrel": {"type": "compound","value": {"Count_i": {"type": "integer", "value": 1},
+											"id": {"type": "short", "value": 22529},
+											"tag": {
+												"type": "compound",
+												"value": {
+													"default_attachment": {"type": "byte", "value": 1}
+												}
+											}
+										}
+										},
+										"slot_mount1": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+											"id": {"type": "short", "value": 22115},
+											"tag": {
+												"type": "compound",
+												"value": {
+													"default_attachment": {"type": "byte", "value": 1}
+												}
+											}
+										}
+										}
+									}
+								}
+							}
+						}
+					],
+					"newbie": [
+						{
+							"id": "wpn.ravent_dp",
+							"tag": {"attach": {
+								"type": "compound",
+								"value": {
+									"slot_sight_on_mount": {"type": "compound", "value": {"Count_i": {"type": "integer", "value": 1},
+										"id": {"type": "short", "value": 22308},
+										"tag": {
+											"type": "compound",
+											"value": {
+												"default_attachment": {"type": "byte", "value": 1}
+											}
+										}
+									}
+									}
+								}
+							}
+							}
+						},
+
+						"blueprint.wpn.ravent_skst",
+						"blueprint.wpn.ravent_spectre",
+						"blueprint.wpn.ravent_l85-1",
+						"blueprint.wpn.ravent_akm",
+						"blueprint.wpn.ravent_mr153"
+					],
+					//тут указывается id предмета-чертежа
+					"stalker": [
+						"blueprint.wpn.ravent_m1a-1",
+						"blueprint.wpn.ravent_ump45",
+						"blueprint.wpn.ravent_l85",
+						"blueprint.wpn.ravent_ak103",
+						"blueprint.wpn.ravent_rpk",
+						"blueprint.wpn.ravent_saiga"
+					],
+					"veteran": [
+						"blueprint.wpn.ravent_m1a",
+						"blueprint.wpn.ravent_mp5",
+						"blueprint.wpn.ravent_f2000-1",
+						"blueprint.wpn.ravent_ak203",
+						"blueprint.wpn.ravent_rpd",
+						"blueprint.wpn.ravent_komrad"
+					],
+					"master": [
+						//new_items
+						"blueprint.wpn.ravent_mk14ebr",
+						"blueprint.wpn.ravent_mpx",
+						"blueprint.wpn.ravent_f2000",
+						"blueprint.wpn.ravent_ak15",
+						"blueprint.wpn.ravent_pkp",
+						"blueprint.wpn.ravent_saiga12"
+					]
+				}
+			},
+			"armor": {
+				"items": {
+					"picklock": [
+						//new items
+						"arm.ravent_berill",
+						"arm.ravent_trapper",
+						"arm.ravent_turist",
+						"arm.ravent_ao2",
+						"arm.ravent_zarya_balon",
+						"arm.ravent_ozk"
+					],
+					"newbie": [
+						//блок новых принтов 2026
+						"blueprint.arm.striker",
+						"blueprint.arm.vorsa",
+						"blueprint.arm.sokol",
+						"blueprint.arm.ao3",
+						"blueprint.arm.yantar",
+						"blueprint.arm.kim85"
+					],
+					"stalker": [
+						//new items
+						"blueprint.arm.goplit",
+						"blueprint.arm.osh",
+						"blueprint.arm.bulat",
+						"blueprint.arm.ao4",
+						"blueprint.arm.kimm",
+						"blueprint.arm.magnit"
+					],
+					"veteran": [
+						//new items
+						"blueprint.arm.legion",
+						"blueprint.arm.eger",
+						"blueprint.arm.skat9m",
+						"blueprint.arm.ao5",
+						"blueprint.arm.seva",
+						"blueprint.arm.tonga"
+					],
+					"master": [
+						"blueprint.arm.centurion",
+						"blueprint.arm.zveroboi",
+						"blueprint.arm.skat10",
+						"blueprint.arm.ao6",
+						"blueprint.arm.saturn",
+						"blueprint.arm.seva_dayx"
+					],
+					"legend": [
+					]
+				}
+			},
+            "extra_weapon": {
+                "items": {
+                    "picklock": [
+						"melee.ravent_6x9",
+						"wpn.ravent_mauser"
+                    ],
+                    "newbie": [
+                      "wpn.ravent_p99",
+                      "wpn.ravent_hp",
+                      "melee.ravent_hunt",
+                      "melee.ravent_old_lopata"
+                    ],
+                    "stalker": [
+                      "wpn.ravent_beretta",
+                      "wpn.ravent_colt",
+                      "melee.ravent_bkr3",
+                      "melee.ravent_lopata"
+                    ],
+                    "veteran": [
+						"melee.ravent_machete",
+						"melee.ravent_bateal"
+					],
+                    "master": [
+						"wpn.ravent_glock17",
+						"wpn.ravent_deagle7",
+						"melee.ravent_kukri",
+						"melee.ravent_ptrd"
+					],
+                    "legend": [
+						"wpn.ravent_oc33",
+						"wpn.ravent_deagle"
+					]
+                }
+            },
+//			"modules": {
+//				"disableLimit": true,
+//				"items": {
+//					"picklock": [
+//						{"id": "wpn_mod.adv.punch_in_the_gut", "tag": {"personal_on_get": {"type": "byte","value": 1}}},
+//						{"id": "wpn_mod.adv.shooting_wear", "tag": {"personal_on_get": {"type": "byte","value": 1}}},
+//						{"id": "wpn_mod.adv.compensator", "tag": {"personal_on_get": {"type": "byte","value": 1}}},
+//						{"id": "wpn_mod.adv.equalizer", "tag": {"personal_on_get": {"type": "byte","value": 1}}}
+//					],
+//					"newbie": [
+//						{"id": "wpn_mod.adv.recalibration", "tag": {"qlt": {"type": "byte", "value": 1}, "personal_on_get": {"type": "byte","value": 1}}},
+//						{"id": "wpn_mod.adv.start_boost", "tag": {"qlt": {"type": "byte", "value": 1}, "personal_on_get": {"type": "byte","value": 1}}},
+//						{"id": "wpn_mod.adv.finish_him", "tag": {"qlt": {"type": "byte", "value": 1}, "personal_on_get": {"type": "byte","value": 1}}},
+//						{"id": "wpn_mod.adv.deformator", "tag": {"qlt": {"type": "byte", "value": 1}, "personal_on_get": {"type": "byte","value": 1}}},
+//						{"id": "wpn_mod.adv.tearing_force", "tag": {"qlt": {"type": "byte", "value": 1}, "personal_on_get": {"type": "byte","value": 1}}}
+//					],
+//					"stalker": [
+//						{"id": "wpn_mod.adv.evil_fighter", "tag": {"qlt": {"type": "byte", "value": 2}, "personal_on_get": {"type": "byte","value": 1}}},
+//						{"id": "wpn_mod.adv.killer_killer", "tag": {"qlt": {"type": "byte", "value": 2}, "personal_on_get": {"type": "byte","value": 1}}},
+//						{"id": "wpn_mod.adv.notches_on_bullets", "tag": {"qlt": {"type": "byte", "value": 2}, "personal_on_get": {"type": "byte","value": 1}}},
+//						{"id": "wpn_mod.adv.lucky_start", "tag": {"qlt": {"type": "byte", "value": 2}, "personal_on_get": {"type": "byte","value": 1}}},
+//						{"id": "wpn_mod.adv.further_better", "tag": {"qlt": {"type": "byte", "value": 2}, "personal_on_get": {"type": "byte","value": 1}}}
+//					],
+//					"veteran": [
+//						{"id": "wpn_mod.adv.versus_all", "tag": {"qlt": {"type": "byte", "value": 3}, "personal_on_get": {"type": "byte","value": 1}}},
+//						{"id": "wpn_mod.adv.be_quiet", "tag": {"qlt": {"type": "byte", "value": 3}, "personal_on_get": {"type": "byte","value": 1}}},
+//						{"id": "wpn_mod.adv.warmup", "tag": {"qlt": {"type": "byte", "value": 3}, "personal_on_get": {"type": "byte","value": 1}}},
+//						{"id": "wpn_mod.adv.vigilante", "tag": {"qlt": {"type": "byte", "value": 3}, "personal_on_get": {"type": "byte","value": 1}}},
+//						{"id": "wpn_mod.adv.seaker", "tag": {"qlt": {"type": "byte", "value": 3}, "personal_on_get": {"type": "byte","value": 1}}}
+//					],
+//					"master": [
+//						{"id": "wpn_mod.adv.persistence", "tag": {"qlt": {"type": "byte", "value": 4}, "personal_on_get": {"type": "byte","value": 1}}},
+//						{"id": "wpn_mod.adv.vulture", "tag": {"qlt": {"type": "byte", "value": 4}, "personal_on_get": {"type": "byte","value": 1}}},
+//						{"id": "wpn_mod.adv.more_gunpowder", "tag": {"qlt": {"type": "byte", "value": 4}, "personal_on_get": {"type": "byte","value": 1}}},
+//						{"id": "wpn_mod.adv.knockback", "tag": {"qlt": {"type": "byte", "value": 4}, "personal_on_get": {"type": "byte","value": 1}}},
+//						{"id": "wpn_mod.adv.quartet", "tag": {"qlt": {"type": "byte", "value": 4}, "personal_on_get": {"type": "byte","value": 1}}}
+//					],
+//					"legend": [
+//					]
+//				}
+//			},
+			"artefacts": {
+				"oneItemPerPlayer": false,
+				"items": {
+					"picklock": [
+					],
+					"newbie": [
+					],
+					"stalker": [
+					],
+					"veteran": [
+					],
+					"master": [
+                    ],
+					"legend": [
+						{"id": "ravent_mislite", "stackSize": 1, "tag": {"qlt": {"type": "byte", "value": 5}, "stats_random": {"type": "float","value":2}}},
+						{"id": "ravent_tverdo", "stackSize": 1, "tag": {"qlt": {"type": "byte", "value": 5}, "stats_random": {"type": "float","value":2}}},
+						{"id": "ravent_dobro", "stackSize": 1, "tag": {"qlt": {"type": "byte", "value": 5}, "stats_random": {"type": "float","value":2}}},
+						{"id": "ravent_zemlya", "stackSize": 1, "tag": {"qlt": {"type": "byte", "value": 5}, "stats_random": {"type": "float","value":2}}},
+						{"id": "ravent_veche", "stackSize": 1, "tag": {"qlt": {"type": "byte", "value": 5}, "stats_random": {"type": "float","value":2}}},
+						{"id": "ravent_zhivete", "stackSize": 1, "tag": {"qlt": {"type": "byte", "value": 5}, "stats_random": {"type": "float","value":2}}},
+						{"id": "ravent_lyudi", "stackSize": 1, "tag": {"qlt": {"type": "byte", "value": 5}, "stats_random": {"type": "float","value":2}}},
+						{"id": "ravent_izhe", "stackSize": 1, "tag": {"qlt": {"type": "byte", "value": 5}, "stats_random": {"type": "float","value":2}}},
+
+						{"id": "ravent_buki", "stackSize": 1, "tag": {"qlt": {"type": "byte", "value": 5}, "stats_random": {"type": "float","value":2}}},
+						{"id": "ravent_eyvaz", "stackSize": 1, "tag": {"qlt": {"type": "byte", "value": 5}, "stats_random": {"type": "float","value":2}}},
+						{"id": "ravent_uruz", "stackSize": 1, "tag": {"qlt": {"type": "byte", "value": 5}, "stats_random": {"type": "float","value":2}}},
+						{"id": "ravent_otal", "stackSize": 1, "tag": {"qlt": {"type": "byte", "value": 5}, "stats_random": {"type": "float","value":2}}}
+
+//						{"id": "art.ravent_flower", "stackSize": 1, "tag": {"qlt": {"type": "byte", "value": 5}, "stats_random": {"type": "float","value":2}}},
+//						{"id": "art.ravent_gusli", "stackSize": 1, "tag": {"qlt": {"type": "byte", "value": 5}, "stats_random": {"type": "float","value":2}}},
+//						{"id": "art.ravent_pie", "stackSize": 1, "tag": {"qlt": {"type": "byte", "value": 5}, "stats_random": {"type": "float","value":2}}},
+//						{"id": "art.ravent_tail", "stackSize": 1, "tag": {"qlt": {"type": "byte", "value": 5}, "stats_random": {"type": "float","value":2}}},
+//						{"id": "art.ravent_hat", "stackSize": 1, "tag": {"qlt": {"type": "byte", "value": 5}, "stats_random": {"type": "float","value":2}}},
+//						{"id": "art.ravent_helmet", "stackSize": 1, "tag": {"qlt": {"type": "byte", "value": 5}, "stats_random": {"type": "float","value":2}}},
+//						{"id": "art.ravent_hair", "stackSize": 1, "tag": {"qlt": {"type": "byte", "value": 5}, "stats_random": {"type": "float","value":2}}},
+//						{"id": "art.ravent_feather", "stackSize": 1, "tag": {"qlt": {"type": "byte", "value": 5}, "stats_random": {"type": "float","value":2}}}
+					]
+				}
+			},
+            "artefacts_special": {
+                "oneItemPerPlayer": false,
+                "items": {
+                    "picklock": [
+                    ],
+                    "newbie": [
+                    ],
+                    "stalker": [
+                    ],
+                    "veteran": [
+                    ],
+                    "master": [
+                    ],
+                    "legend": [
+                      {"id": "ravent_yat", "stackSize": 1, "tag": {"qlt": {"type": "byte", "value": 5}}}
+                    ]
+                }
+            }
+
+		},
+		"shopLimits": "bundle:ravent/raven_shop_limits.csv",
+		"pricePerRank": {
+			"picklock": 10,
+			"newbie": 20,
+			"stalker": 30,
+			"veteran": 50,
+			"master": 70,
+			"legend": 120
+		}
+	},
+
+	"defeatLoot": [ ],
+	"victoryLoot": [
+		[
+			{
+				"stack": {
+					"id": "lootbox.autumn26",
+					"stackSize": 1,
+					"tag": {
+						//"personal_on_get": {
+						//	"type": "byte",
+						//	"value": 1
+						//}
+					}
+				},
+				"weight": 1
+			}
+		]
+	],
+	"ice_wall": {
+		"source_mutant_name": "ra24_frost_gigant_gorynych",
+		"spawn_areas": [
+			{
+				"center": [ 3922.5, 64, -4097.5 ],
+				"radius": 12
+			},
+			{
+				"center": [ 3922.5, 64, -4007.5 ],
+				"radius": 12
+			}
+		],
+		"damage": 5.0,
+		"constriction_delay": "PT6S",
+		"constriction_width": 1.0,
+		"segments_amount": 5,
+		"descent_height": 3.0,
+		"descent_ticks": 20
+	},
+
+	"tutorialHints": [
+		{
+			"tutorialId": "RAVENT_SHOP",
+			"headerKey": "ravent.tutorial.ravent_shop.header",
+			"textKey": "ravent.tutorial.ravent_shop.hint"
+		},
+		{
+			"tutorialId": "RAVENT_MAIN_FLAG",
+			"headerKey": "ravent.tutorial.ravent_main_flag.header",
+			"textKey": "ravent.tutorial.ravent_main_flag.hint"
+		},
+		{
+			"tutorialId": "RAVENT_SHOP_REROLL",
+			"headerKey": "ravent.tutorial.ravent_shop_reroll.header",
+			"textKey": "ravent.tutorial.ravent_shop_reroll.hint"
+		},
+		{
+			"tutorialId": "RAVENT_ITEM_UPGRADE",
+			"headerKey": "ravent.tutorial.ravent_item_upgrade.header",
+			"textKey": "ravent.tutorial.ravent_item_upgrade.hint"
+		},
+		{
+			"tutorialId": "RAVENT_COINS",
+			"headerKey": "ravent.tutorial.ravent_coins.header",
+			"textKey": "ravent.tutorial.ravent_coins.hint"
+		},
+		{
+			"tutorialId": "RAVENT_DUEL",
+			"headerKey": "ravent.tutorial.ravent_duel.header",
+			"textKey": "ravent.tutorial.ravent_duel.hint"
+		},
+		{
+			"tutorialId": "RAVENT_BOSS",
+			"headerKey": "ravent.tutorial.ravent_boss.header",
+			"textKey": "ravent.tutorial.ravent_boss.hint"
+		},
+		{
+			"tutorialId": "RAVENT_PVP",
+			"headerKey": "ravent.tutorial.ravent_pvp.header",
+			"textKey": "ravent.tutorial.ravent_pvp.hint"
+		},
+		{
+			"tutorialId": "RAVENT_PVP_START",
+			"headerKey": "ravent.tutorial.ravent_pvp_start.header",
+			"textKey": "ravent.tutorial.ravent_pvp_start.hint"
+		},
+		{
+			"tutorialId": "RAVENT_SHOP_RESTRICTION",
+			"headerKey": "ravent.tutorial.ravent_shop_restriction.header",
+			"textKey": "ravent.tutorial.ravent_shop_restriction.hint"
+		},
+		{
+			"tutorialId": "RAVENT_ARENA_MODIFIERS",
+			"headerKey": "ravent.tutorial.ravent_arena_modifiers.header",
+			"textKey": "ravent.tutorial.ravent_arena_modifiers.hint"
+		}
+	],
+
+	"passive_abilities": [
+	]
+}

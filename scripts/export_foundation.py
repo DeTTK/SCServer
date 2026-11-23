@@ -13,6 +13,7 @@ def safe(name):
     return '/'.join(parts)
 def files(root,component):
     for directory,dirs,names in os.walk(root,followlinks=False):
+        dirs.sort()
         folder=Path(directory)
         for d in list(dirs):
             p=folder/d
@@ -20,10 +21,15 @@ def files(root,component):
             if folder==root and d.lower()in ('jre','data','logs','saves','reports','cache','.git','temp'):dirs.remove(d)
         for name in sorted(names):
             p=folder/name
+            relative=p.relative_to(root).as_posix()
+            if component=='client' and relative.split('/')[0]not in ('compat','mods'):continue
+            if component=='server' and relative.split('/')[0]not in ('server.jar','server.template.properties','lib','fixtures','source-resources','results','registries','resources'):continue
+            if component=='bootstrap/runtime' and relative.startswith('dependencies/imgui-java-') and '1.82.2'not in relative:continue
             if p.is_symlink()or getattr(p.lstat(),'st_file_attributes',0)&0x400:raise ValueError('Linked game file')
             if name.lower()in ('admin-token.txt','agent.properties','profile.json','files.sha256.json')or p.suffix.lower()in('.pem','.key','.pfx','.log','.sjournal','.dmp'):continue
             yield component+'/'+safe(p.relative_to(root).as_posix()),p
 def export(bundle,java,bridge,output,resume=False):
+    if not (bundle/'Bootstrap/runtime/game.jar').is_file():raise ValueError('Prepare a player-only shared jar runtime before exporting')
     if output.exists()and not resume:raise ValueError('Foundation output must be a new empty owned directory')
     output.mkdir(parents=True,exist_ok=resume)
     pack=bytearray();pending=[];objects=[];unique={};entries=[]
@@ -44,7 +50,7 @@ def export(bundle,java,bridge,output,resume=False):
             while raw:=stream.read(BLOCK):
                 h.update(raw);size+=len(raw);zipped=zlib.compress(raw,6);body=zipped if len(zipped)<len(raw)else raw;pieces.append((digest(raw),body,len(raw),'zlib'if body is zipped else'raw'))
         return logical,h.hexdigest(),size,pieces
-    roots=[('bootstrap/java17',java),('client',bundle/'Client'),('server',bundle/'Server'),('map',bundle/'Map')]
+    roots=[('bootstrap/java17',java),('bootstrap/runtime',bundle/'Bootstrap/runtime'),('client',bundle/'Client'),('server',bundle/'Server'),('map',bundle/'Map')]
     for component,root in roots:
         if not root.is_dir():raise ValueError('Missing foundation component: '+component)
         with concurrent.futures.ThreadPoolExecutor(max_workers=24)as pool:
@@ -62,7 +68,7 @@ def export(bundle,java,bridge,output,resume=False):
     for component in ['bootstrap','client','server','map']:
         rows=sorted((r for r in entries if r['path'].startswith(component+'/')),key=lambda r:r['path'])
         for at in range(0,len(rows),SHARD):
-            selected=rows[at:at+SHARD];raw=encoded(selected);body=zlib.compress(raw,9);name=f'{component}/index-{at//SHARD:04}.json.z';p=output/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_bytes(body)
+            selected=rows[at:at+SHARD];raw=encoded(selected);body=zlib.compress(raw,9);name=f'{component}/index-{digest(raw)[:20]}-{at//SHARD:04}.json.z';p=output/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_bytes(body)
             indices.append({'path':name,'sha256':digest(body),'size':len(body),'decodedSize':len(raw),'files':len(selected),'component':component})
     seed={'schemaVersion':1,'legacyBaseId':bundle.name,'fileCount':len(entries),'expandedBytes':sum(x['size']for x in entries),'indices':indices,'objects':sorted(objects,key=lambda x:x['sha256'])}
     identity='foundation-'+digest(encoded(seed))[:24];descriptor={'id':identity,**seed};raw=encoded(descriptor)

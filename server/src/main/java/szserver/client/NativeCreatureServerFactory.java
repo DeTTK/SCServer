@@ -14,7 +14,7 @@ final class NativeCreatureServerFactory {
     static final String SHA="f1cb5098c9568290807625ce9bc3bc63e96bd63e773a10dbd1f3cbfa9a5cb81f";
 
     static void install(Path runtime,BiFunction<String,byte[],Class<?>> define)throws Exception {
-        byte[] original=Files.readAllBytes(runtime.resolve("classes/"+NATIVE+".class"));
+        byte[] original=RuntimeFiles.read(runtime.resolve("classes/"+NATIVE+".class"));
         if(!HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(original)).equals(SHA))throw new IOException("creature_server_factory_release");
         define.apply(LOGIC,NativeActorBridge.creatureLogic());
         define.apply(NATIVE,patch(original));

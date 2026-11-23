@@ -12,5 +12,5 @@ final class ActorFeedbackGeometryRelease {
         "480350223","2e33ddc2cf7513af19b9b7970c8c9d616fb258dae59e9169c7802704a71d17ed",
         "1155182995","39825761ced9caa239813004cbfb213b6bb8a66aa8b83bc97b15ce8deaf1c9d5",
         "283571282","2862869c1653786e6aa9b9357775e8a02dd731daf88b57c14bbbdc010e20ee47");
-    static void verify(Path runtime)throws Exception{for(var e:HASHES.entrySet())if(!HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(runtime.resolve("classes").resolve(e.getKey()+".class")))).equals(e.getValue()))throw new IllegalStateException("actor_feedback_geometry_release_mismatch:"+e.getKey());}
+    static void verify(Path runtime)throws Exception{for(var e:HASHES.entrySet())if(!HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(RuntimeFiles.read(runtime.resolve("classes").resolve(e.getKey()+".class")))).equals(e.getValue()))throw new IllegalStateException("actor_feedback_geometry_release_mismatch:"+e.getKey());}
 }

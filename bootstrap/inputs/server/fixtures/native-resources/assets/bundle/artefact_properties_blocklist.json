@@ -1,0 +1,11 @@
+{
+  "efficiency_bonus_blocklist": [
+    "radiation_accumulation",
+    "thermal_accumulation",
+    "biological_accumulation",
+    "psycho_accumulation",
+    "frost_accumulation",
+    "toxic_accumulation",
+    "goner_accumulation"
+  ]
+}

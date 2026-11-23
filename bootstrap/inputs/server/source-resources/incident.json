@@ -1,0 +1,1444 @@
+{
+	"matchmaking": {
+		"locationName": "incident",
+//		"accessTime": [
+//			["11:00", "13:00"],
+//			["15:00", "17:00"],
+//			["20:00", "22:00"]
+//		],
+
+		"accessBlockLeaveInPreparation": "PT5M",
+		"accessBlockLeaveInProgress": "PT20M",
+
+		"minGearscore": 0,
+		"minPlaytime": "PT20H",
+
+		"teamSize": 5,
+
+		// matchmaking
+		"matchmakingInitialWindow": 20,
+		"matchmakingWindowExpansionPerMinute": 30,
+		"matchmakingWindowExpansionBase": 1.2,
+		"matchmakingRecentGameDebuff": 100,
+		"matchmakingRecentGamesAmount": 20
+	},
+
+	"rating": {
+		"ratingCalibrationGameCount": 10,
+		"maxRatingDuringCalibration": 2100.0
+	},
+
+	"afkWarningTime": "PT120S",
+	"afkKickTime": "PT180S",
+
+	// placeholder, please replace it
+	"videoClip": "incident_tutorial",
+
+	// карта в пда
+
+	"mapMin": [598.4, -2687.7],
+	"mapMax": [849.1, -2515.3],
+
+	// переключение амбиента
+
+	"pastBounds": [646, 25, -2609, 843, 71, -2586],
+
+	// gameplay
+	"equipmentChestCooldown": "PT3M",
+	"gamesPlayedForIntroSkip": 3,
+	"equipment": {
+		"ammoClipsAmount": 5,
+		"loot": [
+			[{"stack": {"id": 26002, "stackSize": 5,"tag": {"locitem": {"type": "byte","value": 1}}}, "weight": 1}],
+			[{"stack": {"id": 26003, "stackSize": 2,"tag": {"locitem": {"type": "byte","value": 1}}}, "weight": 1}],
+			[{"stack": {"id": 12344, "stackSize": 1,"tag": {"locitem": {"type": "byte","value": 1}}}, "weight": 1}]
+		]
+	},
+	"classSelectionDuration":"PT60S",
+	"preparationDuration": "PT40S",
+	"sessionDuration": "PT30M",
+	"bossKillEndDelay": "PT30S",
+	"startingRespawnAmountInPvpRoom": 2,
+	"respawnAmountPerCell": 2,
+	"cardId": 16433,
+	"cardDropChancePercent": {
+		"default": 0,
+		"tushkan": 0,
+		"spirit": 0,
+		"krovosos": 2,
+		"snork": 1,
+		"npc": 2
+	},
+	"teams": [
+		{
+			"spawnPoints": [
+				[610.5, 31, -2639.5],
+				[612.5, 31, -2639.5],
+				[610.5, 31, -2642.5],
+				[612.5, 31, -2642.5],
+				[617.5, 31, -2638.5]
+			],
+			"spawnRoom": [
+				608, 30, -2646,
+				621, 38, -2634
+			],
+			"armorMaterialId": "incidentA"
+		},
+		{
+			"spawnPoints": [
+				[610.5, 31, -2555.5],
+				[612.5, 31, -2555.5],
+				[610.5, 31, -2552.5],
+				[612.5, 31, -2552.5],
+				[617.5, 31, -2553.5]
+			],
+			"spawnRoom": [
+				608, 30, -2559,
+				621, 38, -2547
+			],
+			"armorMaterialId": "incidentB"
+		}
+	],
+	"energyFields": [
+		{
+			"id": "field_a1",//поле на респавне
+			"defaultState": true,
+			"disableOnStart": true
+		},
+		{
+			"id": "field_a2",//поле к первой комнате, закрыто
+			"defaultState": true
+		},
+		{
+			"id": "field_a3",//поле открываемое через первый терминал
+			"defaultState": false
+		},
+		{
+			"id": "field_a4",//всегда открытое
+			"defaultState": false
+		},
+		{
+			"id": "field_a5",//поле к боссу
+			"defaultState": true
+		},
+		{
+			"id": "field_b1",
+			"defaultState": true,
+			"disableOnStart": true
+		},
+		{
+			"id": "field_b2",
+			"defaultState": true
+		},
+		{
+			"id": "field_b3",
+			"defaultState": false
+		},
+		{
+			"id": "field_b4",//всегда открытое
+			"defaultState": false
+		},
+		{
+			"id": "field_b5",
+			"defaultState": true
+		}
+	],
+	"terminals": [
+		{
+			"id": "terminal_a3",//терминал открывающий 3 поле
+			"fieldId": "field_a3",
+			"targetFieldState": true,
+			"activationCastTime": "PT5S",
+			"isDisabledByDefault": true,
+			"activationVoiceOver": "field_enabled.field_b"
+		},
+		{
+			"id": "terminal_a5",//терминал открывающий поле к босу
+			"fieldId": "field_a5",
+			"targetFieldState": false,
+			"activationCastTime": "PT5S",
+			"requiresCardItem": true
+		},
+		{
+			"id": "terminal_b3",
+			"fieldId": "field_b3",
+			"targetFieldState": true,
+			"activationCastTime": "PT5S",
+			"isDisabledByDefault": true,
+			"activationVoiceOver": "field_enabled.field_a"
+		},
+		{
+			"id": "terminal_b5",
+			"fieldId": "field_b5",
+			"targetFieldState": false,
+			"activationCastTime": "PT5S",
+			"requiresCardItem": true
+		},
+		{
+			"id": "terminal_portal",//терминал запускающий пузырь
+			"activationCastTime": "PT5S",
+			"isDisabledByDefault": true,
+			"activationVoiceOver": "portal.portal",
+			"portal": {
+				"activationCastTime": "PT2S",
+				"duration": "PT40S",
+				"spawnPosition": [817.5, 31, -2597.5],
+				"targetPosition": [814.5, 41, -2596.5]
+			}
+		}
+	],
+	"energyCellRooms": [
+		{
+			"id": "cell_a1",
+			"chargeRadius": 6,
+			"spawnSpotRadius": 18,
+			"guardianDeaggroRadius": 24,
+			"chargeDurationBase": "PT240S",
+			"chargeDurationPlayerReducePercent": 10,
+			"chargeActivationCastTime": "PT5S",
+			"waveProgressIncrements": 0.02,
+			"initialSpawnSpot": "incident_initial",
+			"waveSpawnSpot": "incident_wave",
+			"initialMobs": {
+				"incident_tushkan": 5
+			},
+			"waveMobs": {
+				"incident_tushkan": 50,
+				"incident_spirit": 40
+			}
+		},
+		{
+			"id": "cell_a2",
+			"chargeRadius": 6,
+			"spawnSpotRadius": 27,
+			"guardianDeaggroRadius": 40,
+			"chargeDurationBase": "PT240S",
+			"chargeDurationPlayerReducePercent": 10,
+			"chargeActivationCastTime": "PT5S",
+			"waveProgressIncrements": 0.05,
+			"initialSpawnSpot": "incident_initial",
+			"waveSpawnSpot": "incident_wave",
+			"initialMobs": {
+				"incident_krovosos": 2
+			},
+			"waveMobs": {
+				"incident_krovosos": 20,
+				"incident_spirit": 60
+			}
+		},
+		{
+			"id": "cell_a3",
+			"chargeRadius": 6,
+			"spawnSpotRadius": 25,
+			"guardianDeaggroRadius": 40,
+			"chargeDurationBase": "PT240S",
+			"chargeDurationPlayerReducePercent": 10,
+			"chargeActivationCastTime": "PT5S",
+			"waveProgressIncrements": 0.05,
+			"initialSpawnSpot": "incident_initial",
+			"waveSpawnSpot": "incident_wave",
+			"initialMobs": {
+				"incident_snork": 3
+			},
+			"waveMobs": {
+				"incident_snork": 40,
+				"incident_spirit": 80
+			}
+		},
+		{
+			"id": "cell_a4",
+			"chargeRadius": 6,
+			"spawnSpotRadius": 24,
+			"guardianDeaggroRadius": 40,
+			"chargeDurationBase": "PT240S",
+			"chargeDurationPlayerReducePercent": 10,
+			"chargeActivationCastTime": "PT5S",
+			"waveProgressIncrements": 0.01,
+			"initialSpawnSpot": "incident_initial",
+			"waveSpawnSpot": "incident_wave",
+			"initialMobs": {
+				"incident_spirit": 10
+			},
+			"waveMobs": {
+				"incident_spirit": 200
+			}
+		},
+		{
+			"id": "cell_b1",
+			"chargeRadius": 6,
+			"spawnSpotRadius": 18,
+			"guardianDeaggroRadius": 24,
+			"chargeDurationBase": "PT240S",
+			"chargeDurationPlayerReducePercent": 10,
+			"chargeActivationCastTime": "PT5S",
+			"waveProgressIncrements": 0.02,
+			"initialSpawnSpot": "incident_initial",
+			"waveSpawnSpot": "incident_wave",
+			"initialMobs": {
+				"incident_tushkan": 5
+			},
+			"waveMobs": {
+				"incident_tushkan": 50,
+				"incident_spirit": 40
+			}
+		},
+		{
+			"id": "cell_b2",
+			"chargeRadius": 6,
+			"spawnSpotRadius": 27,
+			"guardianDeaggroRadius": 40,
+			"chargeDurationBase": "PT240S",
+			"chargeDurationPlayerReducePercent": 10,
+			"chargeActivationCastTime": "PT5S",
+			"waveProgressIncrements": 0.05,
+			"initialSpawnSpot": "incident_initial",
+			"waveSpawnSpot": "incident_wave",
+			"initialMobs": {
+				"incident_krovosos": 2
+			},
+			"waveMobs": {
+				"incident_krovosos": 20,
+				"incident_spirit": 60
+			}
+		},
+		{
+			"id": "cell_b3",
+			"chargeRadius": 6,
+			"spawnSpotRadius": 25,
+			"guardianDeaggroRadius": 40,
+			"chargeDurationBase": "PT240S",
+			"chargeDurationPlayerReducePercent": 10,
+			"chargeActivationCastTime": "PT5S",
+			"waveProgressIncrements": 0.05,
+			"initialSpawnSpot": "incident_initial",
+			"waveSpawnSpot": "incident_wave",
+			"initialMobs": {
+				"incident_snork": 3
+			},
+			"waveMobs": {
+				"incident_snork": 40,
+				"incident_spirit": 80
+			}
+		},
+		{
+			"id": "cell_b4",
+			"chargeRadius": 6,
+			"spawnSpotRadius": 24,
+			"guardianDeaggroRadius": 40,
+			"chargeDurationBase": "PT240S",
+			"chargeDurationPlayerReducePercent": 10,
+			"chargeActivationCastTime": "PT5S",
+			"waveProgressIncrements": 0.01,
+			"initialSpawnSpot": "incident_initial",
+			"waveSpawnSpot": "incident_wave",
+			"initialMobs": {
+				"incident_spirit": 10
+			},
+			"waveMobs": {
+				"incident_spirit": 200
+			}
+		},
+		{
+			"id": "cell_middle",
+			"chargeRadius": 6,
+			"spawnSpotRadius": 30,
+			"guardianDeaggroRadius": 50,
+			"chargeDurationBase": "PT300S",
+			"chargeDurationPlayerReducePercent": 10,
+			"chargeActivationCastTime": "PT5S",
+			"targetTerminalIds": ["terminal_a3", "terminal_b3"],
+			"targetTerminalState": true,
+			"waveProgressIncrements": 0.03,
+			"initialSpawnSpot": "middle_initial",
+			"waveSpawnSpot": "middle_wave",
+			"initialMobs": {
+				"[ИНЦИДЕНТ] Ученый": 3,
+				"[ИНЦИДЕНТ] Солдат": 2
+			},
+			"waveMobs": {
+				"[ИНЦИДЕНТ] Солдат": 70
+			}
+		},
+		{
+			"id": "cell_portal",
+			"chargeRadius": 6,
+			"spawnSpotRadius": 25,
+			"guardianDeaggroRadius": 40,
+			"chargeDurationBase": "PT300S",
+			"chargeDurationPlayerReducePercent": 10,
+			"chargeActivationCastTime": "PT5S",
+			"targetTerminalIds": ["terminal_portal"],
+			"targetTerminalState": true,
+			"waveProgressIncrements": 0.03,
+			"initialSpawnSpot": "portal_initial",
+			"waveSpawnSpot": "portal_wave",
+			"initialMobs": {
+				"[ИНЦИДЕНТ] Ученый": 2,
+				"[ИНЦИДЕНТ] Солдат": 1
+			},
+			"waveMobs": {
+				"[ИНЦИДЕНТ] Солдат": 65
+			}
+		}
+	],
+	"pvpRooms": [
+	{
+		"id": "respawn_a",
+			"team": "A",
+			"captureDurationBase": "PT100S",
+			"captureDurationPlayerReducePercent": 10,
+			"captureDurationCellReduceFactor": 0.3,
+			"spawnPosition": [704.5, 31, -2625.5],
+			"captureMinY": 30,
+			"captureMaxY": 36,
+			"captureBounds": [
+				[701, -2621],
+				[701, -2629],
+				[713, -2629],
+				[713, -2621]
+			],
+			"respawnProtection": "PT5S"
+		},
+	{
+		"id": "respawn_b",
+			"team": "B",
+			"captureDurationBase": "PT100S",
+			"captureDurationPlayerReducePercent": 10,
+			"captureDurationCellReduceFactor": 0.3,
+			"spawnPosition": [704.5, 31, -2568.5],
+			"captureMinY": 30,
+			"captureMaxY": 36,
+			"captureBounds": [
+				[701, -2564],
+				[701, -2572],
+				[713, -2572],
+				[713, -2564]
+			],
+			"respawnProtection": "PT5S"
+		}
+	],
+	"bossRoom": {
+		"bossHealth": 20000,
+		"bossRotationDegreesPerSecond": 50,
+		"bossDamage": 55,
+		"bossRateOfFire": 400,
+		"shieldGeneratorHealth": 110,
+		"shieldGeneratorCount": 4,
+		"shieldRechargeTime": "PT15S",
+		"burstAmountBase": 20,
+		"burstAmountDelta": 10,
+		"reloadTimeBase": 35,
+		"reloadTimeDelta": 5,
+		"accuracy": 75,
+		"retargetDelay": "PT2S",
+		"roomBounds": [741, 41, -2611, 820, 63, -2582],
+		"stompBounds": [743, 47, -2603, 753, 60, -2591]
+	},
+	"score": {
+		"energyCellActivation": 1000,
+		"mutantKillDefault": 3,
+		"mutantKillTushkan": 4,
+		"mutantKillSnork": 15,
+		"mutantKillKrovosos": 25,
+		"mutantKillSpirit": 2,
+		"npcKill": 10,
+		"playerKill": 50,
+		"bossKill": 0,
+		"bossDamageDealt": 2000,
+		"playerDeath": 0,
+		"roomRespawn": 0
+	},
+	"scoreToBattlePoints": {
+		"0": 0,
+		"1500": 50,
+		"3000": 100,
+		"4500": 150,
+		"6000": 200,
+		"7500": 250,
+		"10000": 300
+	},
+	"victoryBattlePointsFactor": 1.7,
+
+	"defeatLoot": [
+		[
+			{"stack": {"id": "crt.barter_coins", "stackSize": 75, "tag": {"personal_on_get":{"type":"byte","value":1}}}, "weight": 1}
+		]
+	],
+	"victoryLoot": [
+		[
+			{"stack": {"id": "crt.barter_coins", "stackSize": 150, "tag": {"personal_on_get":{"type":"byte","value":1}}}, "weight": 1}
+		],
+		[
+			{"stack": {"id": "misc.anomal_battery", "stackSize": 2, "tag": {"personal_on_get":{"type":"byte","value":1}}}, "weight": 1}
+		],
+		[
+			{"stack": {"id": "misc.anomal_dust", "stackSize": 25, "stackSizeVariance": 25, "tag": {"personal_on_get":{"type":"byte","value":1}}}, "weight": 1}
+		]
+	],
+	"battlepack": {
+		"pointsPerLevel": 1000,
+		"drop": [
+			[
+				{"stack": {"id": "lootbox.incident_battlepack", "stackSize": 1}, "weight": 1}
+			]
+		],
+		"unlocalizedDesc": "incident.battlepack.description"
+	},
+	"weeklyDrop": {
+		"victoriesRequired": 10,
+		"resetDay": "WEDNESDAY",
+		"drop": [
+			[
+				{"stack": {"id": "lootbox.incident_weekly", "stackSize": 1, "tag": {"personal_on_get":{"type":"byte","value":1}}}, "weight": 1}
+			]
+		],
+		"unlocalizedDesc": "incident.weekly_drop.description"
+	},
+
+	"gameClasses": {
+		"lmg": {
+			"animationName": "preview_lmg",
+			"iconName": "support",
+			"unlocalizedName": "incident.game_class.sample.support.name",
+			"unlocalizedDesc": "incident.game_class.sample.support.desc",
+
+			// armor, primary/secondary/meleeWeapon выдаются единожды с тегами на персональность и привязку к лоации
+			"armor": {"id": 25451, "tag": {
+
+									}		
+						},
+			"primaryWeapon": {"id": 9100,"tag": {
+											"attach": {
+												"type": "compound",
+												"value": {
+													"slot_sight": {
+														"type": "compound",
+														"value": {
+															"Count_i": {
+																"type": "integer",
+																"value": 1
+															},
+															"id": {
+																"type": "short",
+																"value": 22903
+															},
+															"tag": {
+																"type": "compound",
+																"value": {
+																	"is_locked": {
+																		"type": "byte",
+																		"value": 1
+																	},
+																	"unbreakable": {
+																		"type": "byte",
+																		"value": 1
+																	}
+																}
+															}
+														}
+													},
+													"slot_sight_on_mount": {
+														"type": "compound",
+														"value": {
+															"Count_i": {
+																"type": "integer",
+																"value": 1
+															},
+															"id": {
+																"type": "short",
+																"value": 22207
+															},
+															"tag": {
+																"type": "compound",
+																"value": {
+																	"is_locked": {
+																		"type": "byte",
+																		"value": 1
+																	},
+																	"unbreakable": {
+																		"type": "byte",
+																		"value": 1
+																	}
+																}
+															}
+														}
+													},
+													"slot_magazine": {
+														"type": "compound",
+														"value": {
+															"Count_i": {
+																"type": "integer",
+																"value": 1
+															},
+															"id": {
+																"type": "short",
+																"value": 22754
+															},
+															"tag": {
+																"type": "compound",
+																"value": {
+																	"is_locked": {
+																		"type": "byte",
+																		"value": 1
+																	},
+																	"unbreakable": {
+																		"type": "byte",
+																		"value": 1
+																	}
+																}
+															}
+														}
+													},
+													"slot_barrel": {
+														"type": "compound",
+														"value": {
+															"Count_i": {
+																"type": "integer",
+																"value": 1
+															},
+															"id": {
+																"type": "short",
+																"value": 22525
+															},
+															"tag": {
+																"type": "compound",
+																"value": {
+																	"is_locked": {
+																		"type": "byte",
+																		"value": 1
+																	},
+																	"unbreakable": {
+																		"type": "byte",
+																		"value": 1
+																	}
+																}
+															}
+														}
+													}
+												}
+											}
+										}
+									},
+			"secondaryWeapon": {"id": 9101},
+			"backpack": {"id": 12080, "tag": {"personal_on_get":{"type":"byte","value":1}}},
+			"meleeWeapon": {"id": 21036},
+			
+			"supplyPack": "incident_lmg",
+
+			// расходники, выдаются в начале игры, на каждом респавне и на каждом использование ящика с патронами
+			// это просто массив предметов, не таблица рандомного дропа
+			"consumableItems": [
+				{"id": 26022, "stackSize": 10,"tag": {"personal_on_get":{"type":"byte","value":1},"remove_on_death": {"type": "byte", "value": 1 }}}, 
+				{"id": 12343, "stackSize": 2,"tag": {"personal_on_get":{"type":"byte","value":1},"remove_on_death": {"type": "byte", "value": 1 }}},
+				{"id": 26003, "stackSize": 5,"tag": {"personal_on_get":{"type":"byte","value":1},"remove_on_death": {"type": "byte", "value": 1 }}},
+				{"id": 16464, "stackSize": 1,"tag": {"personal_on_get":{"type":"byte","value":1},"remove_on_death": {"type": "byte", "value": 1 }}}
+				//{"id": 12714, "stackSize": 360,"tag": {"personal_on_get":{"type":"byte","value":1},"remove_on_death": {"type": "byte", "value": 1 }}},
+				//{"id": 12710, "stackSize": 60,"tag": {"personal_on_get":{"type":"byte","value":1},"remove_on_death": {"type": "byte", "value": 1 }}}
+			],
+			// см. расходники
+			"ammoClipsAmount": 0
+		},
+		"raider": {
+			"animationName": "preview_pdw",
+			"iconName": "raider",
+			"unlocalizedName": "incident.game_class.sample.raider.name",
+			"unlocalizedDesc": "incident.game_class.sample.raider.desc",
+
+			"armor": {"id": 25351, "tag": {
+										
+									}		
+						},
+			"primaryWeapon": {"id": 9102,"tag": {
+											"upgrade_level": {"type": "integer","value": 9},
+											"attach": {
+												"type": "compound",
+												"value": {
+													"slot_sight": {
+														"type": "compound",
+														"value": {
+															"Count_i": {
+																"type": "integer",
+																"value": 1
+															},
+															"id": {
+																"type": "short",
+																"value": 22912
+															},
+															"tag": {
+																"type": "compound",
+																"value": {
+																	"is_locked": {
+																		"type": "byte",
+																		"value": 1
+																	},
+																	"unbreakable": {
+																		"type": "byte",
+																		"value": 1
+																	}
+																}
+															}
+														}
+													},
+													"slot_sight_on_mount": {
+														"type": "compound",
+														"value": {
+															"Count_i": {
+																"type": "integer",
+																"value": 1
+															},
+															"id": {
+																"type": "short",
+																"value": 22308
+															},
+															"tag": {
+																"type": "compound",
+																"value": {
+																	"is_locked": {
+																		"type": "byte",
+																		"value": 1
+																	},
+																	"unbreakable": {
+																		"type": "byte",
+																		"value": 1
+																	}
+																}
+															}
+														}
+													},
+													"slot_barrel": {
+														"type": "compound",
+														"value": {
+															"Count_i": {
+																"type": "integer",
+																"value": 1
+															},
+															"id": {
+																"type": "short",
+																"value": 22551
+															},
+															"tag": {
+																"type": "compound",
+																"value": {
+																	"is_locked": {
+																		"type": "byte",
+																		"value": 1
+																	},
+																	"unbreakable": {
+																		"type": "byte",
+																		"value": 1
+																	}
+																}
+															}
+														}
+													}
+												}
+											}
+										}
+									},
+			"secondaryWeapon": {"id": 9103},
+			"backpack": {"id": 12083, "tag": {"personal_on_get":{"type":"byte","value":1}}},
+			"meleeWeapon": {"id": 21038},
+			
+			"supplyPack": "incident_raider",
+
+			"consumableItems": [
+				{"id": 26002, "stackSize": 10,"tag": {"personal_on_get":{"type":"byte","value":1},"remove_on_death": {"type": "byte", "value": 1 }}},
+				{"id": 12368, "stackSize": 2,"tag": {"personal_on_get":{"type":"byte","value":1},"remove_on_death": {"type": "byte", "value": 1 }}}, 
+				{"id": 26003, "stackSize": 5,"tag": {"personal_on_get":{"type":"byte","value":1},"remove_on_death": {"type": "byte", "value": 1 }}}
+				//{"id": 12701, "stackSize": 400,"tag": {"personal_on_get":{"type":"byte","value":1},"remove_on_death": {"type": "byte", "value": 1 }}},
+				//{"id": 12701, "stackSize": 80,"tag": {"personal_on_get":{"type":"byte","value":1},"remove_on_death": {"type": "byte", "value": 1 }}}
+			],
+			"ammoClipsAmount": 0
+		},
+		"stormtrooper": {
+			"animationName": "preview_rifle",
+			"iconName": "stormtrooper",
+			"unlocalizedName": "incident.game_class.sample.stormtrooper.name",
+			"unlocalizedDesc": "incident.game_class.sample.stormtrooper.desc",
+
+			"armor": {"id": 25078, "tag": {
+
+									}		
+						},
+			"primaryWeapon": {"id": 9104,"tag": {
+											"upgrade_level": {"type": "integer","value": 9},
+											"attach": {
+												"type": "compound",
+												"value": {
+													"slot_sight": {
+														"type": "compound",
+														"value": {
+															"Count_i": {
+																"type": "integer",
+																"value": 1
+															},
+															"id": {
+																"type": "short",
+																"value": 22250
+															},
+															"tag": {
+																"type": "compound",
+																"value": {
+																	"is_locked": {
+																		"type": "byte",
+																		"value": 1
+																	},
+																	"unbreakable": {
+																		"type": "byte",
+																		"value": 1
+																	}
+																}
+															}
+														}
+													}
+												}
+											}
+										}
+									},
+			"secondaryWeapon": {"id": 9103},
+			"backpack": {"id": 12081, "tag": {"personal_on_get":{"type":"byte","value":1}}},
+			"meleeWeapon": {"id": 21038},
+
+			"supplyPack": "incident_stormtrooper",
+
+			"consumableItems": [
+				{"id": 26002, "stackSize": 10,"tag": {"personal_on_get":{"type":"byte","value":1},"remove_on_death": {"type": "byte", "value": 1 }}}, 
+				{"id": 12344, "stackSize": 1,"tag": {"personal_on_get":{"type":"byte","value":1},"remove_on_death": {"type": "byte", "value": 1 }}}, 
+				{"id": 26003, "stackSize": 5,"tag": {"personal_on_get":{"type":"byte","value":1},"remove_on_death": {"type": "byte", "value": 1 }}}
+				//{"id": 12714, "stackSize": 300,"tag": {"personal_on_get":{"type":"byte","value":1},"remove_on_death": {"type": "byte", "value": 1 }}},
+				//{"id": 12700, "stackSize": 80,"tag": {"personal_on_get":{"type":"byte","value":1},"remove_on_death": {"type": "byte", "value": 1 }}}
+			],
+			"ammoClipsAmount": 0
+		},
+		"hunter": {
+			"animationName": "preview_shotgun",
+			"iconName": "druid",
+			"unlocalizedName": "incident.game_class.sample.druid.name",
+			"unlocalizedDesc": "incident.game_class.sample.druid.desc",
+
+			"armor": {"id": 25068, "tag": {
+									}		
+						},
+			"primaryWeapon": {"id": 9105,"tag": {
+											"upgrade_level": {"type": "integer","value": 14},
+											"attach": {
+												"type": "compound",
+												"value": {
+													"slot_sight": {
+														"type": "compound",
+														"value": {
+															"Count_i": {
+																"type": "integer",
+																"value": 1
+															},
+															"id": {
+																"type": "short",
+																"value": 22903
+															},
+															"tag": {
+																"type": "compound",
+																"value": {
+																	"is_locked": {
+																		"type": "byte",
+																		"value": 1
+																	},
+																	"unbreakable": {
+																		"type": "byte",
+																		"value": 1
+																	}
+																}
+															}
+														}
+													},
+													"slot_sight_on_mount": {
+														"type": "compound",
+														"value": {
+															"Count_i": {
+																"type": "integer",
+																"value": 1
+															},
+															"id": {
+																"type": "short",
+																"value": 22317
+															},
+															"tag": {
+																"type": "compound",
+																"value": {
+																	"is_locked": {
+																		"type": "byte",
+																		"value": 1
+																	},
+																	"unbreakable": {
+																		"type": "byte",
+																		"value": 1
+																	}
+																}
+															}
+														}
+													}
+												}
+											}
+										}
+									},
+			"secondaryWeapon": {"id": 9106,"tag": {
+											"attach": {
+												"type": "compound",
+												"value": {
+													"slot_magazine": {
+														"type": "compound",
+														"value": {
+															"Count_i": {
+																"type": "integer",
+																"value": 1
+															},
+															"id": {
+																"type": "short",
+																"value": 22715
+															},
+															"tag": {
+																"type": "compound",
+																"value": {
+																	"is_locked": {
+																		"type": "byte",
+																		"value": 1
+																	},
+																	"unbreakable": {
+																		"type": "byte",
+																		"value": 1
+																	}
+																}
+															}
+														}
+													}
+												}
+											}
+										}
+									},
+			"backpack": {"id": 12084, "tag": {"personal_on_get":{"type":"byte","value":1}}},
+			"meleeWeapon": {"id": 21037},
+			
+			"supplyPack": "incident_hunter",
+
+			"consumableItems": [
+				{"id": 26022, "stackSize": 10,"tag": {"personal_on_get":{"type":"byte","value":1},"remove_on_death": {"type": "byte", "value": 1 }}}, 
+				{"id": 12343, "stackSize": 2,"tag": {"personal_on_get":{"type":"byte","value":1},"remove_on_death": {"type": "byte", "value": 1 }}},
+				{"id": 26003, "stackSize": 5,"tag": {"personal_on_get":{"type":"byte","value":1},"remove_on_death": {"type": "byte", "value": 1 }}}
+				//{"id": 12712, "stackSize": 120,"tag": {"personal_on_get":{"type":"byte","value":1},"remove_on_death": {"type": "byte", "value": 1 }}},
+				//{"id": 12700, "stackSize": 100,"tag": {"personal_on_get":{"type":"byte","value":1},"remove_on_death": {"type": "byte", "value": 1 }}}
+			],
+			"ammoClipsAmount": 0
+		},
+		"sniper": {
+			"animationName": "preview_sniper",
+			"iconName": "sniper",
+			"unlocalizedName": "incident.game_class.sample.sniper.name",
+			"unlocalizedDesc": "incident.game_class.sample.sniper.desc",
+
+			"armor": {"id": 25167, "tag": {
+
+									}		
+						},
+			"primaryWeapon": {
+				"id": 9112,
+				"tag": {
+					"upgrade_level": {"type": "integer","value": 9},
+					"attach": {
+						"type": "compound",
+						"value": {
+							"slot_sight": {
+								"type": "compound",
+								"value": {
+									"Count_i": {
+										"type": "integer",
+										"value": 1
+									},
+									"id": {
+										"type": "short",
+										"value": 22206
+									},
+									"tag": {
+										"type": "compound",
+										"value": {
+											"default_attachment": {
+												"type": "byte",
+												"value": 1
+											},
+											"unbreakable": {
+												"type": "byte",
+												"value": 1
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			},
+			"secondaryWeapon": {"id": 9108},
+			"backpack": {"id": 12082, "tag": {"personal_on_get":{"type":"byte","value":1}}},
+			"meleeWeapon": {"id": 21036},
+			
+			"supplyPack": "incident_sniper",
+
+			"consumableItems": [
+				{"id": 26022, "stackSize": 10,"tag": {"personal_on_get":{"type":"byte","value":1},"remove_on_death": {"type": "byte", "value": 1 }}}, 
+				{"id": 12371, "stackSize": 2,"tag": {"personal_on_get":{"type":"byte","value":1},"remove_on_death": {"type": "byte", "value": 1 }}},
+				{"id": 26003, "stackSize": 5,"tag": {"personal_on_get":{"type":"byte","value":1},"remove_on_death": {"type": "byte", "value": 1 }}}
+				//{"id": 12735, "stackSize": 100,"tag": {"personal_on_get":{"type":"byte","value":1},"remove_on_death": {"type": "byte", "value": 1 }}},
+				//{"id": 12700, "stackSize": 80,"tag": {"personal_on_get":{"type":"byte","value":1},"remove_on_death": {"type": "byte", "value": 1 }}}
+			],
+			"ammoClipsAmount": 0
+		},
+		"marksman": {
+			"animationName": "preview_rifle2",
+			"iconName": "marksman",
+			"unlocalizedName": "incident.game_class.sample.marksman.name",
+			"unlocalizedDesc": "incident.game_class.sample.marksman.desc",
+
+			"armor": {"id": 25021, "tag": {}},
+			"primaryWeapon": {
+				"id": 9113,
+				"tag": {
+					"upgrade_level": {"type": "integer", "value": 9},
+					"attach": {
+						"type": "compound",
+						"value": {
+							"slot_sight": {
+								"type": "compound",
+								"value": {
+									"Count_i": {
+										"type": "integer",
+										"value": 1
+									},
+									"id": {
+										"type": "short",
+										"value": 22255
+									},
+									"tag": {
+										"type": "compound",
+										"value": {
+											"default_attachment": {
+												"type": "byte",
+												"value": 1
+											},
+											"unbreakable": {
+												"type": "byte",
+												"value": 1
+											}
+										}
+									}
+								}
+							},
+							"slot_magazine": {
+								"type": "compound",
+								"value": {
+									"Count_i": {
+										"type": "integer",
+										"value": 1
+									},
+									"id": {
+										"type": "short",
+										"value": 22759
+									},
+									"tag": {
+										"type": "compound",
+										"value": {
+											"is_locked": {
+												"type": "byte",
+												"value": 1
+											},
+											"unbreakable": {
+												"type": "byte",
+												"value": 1
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			},
+			"secondaryWeapon": {
+				"id": 9114,
+				"tag": {
+					"upgrade_level": {"type": "integer", "value": 4},
+					"attach": {
+						"type": "compound",
+						"value": {
+							"slot_barrel": {
+								"type": "compound",
+								"value": {
+									"Count_i": {
+										"type": "integer",
+										"value": 1
+									},
+									"id": {
+										"type": "short",
+										"value": 22551
+									},
+									"tag": {
+										"type": "compound",
+										"value": {
+											"is_locked": {
+												"type": "byte",
+												"value": 1
+											},
+											"unbreakable": {
+												"type": "byte",
+												"value": 1
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			},
+			"backpack": {"id": 12085, "tag": {"personal_on_get":{"type":"byte","value":1}}},						
+			"meleeWeapon": {"id": 21038},
+			
+			"supplyPack": "incident_marksman",
+
+			"consumableItems": [
+				{"id": 26002, "stackSize": 10,"tag": {"personal_on_get":{"type":"byte","value":1},"remove_on_death": {"type": "byte", "value": 1 }}}, 
+				{"id": 12343, "stackSize": 2,"tag": {"personal_on_get":{"type":"byte","value":1},"remove_on_death": {"type": "byte", "value": 1 }}}, 
+				{"id": 26003, "stackSize": 5,"tag": {"personal_on_get":{"type":"byte","value":1},"remove_on_death": {"type": "byte", "value": 1 }}}
+				//{"id": 12725, "stackSize": 200,"tag": {"personal_on_get":{"type":"byte","value":1},"remove_on_death": {"type": "byte", "value": 1 }}},
+				//{"id": 12700, "stackSize": 140,"tag": {"personal_on_get":{"type":"byte","value":1},"remove_on_death": {"type": "byte", "value": 1 }}}
+			],
+			"ammoClipsAmount": 0
+		},
+		"chemist": {
+			"animationName": "preview_shotgun2",
+			"iconName": "healer",
+			"unlocalizedName": "incident.game_class.sample.healer.name",
+			"unlocalizedDesc": "incident.game_class.sample.healer.desc",
+
+			"armor": {"id": 25420, "tag": {
+									}		
+						},
+			"primaryWeapon": {"id": 9111,"tag": {
+											"upgrade_level": {"type": "integer","value": 14},
+											"attach": {
+												"type": "compound",
+												"value": {
+													"slot_sight": {
+														"type": "compound",
+														"value": {
+															"Count_i": {
+																"type": "integer",
+																"value": 1
+															},
+															"id": {
+																"type": "short",
+																"value": 22200
+															},
+															"tag": {
+																"type": "compound",
+																"value": {
+																	"is_locked": {
+																		"type": "byte",
+																		"value": 1
+																	},
+																	"unbreakable": {
+																		"type": "byte",
+																		"value": 1
+																	}
+																}
+															}
+														}
+													},
+													"slot_mount1": {
+														"type": "compound",
+														"value": {
+															"Count_i": {
+																"type": "integer",
+																"value": 1
+															},
+															"id": {
+																"type": "short",
+																"value": 22100
+															},
+															"tag": {
+																"type": "compound",
+																"value": {
+																	"is_locked": {
+																		"type": "byte",
+																		"value": 1
+																	},
+																	"unbreakable": {
+																		"type": "byte",
+																		"value": 1
+																	}
+																}
+															}
+														}
+													}
+												}
+											}
+										}
+									},
+			"secondaryWeapon": {"id": 9110,"tag": {
+											"attach": {
+												"type": "compound",
+												"value": {
+													"slot_magazine": {
+														"type": "compound",
+														"value": {
+															"Count_i": {
+																"type": "integer",
+																"value": 1
+															},
+															"id": {
+																"type": "short",
+																"value": 22764
+															},
+															"tag": {
+																"type": "compound",
+																"value": {
+																	"is_locked": {
+																		"type": "byte",
+																		"value": 1
+																	},
+																	"unbreakable": {
+																		"type": "byte",
+																		"value": 1
+																	}
+																}
+															}
+														}
+													}
+												}
+											}
+										}
+									},
+			"backpack": {"id": 12086, "tag": {"personal_on_get":{"type":"byte","value":1}}},	
+			"meleeWeapon": {"id": 21036},
+			
+			"supplyPack": "incident_chemist",
+
+			"consumableItems": [
+				{"id": 12363, "stackSize": 5,"tag": {"personal_on_get":{"type":"byte","value":1},"remove_on_death": {"type": "byte", "value": 1 }}}, 
+				{"id": 12364, "stackSize": 2,"tag": {"personal_on_get":{"type":"byte","value":1},"remove_on_death": {"type": "byte", "value": 1 }}},			
+				{"id": 26002, "stackSize": 10,"tag": {"personal_on_get":{"type":"byte","value":1},"remove_on_death": {"type": "byte", "value": 1 }}}, 
+				{"id": 26003, "stackSize": 5,"tag": {"personal_on_get":{"type":"byte","value":1},"remove_on_death": {"type": "byte", "value": 1 }}}
+				//{"id": 12700, "stackSize": 300,"tag": {"personal_on_get":{"type":"byte","value":1},"remove_on_death": {"type": "byte", "value": 1 }}},
+				//{"id": 12700, "stackSize": 140,"tag": {"personal_on_get":{"type":"byte","value":1},"remove_on_death": {"type": "byte", "value": 1 }}}
+			],
+			"ammoClipsAmount": 0
+		},
+		"grenadier": {
+			"animationName": "preview_shotgun2",
+			"iconName": "grenadier",
+			"unlocalizedName": "incident.game_class.sample.grenadier.name",
+			"unlocalizedDesc": "incident.game_class.sample.grenadier.desc",
+
+			"armor": {"id": 25174, "tag": {}},
+			"primaryWeapon": {
+				"id": 9115,
+				"tag": {
+					"upgrade_level": {"type": "integer", "value": 4},
+					"attach": {
+						"type": "compound",
+						"value": {
+							"slot_sight": {
+								"type": "compound",
+								"value": {
+									"Count_i": {
+										"type": "integer",
+										"value": 1
+									},
+									"id": {
+										"type": "short",
+										"value": 22250
+									},
+									"tag": {
+										"type": "compound",
+										"value": {
+											"default_attachment": {
+												"type": "byte",
+												"value": 1
+											},
+											"unbreakable": {
+												"type": "byte",
+												"value": 1
+											}
+										}
+									}
+								}
+							},
+							"slot_mount1": {
+								"type": "compound",
+								"value": {
+									"Count_i": {
+										"type": "integer",
+										"value": 1
+									},
+									"id": {
+										"type": "short",
+										"value": 17007
+									},
+									"tag": {
+										"type": "compound",
+										"value": {
+											"is_locked": {
+												"type": "byte",
+												"value": 1
+											},
+											"unbreakable": {
+												"type": "byte",
+												"value": 1
+											}
+										}
+									}
+								}
+							},
+							"slot_handle": {
+								"type": "compound",
+								"value": {
+									"Count_i": {
+										"type": "integer",
+										"value": 1
+									},
+									"id": {
+										"type": "short",
+										"value": 23101
+									},
+									"tag": {
+										"type": "compound",
+										"value": {
+											"is_locked": {
+												"type": "byte",
+												"value": 1
+											},
+											"unbreakable": {
+												"type": "byte",
+												"value": 1
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			},
+			"secondaryWeapon": {
+				"id": 9116,
+				"tag": {
+					"upgrade_level": {"type": "integer", "value": 9}
+				}
+			},
+			"backpack": {"id": 12087, "tag": {"personal_on_get":{"type":"byte","value":1}}},	
+			"meleeWeapon": {"id": 21037},
+			
+			"supplyPack": "incident_grenadier",
+
+			"consumableItems": [
+				{"id": 12344, "stackSize": 2,"tag": {"personal_on_get":{"type":"byte","value":1},"remove_on_death": {"type": "byte", "value": 1 }}},
+				{"id": 12369, "stackSize": 2,"tag": {"personal_on_get":{"type":"byte","value":1},"remove_on_death": {"type": "byte", "value": 1 }}},
+				{"id": 12344, "stackSize": 2,"tag": {"personal_on_get":{"type":"byte","value":1},"remove_on_death": {"type": "byte", "value": 1 }}},
+				{"id": 26002, "stackSize": 10,"tag": {"personal_on_get":{"type":"byte","value":1},"remove_on_death": {"type": "byte", "value": 1 }}}, 
+				{"id": 26003, "stackSize": 5,"tag": {"personal_on_get":{"type":"byte","value":1},"remove_on_death": {"type": "byte", "value": 1 }}}
+			],
+			"ammoClipsAmount": 0
+		}/*,
+		"scout": {
+			"animationName": "preview_shotgun2",
+			"iconName": "scout",
+			"unlocalizedName": "incident.game_class.sample.scout.name",
+			"unlocalizedDesc": "incident.game_class.sample.scout.desc",
+
+			"armor": {"id": 25308, "tag": {
+									}		
+						},
+			"primaryWeapon": {"id": 9117,"tag": {
+											"upgrade_level": {"type": "integer", "value": 9},
+											"attach": {
+												"type": "compound",
+												"value": {
+													"slot_sight": {
+														"type": "compound",
+														"value": {
+															"Count_i": {
+																"type": "integer",
+																"value": 1
+															},
+															"id": {
+																"type": "short",
+																"value": 22314
+															},
+															"tag": {
+																"type": "compound",
+																"value": {
+																	"default_attachment": {
+																		"type": "byte",
+																		"value": 1
+																	},
+																	"unbreakable": {
+																		"type": "byte",
+																		"value": 1
+																	}
+																}
+															}
+														}
+													}
+												}
+											}
+										}
+									},
+			"secondaryWeapon": {"id":9118,"tag": {
+											"upgrade_level": {"type": "integer", "value": 14},
+											"attach": {
+												"type": "compound",
+												"value": {
+													"slot_barrel": {
+														"type": "compound",
+														"value": {
+															"Count_i": {
+																"type": "integer",
+																"value": 1
+															},
+															"id": {
+																"type": "short",
+																"value": 22551
+															},
+															"tag": {
+																"type": "compound",
+																"value": {
+																	"is_locked": {
+																		"type": "byte",
+																		"value": 1
+																	},
+																	"unbreakable": {
+																		"type": "byte",
+																		"value": 1
+																	}
+																}
+															}
+														}
+													}
+												}
+											}
+										}
+									},
+			"backpack": {"id": 12087, "tag": {"personal_on_get":{"type":"byte","value":1}}},
+			"meleeWeapon": {"id": 21036},
+			
+			
+			"supplyPack": "incident_scout",
+
+			"consumableItems": [		
+				{"id": 9119, "stackSize": 2, "tag": {"personal_on_get":{"type":"byte","value":1},"remove_on_death": {"type": "byte", "value": 1 }}},
+				{"id": 26002, "stackSize": 10,"tag": {"personal_on_get":{"type":"byte","value":1},"remove_on_death": {"type": "byte", "value": 1 }}}, 
+				{"id": 26003, "stackSize": 5,"tag": {"personal_on_get":{"type":"byte","value":1},"remove_on_death": {"type": "byte", "value": 1 }}}
+				//{"id": 12710, "stackSize": 60,"tag": {"personal_on_get":{"type":"byte","value":1},"remove_on_death": {"type": "byte", "value": 1 }}},
+				//{"id": 12700, "stackSize": 160,"tag": {"personal_on_get":{"type":"byte","value":1},"remove_on_death": {"type": "byte", "value": 1 }}}
+			],
+			"ammoClipsAmount": 0
+		}*/
+	}
+}

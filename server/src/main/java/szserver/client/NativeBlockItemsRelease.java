@@ -25,7 +25,7 @@ final class NativeBlockItemsRelease {
         Map.entry("888622828","5bf5068dfb51c78db59edc7564e395de71f1d46cad84ddff83640331e19f4414"),
         Map.entry("973018104","d99f481945f24bb05d6005b4153bdae6d38fe639685fbffb0c70d90c11cf262a"),
         Map.entry("981745603","c6934dee309e20b7843755ab70a5fd41ca26d92744ac3385439c3838752c5889"));
-    private static String sha(Path path)throws Exception{return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(path)));}
+    private static String sha(Path path)throws Exception{return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(RuntimeFiles.read(path)));}
     static void verifyRuntime(Path runtime)throws Exception{for(var row:HASHES.entrySet())if(!sha(runtime.resolve("classes").resolve(row.getKey()+".class")).equals(row.getValue()))throw new IllegalStateException("native_block_item_release_changed:"+row.getKey());}
     static void verifyDefinitions(Path fixtures)throws Exception{if(!sha(fixtures.resolve("native-block-item-definitions.json")).equals(DEFINITIONS_SHA))throw new IllegalStateException("native_block_item_definitions_changed");}
     private NativeBlockItemsRelease(){}

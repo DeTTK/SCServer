@@ -1,0 +1,133 @@
+{
+  "items": {
+    "14968": {
+      "definition_source": "installed_native_factory",
+      "item_id": 14968,
+      "slot_size": "1x1",
+      "stack_size": 100,
+      "type": "native_builtin",
+      "weight": 0.0
+    },
+    "14969": {
+      "definition_source": "installed_native_factory",
+      "item_id": 14969,
+      "slot_size": "1x1",
+      "stack_size": 100,
+      "type": "native_builtin",
+      "weight": 0.0
+    },
+    "15789": {
+      "definition_source": "installed_native_factory",
+      "item_id": 15789,
+      "slot_size": "1x1",
+      "stack_size": 1,
+      "type": "native_builtin",
+      "weight": 0.0
+    },
+    "15791": {
+      "definition_source": "installed_native_factory",
+      "item_id": 15791,
+      "slot_size": "1x1",
+      "stack_size": 1,
+      "type": "native_builtin",
+      "weight": 0.0
+    },
+    "16504": {
+      "definition_source": "installed_native_factory",
+      "item_id": 16504,
+      "slot_size": "1x1",
+      "stack_size": 10000,
+      "type": "native_builtin",
+      "weight": 0.0
+    },
+    "16968": {
+      "definition_source": "installed_native_factory",
+      "item_id": 16968,
+      "slot_size": "1x1",
+      "stack_size": 1,
+      "type": "native_builtin",
+      "weight": 0.0
+    },
+    "26972": {
+      "definition_source": "installed_native_factory",
+      "item_id": 26972,
+      "slot_size": "1x1",
+      "stack_size": 1,
+      "type": "native_builtin",
+      "weight": 0.0
+    },
+    "26980": {
+      "definition_source": "installed_native_factory",
+      "item_id": 26980,
+      "slot_size": "1x1",
+      "stack_size": 1,
+      "type": "native_builtin",
+      "weight": 0.0
+    },
+    "26982": {
+      "definition_source": "installed_native_factory",
+      "item_id": 26982,
+      "slot_size": "1x1",
+      "stack_size": 1,
+      "type": "native_builtin",
+      "weight": 0.0
+    },
+    "26983": {
+      "definition_source": "installed_native_factory",
+      "item_id": 26983,
+      "slot_size": "1x1",
+      "stack_size": 1,
+      "type": "native_builtin",
+      "weight": 0.0
+    },
+    "26984": {
+      "definition_source": "installed_native_factory",
+      "item_id": 26984,
+      "slot_size": "1x1",
+      "stack_size": 1,
+      "type": "native_builtin",
+      "weight": 0.0
+    },
+    "5401": {
+      "definition_source": "installed_native_factory",
+      "item_id": 5401,
+      "slot_size": "1x1",
+      "stack_size": 100,
+      "type": "native_builtin",
+      "weight": 0.0
+    },
+    "5402": {
+      "definition_source": "installed_native_factory",
+      "item_id": 5402,
+      "slot_size": "1x1",
+      "stack_size": 100,
+      "type": "native_builtin",
+      "weight": 0.0
+    },
+    "5403": {
+      "definition_source": "installed_native_factory",
+      "item_id": 5403,
+      "slot_size": "1x1",
+      "stack_size": 64,
+      "type": "native_builtin",
+      "weight": 0.0
+    },
+    "5405": {
+      "definition_source": "installed_native_factory",
+      "item_id": 5405,
+      "slot_size": "1x1",
+      "stack_size": 100,
+      "type": "native_builtin",
+      "weight": 0.0
+    },
+    "5406": {
+      "definition_source": "installed_native_factory",
+      "item_id": 5406,
+      "slot_size": "1x1",
+      "stack_size": 100,
+      "type": "native_builtin",
+      "weight": 0.0
+    }
+  },
+  "version": 1
+}

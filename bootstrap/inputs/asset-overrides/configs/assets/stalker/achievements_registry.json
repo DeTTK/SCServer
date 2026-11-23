@@ -1,0 +1,7909 @@
+{
+	// В этом классе регистрируются все ачивки в игре
+	// Некоторые ачивки триггерятся напрямую из кода
+	// Некоторые ачивки триггерятся согласно правилам, указанным в triggerRules
+	// Некоторые ачивки не триггерятся вообще и выдаются игрокам только вручную
+	//
+	// У каждой ачивки должен быть уникальный числовой айди и уникальный строковый ключ
+	"achievements": [
+		{
+			"id": 1,
+			"canUseAsTag": true,
+			"key": "acrobat",
+			"title": "general.achievement.id.acrobat.title",
+			"desc": "general.achievement.id.acrobat.desc",
+			"category": "zone",
+			"rarity": "common",
+			"type": "trigger"
+		},
+		{
+			"id": 2,
+			"canUseAsTag": false,
+			"key": "active_expansion",
+			"title": "general.achievement.id.active_expansion.title",
+			"desc": "general.achievement.id.active_expansion.desc",
+			"category": "guild_n_party",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 3,
+			"canUseAsTag": false,
+			"key": "agroprom_explored",
+			"title": "general.achievement.id.agroprom_explored.title",
+			"desc": "general.achievement.id.agroprom_explored.desc",
+			"category": "zone",
+			"rarity": "common",
+			"type": "trigger",
+			"triggerRules": {
+				"location": [
+					{
+						"locations": [
+							"agroprom"
+						],
+						"area": {
+							"minX": -6000.0,
+							"minY": 0.0,
+							"minZ": -1500.0,
+							"maxX": -2700.0,
+							"maxY": 100.0,
+							"maxZ": 4900.0
+						}
+					}
+				]
+			}
+		},
+		{
+			"id": 4,
+			"canUseAsTag": true,
+			"key": "agroprom_miniboss_2021",
+			"title": "general.achievement.id.agroprom_miniboss_2021.title",
+			"desc": "general.achievement.id.agroprom_miniboss_2021.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "counter",
+			"hidden": true,
+			"count": 1,
+			"triggerRules": {
+				"killTarget": [
+					"Отморозок/"
+				]
+			}
+		},
+		{
+			"id": 5,
+			"canUseAsTag": false,
+			"key": "all_world_events_complete",
+			"title": "general.achievement.id.all_world_events_complete.title",
+			"desc": "general.achievement.id.all_world_events_complete.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "multitrigger",
+			"distributorExportable": true,
+			"triggerValues": [
+				"abstract_anomaly_node",
+				"abstract_camp_flesh",
+				"abstract_airdrop",
+				"abstract_camp_snork",
+				"abstract_flex_node_electra",
+				"abstract_camp_zombie",
+				"abstract_clash_st_ba",
+				"abstract_camp_dog",
+				"abstract_camp_boar",
+				"abstract_camp_krovosos",
+				"abstract_camp_tushkan",
+				"abstract_camp_monolit",
+				"abstract_rescue",
+				"abstract_camp_military"
+			]
+		},
+		{
+			"id": 6,
+			"canUseAsTag": false,
+			"key": "alliance_join",
+			"title": "general.achievement.id.alliance_join.title",
+			"desc": "general.achievement.id.alliance_join.desc",
+			"category": "zone",
+			"rarity": "common",
+			"type": "trigger",
+			"distributorExportable": true
+		},
+		{
+			"id": 7,
+			"canUseAsTag": false,
+			"key": "anomaly_hobby",
+			"title": "general.achievement.id.anomaly_hobby.title",
+			"desc": "general.achievement.id.anomaly_hobby.desc",
+			"category": "zone",
+			"rarity": "common",
+			"type": "counter",
+			"count": 100
+		},
+		{
+			"id": 8,
+			"canUseAsTag": false,
+			"key": "anomaly_node_2021",
+			"title": "general.achievement.id.anomaly_node_2021.title",
+			"desc": "general.achievement.id.anomaly_node_2021.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "counter",
+			"hidden": true,
+			"count": 10,
+			"triggerRules": {
+				"worldEvent": [
+					"abstract_anomaly_node/"
+				]
+			}
+		},
+		{
+			"id": 9,
+			"canUseAsTag": false,
+			"key": "anomaly_sliced_sausage",
+			"title": "general.achievement.id.anomaly_sliced_sausage.title",
+			"desc": "general.achievement.id.anomaly_sliced_sausage.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"dialog": [
+					-28
+				]
+			}
+		},
+		{
+			"id": 10,
+			"canUseAsTag": false,
+			"key": "antitank",
+			"title": "general.achievement.id.antitank.title",
+			"desc": "general.achievement.id.antitank.desc",
+			"category": "combat",
+			"rarity": "rare",
+			"type": "counter",
+			"count": 100,
+			"triggerRules": {
+				"mutantKills": [
+					"pseudogigant"
+				]
+			}
+		},
+		{
+			"id": 11,
+			"canUseAsTag": true,
+			"key": "apothecary",
+			"title": "general.achievement.id.apothecary.title",
+			"desc": "general.achievement.id.apothecary.desc",
+			"category": "zone",
+			"rarity": "common",
+			"type": "counter",
+			"count": 500
+		},
+		{
+			"id": 12,
+			"canUseAsTag": true,
+			"key": "april_fools_2021",
+			"title": "general.achievement.id.april_fools_2021.title",
+			"desc": "general.achievement.id.april_fools_2021.desc",
+			"category": "combat",
+			"rarity": "secret",
+			"type": "counter",
+			"hidden": true,
+			"count": 2241
+		},
+		{
+			"id": 13,
+			"canUseAsTag": true,
+			"key": "ares",
+			"title": "general.achievement.id.ares.title",
+			"desc": "general.achievement.id.ares.desc",
+			"category": "combat",
+			"rarity": "legendary",
+			"type": "counter",
+			"count": 10000
+		},
+		{
+			"id": 14,
+			"canUseAsTag": true,
+			"key": "armor_master_equip",
+			"title": "general.achievement.id.armor_master_equip.title",
+			"desc": "general.achievement.id.armor_master_equip.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"distributorExportable": true
+		},
+		{
+			"id": 15,
+			"canUseAsTag": true,
+			"key": "armor_n_b",
+			"title": "general.achievement.id.armor_n_b.title",
+			"desc": "general.achievement.id.armor_n_b.desc",
+			"category": "combat",
+			"rarity": "secret",
+			"type": "trigger"
+		},
+		{
+			"id": 16,
+			"canUseAsTag": false,
+			"key": "armor_veteran_equip",
+			"title": "general.achievement.id.armor_veteran_equip.title",
+			"desc": "general.achievement.id.armor_veteran_equip.desc",
+			"category": "zone",
+			"rarity": "common",
+			"type": "trigger",
+			"distributorExportable": true
+		},
+		{
+			"id": 17,
+			"canUseAsTag": false,
+			"key": "armourer",
+			"title": "general.achievement.id.armourer.title",
+			"desc": "general.achievement.id.armourer.desc",
+			"category": "economy",
+			"rarity": "rare",
+			"type": "counter",
+			"count": 25
+		},
+		{
+			"id": 18,
+			"canUseAsTag": false,
+			"key": "armsklad_explored",
+			"title": "general.achievement.id.armsklad_explored.title",
+			"desc": "general.achievement.id.armsklad_explored.desc",
+			"category": "zone",
+			"rarity": "rare",
+			"type": "trigger",
+			"triggerRules": {
+				"location": [
+					{
+						"locations": [
+							"armsklad"
+						],
+						"area": {
+							"minX": -6000.0,
+							"minY": 0.0,
+							"minZ": -1500.0,
+							"maxX": -2700.0,
+							"maxY": 100.0,
+							"maxZ": 4900.0
+						}
+					}
+				]
+			}
+		},
+		{
+			"id": 19,
+			"canUseAsTag": true,
+			"key": "armsklad_miniboss_2021",
+			"title": "general.achievement.id.armsklad_miniboss_2021.title",
+			"desc": "general.achievement.id.armsklad_miniboss_2021.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "counter",
+			"hidden": true,
+			"count": 1,
+			"triggerRules": {
+				"killTarget": [
+					"Игорь/"
+				]
+			}
+		},
+		{
+			"id": 20,
+			"canUseAsTag": true,
+			"key": "armsklad_miniboss_2021_winter",
+			"title": "general.achievement.id.armsklad_miniboss_2021_winter.title",
+			"desc": "general.achievement.id.armsklad_miniboss_2021_winter.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "counter",
+			"hidden": true,
+			"count": 1,
+			"triggerRules": {
+				"killTarget": [
+					"Отморозокl"
+				]
+			}
+		},
+		{
+			"id": 21,
+			"canUseAsTag": false,
+			"key": "artefakts-scanned",
+			"title": "general.achievement.id.artefakts-scanned.title",
+			"desc": "general.achievement.id.artefakts-scanned.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "counter",
+			"count": 50
+		},
+		{
+			"id": 22,
+			"canUseAsTag": true,
+			"key": "arthunter",
+			"title": "general.achievement.id.arthunter.title",
+			"desc": "general.achievement.id.arthunter.desc",
+			"category": "zone",
+			"rarity": "rare",
+			"type": "counter",
+			"count": 1000
+		},
+		{
+			"id": 23,
+			"canUseAsTag": true,
+			"key": "artilleryman",
+			"title": "general.achievement.id.artilleryman.title",
+			"desc": "general.achievement.id.artilleryman.desc",
+			"category": "combat",
+			"rarity": "rare",
+			"type": "counter",
+			"count": 100
+		},
+		{
+			"id": 24,
+			"canUseAsTag": false,
+			"key": "attack_repelled",
+			"title": "general.achievement.id.attack_repelled.title",
+			"desc": "general.achievement.id.attack_repelled.desc",
+			"category": "guild_n_party",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 25,
+			"canUseAsTag": true,
+			"key": "aviator",
+			"title": "general.achievement.id.aviator.title",
+			"desc": "general.achievement.id.aviator.desc",
+			"category": "zone",
+			"rarity": "common",
+			"type": "trigger"
+		},
+		{
+			"id": 26,
+			"canUseAsTag": true,
+			"key": "bank",
+			"title": "general.achievement.id.bank.title",
+			"desc": "general.achievement.id.bank.desc",
+			"category": "economy",
+			"rarity": "legendary",
+			"type": "trigger",
+			"triggerRules": {
+				"currencyMaxAmount": {
+					"currency": "money",
+					"maxAmount": 100000000
+				}
+			}
+		},
+		{
+			"id": 27,
+			"canUseAsTag": true,
+			"key": "bar100_explored",
+			"title": "general.achievement.id.bar100_explored.title",
+			"desc": "general.achievement.id.bar100_explored.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"location": [
+					{
+						"locations": [
+							"bar_sever"
+						],
+						"area": {
+							"minX": -1360.0,
+							"minY": 60.0,
+							"minZ": -5304.0,
+							"maxX": -1316.0,
+							"maxY": 75.0,
+							"maxZ": -5245.0
+						}
+					}
+				]
+			}
+		},
+		{
+			"id": 28,
+			"canUseAsTag": false,
+			"key": "bar_explored",
+			"title": "general.achievement.id.bar_explored.title",
+			"desc": "general.achievement.id.bar_explored.desc",
+			"category": "zone",
+			"rarity": "common",
+			"type": "trigger",
+			"triggerRules": {
+				"location": [
+					{
+						"locations": [
+							"bar_save"
+						],
+						"area": {
+							"minX": -1668.0,
+							"minY": 55,
+							"minZ": -5122.0,
+							"maxX": -1530.0,
+							"maxY": 95.0,
+							"maxZ": -4951.0
+						}
+					}
+				]
+			}
+		},
+		{
+			"id": 29,
+			"canUseAsTag": false,
+			"key": "battlefield_won",
+			"title": "general.achievement.id.battlefield_won.title",
+			"desc": "general.achievement.id.battlefield_won.desc",
+			"category": "combat",
+			"rarity": "common",
+			"type": "trigger",
+			"distributorExportable": true
+		},
+		{
+			"id": 30,
+			"canUseAsTag": false,
+			"key": "better_late",
+			"title": "general.achievement.id.better_late.title",
+			"desc": "general.achievement.id.better_late.desc",
+			"category": "guild_n_party",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 31,
+			"canUseAsTag": false,
+			"key": "blitzkrieg",
+			"title": "general.achievement.id.blitzkrieg.title",
+			"desc": "general.achievement.id.blitzkrieg.desc",
+			"category": "guild_n_party",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 32,
+			"canUseAsTag": true,
+			"key": "blizzard_event_easter_egg_2022",
+			"title": "general.achievement.id.blizzard_event_easter_egg_2022.title",
+			"desc": "general.achievement.id.blizzard_event_easter_egg_2022.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					18084
+				]
+			}
+		},
+		{
+			"id": 33,
+			"canUseAsTag": true,
+			"key": "blizzard_event_quest_2022",
+			"title": "general.achievement.id.blizzard_event_quest_2022.title",
+			"desc": "general.achievement.id.blizzard_event_quest_2022.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					17961
+				]
+			}
+		},
+		{
+			"id": 34,
+			"canUseAsTag": true,
+			"key": "blizzard_survivor",
+			"title": "general.achievement.id.blizzard_survivor.title",
+			"desc": "general.achievement.id.blizzard_survivor.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 35,
+			"canUseAsTag": false,
+			"key": "boar",
+			"title": "general.achievement.id.boar.title",
+			"desc": "general.achievement.id.boar.desc",
+			"category": "combat",
+			"rarity": "rare",
+			"type": "counter",
+			"count": 100,
+			"triggerRules": {
+				"mutantKills": [
+					"boar"
+				]
+			}
+		},
+		{
+			"id": 36,
+			"canUseAsTag": false,
+			"key": "boar_camp_2021",
+			"title": "general.achievement.id.boar_camp_2021.title",
+			"desc": "general.achievement.id.boar_camp_2021.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "counter",
+			"hidden": true,
+			"count": 10,
+			"triggerRules": {
+				"worldEvent": [
+					"abstract_camp_boar/"
+				]
+			}
+		},
+		{
+			"id": 37,
+			"canUseAsTag": false,
+			"key": "boar_camp_2021_winter",
+			"title": "general.achievement.id.boar_camp_2021_winter.title",
+			"desc": "general.achievement.id.boar_camp_2021_winter.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "counter",
+			"hidden": true,
+			"count": 5,
+			"triggerRules": {
+				"worldEvent": [
+					"abstract_camp_bokar"
+				]
+			}
+		},
+		{
+			"id": 38,
+			"canUseAsTag": false,
+			"key": "bolota_bandits_selected",
+			"title": "general.achievement.id.bolota_bandits_selected.title",
+			"desc": "general.achievement.id.bolota_bandits_selected.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"dialog": [
+					21668
+				]
+			}
+		},
+		{
+			"id": 39,
+			"canUseAsTag": false,
+			"key": "bolota_explored",
+			"title": "general.achievement.id.bolota_explored.title",
+			"desc": "general.achievement.id.bolota_explored.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"triggerRules": {
+				"location": [
+					{
+						"locations": [
+							"bolota"
+						],
+						"area": {
+							"minX": -6000.0,
+							"minY": 0.0,
+							"minZ": -1500.0,
+							"maxX": -2700.0,
+							"maxY": 100.0,
+							"maxZ": 4900.0
+						}
+					}
+				]
+			}
+		},
+		{
+			"id": 40,
+			"canUseAsTag": false,
+			"key": "bolota_hermit_second_talk",
+			"title": "general.achievement.id.bolota_hermit_second_talk.title",
+			"desc": "general.achievement.id.bolota_hermit_second_talk.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"dialog": [
+					21695
+				]
+			}
+		},
+		{
+			"id": 41,
+			"canUseAsTag": false,
+			"key": "bolota_myar_found",
+			"title": "general.achievement.id.bolota_myar_found.title",
+			"desc": "general.achievement.id.bolota_myar_found.desc",
+			"category": "zone",
+			"rarity": "common",
+			"type": "trigger",
+			"triggerRules": {
+				"location": [
+					{
+						"locations": [
+							"bolota"
+						],
+						"area": {
+							"minX": -4726.5,
+							"minY": 62.0,
+							"minZ": 3752.5,
+							"maxX": -4723.5,
+							"maxY": 66.0,
+							"maxZ": 3760.5
+						}
+					}
+				]
+			}
+		},
+		{
+			"id": 42,
+			"canUseAsTag": false,
+			"key": "bolota_rat_run",
+			"title": "general.achievement.id.bolota_rat_run.title",
+			"desc": "general.achievement.id.bolota_rat_run.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					7141
+				]
+			}
+		},
+		{
+			"id": 43,
+			"canUseAsTag": false,
+			"key": "bolota_stalkers_selected",
+			"title": "general.achievement.id.bolota_stalkers_selected.title",
+			"desc": "general.achievement.id.bolota_stalkers_selected.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"dialog": [
+					21667
+				]
+			}
+		},
+		{
+			"id": 44,
+			"canUseAsTag": true,
+			"key": "boss_pseudo_electro",
+			"title": "general.achievement.id.boss_pseudo_electro.title",
+			"desc": "general.achievement.id.boss_pseudo_electro.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					6898
+				]
+			}
+		},
+		{
+			"id": 45,
+			"canUseAsTag": true,
+			"key": "boss_snork_toxic",
+			"title": "general.achievement.id.boss_snork_toxic.title",
+			"desc": "general.achievement.id.boss_snork_toxic.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					6994
+				]
+			}
+		},
+		{
+			"id": 46,
+			"canUseAsTag": true,
+			"key": "br_win",
+			"title": "general.achievement.id.br_win.title",
+			"desc": "general.achievement.id.br_win.desc",
+			"category": "session_modes",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 47,
+			"canUseAsTag": true,
+			"key": "br_win_without_kills",
+			"title": "general.achievement.id.br_win_without_kills.title",
+			"desc": "general.achievement.id.br_win_without_kills.desc",
+			"category": "session_modes",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 48,
+			"canUseAsTag": true,
+			"key": "br_zone_death",
+			"title": "general.achievement.id.br_zone_death.title",
+			"desc": "general.achievement.id.br_zone_death.desc",
+			"category": "session_modes",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 49,
+			"canUseAsTag": true,
+			"key": "buckshot",
+			"title": "general.achievement.id.buckshot.title",
+			"desc": "general.achievement.id.buckshot.desc",
+			"category": "combat",
+			"rarity": "common",
+			"type": "counter",
+			"count": 100
+		},
+		{
+			"id": 50,
+			"canUseAsTag": true,
+			"key": "burning",
+			"title": "general.achievement.id.burning.title",
+			"desc": "general.achievement.id.burning.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger"
+		},
+		{
+			"id": 51,
+			"canUseAsTag": true,
+			"key": "butcher",
+			"title": "general.achievement.id.butcher.title",
+			"desc": "general.achievement.id.butcher.desc",
+			"category": "combat",
+			"rarity": "common",
+			"type": "counter",
+			"count": 50
+		},
+		{
+			"id": 52,
+			"canUseAsTag": false,
+			"key": "buyer",
+			"title": "general.achievement.id.buyer.title",
+			"desc": "general.achievement.id.buyer.desc",
+			"category": "economy",
+			"rarity": "common",
+			"type": "counter",
+			"count": 25
+		},
+		{
+			"id": 53,
+			"canUseAsTag": false,
+			"key": "camp_bandit_2021",
+			"title": "general.achievement.id.camp_bandit_2021.title",
+			"desc": "general.achievement.id.camp_bandit_2021.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "counter",
+			"hidden": true,
+			"count": 10,
+			"triggerRules": {
+				"worldEvent": [
+					"abstract_camp_bandit_large/",
+					"abstract_camp_bandit/"
+				]
+			}
+		},
+		{
+			"id": 54,
+			"canUseAsTag": false,
+			"key": "camp_military_2021",
+			"title": "general.achievement.id.camp_military_2021.title",
+			"desc": "general.achievement.id.camp_military_2021.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "counter",
+			"hidden": true,
+			"count": 10,
+			"triggerRules": {
+				"worldEvent": [
+					"abstract_camp_military/",
+					"abstract_camp_military_large/"
+				]
+			}
+		},
+		{
+			"id": 55,
+			"canUseAsTag": false,
+			"key": "camp_monolit_2021",
+			"title": "general.achievement.id.camp_monolit_2021.title",
+			"desc": "general.achievement.id.camp_monolit_2021.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "counter",
+			"hidden": true,
+			"count": 10,
+			"triggerRules": {
+				"worldEvent": [
+					"abstract_camp_monolit/",
+					"abstract_camp_monolit_large/"
+				]
+			}
+		},
+		{
+			"id": 56,
+			"canUseAsTag": false,
+			"key": "camp_node_2021_winter",
+			"title": "general.achievement.id.camp_node_2021_winter.title",
+			"desc": "general.achievement.id.camp_node_2021_winter.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "counter",
+			"hidden": true,
+			"count": 5,
+			"triggerRules": {
+				"worldEvent": [
+					"abstract_rescue_extracktor"
+				]
+			}
+		},
+		{
+			"id": 57,
+			"canUseAsTag": false,
+			"key": "camp_snork_2021_winter",
+			"title": "general.achievement.id.camp_snork_2021_winter.title",
+			"desc": "general.achievement.id.camp_snork_2021_winter.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "counter",
+			"hidden": true,
+			"count": 5,
+			"triggerRules": {
+				"worldEvent": [
+					"abstract_camp_snokrk"
+				]
+			}
+		},
+		{
+			"id": 58,
+			"canUseAsTag": false,
+			"key": "camp_stalker_2021",
+			"title": "general.achievement.id.camp_stalker_2021.title",
+			"desc": "general.achievement.id.camp_stalker_2021.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "counter",
+			"hidden": true,
+			"count": 10,
+			"triggerRules": {
+				"worldEvent": [
+					"abstract_camp_stalker/",
+					"abstract_camp_stalker_large/"
+				]
+			}
+		},
+		{
+			"id": 59,
+			"canUseAsTag": false,
+			"key": "camp_zombie_2021",
+			"title": "general.achievement.id.camp_zombie_2021.title",
+			"desc": "general.achievement.id.camp_zombie_2021.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "counter",
+			"hidden": true,
+			"count": 10,
+			"triggerRules": {
+				"worldEvent": [
+					"abstract_camp_zombie_large/",
+					"abstract_camp_zombie/"
+				]
+			}
+		},
+		{
+			"id": 60,
+			"canUseAsTag": true,
+			"key": "cardan_op",
+			"title": "general.achievement.id.cardan_op.title",
+			"desc": "general.achievement.id.cardan_op.desc",
+			"category": "zone",
+			"rarity": "common",
+			"type": "counter",
+			"count": 1000
+		},
+		{
+			"id": 61,
+			"canUseAsTag": false,
+			"key": "ch4_explored",
+			"title": "general.achievement.id.ch4_explored.title",
+			"desc": "general.achievement.id.ch4_explored.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"location": [
+					{
+						"locations": [
+							"ch4"
+						],
+						"area": {
+							"minX": 0.0,
+							"minY": 0.0,
+							"minZ": 0.0,
+							"maxX": 0.0,
+							"maxY": 0.0,
+							"maxZ": 0.0
+						}
+					}
+				]
+			}
+		},
+		{
+			"id": 62,
+			"canUseAsTag": false,
+			"key": "ch4_final",
+			"title": "general.achievement.id.ch4_final.title",
+			"desc": "general.achievement.id.ch4_final.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					-25
+				]
+			}
+		},
+		{
+			"id": 63,
+			"canUseAsTag": false,
+			"key": "ch4_first1",
+			"title": "general.achievement.id.ch4_first1.title",
+			"desc": "general.achievement.id.ch4_first1.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					-22
+				]
+			}
+		},
+		{
+			"id": 64,
+			"canUseAsTag": false,
+			"key": "ch4_first2",
+			"title": "general.achievement.id.ch4_first2.title",
+			"desc": "general.achievement.id.ch4_first2.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					-23
+				]
+			}
+		},
+		{
+			"id": 65,
+			"canUseAsTag": true,
+			"key": "clans_veteran",
+			"title": "general.achievement.id.clans_veteran.title",
+			"desc": "general.achievement.id.clans_veteran.desc",
+			"category": "guild_n_party",
+			"rarity": "secret",
+			"type": "counter",
+			"hidden": true,
+			"count": 47
+		},
+		{
+			"id": 66,
+			"canUseAsTag": false,
+			"key": "classic",
+			"title": "general.achievement.id.classic.title",
+			"desc": "general.achievement.id.classic.desc",
+			"category": "combat",
+			"rarity": "common",
+			"type": "counter",
+			"count": 100
+		},
+		{
+			"id": 67,
+			"canUseAsTag": true,
+			"key": "climber_monologue",
+			"title": "general.achievement.id.climber_monologue.title",
+			"desc": "general.achievement.id.climber_monologue.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					31347
+				]
+			}
+		},
+		{
+			"id": 68,
+			"canUseAsTag": true,
+			"key": "closed_beta_2014",
+			"title": "general.achievement.id.closed_beta_2014.title",
+			"desc": "general.achievement.id.closed_beta_2014.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"dialog": [
+					-2
+				]
+			}
+		},
+		{
+			"id": 69,
+			"canUseAsTag": true,
+			"key": "cold_blooded",
+			"title": "general.achievement.id.cold_blooded.title",
+			"desc": "general.achievement.id.cold_blooded.desc",
+			"category": "combat",
+			"rarity": "rare",
+			"type": "counter",
+			"hidden": true,
+			"count": 100
+		},
+		{
+			"id": 70,
+			"canUseAsTag": true,
+			"key": "collector",
+			"title": "general.achievement.id.collector.title",
+			"desc": "general.achievement.id.collector.desc",
+			"category": "zone",
+			"rarity": "common",
+			"type": "counter",
+			"count": 500
+		},
+		{
+			"id": 71,
+			"canUseAsTag": true,
+			"key": "combine",
+			"title": "general.achievement.id.combine.title",
+			"desc": "general.achievement.id.combine.desc",
+			"category": "combat",
+			"rarity": "common",
+			"type": "counter",
+			"count": 100
+		},
+		{
+			"id": 72,
+			"canUseAsTag": true,
+			"key": "come_with_me",
+			"title": "general.achievement.id.come_with_me.title",
+			"desc": "general.achievement.id.come_with_me.desc",
+			"category": "combat",
+			"rarity": "legendary",
+			"type": "trigger",
+			"distributorExportable": true
+		},
+		{
+			"id": 73,
+			"canUseAsTag": true,
+			"key": "concept_artist_2019",
+			"title": "general.achievement.id.concept_artist_2019.title",
+			"desc": "general.achievement.id.concept_artist_2019.desc",
+			"category": "zone",
+			"rarity": "rare",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"dialog": [
+					-3
+				]
+			}
+		},
+		{
+			"id": 74,
+			"canUseAsTag": true,
+			"key": "concept_artist_2019_winner",
+			"title": "general.achievement.id.concept_artist_2019_winner.title",
+			"desc": "general.achievement.id.concept_artist_2019_winner.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"dialog": [
+					-4
+				]
+			}
+		},
+		{
+			"id": 75,
+			"canUseAsTag": true,
+			"key": "cour_threat",
+			"title": "general.achievement.id.cour_threat.title",
+			"desc": "general.achievement.id.cour_threat.desc",
+			"category": "combat",
+			"rarity": "rare",
+			"type": "counter",
+			"hidden": true,
+			"count": 50
+		},
+		{
+			"id": 76,
+			"canUseAsTag": true,
+			"key": "courier",
+			"title": "general.achievement.id.courier.title",
+			"desc": "general.achievement.id.courier.desc",
+			"category": "economy",
+			"rarity": "rare",
+			"type": "counter",
+			"count": 50
+		},
+		{
+			"id": 77,
+			"canUseAsTag": false,
+			"key": "crystal_hunter_1",
+			"title": "general.achievement.id.crystal_hunter_1.title",
+			"desc": "general.achievement.id.crystal_hunter_1.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 78,
+			"canUseAsTag": false,
+			"key": "crystal_hunter_20",
+			"title": "general.achievement.id.crystal_hunter_20.title",
+			"desc": "general.achievement.id.crystal_hunter_20.desc",
+			"category": "session_modes",
+			"rarity": "legendary",
+			"type": "counter",
+			"hidden": true,
+			"count": 20
+		},
+		{
+			"id": 79,
+			"canUseAsTag": false,
+			"key": "crystal_hunter_5",
+			"title": "general.achievement.id.crystal_hunter_5.title",
+			"desc": "general.achievement.id.crystal_hunter_5.desc",
+			"category": "session_modes",
+			"rarity": "rare",
+			"type": "counter",
+			"hidden": true,
+			"count": 5
+		},
+		{
+			"id": 80,
+			"canUseAsTag": true,
+			"key": "dark_archaeologist",
+			"title": "general.achievement.id.dark_archaeologist.title",
+			"desc": "general.achievement.id.dark_archaeologist.desc",
+			"category": "zone",
+			"rarity": "common",
+			"type": "counter",
+			"count": 10
+		},
+		{
+			"id": 81,
+			"canUseAsTag": true,
+			"key": "dayx_developer",
+			"title": "general.achievement.id.dayx_developer.title",
+			"desc": "general.achievement.id.dayx_developer.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"dialog": [
+					-30
+				]
+			}
+		},
+		{
+			"id": 82,
+			"canUseAsTag": false,
+			"key": "deactivation",
+			"title": "general.achievement.id.deactivation.title",
+			"desc": "general.achievement.id.deactivation.desc",
+			"category": "zone",
+			"rarity": "common",
+			"type": "trigger"
+		},
+		{
+			"id": 83,
+			"canUseAsTag": true,
+			"key": "detective",
+			"title": "general.achievement.id.detective.title",
+			"desc": "general.achievement.id.detective.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 84,
+			"canUseAsTag": false,
+			"key": "devora_lor",
+			"title": "general.achievement.id.devora_lor.title",
+			"desc": "general.achievement.id.devora_lor.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"dialog": [
+					-21
+				]
+			}
+		},
+		{
+			"id": 85,
+			"canUseAsTag": true,
+			"key": "devora_questions1",
+			"title": "general.achievement.id.devora_questions1.title",
+			"desc": "general.achievement.id.devora_questions1.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"dialog": [
+					-17
+				]
+			}
+		},
+		{
+			"id": 86,
+			"canUseAsTag": true,
+			"key": "devora_questions2",
+			"title": "general.achievement.id.devora_questions2.title",
+			"desc": "general.achievement.id.devora_questions2.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"dialog": [
+					-18
+				]
+			}
+		},
+		{
+			"id": 87,
+			"canUseAsTag": true,
+			"key": "devora_questions3",
+			"title": "general.achievement.id.devora_questions3.title",
+			"desc": "general.achievement.id.devora_questions3.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"dialog": [
+					-19
+				]
+			}
+		},
+		{
+			"id": 88,
+			"canUseAsTag": true,
+			"key": "devora_questions4",
+			"title": "general.achievement.id.devora_questions4.title",
+			"desc": "general.achievement.id.devora_questions4.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"dialog": [
+					-20
+				]
+			}
+		},
+		{
+			"id": 89,
+			"canUseAsTag": false,
+			"key": "disassembler",
+			"title": "general.achievement.id.disassembler.title",
+			"desc": "general.achievement.id.disassembler.desc",
+			"category": "economy",
+			"rarity": "legendary",
+			"type": "counter",
+			"hidden": true,
+			"count": 1000
+		},
+		{
+			"id": 90,
+			"canUseAsTag": true,
+			"key": "dispenser",
+			"title": "general.achievement.id.dispenser.title",
+			"desc": "general.achievement.id.dispenser.desc",
+			"category": "combat",
+			"rarity": "legendary",
+			"type": "counter",
+			"count": 1000000
+		},
+		{
+			"id": 91,
+			"canUseAsTag": false,
+			"key": "do-not-go",
+			"title": "general.achievement.id.do-not-go.title",
+			"desc": "general.achievement.id.do-not-go.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 92,
+			"canUseAsTag": false,
+			"key": "dog_camp_2021",
+			"title": "general.achievement.id.dog_camp_2021.title",
+			"desc": "general.achievement.id.dog_camp_2021.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "counter",
+			"hidden": true,
+			"count": 10,
+			"triggerRules": {
+				"worldEvent": [
+					"abstract_camp_dog/"
+				]
+			}
+		},
+		{
+			"id": 93,
+			"canUseAsTag": false,
+			"key": "dog_camp_2021_winter",
+			"title": "general.achievement.id.dog_camp_2021_winter.title",
+			"desc": "general.achievement.id.dog_camp_2021_winter.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "counter",
+			"hidden": true,
+			"count": 5,
+			"triggerRules": {
+				"worldEvent": [
+					"abstract_camp_dkog"
+				]
+			}
+		},
+		{
+			"id": 94,
+			"canUseAsTag": false,
+			"key": "doghunter",
+			"title": "general.achievement.id.doghunter.title",
+			"desc": "general.achievement.id.doghunter.desc",
+			"category": "combat",
+			"rarity": "rare",
+			"type": "counter",
+			"count": 100,
+			"triggerRules": {
+				"mutantKills": [
+					"dog"
+				]
+			}
+		},
+		{
+			"id": 95,
+			"canUseAsTag": false,
+			"key": "dt_explored",
+			"title": "general.achievement.id.dt_explored.title",
+			"desc": "general.achievement.id.dt_explored.desc",
+			"category": "zone",
+			"rarity": "common",
+			"type": "trigger",
+			"triggerRules": {
+				"location": [
+					{
+						"locations": [
+							"bar"
+						],
+						"area": {
+							"minX": -6000.0,
+							"minY": 0.0,
+							"minZ": -1500.0,
+							"maxX": -2700.0,
+							"maxY": 100.0,
+							"maxZ": 4900.0
+						}
+					}
+				]
+			}
+		},
+		{
+			"id": 96,
+			"canUseAsTag": true,
+			"key": "duelist",
+			"title": "general.achievement.id.duelist.title",
+			"desc": "general.achievement.id.duelist.desc",
+			"category": "combat",
+			"rarity": "common",
+			"type": "counter",
+			"count": 100
+		},
+		{
+			"id": 97,
+			"canUseAsTag": false,
+			"key": "easy_money",
+			"title": "general.achievement.id.easy_money.title",
+			"desc": "general.achievement.id.easy_money.desc",
+			"category": "economy",
+			"rarity": "common",
+			"type": "trigger"
+		},
+		{
+			"id": 98,
+			"canUseAsTag": false,
+			"key": "ejectionproof",
+			"title": "general.achievement.id.ejectionproof.title",
+			"desc": "general.achievement.id.ejectionproof.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"distributorExportable": true
+		},
+		{
+			"id": 99,
+			"canUseAsTag": false,
+			"key": "elephants",
+			"title": "general.achievement.id.elephants.title",
+			"desc": "general.achievement.id.elephants.desc",
+			"category": "combat",
+			"rarity": "rare",
+			"type": "counter",
+			"count": 100,
+			"triggerRules": {
+				"mutantKills": [
+					"snork"
+				]
+			}
+		},
+		{
+			"id": 100,
+			"canUseAsTag": true,
+			"key": "entrepreneur",
+			"title": "general.achievement.id.entrepreneur.title",
+			"desc": "general.achievement.id.entrepreneur.desc",
+			"category": "economy",
+			"rarity": "rare",
+			"type": "counter",
+			"count": 1000000
+		},
+		{
+			"id": 101,
+			"canUseAsTag": false,
+			"key": "env_hater",
+			"title": "general.achievement.id.env_hater.title",
+			"desc": "general.achievement.id.env_hater.desc",
+			"category": "combat",
+			"rarity": "legendary",
+			"type": "counter",
+			"count": 1000
+		},
+		{
+			"id": 102,
+			"canUseAsTag": true,
+			"key": "esthete",
+			"title": "general.achievement.id.esthete.title",
+			"desc": "general.achievement.id.esthete.desc",
+			"category": "economy",
+			"rarity": "common",
+			"type": "counter",
+			"count": 10
+		},
+		{
+			"id": 103,
+			"canUseAsTag": true,
+			"key": "evacuation",
+			"title": "general.achievement.id.evacuation.title",
+			"desc": "general.achievement.id.evacuation.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger"
+		},
+		{
+			"id": 104,
+			"canUseAsTag": false,
+			"key": "event_deadtime_diary_found",
+			"title": "general.achievement.id.event_deadtime_diary_found.title",
+			"desc": "general.achievement.id.event_deadtime_diary_found.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					-14
+				]
+			}
+		},
+		{
+			"id": 105,
+			"canUseAsTag": false,
+			"key": "event_deadtime_time_attack_2_boss",
+			"title": "general.achievement.id.event_deadtime_time_attack_2_boss.title",
+			"desc": "general.achievement.id.event_deadtime_time_attack_2_boss.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"triggerRules": {
+				"quest": [
+					-13
+				]
+			}
+		},
+		{
+			"id": 106,
+			"canUseAsTag": false,
+			"key": "event_deadtime_time_attack_2_mobs",
+			"title": "general.achievement.id.event_deadtime_time_attack_2_mobs.title",
+			"desc": "general.achievement.id.event_deadtime_time_attack_2_mobs.desc",
+			"category": "zone",
+			"rarity": "rare",
+			"type": "trigger",
+			"triggerRules": {
+				"quest": [
+					-12
+				]
+			}
+		},
+		{
+			"id": 107,
+			"canUseAsTag": false,
+			"key": "event_deadtime_time_attack_boss",
+			"title": "general.achievement.id.event_deadtime_time_attack_boss.title",
+			"desc": "general.achievement.id.event_deadtime_time_attack_boss.desc",
+			"category": "zone",
+			"rarity": "rare",
+			"type": "trigger",
+			"triggerRules": {
+				"quest": [
+					-11
+				]
+			}
+		},
+		{
+			"id": 108,
+			"canUseAsTag": false,
+			"key": "event_deadtime_time_attack_mobs",
+			"title": "general.achievement.id.event_deadtime_time_attack_mobs.title",
+			"desc": "general.achievement.id.event_deadtime_time_attack_mobs.desc",
+			"category": "zone",
+			"rarity": "common",
+			"type": "trigger",
+			"triggerRules": {
+				"quest": [
+					-10
+				]
+			}
+		},
+		{
+			"id": 109,
+			"canUseAsTag": false,
+			"key": "event_mist_complete",
+			"title": "general.achievement.id.event_mist_complete.title",
+			"desc": "general.achievement.id.event_mist_complete.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					-27
+				]
+			}
+		},
+		{
+			"id": 110,
+			"canUseAsTag": true,
+			"key": "event_pumpkin",
+			"title": "general.achievement.id.event_pumpkin.title",
+			"desc": "general.achievement.id.event_pumpkin.desc",
+			"category": "economy",
+			"rarity": "legendary",
+			"type": "counter",
+			"hidden": true,
+			"count": 1,
+			"triggerRules": {
+				"currencyCollection": "pumpkin"
+			}
+		},
+		{
+			"id": 111,
+			"canUseAsTag": false,
+			"key": "event_pumpkin_ext",
+			"title": "general.achievement.id.event_pumpkin_ext.title",
+			"desc": "general.achievement.id.event_pumpkin_ext.desc",
+			"category": "economy",
+			"rarity": "legendary",
+			"type": "counter",
+			"hidden": true,
+			"count": 5000,
+			"triggerRules": {
+				"currencyCollection": "pumpkin"
+			}
+		},
+		{
+			"id": 112,
+			"canUseAsTag": true,
+			"key": "event_rofl",
+			"title": "general.achievement.id.event_rofl.title",
+			"desc": "general.achievement.id.event_rofl.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					-26
+				]
+			}
+		},
+		{
+			"id": 113,
+			"canUseAsTag": false,
+			"key": "example_of_luck",
+			"title": "general.achievement.id.example_of_luck.title",
+			"desc": "general.achievement.id.example_of_luck.desc",
+			"category": "combat",
+			"rarity": "secret",
+			"type": "trigger"
+		},
+		{
+			"id": 114,
+			"canUseAsTag": true,
+			"key": "exbo_friend",
+			"title": "general.achievement.id.exbo_friend.title",
+			"desc": "general.achievement.id.exbo_friend.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 115,
+			"canUseAsTag": false,
+			"key": "exp_hunter",
+			"title": "general.achievement.id.exp_hunter.title",
+			"desc": "general.achievement.id.exp_hunter.desc",
+			"category": "combat",
+			"rarity": "rare",
+			"type": "counter",
+			"count": 100,
+			"triggerRules": {
+				"mutantKills": [
+					"chimera"
+				]
+			}
+		},
+		{
+			"id": 116,
+			"canUseAsTag": true,
+			"key": "expirienced",
+			"title": "general.achievement.id.expirienced.title",
+			"desc": "general.achievement.id.expirienced.desc",
+			"category": "zone",
+			"rarity": "rare",
+			"type": "trigger"
+		},
+		{
+			"id": 117,
+			"canUseAsTag": false,
+			"key": "exterminate",
+			"title": "general.achievement.id.exterminate.title",
+			"desc": "general.achievement.id.exterminate.desc",
+			"category": "combat",
+			"rarity": "rare",
+			"type": "counter",
+			"distributorExportable": true,
+			"count": 1000
+		},
+		{
+			"id": 118,
+			"canUseAsTag": true,
+			"key": "farming_first",
+			"title": "general.achievement.id.farming_first.title",
+			"desc": "general.achievement.id.farming_first.desc",
+			"category": "economy",
+			"rarity": "common",
+			"type": "trigger",
+			"triggerRules": {
+				"currencyMaxAmount": {
+					"currency": "money",
+					"maxAmount": 2500000
+				}
+			}
+		},
+		{
+			"id": 119,
+			"canUseAsTag": false,
+			"key": "first_artefakt",
+			"title": "general.achievement.id.first_artefakt.title",
+			"desc": "general.achievement.id.first_artefakt.desc",
+			"category": "zone",
+			"rarity": "common",
+			"type": "trigger"
+		},
+		{
+			"id": 120,
+			"canUseAsTag": true,
+			"key": "first_blood",
+			"title": "general.achievement.id.first_blood.title",
+			"desc": "general.achievement.id.first_blood.desc",
+			"category": "combat",
+			"rarity": "common",
+			"type": "trigger"
+		},
+		{
+			"id": 121,
+			"canUseAsTag": true,
+			"key": "first_million",
+			"title": "general.achievement.id.first_million.title",
+			"desc": "general.achievement.id.first_million.desc",
+			"category": "economy",
+			"rarity": "common",
+			"type": "trigger",
+			"distributorExportable": true,
+			"triggerRules": {
+				"currencyMaxAmount": {
+					"currency": "money",
+					"maxAmount": 1000000
+				}
+			}
+		},
+		{
+			"id": 122,
+			"canUseAsTag": false,
+			"key": "flesh_camp_2021",
+			"title": "general.achievement.id.flesh_camp_2021.title",
+			"desc": "general.achievement.id.flesh_camp_2021.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "counter",
+			"hidden": true,
+			"count": 10,
+			"triggerRules": {
+				"worldEvent": [
+					"abstract_camp_flesh/"
+				]
+			}
+		},
+		{
+			"id": 123,
+			"canUseAsTag": false,
+			"key": "flesh_camp_2021_winter",
+			"title": "general.achievement.id.flesh_camp_2021_winter.title",
+			"desc": "general.achievement.id.flesh_camp_2021_winter.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "counter",
+			"hidden": true,
+			"count": 5,
+			"triggerRules": {
+				"worldEvent": [
+					"abstract_camp_flkesh"
+				]
+			}
+		},
+		{
+			"id": 124,
+			"canUseAsTag": false,
+			"key": "for_slaughter",
+			"title": "general.achievement.id.for_slaughter.title",
+			"desc": "general.achievement.id.for_slaughter.desc",
+			"category": "combat",
+			"rarity": "common",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 125,
+			"canUseAsTag": true,
+			"key": "frontline_all_evacuated",
+			"title": "general.achievement.id.frontline_all_evacuated.title",
+			"desc": "general.achievement.id.frontline_all_evacuated.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 126,
+			"canUseAsTag": false,
+			"key": "frontline_kill_3_chimera",
+			"title": "general.achievement.id.frontline_kill_3_chimera.title",
+			"desc": "general.achievement.id.frontline_kill_3_chimera.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 127,
+			"canUseAsTag": true,
+			"key": "frontline_kill_40_by_heli",
+			"title": "general.achievement.id.frontline_kill_40_by_heli.title",
+			"desc": "general.achievement.id.frontline_kill_40_by_heli.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 128,
+			"canUseAsTag": true,
+			"key": "frontline_kill_50_by_fab",
+			"title": "general.achievement.id.frontline_kill_50_by_fab.title",
+			"desc": "general.achievement.id.frontline_kill_50_by_fab.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 129,
+			"canUseAsTag": true,
+			"key": "frontline_kill_pseudogiant_by_rpg",
+			"title": "general.achievement.id.frontline_kill_pseudogiant_by_rpg.title",
+			"desc": "general.achievement.id.frontline_kill_pseudogiant_by_rpg.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 130,
+			"canUseAsTag": false,
+			"key": "frontline_no_one_to_lose",
+			"title": "general.achievement.id.frontline_no_one_to_lose.title",
+			"desc": "general.achievement.id.frontline_no_one_to_lose.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 131,
+			"canUseAsTag": false,
+			"key": "frontline_we_were_screwed",
+			"title": "",
+			"desc": "",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "trigger",
+			"enabled": false,
+			"hidden": true
+		},
+		{
+			"id": 132,
+			"canUseAsTag": true,
+			"key": "funcka_party",
+			"title": "general.achievement.id.funcka_party.title",
+			"desc": "general.achievement.id.funcka_party.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"location": [
+					{
+						"locations": [
+							"kordon"
+						],
+						"area": {
+							"minX": 0.0,
+							"minY": 0.0,
+							"minZ": 0.0,
+							"maxX": 1.0,
+							"maxY": 1.0,
+							"maxZ": 1.0
+						}
+					}
+				]
+			}
+		},
+		{
+			"id": 133,
+			"canUseAsTag": true,
+			"key": "golden_hands",
+			"title": "general.achievement.id.golden_hands.title",
+			"desc": "general.achievement.id.golden_hands.desc",
+			"category": "zone",
+			"rarity": "common",
+			"type": "counter",
+			"count": 100
+		},
+		{
+			"id": 134,
+			"canUseAsTag": true,
+			"key": "good_boy",
+			"title": "general.achievement.id.good_boy.title",
+			"desc": "general.achievement.id.good_boy.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 135,
+			"canUseAsTag": true,
+			"key": "growth",
+			"title": "general.achievement.id.growth.title",
+			"desc": "general.achievement.id.growth.desc",
+			"category": "economy",
+			"rarity": "common",
+			"type": "trigger",
+			"triggerRules": {
+				"currencyMaxAmount": {
+					"currency": "money",
+					"maxAmount": 500000
+				}
+			}
+		},
+		{
+			"id": 136,
+			"canUseAsTag": true,
+			"key": "guide",
+			"title": "general.achievement.id.guide.title",
+			"desc": "general.achievement.id.guide.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "multitrigger",
+			"distributorExportable": true,
+			"triggerValues": [
+				"armsklad",
+				"zaton",
+				"svalka",
+				"agroprom",
+				"td",
+				"bar",
+				"bolota",
+				"pd",
+				"rls",
+				"yantar",
+				"mg",
+				"les",
+				"yanov",
+				"nbolota",
+				"kordon"
+			]
+		},
+		{
+			"id": 137,
+			"canUseAsTag": true,
+			"key": "hell_harvester",
+			"title": "general.achievement.id.hell_harvester.title",
+			"desc": "general.achievement.id.hell_harvester.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "counter",
+			"count": 10000
+		},
+		{
+			"id": 138,
+			"canUseAsTag": true,
+			"key": "helper",
+			"title": "general.achievement.id.helper.title",
+			"desc": "general.achievement.id.helper.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 139,
+			"canUseAsTag": true,
+			"key": "hidden-threat",
+			"title": "general.achievement.id.hidden-threat.title",
+			"desc": "general.achievement.id.hidden-threat.desc",
+			"category": "zone",
+			"rarity": "common",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 140,
+			"canUseAsTag": true,
+			"key": "hideout_carpets",
+			"title": "general.achievement.id.hideout_carpets.title",
+			"desc": "general.achievement.id.hideout_carpets.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger"
+		},
+		{
+			"id": 141,
+			"canUseAsTag": false,
+			"key": "hideout_enrg_spent",
+			"title": "general.achievement.id.hideout_enrg_spent.title",
+			"desc": "general.achievement.id.hideout_enrg_spent.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "counter",
+			"count": 100000
+		},
+		{
+			"id": 142,
+			"canUseAsTag": false,
+			"key": "hideout_enter",
+			"title": "general.achievement.id.hideout_enter.title",
+			"desc": "general.achievement.id.hideout_enter.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger"
+		},
+		{
+			"id": 143,
+			"canUseAsTag": true,
+			"key": "hideout_frnd",
+			"title": "general.achievement.id.hideout_frnd.title",
+			"desc": "general.achievement.id.hideout_frnd.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger"
+		},
+		{
+			"id": 144,
+			"canUseAsTag": true,
+			"key": "hideout_frnd_total",
+			"title": "general.achievement.id.hideout_frnd_total.title",
+			"desc": "general.achievement.id.hideout_frnd_total.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "counter",
+			"count": 1000
+		},
+		{
+			"id": 145,
+			"canUseAsTag": true,
+			"key": "hideout_gen_exts",
+			"title": "general.achievement.id.hideout_gen_exts.title",
+			"desc": "general.achievement.id.hideout_gen_exts.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger"
+		},
+		{
+			"id": 146,
+			"canUseAsTag": true,
+			"key": "hideout_hookah_week",
+			"title": "general.achievement.id.hideout_hookah_week.title",
+			"desc": "general.achievement.id.hideout_hookah_week.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "trigger"
+		},
+		{
+			"id": 147,
+			"canUseAsTag": true,
+			"key": "hideout_kit_exts",
+			"title": "general.achievement.id.hideout_kit_exts.title",
+			"desc": "general.achievement.id.hideout_kit_exts.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger"
+		},
+		{
+			"id": 148,
+			"canUseAsTag": false,
+			"key": "hideout_lab_exts",
+			"title": "general.achievement.id.hideout_lab_exts.title",
+			"desc": "general.achievement.id.hideout_lab_exts.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger"
+		},
+		{
+			"id": 149,
+			"canUseAsTag": false,
+			"key": "hideout_max_decor",
+			"title": "general.achievement.id.hideout_max_decor.title",
+			"desc": "general.achievement.id.hideout_max_decor.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger"
+		},
+		{
+			"id": 150,
+			"canUseAsTag": true,
+			"key": "hideout_stor_exts",
+			"title": "general.achievement.id.hideout_stor_exts.title",
+			"desc": "general.achievement.id.hideout_stor_exts.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger"
+		},
+		{
+			"id": 151,
+			"canUseAsTag": false,
+			"key": "hideout_work_exts",
+			"title": "general.achievement.id.hideout_work_exts.title",
+			"desc": "general.achievement.id.hideout_work_exts.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger"
+		},
+		{
+			"id": 152,
+			"canUseAsTag": false,
+			"key": "human_camp_2021_winter",
+			"title": "general.achievement.id.human_camp_2021_winter.title",
+			"desc": "general.achievement.id.human_camp_2021_winter.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "counter",
+			"hidden": true,
+			"count": 5,
+			"triggerRules": {
+				"worldEvent": [
+					"abstract_camp_humkn"
+				]
+			}
+		},
+		{
+			"id": 153,
+			"canUseAsTag": true,
+			"key": "idealogical",
+			"title": "general.achievement.id.idealogical.title",
+			"desc": "general.achievement.id.idealogical.desc",
+			"category": "combat",
+			"rarity": "common",
+			"type": "counter",
+			"count": 1000
+		},
+		{
+			"id": 154,
+			"canUseAsTag": false,
+			"key": "illusionist",
+			"title": "general.achievement.id.illusionist.title",
+			"desc": "general.achievement.id.illusionist.desc",
+			"category": "combat",
+			"rarity": "rare",
+			"type": "counter",
+			"count": 100,
+			"triggerRules": {
+				"mutantKills": [
+					"psidog"
+				]
+			}
+		},
+		{
+			"id": 155,
+			"canUseAsTag": true,
+			"key": "incident_participation",
+			"title": "general.achievement.id.incident_participation.title",
+			"desc": "general.achievement.id.incident_participation.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "trigger"
+		},
+		{
+			"id": 156,
+			"canUseAsTag": true,
+			"key": "incident_win_1",
+			"title": "general.achievement.id.incident_win_1.title",
+			"desc": "general.achievement.id.incident_win_1.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "trigger"
+		},
+		{
+			"id": 157,
+			"canUseAsTag": true,
+			"key": "incident_win_10",
+			"title": "general.achievement.id.incident_win_10.title",
+			"desc": "general.achievement.id.incident_win_10.desc",
+			"category": "session_modes",
+			"rarity": "rare",
+			"type": "counter",
+			"count": 10
+		},
+		{
+			"id": 158,
+			"canUseAsTag": true,
+			"key": "incident_win_100",
+			"title": "general.achievement.id.incident_win_100.title",
+			"desc": "general.achievement.id.incident_win_100.desc",
+			"category": "session_modes",
+			"rarity": "legendary",
+			"type": "counter",
+			"count": 100
+		},
+		{
+			"id": 159,
+			"canUseAsTag": false,
+			"key": "industry_artillery_10",
+			"title": "general.achievement.id.industry_artillery_10.title",
+			"desc": "general.achievement.id.industry_artillery_10.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "counter",
+			"count": 10,
+			"triggerRules": {
+				"frontlineIndustry": [
+					"artillery"
+				]
+			}
+		},
+		{
+			"id": 160,
+			"canUseAsTag": false,
+			"key": "industry_artillery_20",
+			"title": "general.achievement.id.industry_artillery_20.title",
+			"desc": "general.achievement.id.industry_artillery_20.desc",
+			"category": "session_modes",
+			"rarity": "rare",
+			"type": "counter",
+			"count": 20,
+			"triggerRules": {
+				"frontlineIndustry": [
+					"artillery"
+				]
+			}
+		},
+		{
+			"id": 161,
+			"canUseAsTag": false,
+			"key": "industry_artillery_30",
+			"title": "general.achievement.id.industry_artillery_30.title",
+			"desc": "general.achievement.id.industry_artillery_30.desc",
+			"category": "session_modes",
+			"rarity": "legendary",
+			"type": "counter",
+			"count": 30,
+			"triggerRules": {
+				"frontlineIndustry": [
+					"artillery"
+				]
+			}
+		},
+		{
+			"id": 162,
+			"canUseAsTag": false,
+			"key": "industry_aviation_10",
+			"title": "general.achievement.id.industry_aviation_10.title",
+			"desc": "general.achievement.id.industry_aviation_10.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "counter",
+			"count": 10,
+			"triggerRules": {
+				"frontlineIndustry": [
+					"aviation"
+				]
+			}
+		},
+		{
+			"id": 163,
+			"canUseAsTag": false,
+			"key": "industry_aviation_20",
+			"title": "general.achievement.id.industry_aviation_20.title",
+			"desc": "general.achievement.id.industry_aviation_20.desc",
+			"category": "session_modes",
+			"rarity": "rare",
+			"type": "counter",
+			"count": 20,
+			"triggerRules": {
+				"frontlineIndustry": [
+					"aviation"
+				]
+			}
+		},
+		{
+			"id": 164,
+			"canUseAsTag": false,
+			"key": "industry_aviation_30",
+			"title": "general.achievement.id.industry_aviation_30.title",
+			"desc": "general.achievement.id.industry_aviation_30.desc",
+			"category": "session_modes",
+			"rarity": "legendary",
+			"type": "counter",
+			"count": 30,
+			"triggerRules": {
+				"frontlineIndustry": [
+					"aviation"
+				]
+			}
+		},
+		{
+			"id": 165,
+			"canUseAsTag": false,
+			"key": "industry_logistics_10",
+			"title": "general.achievement.id.industry_logistics_10.title",
+			"desc": "general.achievement.id.industry_logistics_10.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "counter",
+			"count": 10,
+			"triggerRules": {
+				"frontlineIndustry": [
+					"logistics"
+				]
+			}
+		},
+		{
+			"id": 166,
+			"canUseAsTag": false,
+			"key": "industry_logistics_20",
+			"title": "general.achievement.id.industry_logistics_20.title",
+			"desc": "general.achievement.id.industry_logistics_20.desc",
+			"category": "session_modes",
+			"rarity": "rare",
+			"type": "counter",
+			"count": 20,
+			"triggerRules": {
+				"frontlineIndustry": [
+					"logistics"
+				]
+			}
+		},
+		{
+			"id": 167,
+			"canUseAsTag": false,
+			"key": "industry_logistics_30",
+			"title": "general.achievement.id.industry_logistics_30.title",
+			"desc": "general.achievement.id.industry_logistics_30.desc",
+			"category": "session_modes",
+			"rarity": "legendary",
+			"type": "counter",
+			"count": 30,
+			"triggerRules": {
+				"frontlineIndustry": [
+					"logistics"
+				]
+			}
+		},
+		{
+			"id": 168,
+			"canUseAsTag": false,
+			"key": "industry_scouting_10",
+			"title": "general.achievement.id.industry_scouting_10.title",
+			"desc": "general.achievement.id.industry_scouting_10.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "counter",
+			"count": 10,
+			"triggerRules": {
+				"frontlineIndustry": [
+					"scouting"
+				]
+			}
+		},
+		{
+			"id": 169,
+			"canUseAsTag": false,
+			"key": "industry_scouting_20",
+			"title": "general.achievement.id.industry_scouting_20.title",
+			"desc": "general.achievement.id.industry_scouting_20.desc",
+			"category": "session_modes",
+			"rarity": "rare",
+			"type": "counter",
+			"count": 20,
+			"triggerRules": {
+				"frontlineIndustry": [
+					"scouting"
+				]
+			}
+		},
+		{
+			"id": 170,
+			"canUseAsTag": false,
+			"key": "industry_scouting_30",
+			"title": "general.achievement.id.industry_scouting_30.title",
+			"desc": "general.achievement.id.industry_scouting_30.desc",
+			"category": "session_modes",
+			"rarity": "legendary",
+			"type": "counter",
+			"count": 30,
+			"triggerRules": {
+				"frontlineIndustry": [
+					"scouting"
+				]
+			}
+		},
+		{
+			"id": 171,
+			"canUseAsTag": true,
+			"key": "ivent_12837",
+			"title": "general.achievement.id.ivent_12837.title",
+			"desc": "general.achievement.id.ivent_12837.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					12837
+				]
+			}
+		},
+		{
+			"id": 172,
+			"canUseAsTag": true,
+			"key": "ivent_12846",
+			"title": "general.achievement.id.ivent_12846.title",
+			"desc": "general.achievement.id.ivent_12846.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					12846
+				]
+			}
+		},
+		{
+			"id": 173,
+			"canUseAsTag": false,
+			"key": "ivent_12862",
+			"title": "general.achievement.id.ivent_12862.title",
+			"desc": "general.achievement.id.ivent_12862.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					12862
+				]
+			}
+		},
+		{
+			"id": 174,
+			"canUseAsTag": true,
+			"key": "ivent_12900",
+			"title": "general.achievement.id.ivent_12900.title",
+			"desc": "general.achievement.id.ivent_12900.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					12900
+				]
+			}
+		},
+		{
+			"id": 175,
+			"canUseAsTag": false,
+			"key": "ivent_12934",
+			"title": "general.achievement.id.ivent_12934.title",
+			"desc": "general.achievement.id.ivent_12934.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					12934
+				]
+			}
+		},
+		{
+			"id": 176,
+			"canUseAsTag": true,
+			"key": "jingles_contest",
+			"title": "general.achievement.id.jingles_contest.title",
+			"desc": "general.achievement.id.jingles_contest.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 177,
+			"canUseAsTag": true,
+			"key": "jun-researcher",
+			"title": "general.achievement.id.jun-researcher.title",
+			"desc": "general.achievement.id.jun-researcher.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "counter",
+			"count": 1000
+		},
+		{
+			"id": 178,
+			"canUseAsTag": false,
+			"key": "just_business",
+			"title": "general.achievement.id.just_business.title",
+			"desc": "general.achievement.id.just_business.desc",
+			"category": "combat",
+			"rarity": "legendary",
+			"type": "counter",
+			"hidden": true,
+			"count": 200
+		},
+		{
+			"id": 179,
+			"canUseAsTag": true,
+			"key": "kapibara",
+			"title": "general.achievement.id.kapibara.title",
+			"desc": "general.achievement.id.kapibara.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger"
+		},
+		{
+			"id": 180,
+			"canUseAsTag": false,
+			"key": "kill_acacia",
+			"title": "general.achievement.id.kill_acacia.title",
+			"desc": "general.achievement.id.kill_acacia.desc",
+			"category": "session_modes",
+			"rarity": "legendary",
+			"type": "counter",
+			"count": 20000,
+			"triggerRules": {
+				"calldown": [
+					"acacia",
+					"gvozdika"
+				]
+			}
+		},
+		{
+			"id": 181,
+			"canUseAsTag": false,
+			"key": "kill_all",
+			"title": "general.achievement.id.kill_all.title",
+			"desc": "general.achievement.id.kill_all.desc",
+			"category": "session_modes",
+			"rarity": "legendary",
+			"type": "counter",
+			"count": 100000,
+			"triggerRules": {
+				"calldown": [
+					"ZAB-100",
+					"pfm1",
+					"heli_C24",
+					"RBK-250",
+					"heli_C5",
+					"acacia",
+					"gvozdika",
+					"FAB-100",
+					"heli_C8",
+					"grad"
+				]
+			}
+		},
+		{
+			"id": 182,
+			"canUseAsTag": false,
+			"key": "kill_cluster",
+			"title": "general.achievement.id.kill_cluster.title",
+			"desc": "general.achievement.id.kill_cluster.desc",
+			"category": "session_modes",
+			"rarity": "legendary",
+			"type": "counter",
+			"count": 10000,
+			"triggerRules": {
+				"calldown": [
+					"RBK-250"
+				]
+			}
+		},
+		{
+			"id": 183,
+			"canUseAsTag": true,
+			"key": "kill_grad",
+			"title": "general.achievement.id.kill_grad.title",
+			"desc": "general.achievement.id.kill_grad.desc",
+			"category": "session_modes",
+			"rarity": "legendary",
+			"type": "counter",
+			"count": 25000,
+			"triggerRules": {
+				"calldown": [
+					"grad"
+				]
+			}
+		},
+		{
+			"id": 184,
+			"canUseAsTag": false,
+			"key": "kill_heli",
+			"title": "general.achievement.id.kill_heli.title",
+			"desc": "general.achievement.id.kill_heli.desc",
+			"category": "session_modes",
+			"rarity": "legendary",
+			"type": "counter",
+			"count": 30000,
+			"triggerRules": {
+				"calldown": [
+					"heli_C24",
+					"heli_C5",
+					"heli_C8"
+				]
+			}
+		},
+		{
+			"id": 185,
+			"canUseAsTag": false,
+			"key": "kill_mines",
+			"title": "general.achievement.id.kill_mines.title",
+			"desc": "general.achievement.id.kill_mines.desc",
+			"category": "session_modes",
+			"rarity": "legendary",
+			"type": "counter",
+			"count": 3000,
+			"triggerRules": {
+				"calldown": [
+					"pfm1"
+				]
+			}
+		},
+		{
+			"id": 186,
+			"canUseAsTag": false,
+			"key": "kill_napalm",
+			"title": "general.achievement.id.kill_napalm.title",
+			"desc": "general.achievement.id.kill_napalm.desc",
+			"category": "session_modes",
+			"rarity": "legendary",
+			"type": "counter",
+			"count": 15000,
+			"triggerRules": {
+				"calldown": [
+					"ZAB-100"
+				]
+			}
+		},
+		{
+			"id": 187,
+			"canUseAsTag": false,
+			"key": "kingdom_defence",
+			"title": "general.achievement.id.kingdom_defence.title",
+			"desc": "general.achievement.id.kingdom_defence.desc",
+			"category": "guild_n_party",
+			"rarity": "secret",
+			"type": "counter",
+			"hidden": true,
+			"count": 47
+		},
+		{
+			"id": 188,
+			"canUseAsTag": false,
+			"key": "kishka_explored",
+			"title": "general.achievement.id.kishka_explored.title",
+			"desc": "general.achievement.id.kishka_explored.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"location": [
+					{
+						"locations": [
+							"kishka"
+						],
+						"area": {
+							"minX": 0.0,
+							"minY": 0.0,
+							"minZ": 0.0,
+							"maxX": 0.0,
+							"maxY": 0.0,
+							"maxZ": 0.0
+						}
+					}
+				]
+			}
+		},
+		{
+			"id": 189,
+			"canUseAsTag": false,
+			"key": "kissel",
+			"title": "general.achievement.id.kissel.title",
+			"desc": "general.achievement.id.kissel.desc",
+			"category": "zone",
+			"rarity": "common",
+			"type": "trigger"
+		},
+		{
+			"id": 190,
+			"canUseAsTag": true,
+			"key": "kombucha",
+			"title": "general.achievement.id.kombucha.title",
+			"desc": "general.achievement.id.kombucha.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "counter",
+			"hidden": true,
+			"count": 25
+		},
+		{
+			"id": 191,
+			"canUseAsTag": false,
+			"key": "kordon_explored",
+			"title": "general.achievement.id.kordon_explored.title",
+			"desc": "general.achievement.id.kordon_explored.desc",
+			"category": "zone",
+			"rarity": "common",
+			"type": "trigger",
+			"triggerRules": {
+				"location": [
+					{
+						"locations": [
+							"kordon"
+						],
+						"area": {
+							"minX": -6000.0,
+							"minY": 0.0,
+							"minZ": -1500.0,
+							"maxX": -2700.0,
+							"maxY": 100.0,
+							"maxZ": 4900.0
+						}
+					}
+				]
+			}
+		},
+		{
+			"id": 192,
+			"canUseAsTag": true,
+			"key": "kordon_miniboss_2021",
+			"title": "general.achievement.id.kordon_miniboss_2021.title",
+			"desc": "general.achievement.id.kordon_miniboss_2021.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "counter",
+			"hidden": true,
+			"count": 1,
+			"triggerRules": {
+				"killTarget": [
+					"Ксерокопыч/"
+				]
+			}
+		},
+		{
+			"id": 193,
+			"canUseAsTag": false,
+			"key": "krovosos_camp_2021",
+			"title": "general.achievement.id.krovosos_camp_2021.title",
+			"desc": "general.achievement.id.krovosos_camp_2021.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "counter",
+			"hidden": true,
+			"count": 10,
+			"triggerRules": {
+				"worldEvent": [
+					"abstract_camp_krovosos/"
+				]
+			}
+		},
+		{
+			"id": 194,
+			"canUseAsTag": false,
+			"key": "krovosos_camp_2021_winter",
+			"title": "general.achievement.id.krovosos_camp_2021_winter.title",
+			"desc": "general.achievement.id.krovosos_camp_2021_winter.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "counter",
+			"hidden": true,
+			"count": 5,
+			"triggerRules": {
+				"worldEvent": [
+					"abstract_camp_krovososk"
+				]
+			}
+		},
+		{
+			"id": 195,
+			"canUseAsTag": true,
+			"key": "ksa_big_overflow",
+			"title": "general.achievement.id.ksa_big_overflow.title",
+			"desc": "general.achievement.id.ksa_big_overflow.desc",
+			"category": "combat",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 196,
+			"canUseAsTag": true,
+			"key": "ksa_session_big_overflow",
+			"title": "general.achievement.id.ksa_session_big_overflow.title",
+			"desc": "general.achievement.id.ksa_session_big_overflow.desc",
+			"category": "combat",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 197,
+			"canUseAsTag": true,
+			"key": "ksa_session_small_overflow",
+			"title": "general.achievement.id.ksa_session_small_overflow.title",
+			"desc": "general.achievement.id.ksa_session_small_overflow.desc",
+			"category": "combat",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 198,
+			"canUseAsTag": true,
+			"key": "ksa_small_overflow",
+			"title": "general.achievement.id.ksa_small_overflow.title",
+			"desc": "general.achievement.id.ksa_small_overflow.desc",
+			"category": "combat",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 199,
+			"canUseAsTag": true,
+			"key": "legen-robber",
+			"title": "general.achievement.id.legen-robber.title",
+			"desc": "general.achievement.id.legen-robber.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "counter",
+			"hidden": true,
+			"count": 1000
+		},
+		{
+			"id": 200,
+			"canUseAsTag": true,
+			"key": "legend",
+			"title": "general.achievement.id.legend.title",
+			"desc": "",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 201,
+			"canUseAsTag": false,
+			"key": "les_explored",
+			"title": "general.achievement.id.les_explored.title",
+			"desc": "general.achievement.id.les_explored.desc",
+			"category": "zone",
+			"rarity": "common",
+			"type": "trigger",
+			"triggerRules": {
+				"location": [
+					{
+						"locations": [
+							"les"
+						],
+						"area": {
+							"minX": -6000.0,
+							"minY": 0.0,
+							"minZ": -1500.0,
+							"maxX": -2700.0,
+							"maxY": 100.0,
+							"maxZ": 4900.0
+						}
+					}
+				]
+			}
+		},
+		{
+			"id": 202,
+			"canUseAsTag": false,
+			"key": "les_miniboss_2021_winter",
+			"title": "general.achievement.id.les_miniboss_2021_winter.title",
+			"desc": "general.achievement.id.les_miniboss_2021_winter.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "counter",
+			"hidden": true,
+			"count": 1,
+			"triggerRules": {
+				"killTarget": [
+					"Лейтенант военныхl"
+				]
+			}
+		},
+		{
+			"id": 203,
+			"canUseAsTag": false,
+			"key": "limansk_12113",
+			"title": "general.achievement.id.limansk_12113.title",
+			"desc": "general.achievement.id.limansk_12113.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					12113
+				]
+			}
+		},
+		{
+			"id": 204,
+			"canUseAsTag": false,
+			"key": "limansk_12114",
+			"title": "general.achievement.id.limansk_12114.title",
+			"desc": "general.achievement.id.limansk_12114.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					12114
+				]
+			}
+		},
+		{
+			"id": 205,
+			"canUseAsTag": false,
+			"key": "limansk_12116",
+			"title": "general.achievement.id.limansk_12116.title",
+			"desc": "general.achievement.id.limansk_12116.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					12116
+				]
+			}
+		},
+		{
+			"id": 206,
+			"canUseAsTag": false,
+			"key": "limansk_12227",
+			"title": "general.achievement.id.limansk_12227.title",
+			"desc": "general.achievement.id.limansk_12227.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					12227
+				]
+			}
+		},
+		{
+			"id": 207,
+			"canUseAsTag": false,
+			"key": "limansk_12282",
+			"title": "general.achievement.id.limansk_12282.title",
+			"desc": "general.achievement.id.limansk_12282.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					12282
+				]
+			}
+		},
+		{
+			"id": 208,
+			"canUseAsTag": false,
+			"key": "limansk_12486",
+			"title": "general.achievement.id.limansk_12486.title",
+			"desc": "general.achievement.id.limansk_12486.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					12486
+				]
+			}
+		},
+		{
+			"id": 209,
+			"canUseAsTag": false,
+			"key": "limansk_12487",
+			"title": "general.achievement.id.limansk_12487.title",
+			"desc": "general.achievement.id.limansk_12487.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					12487
+				]
+			}
+		},
+		{
+			"id": 210,
+			"canUseAsTag": false,
+			"key": "limansk_explored",
+			"title": "general.achievement.id.limansk_explored.title",
+			"desc": "general.achievement.id.limansk_explored.desc",
+			"category": "zone",
+			"rarity": "rare",
+			"type": "trigger",
+			"triggerRules": {
+				"location": [
+					{
+						"locations": [
+							"limansk",
+							"limansk_duty_freedom",
+							"limansk_merc_covenant"
+						],
+						"area": {
+							"minX": 354.0,
+							"minY": 0.0,
+							"minZ": -4365.0,
+							"maxX": 1126.0,
+							"maxY": 150.0,
+							"maxZ": -3197.0
+						}
+					}
+				]
+			}
+		},
+		{
+			"id": 211,
+			"canUseAsTag": false,
+			"key": "limansk_miniboss_2021",
+			"title": "general.achievement.id.limansk_miniboss_2021.title",
+			"desc": "general.achievement.id.limansk_miniboss_2021.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "counter",
+			"hidden": true,
+			"count": 1,
+			"triggerRules": {
+				"killTarget": [
+					"Орлиный глаз/"
+				]
+			}
+		},
+		{
+			"id": 212,
+			"canUseAsTag": false,
+			"key": "limansk_miniboss_2021_winter",
+			"title": "general.achievement.id.limansk_miniboss_2021_winter.title",
+			"desc": "general.achievement.id.limansk_miniboss_2021_winter.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "counter",
+			"hidden": true,
+			"count": 1,
+			"triggerRules": {
+				"killTarget": [
+					"Генерал Хаммеlл"
+				]
+			}
+		},
+		{
+			"id": 213,
+			"canUseAsTag": false,
+			"key": "limansk_ufo_found",
+			"title": "general.achievement.id.limansk_ufo_found.title",
+			"desc": "general.achievement.id.limansk_ufo_found.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"location": [
+					{
+						"locations": [
+							"limansk",
+							"limansk_duty_freedom",
+							"limansk_merc_covenant"
+						],
+						"area": {
+							"minX": -5467.0,
+							"minY": 65.0,
+							"minZ": -1098.0,
+							"maxX": -5432.0,
+							"maxY": 95.0,
+							"maxZ": -1070.0
+						}
+					}
+				]
+			}
+		},
+		{
+			"id": 214,
+			"canUseAsTag": true,
+			"key": "live_bush",
+			"title": "general.achievement.id.live_bush.title",
+			"desc": "general.achievement.id.live_bush.desc",
+			"category": "combat",
+			"rarity": "common",
+			"type": "counter",
+			"count": 100
+		},
+		{
+			"id": 215,
+			"canUseAsTag": true,
+			"key": "mad_breadcutter",
+			"title": "general.achievement.id.mad_breadcutter.title",
+			"desc": "general.achievement.id.mad_breadcutter.desc",
+			"category": "combat",
+			"rarity": "common",
+			"type": "counter",
+			"count": 100
+		},
+		{
+			"id": 216,
+			"canUseAsTag": false,
+			"key": "main-secret",
+			"title": "general.achievement.id.main-secret.title",
+			"desc": "general.achievement.id.main-secret.desc",
+			"category": "zone",
+			"rarity": "common",
+			"type": "trigger"
+		},
+		{
+			"id": 217,
+			"canUseAsTag": true,
+			"key": "making_money",
+			"title": "general.achievement.id.making_money.title",
+			"desc": "general.achievement.id.making_money.desc",
+			"category": "economy",
+			"rarity": "rare",
+			"type": "trigger",
+			"triggerRules": {
+				"currencyMaxAmount": {
+					"currency": "money",
+					"maxAmount": 5000000
+				}
+			}
+		},
+		{
+			"id": 218,
+			"canUseAsTag": true,
+			"key": "marauder",
+			"title": "general.achievement.id.marauder.title",
+			"desc": "general.achievement.id.marauder.desc",
+			"category": "zone",
+			"rarity": "common",
+			"type": "counter",
+			"hidden": true,
+			"count": 50
+		},
+		{
+			"id": 219,
+			"canUseAsTag": true,
+			"key": "maslina",
+			"title": "general.achievement.id.maslina.title",
+			"desc": "general.achievement.id.maslina.desc",
+			"category": "combat",
+			"rarity": "secret",
+			"type": "trigger"
+		},
+		{
+			"id": 220,
+			"canUseAsTag": true,
+			"key": "mason",
+			"title": "general.achievement.id.mason.title",
+			"desc": "general.achievement.id.mason.desc",
+			"category": "economy",
+			"rarity": "legendary",
+			"type": "trigger",
+			"triggerRules": {
+				"currencyMaxAmount": {
+					"currency": "money",
+					"maxAmount": 1000000000
+				}
+			}
+		},
+		{
+			"id": 221,
+			"canUseAsTag": true,
+			"key": "master",
+			"title": "general.achievement.id.master.title",
+			"desc": "general.achievement.id.master.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger"
+		},
+		{
+			"id": 222,
+			"canUseAsTag": false,
+			"key": "material_thanks",
+			"title": "general.achievement.id.material_thanks.title",
+			"desc": "general.achievement.id.material_thanks.desc",
+			"category": "economy",
+			"rarity": "legendary",
+			"type": "counter",
+			"count": 100000
+		},
+		{
+			"id": 223,
+			"canUseAsTag": true,
+			"key": "media_advanced",
+			"title": "general.achievement.id.media_advanced.title",
+			"desc": "general.achievement.id.media_advanced.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 224,
+			"canUseAsTag": true,
+			"key": "media_base",
+			"title": "general.achievement.id.media_base.title",
+			"desc": "general.achievement.id.media_base.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 225,
+			"canUseAsTag": false,
+			"key": "metal_factory",
+			"title": "general.achievement.id.metal_factory.title",
+			"desc": "general.achievement.id.metal_factory.desc",
+			"category": "zone",
+			"rarity": "common",
+			"type": "counter",
+			"count": 10000
+		},
+		{
+			"id": 226,
+			"canUseAsTag": false,
+			"key": "mg_explored",
+			"title": "general.achievement.id.mg_explored.title",
+			"desc": "general.achievement.id.mg_explored.desc",
+			"category": "zone",
+			"rarity": "common",
+			"type": "trigger",
+			"triggerRules": {
+				"location": [
+					{
+						"locations": [
+							"mg"
+						],
+						"area": {
+							"minX": -6000.0,
+							"minY": 0.0,
+							"minZ": -1500.0,
+							"maxX": -2700.0,
+							"maxY": 100.0,
+							"maxZ": 4900.0
+						}
+					}
+				]
+			}
+		},
+		{
+			"id": 227,
+			"canUseAsTag": false,
+			"key": "mines_explored",
+			"title": "general.achievement.id.mines_explored.title",
+			"desc": "general.achievement.id.mines_explored.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"location": [
+					{
+						"locations": [
+							"mines"
+						],
+						"area": {
+							"minX": -6000.0,
+							"minY": 0.0,
+							"minZ": -1500.0,
+							"maxX": -2700.0,
+							"maxY": 100.0,
+							"maxZ": 4900.0
+						}
+					}
+				]
+			}
+		},
+		{
+			"id": 228,
+			"canUseAsTag": false,
+			"key": "mogilnik_explored",
+			"title": "general.achievement.id.mogilnik_explored.title",
+			"desc": "general.achievement.id.mogilnik_explored.desc",
+			"category": "zone",
+			"rarity": "common",
+			"type": "trigger",
+			"triggerRules": {
+				"location": [
+					{
+						"locations": [
+							"nbolota"
+						],
+						"area": {
+							"minX": -6000.0,
+							"minY": 0.0,
+							"minZ": -1500.0,
+							"maxX": -2700.0,
+							"maxY": 100.0,
+							"maxZ": 4900.0
+						}
+					}
+				]
+			}
+		},
+		{
+			"id": 229,
+			"canUseAsTag": false,
+			"key": "money_on_road",
+			"title": "general.achievement.id.money_on_road.title",
+			"desc": "general.achievement.id.money_on_road.desc",
+			"category": "zone",
+			"rarity": "common",
+			"type": "counter",
+			"count": 10
+		},
+		{
+			"id": 230,
+			"canUseAsTag": false,
+			"key": "moryatnik_explored",
+			"title": "general.achievement.id.moryatnik_explored.title",
+			"desc": "general.achievement.id.moryatnik_explored.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"location": [
+					{
+						"locations": [
+							"moryatnik"
+						],
+						"area": {
+							"minX": 0.0,
+							"minY": 0.0,
+							"minZ": 0.0,
+							"maxX": 0.0,
+							"maxY": 0.0,
+							"maxZ": 0.0
+						}
+					}
+				]
+			}
+		},
+		{
+			"id": 231,
+			"canUseAsTag": true,
+			"key": "nanomaster",
+			"title": "general.achievement.id.nanomaster.title",
+			"desc": "general.achievement.id.nanomaster.desc",
+			"category": "economy",
+			"rarity": "rare",
+			"type": "counter",
+			"hidden": true,
+			"count": 25
+		},
+		{
+			"id": 232,
+			"canUseAsTag": true,
+			"key": "new_year_mister_of_energy",
+			"title": "general.achievement.id.new_year_mister_of_energy.title",
+			"desc": "general.achievement.id.new_year_mister_of_energy.desc",
+			"category": "zone",
+			"rarity": "rare",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 233,
+			"canUseAsTag": true,
+			"key": "new_year_no_gifts",
+			"title": "general.achievement.id.new_year_no_gifts.title",
+			"desc": "general.achievement.id.new_year_no_gifts.desc",
+			"category": "zone",
+			"rarity": "common",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 234,
+			"canUseAsTag": true,
+			"key": "new_year_sharpshooter",
+			"title": "general.achievement.id.new_year_sharpshooter.title",
+			"desc": "general.achievement.id.new_year_sharpshooter.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 235,
+			"canUseAsTag": true,
+			"key": "new_year_small_but_mighty",
+			"title": "general.achievement.id.new_year_small_but_mighty.title",
+			"desc": "general.achievement.id.new_year_small_but_mighty.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 236,
+			"canUseAsTag": true,
+			"key": "new_year_snow_kamikaze",
+			"title": "general.achievement.id.new_year_snow_kamikaze.title",
+			"desc": "general.achievement.id.new_year_snow_kamikaze.desc",
+			"category": "zone",
+			"rarity": "rare",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 237,
+			"canUseAsTag": true,
+			"key": "new_year_strike",
+			"title": "general.achievement.id.new_year_strike.title",
+			"desc": "general.achievement.id.new_year_strike.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 238,
+			"canUseAsTag": true,
+			"key": "new_year_to_the_moon",
+			"title": "general.achievement.id.new_year_to_the_moon.title",
+			"desc": "general.achievement.id.new_year_to_the_moon.desc",
+			"category": "zone",
+			"rarity": "common",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 239,
+			"canUseAsTag": true,
+			"key": "new_year_what_a_carrot",
+			"title": "general.achievement.id.new_year_what_a_carrot.title",
+			"desc": "general.achievement.id.new_year_what_a_carrot.desc",
+			"category": "zone",
+			"rarity": "rare",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 240,
+			"canUseAsTag": true,
+			"key": "newbie",
+			"title": "general.achievement.id.newbie.title",
+			"desc": "general.achievement.id.newbie.desc",
+			"category": "zone",
+			"rarity": "common",
+			"type": "trigger"
+		},
+		{
+			"id": 241,
+			"canUseAsTag": true,
+			"key": "not_yours",
+			"title": "general.achievement.id.not_yours.title",
+			"desc": "general.achievement.id.not_yours.desc",
+			"category": "combat",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 242,
+			"canUseAsTag": true,
+			"key": "nothing_personal",
+			"title": "general.achievement.id.nothing_personal.title",
+			"desc": "general.achievement.id.nothing_personal.desc",
+			"category": "combat",
+			"rarity": "common",
+			"type": "counter",
+			"count": 10
+		},
+		{
+			"id": 243,
+			"canUseAsTag": true,
+			"key": "ny24_recap",
+			"title": "general.achievement.id.ny24_recap.title",
+			"desc": "general.achievement.id.ny24_recap.desc",
+			"category": "zone",
+			"rarity": "rare",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"location": [
+					{
+						"locations": [
+							"kordon"
+						],
+						"area": {
+							"minX": 0.0,
+							"minY": 0.0,
+							"minZ": 0.0,
+							"maxX": 1.0,
+							"maxY": 1.0,
+							"maxZ": 1.0
+						}
+					}
+				]
+			}
+		},
+		{
+			"id": 244,
+			"canUseAsTag": true,
+			"key": "oiz",
+			"title": "general.achievement.id.oiz.title",
+			"desc": "general.achievement.id.oiz.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					20775
+				]
+			}
+		},
+		{
+			"id": 245,
+			"canUseAsTag": true,
+			"key": "oligarch",
+			"title": "general.achievement.id.oligarch.title",
+			"desc": "general.achievement.id.oligarch.desc",
+			"category": "economy",
+			"rarity": "rare",
+			"type": "trigger",
+			"triggerRules": {
+				"currencyMaxAmount": {
+					"currency": "money",
+					"maxAmount": 10000000
+				}
+			}
+		},
+		{
+			"id": 246,
+			"canUseAsTag": true,
+			"key": "olivegun",
+			"title": "general.achievement.id.olivegun.title",
+			"desc": "general.achievement.id.olivegun.desc",
+			"category": "combat",
+			"rarity": "common",
+			"type": "counter",
+			"count": 100
+		},
+		{
+			"id": 247,
+			"canUseAsTag": false,
+			"key": "omaha_beach",
+			"title": "general.achievement.id.omaha_beach.title",
+			"desc": "general.achievement.id.omaha_beach.desc",
+			"category": "guild_n_party",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 248,
+			"canUseAsTag": false,
+			"key": "on_head",
+			"title": "general.achievement.id.on_head.title",
+			"desc": "general.achievement.id.on_head.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger"
+		},
+		{
+			"id": 249,
+			"canUseAsTag": false,
+			"key": "our_land",
+			"title": "general.achievement.id.our_land.title",
+			"desc": "general.achievement.id.our_land.desc",
+			"category": "guild_n_party",
+			"rarity": "secret",
+			"type": "counter",
+			"hidden": true,
+			"count": 10
+		},
+		{
+			"id": 250,
+			"canUseAsTag": true,
+			"key": "owner",
+			"title": "general.achievement.id.owner.title",
+			"desc": "general.achievement.id.owner.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 251,
+			"canUseAsTag": true,
+			"key": "painter",
+			"title": "general.achievement.id.painter.title",
+			"desc": "general.achievement.id.painter.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger"
+		},
+		{
+			"id": 252,
+			"canUseAsTag": false,
+			"key": "pd_explored",
+			"title": "general.achievement.id.pd_explored.title",
+			"desc": "general.achievement.id.pd_explored.desc",
+			"category": "zone",
+			"rarity": "rare",
+			"type": "trigger",
+			"triggerRules": {
+				"location": [
+					{
+						"locations": [
+							"pd"
+						],
+						"area": {
+							"minX": -6000.0,
+							"minY": 0.0,
+							"minZ": -1500.0,
+							"maxX": -2700.0,
+							"maxY": 100.0,
+							"maxZ": 4900.0
+						}
+					}
+				]
+			}
+		},
+		{
+			"id": 253,
+			"canUseAsTag": true,
+			"key": "perestroika_test",
+			"title": "general.achievement.id.perestroika_test.title",
+			"desc": "general.achievement.id.perestroika_test.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 254,
+			"canUseAsTag": true,
+			"key": "perk_alcohol",
+			"title": "general.achievement.id.perk_alcohol.title",
+			"desc": "general.achievement.id.perk_alcohol.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger"
+		},
+		{
+			"id": 255,
+			"canUseAsTag": true,
+			"key": "perk_ammo",
+			"title": "general.achievement.id.perk_ammo.title",
+			"desc": "general.achievement.id.perk_ammo.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger"
+		},
+		{
+			"id": 256,
+			"canUseAsTag": true,
+			"key": "perk_armor",
+			"title": "general.achievement.id.perk_armor.title",
+			"desc": "general.achievement.id.perk_armor.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger"
+		},
+		{
+			"id": 257,
+			"canUseAsTag": true,
+			"key": "perk_cooking",
+			"title": "general.achievement.id.perk_cooking.title",
+			"desc": "general.achievement.id.perk_cooking.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger"
+		},
+		{
+			"id": 258,
+			"canUseAsTag": true,
+			"key": "perk_engineering",
+			"title": "general.achievement.id.perk_engineering.title",
+			"desc": "general.achievement.id.perk_engineering.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger"
+		},
+		{
+			"id": 259,
+			"canUseAsTag": false,
+			"key": "perk_explosives",
+			"title": "general.achievement.id.perk_explosives.title",
+			"desc": "general.achievement.id.perk_explosives.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger"
+		},
+		{
+			"id": 260,
+			"canUseAsTag": true,
+			"key": "perk_materials",
+			"title": "general.achievement.id.perk_materials.title",
+			"desc": "general.achievement.id.perk_materials.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger"
+		},
+		{
+			"id": 261,
+			"canUseAsTag": false,
+			"key": "perk_medicine",
+			"title": "general.achievement.id.perk_medicine.title",
+			"desc": "general.achievement.id.perk_medicine.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger"
+		},
+		{
+			"id": 262,
+			"canUseAsTag": false,
+			"key": "pinball",
+			"title": "general.achievement.id.pinball.title",
+			"desc": "general.achievement.id.pinball.desc",
+			"category": "zone",
+			"rarity": "common",
+			"type": "trigger"
+		},
+		{
+			"id": 263,
+			"canUseAsTag": true,
+			"key": "pixel_battle_2018",
+			"title": "general.achievement.id.pixel_battle_2018.title",
+			"desc": "general.achievement.id.pixel_battle_2018.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"dialog": [
+					-1
+				]
+			}
+		},
+		{
+			"id": 264,
+			"canUseAsTag": true,
+			"key": "pixel_battle_2019",
+			"title": "general.achievement.id.pixel_battle_2019.title",
+			"desc": "general.achievement.id.pixel_battle_2019.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"dialog": [
+					-1
+				]
+			}
+		},
+		{
+			"id": 265,
+			"canUseAsTag": true,
+			"key": "pixel_battle_2020",
+			"title": "general.achievement.id.pixel_battle_2020.title",
+			"desc": "general.achievement.id.pixel_battle_2020.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"dialog": [
+					-1
+				]
+			}
+		},
+		{
+			"id": 266,
+			"canUseAsTag": true,
+			"key": "pixel_battle_2023",
+			"title": "general.achievement.id.pixel_battle_2023.title",
+			"desc": "general.achievement.id.pixel_battle_2023.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"dialog": [
+					-1
+				]
+			}
+		},
+		{
+			"id": 267,
+			"canUseAsTag": true,
+			"key": "pixel_battle_hero",
+			"title": "general.achievement.id.pixel_battle_hero.title",
+			"desc": "general.achievement.id.pixel_battle_hero.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"dialog": [
+					-1
+				]
+			}
+		},
+		{
+			"id": 268,
+			"canUseAsTag": true,
+			"key": "printing_machine",
+			"title": "general.achievement.id.printing_machine.title",
+			"desc": "general.achievement.id.printing_machine.desc",
+			"category": "economy",
+			"rarity": "rare",
+			"type": "trigger",
+			"triggerRules": {
+				"currencyMaxAmount": {
+					"currency": "money",
+					"maxAmount": 25000000
+				}
+			}
+		},
+		{
+			"id": 269,
+			"canUseAsTag": true,
+			"key": "promzona_explored",
+			"title": "general.achievement.id.promzona_explored.title",
+			"desc": "general.achievement.id.promzona_explored.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"location": [
+					{
+						"locations": [
+							"promzona"
+						],
+						"area": {
+							"minX": 0.0,
+							"minY": 0.0,
+							"minZ": 0.0,
+							"maxX": 0.0,
+							"maxY": 0.0,
+							"maxZ": 0.0
+						}
+					}
+				]
+			}
+		},
+		{
+			"id": 270,
+			"canUseAsTag": true,
+			"key": "prophet",
+			"title": "general.achievement.id.prophet.title",
+			"desc": "general.achievement.id.prophet.desc",
+			"category": "combat",
+			"rarity": "legendary",
+			"type": "trigger",
+			"distributorExportable": true
+		},
+		{
+			"id": 271,
+			"canUseAsTag": false,
+			"key": "prt_crate",
+			"title": "general.achievement.id.prt_crate.title",
+			"desc": "general.achievement.id.prt_crate.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"dialog": [
+					-29
+				]
+			}
+		},
+		{
+			"id": 272,
+			"canUseAsTag": false,
+			"key": "pulk_frontier",
+			"title": "general.achievement.id.pulk_frontier.title",
+			"desc": "general.achievement.id.pulk_frontier.desc",
+			"category": "guild_n_party",
+			"rarity": "secret",
+			"type": "counter",
+			"hidden": true,
+			"count": 3
+		},
+		{
+			"id": 273,
+			"canUseAsTag": true,
+			"key": "quest_13239",
+			"title": "general.achievement.id.quest_13239.title",
+			"desc": "general.achievement.id.quest_13239.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					13239
+				]
+			}
+		},
+		{
+			"id": 274,
+			"canUseAsTag": false,
+			"key": "quest_15733",
+			"title": "general.achievement.id.quest_15733.title",
+			"desc": "general.achievement.id.quest_15733.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					15733
+				]
+			}
+		},
+		{
+			"id": 275,
+			"canUseAsTag": true,
+			"key": "quest_17515",
+			"title": "general.achievement.id.quest_17515.title",
+			"desc": "general.achievement.id.quest_17515.desc",
+			"category": "zone",
+			"rarity": "common",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					17515
+				]
+			}
+		},
+		{
+			"id": 276,
+			"canUseAsTag": false,
+			"key": "quest_17750",
+			"title": "general.achievement.id.quest_17750.title",
+			"desc": "general.achievement.id.quest_17750.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					17750
+				]
+			}
+		},
+		{
+			"id": 277,
+			"canUseAsTag": true,
+			"key": "quest_17854",
+			"title": "general.achievement.id.quest_17854.title",
+			"desc": "general.achievement.id.quest_17854.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					17854
+				]
+			}
+		},
+		{
+			"id": 278,
+			"canUseAsTag": false,
+			"key": "quest_17855",
+			"title": "general.achievement.id.quest_17855.title",
+			"desc": "general.achievement.id.quest_17855.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					17855
+				]
+			}
+		},
+		{
+			"id": 279,
+			"canUseAsTag": true,
+			"key": "quest_17858",
+			"title": "general.achievement.id.quest_17858.title",
+			"desc": "general.achievement.id.quest_17858.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					17858
+				]
+			}
+		},
+		{
+			"id": 280,
+			"canUseAsTag": true,
+			"key": "quest_17859",
+			"title": "general.achievement.id.quest_17859.title",
+			"desc": "general.achievement.id.quest_17859.desc",
+			"category": "zone",
+			"rarity": "rare",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					17859
+				]
+			}
+		},
+		{
+			"id": 281,
+			"canUseAsTag": true,
+			"key": "quest_17860",
+			"title": "general.achievement.id.quest_17860.title",
+			"desc": "general.achievement.id.quest_17860.desc",
+			"category": "zone",
+			"rarity": "rare",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					17860
+				]
+			}
+		},
+		{
+			"id": 282,
+			"canUseAsTag": false,
+			"key": "quest_18181",
+			"title": "general.achievement.id.quest_18181.title",
+			"desc": "general.achievement.id.quest_18181.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					18181
+				]
+			}
+		},
+		{
+			"id": 283,
+			"canUseAsTag": true,
+			"key": "raiter_of_the_zone",
+			"title": "general.achievement.id.raiter_of_the_zone.title",
+			"desc": "general.achievement.id.raiter_of_the_zone.desc",
+			"category": "economy",
+			"rarity": "rare",
+			"type": "counter",
+			"count": 50
+		},
+		{
+			"id": 284,
+			"canUseAsTag": true,
+			"key": "ravent_game_won",
+			"title": "general.achievement.id.ravent_game_won.title",
+			"desc": "general.achievement.id.ravent_game_won.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "counter",
+			"hidden": true,
+			"count": 50
+		},
+		{
+			"id": 285,
+			"canUseAsTag": false,
+			"key": "ravent_game_won_twenty_percents",
+			"title": "general.achievement.id.ravent_game_won_twenty_percents.title",
+			"desc": "general.achievement.id.ravent_game_won_twenty_percents.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 286,
+			"canUseAsTag": true,
+			"key": "ravent_pvp_won",
+			"title": "general.achievement.id.ravent_pvp_won.title",
+			"desc": "general.achievement.id.ravent_pvp_won.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "counter",
+			"hidden": true,
+			"count": 100
+		},
+		{
+			"id": 287,
+			"canUseAsTag": true,
+			"key": "ravent_quests",
+			"title": "general.achievement.id.ravent_quests.title",
+			"desc": "general.achievement.id.ravent_quests.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					23224
+				]
+			}
+		},
+		{
+			"id": 288,
+			"canUseAsTag": true,
+			"key": "ravent_quests_hard",
+			"title": "general.achievement.id.ravent_quests_hard.title",
+			"desc": "general.achievement.id.ravent_quests_hard.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					23249
+				]
+			}
+		},
+		{
+			"id": 289,
+			"canUseAsTag": true,
+			"key": "ravent_zone_titans_defeat",
+			"title": "general.achievement.id.ravent_zone_titans_defeat.title",
+			"desc": "general.achievement.id.ravent_zone_titans_defeat.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 290,
+			"canUseAsTag": false,
+			"key": "region_controlled",
+			"title": "general.achievement.id.region_controlled.title",
+			"desc": "general.achievement.id.region_controlled.desc",
+			"category": "guild_n_party",
+			"rarity": "secret",
+			"type": "counter",
+			"hidden": true,
+			"count": 3
+		},
+		{
+			"id": 291,
+			"canUseAsTag": true,
+			"key": "release_tester_1",
+			"title": "general.achievement.id.release_tester_1.title",
+			"desc": "general.achievement.id.release_tester_1.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 292,
+			"canUseAsTag": true,
+			"key": "release_tester_2",
+			"title": "general.achievement.id.release_tester_2.title",
+			"desc": "general.achievement.id.release_tester_2.desc",
+			"category": "zone",
+			"rarity": "rare",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 293,
+			"canUseAsTag": true,
+			"key": "release_tester_3",
+			"title": "general.achievement.id.release_tester_3.title",
+			"desc": "general.achievement.id.release_tester_3.desc",
+			"category": "zone",
+			"rarity": "common",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 294,
+			"canUseAsTag": false,
+			"key": "rescue_st_ba_2021",
+			"title": "general.achievement.id.rescue_st_ba_2021.title",
+			"desc": "general.achievement.id.rescue_st_ba_2021.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "counter",
+			"hidden": true,
+			"count": 10,
+			"triggerRules": {
+				"worldEvent": [
+					"abstract_rescue/"
+				]
+			}
+		},
+		{
+			"id": 295,
+			"canUseAsTag": false,
+			"key": "rijik_explored",
+			"title": "general.achievement.id.rijik_explored.title",
+			"desc": "general.achievement.id.rijik_explored.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"location": [
+					{
+						"locations": [
+							"rijik"
+						],
+						"area": {
+							"minX": -6000.0,
+							"minY": 0.0,
+							"minZ": -1500.0,
+							"maxX": -2700.0,
+							"maxY": 100.0,
+							"maxZ": 4900.0
+						}
+					}
+				]
+			}
+		},
+		{
+			"id": 296,
+			"canUseAsTag": true,
+			"key": "rijik_miniboss_2021",
+			"title": "general.achievement.id.rijik_miniboss_2021.title",
+			"desc": "general.achievement.id.rijik_miniboss_2021.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "counter",
+			"hidden": true,
+			"count": 1,
+			"triggerRules": {
+				"killTarget": [
+					"Гоблин/"
+				]
+			}
+		},
+		{
+			"id": 297,
+			"canUseAsTag": true,
+			"key": "rijik_miniboss_2021_winter",
+			"title": "general.achievement.id.rijik_miniboss_2021_winter.title",
+			"desc": "general.achievement.id.rijik_miniboss_2021_winter.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "counter",
+			"hidden": true,
+			"count": 1,
+			"triggerRules": {
+				"killTarget": [
+					"Гоблинl"
+				]
+			}
+		},
+		{
+			"id": 298,
+			"canUseAsTag": false,
+			"key": "rls_explored",
+			"title": "general.achievement.id.rls_explored.title",
+			"desc": "general.achievement.id.rls_explored.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"location": [
+					{
+						"locations": [
+							"rls"
+						],
+						"area": {
+							"minX": -6000.0,
+							"minY": 0.0,
+							"minZ": -1500.0,
+							"maxX": -2700.0,
+							"maxY": 100.0,
+							"maxZ": 4900.0
+						}
+					}
+				]
+			}
+		},
+		{
+			"id": 299,
+			"canUseAsTag": true,
+			"key": "rls_miniboss_2021_winter",
+			"title": "general.achievement.id.rls_miniboss_2021_winter.title",
+			"desc": "general.achievement.id.rls_miniboss_2021_winter.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "counter",
+			"hidden": true,
+			"count": 1,
+			"triggerRules": {
+				"killTarget": [
+					"Орлиный глаlз"
+				]
+			}
+		},
+		{
+			"id": 300,
+			"canUseAsTag": true,
+			"key": "rls_top_explored",
+			"title": "general.achievement.id.rls_top_explored.title",
+			"desc": "general.achievement.id.rls_top_explored.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"location": [
+					{
+						"locations": [
+							"rls"
+						],
+						"area": {
+							"minX": -5230.0,
+							"minY": 209.0,
+							"minZ": -1155.0,
+							"maxX": -4780.0,
+							"maxY": 220.0,
+							"maxZ": -1120.0
+						}
+					}
+				]
+			}
+		},
+		{
+			"id": 301,
+			"canUseAsTag": true,
+			"key": "rune_first_18541",
+			"title": "general.achievement.id.rune_first_18541.title",
+			"desc": "general.achievement.id.rune_first_18541.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					18541
+				]
+			}
+		},
+		{
+			"id": 302,
+			"canUseAsTag": true,
+			"key": "rune_first_18542",
+			"title": "general.achievement.id.rune_first_18542.title",
+			"desc": "general.achievement.id.rune_first_18542.desc",
+			"category": "zone",
+			"rarity": "rare",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					18542
+				]
+			}
+		},
+		{
+			"id": 303,
+			"canUseAsTag": false,
+			"key": "scstore_aurora",
+			"title": "general.achievement.id.scstore_aurora.title",
+			"desc": "general.achievement.id.scstore_aurora.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"dialog": [
+					-1
+				]
+			}
+		},
+		{
+			"id": 304,
+			"canUseAsTag": true,
+			"key": "scstore_tier1",
+			"title": "general.achievement.id.scstore_tier1.title",
+			"desc": "general.achievement.id.scstore_tier1.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"dialog": [
+					-1
+				]
+			}
+		},
+		{
+			"id": 305,
+			"canUseAsTag": true,
+			"key": "scstore_tier2",
+			"title": "general.achievement.id.scstore_tier2.title",
+			"desc": "general.achievement.id.scstore_tier2.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"dialog": [
+					-1
+				]
+			}
+		},
+		{
+			"id": 306,
+			"canUseAsTag": true,
+			"key": "scstore_tier3",
+			"title": "general.achievement.id.scstore_tier3.title",
+			"desc": "general.achievement.id.scstore_tier3.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"dialog": [
+					-1
+				]
+			}
+		},
+		{
+			"id": 307,
+			"canUseAsTag": false,
+			"key": "seamstres",
+			"title": "general.achievement.id.seamstres.title",
+			"desc": "general.achievement.id.seamstres.desc",
+			"category": "economy",
+			"rarity": "rare",
+			"type": "counter",
+			"count": 25
+		},
+		{
+			"id": 308,
+			"canUseAsTag": true,
+			"key": "seller",
+			"title": "general.achievement.id.seller.title",
+			"desc": "general.achievement.id.seller.desc",
+			"category": "economy",
+			"rarity": "common",
+			"type": "counter",
+			"count": 100
+		},
+		{
+			"id": 309,
+			"canUseAsTag": false,
+			"key": "sense_of_taste",
+			"title": "general.achievement.id.sense_of_taste.title",
+			"desc": "general.achievement.id.sense_of_taste.desc",
+			"category": "economy",
+			"rarity": "common",
+			"type": "trigger"
+		},
+		{
+			"id": 310,
+			"canUseAsTag": false,
+			"key": "signal-hunter",
+			"title": "general.achievement.id.signal-hunter.title",
+			"desc": "general.achievement.id.signal-hunter.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "counter",
+			"count": 100
+		},
+		{
+			"id": 311,
+			"canUseAsTag": false,
+			"key": "silktouch",
+			"title": "general.achievement.id.silktouch.title",
+			"desc": "general.achievement.id.silktouch.desc",
+			"category": "economy",
+			"rarity": "secret",
+			"type": "counter",
+			"count": 100
+		},
+		{
+			"id": 312,
+			"canUseAsTag": false,
+			"key": "sovhoz_explored",
+			"title": "general.achievement.id.sovhoz_explored.title",
+			"desc": "general.achievement.id.sovhoz_explored.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"location": [
+					{
+						"locations": [
+							"sovhoz"
+						],
+						"area": {
+							"minX": 0.0,
+							"minY": 0.0,
+							"minZ": 0.0,
+							"maxX": 0.0,
+							"maxY": 0.0,
+							"maxZ": 0.0
+						}
+					}
+				]
+			}
+		},
+		{
+			"id": 313,
+			"canUseAsTag": true,
+			"key": "speed_lover",
+			"title": "general.achievement.id.speed_lover.title",
+			"desc": "general.achievement.id.speed_lover.desc",
+			"category": "guild_n_party",
+			"rarity": "secret",
+			"type": "counter",
+			"hidden": true,
+			"count": 100
+		},
+		{
+			"id": 314,
+			"canUseAsTag": true,
+			"key": "spring25_mite",
+			"title": "general.achievement.id.spring25_mite.title",
+			"desc": "general.achievement.id.spring25_mite.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "counter",
+			"hidden": true,
+			"count": 1,
+			"triggerRules": {
+				"killTarget": [
+					"Щелк"
+				]
+			}
+		},
+		{
+			"id": 315,
+			"canUseAsTag": false,
+			"key": "stacker",
+			"title": "general.achievement.id.stacker.title",
+			"desc": "general.achievement.id.stacker.desc",
+			"category": "economy",
+			"rarity": "legendary",
+			"type": "counter",
+			"count": 200
+		},
+		{
+			"id": 316,
+			"canUseAsTag": false,
+			"key": "stalker_interceptor",
+			"title": "general.achievement.id.stalker_interceptor.title",
+			"desc": "general.achievement.id.stalker_interceptor.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "counter",
+			"count": 25
+		},
+		{
+			"id": 317,
+			"canUseAsTag": false,
+			"key": "start",
+			"title": "general.achievement.id.start.title",
+			"desc": "general.achievement.id.start.desc",
+			"category": "economy",
+			"rarity": "common",
+			"type": "trigger",
+			"triggerRules": {
+				"currencyMaxAmount": {
+					"currency": "money",
+					"maxAmount": 100000
+				}
+			}
+		},
+		{
+			"id": 318,
+			"canUseAsTag": false,
+			"key": "steam_daily",
+			"title": "general.achievement.id.steam_daily.title",
+			"desc": "general.achievement.id.steam_daily.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"distributorExportable": true,
+			"triggerRules": {
+				"quest": [
+					19797
+				]
+			}
+		},
+		{
+			"id": 319,
+			"canUseAsTag": true,
+			"key": "steam_sujet",
+			"title": "general.achievement.id.steam_sujet.title",
+			"desc": "general.achievement.id.steam_sujet.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"distributorExportable": true,
+			"triggerRules": {
+				"quest": [
+					18029
+				]
+			}
+		},
+		{
+			"id": 320,
+			"canUseAsTag": true,
+			"key": "steam_weekly",
+			"title": "general.achievement.id.steam_weekly.title",
+			"desc": "general.achievement.id.steam_weekly.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"distributorExportable": true
+//			"triggerRules": {
+//				"quest": [
+//					19814
+//				]
+//			}
+		},
+		{
+			"id": 321,
+			"canUseAsTag": false,
+			"key": "stop_right_there",
+			"title": "general.achievement.id.stop_right_there.title",
+			"desc": "general.achievement.id.stop_right_there.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "counter",
+			"count": 10
+		},
+		{
+			"id": 322,
+			"canUseAsTag": true,
+			"key": "stopped_tradepack",
+			"title": "general.achievement.id.stopped_tradepack.title",
+			"desc": "general.achievement.id.stopped_tradepack.desc",
+			"category": "combat",
+			"rarity": "common",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 323,
+			"canUseAsTag": true,
+			"key": "suget_bandits_FirstEnd",
+			"title": "general.achievement.id.suget_bandits_FirstEnd.title",
+			"desc": "general.achievement.id.suget_bandits_FirstEnd.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					10690
+				]
+			}
+		},
+		{
+			"id": 324,
+			"canUseAsTag": false,
+			"key": "suget_bandits_MilitaryWSanitats",
+			"title": "general.achievement.id.suget_bandits_MilitaryWSanitats.title",
+			"desc": "general.achievement.id.suget_bandits_MilitaryWSanitats.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					9198
+				]
+			}
+		},
+		{
+			"id": 325,
+			"canUseAsTag": true,
+			"key": "suget_bandits_good_torture",
+			"title": "general.achievement.id.suget_bandits_good_torture.title",
+			"desc": "general.achievement.id.suget_bandits_good_torture.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					9357
+				]
+			}
+		},
+		{
+			"id": 326,
+			"canUseAsTag": false,
+			"key": "suget_bandits_kaa",
+			"title": "general.achievement.id.suget_bandits_kaa.title",
+			"desc": "general.achievement.id.suget_bandits_kaa.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					9150
+				]
+			}
+		},
+		{
+			"id": 327,
+			"canUseAsTag": true,
+			"key": "suget_bandits_kill_Lipa",
+			"title": "general.achievement.id.suget_bandits_kill_Lipa.title",
+			"desc": "general.achievement.id.suget_bandits_kill_Lipa.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					9035
+				]
+			}
+		},
+		{
+			"id": 328,
+			"canUseAsTag": true,
+			"key": "suget_bandits_kill_psi",
+			"title": "general.achievement.id.suget_bandits_kill_psi.title",
+			"desc": "general.achievement.id.suget_bandits_kill_psi.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					9101
+				]
+			}
+		},
+		{
+			"id": 329,
+			"canUseAsTag": false,
+			"key": "suget_bandits_orakul_leave",
+			"title": "general.achievement.id.suget_bandits_orakul_leave.title",
+			"desc": "general.achievement.id.suget_bandits_orakul_leave.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					9132
+				]
+			}
+		},
+		{
+			"id": 330,
+			"canUseAsTag": false,
+			"key": "suget_bandits_orakul_stay",
+			"title": "general.achievement.id.suget_bandits_orakul_stay.title",
+			"desc": "general.achievement.id.suget_bandits_orakul_stay.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					9131
+				]
+			}
+		},
+		{
+			"id": 331,
+			"canUseAsTag": false,
+			"key": "suget_bandits_pacific_torture",
+			"title": "general.achievement.id.suget_bandits_pacific_torture.title",
+			"desc": "general.achievement.id.suget_bandits_pacific_torture.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					9202
+				]
+			}
+		},
+		{
+			"id": 332,
+			"canUseAsTag": false,
+			"key": "suget_bandits_save_Lipa",
+			"title": "general.achievement.id.suget_bandits_save_Lipa.title",
+			"desc": "general.achievement.id.suget_bandits_save_Lipa.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					9036
+				]
+			}
+		},
+		{
+			"id": 333,
+			"canUseAsTag": false,
+			"key": "suget_bandits_sleep",
+			"title": "general.achievement.id.suget_bandits_sleep.title",
+			"desc": "general.achievement.id.suget_bandits_sleep.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					9201
+				]
+			}
+		},
+		{
+			"id": 334,
+			"canUseAsTag": false,
+			"key": "suget_bandits_sleepFirst",
+			"title": "general.achievement.id.suget_bandits_sleepFirst.title",
+			"desc": "general.achievement.id.suget_bandits_sleepFirst.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					10317
+				]
+			}
+		},
+		{
+			"id": 335,
+			"canUseAsTag": true,
+			"key": "suget_bandits_start",
+			"title": "general.achievement.id.suget_bandits_start.title",
+			"desc": "general.achievement.id.suget_bandits_start.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					8412
+				]
+			}
+		},
+		{
+			"id": 336,
+			"canUseAsTag": true,
+			"key": "suget_stalkers_FirstEnd",
+			"title": "general.achievement.id.suget_stalkers_FirstEnd.title",
+			"desc": "general.achievement.id.suget_stalkers_FirstEnd.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					10689
+				]
+			}
+		},
+		{
+			"id": 337,
+			"canUseAsTag": false,
+			"key": "suget_stalkers_MilitaryWSanitats",
+			"title": "general.achievement.id.suget_stalkers_MilitaryWSanitats.title",
+			"desc": "general.achievement.id.suget_stalkers_MilitaryWSanitats.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					9207
+				]
+			}
+		},
+		{
+			"id": 338,
+			"canUseAsTag": true,
+			"key": "suget_stalkers_good_torture",
+			"title": "general.achievement.id.suget_stalkers_good_torture.title",
+			"desc": "general.achievement.id.suget_stalkers_good_torture.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					9362
+				]
+			}
+		},
+		{
+			"id": 339,
+			"canUseAsTag": false,
+			"key": "suget_stalkers_kaa",
+			"title": "general.achievement.id.suget_stalkers_kaa.title",
+			"desc": "general.achievement.id.suget_stalkers_kaa.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					9155
+				]
+			}
+		},
+		{
+			"id": 340,
+			"canUseAsTag": true,
+			"key": "suget_stalkers_kill_Lipa",
+			"title": "general.achievement.id.suget_stalkers_kill_Lipa.title",
+			"desc": "general.achievement.id.suget_stalkers_kill_Lipa.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					9037
+				]
+			}
+		},
+		{
+			"id": 341,
+			"canUseAsTag": true,
+			"key": "suget_stalkers_kill_psi",
+			"title": "general.achievement.id.suget_stalkers_kill_psi.title",
+			"desc": "general.achievement.id.suget_stalkers_kill_psi.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					9117
+				]
+			}
+		},
+		{
+			"id": 342,
+			"canUseAsTag": false,
+			"key": "suget_stalkers_orakul_leave",
+			"title": "general.achievement.id.suget_stalkers_orakul_leave.title",
+			"desc": "general.achievement.id.suget_stalkers_orakul_leave.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					9129
+				]
+			}
+		},
+		{
+			"id": 343,
+			"canUseAsTag": false,
+			"key": "suget_stalkers_orakul_stay",
+			"title": "general.achievement.id.suget_stalkers_orakul_stay.title",
+			"desc": "general.achievement.id.suget_stalkers_orakul_stay.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					9130
+				]
+			}
+		},
+		{
+			"id": 344,
+			"canUseAsTag": false,
+			"key": "suget_stalkers_pacific_torture",
+			"title": "general.achievement.id.suget_stalkers_pacific_torture.title",
+			"desc": "general.achievement.id.suget_stalkers_pacific_torture.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					9359
+				]
+			}
+		},
+		{
+			"id": 345,
+			"canUseAsTag": false,
+			"key": "suget_stalkers_save_Lipa",
+			"title": "general.achievement.id.suget_stalkers_save_Lipa.title",
+			"desc": "general.achievement.id.suget_stalkers_save_Lipa.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					9038
+				]
+			}
+		},
+		{
+			"id": 346,
+			"canUseAsTag": false,
+			"key": "suget_stalkers_sleep",
+			"title": "general.achievement.id.suget_stalkers_sleep.title",
+			"desc": "general.achievement.id.suget_stalkers_sleep.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					9210
+				]
+			}
+		},
+		{
+			"id": 347,
+			"canUseAsTag": false,
+			"key": "suget_stalkers_sleepFirst",
+			"title": "general.achievement.id.suget_stalkers_sleepFirst.title",
+			"desc": "general.achievement.id.suget_stalkers_sleepFirst.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					10325
+				]
+			}
+		},
+		{
+			"id": 348,
+			"canUseAsTag": false,
+			"key": "suget_stalkers_start",
+			"title": "general.achievement.id.suget_stalkers_start.title",
+			"desc": "general.achievement.id.suget_stalkers_start.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					8360
+				]
+			}
+		},
+		{
+			"id": 349,
+			"canUseAsTag": false,
+			"key": "sujet_base_sanitar",
+			"title": "general.achievement.id.sujet_base_sanitar.title",
+			"desc": "general.achievement.id.sujet_base_sanitar.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					17511
+				]
+			}
+		},
+		{
+			"id": 350,
+			"canUseAsTag": false,
+			"key": "sujet_brain_burner",
+			"title": "general.achievement.id.sujet_brain_burner.title",
+			"desc": "general.achievement.id.sujet_brain_burner.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					17807
+				]
+			}
+		},
+		{
+			"id": 351,
+			"canUseAsTag": false,
+			"key": "sujet_cov",
+			"title": "general.achievement.id.sujet_cov.title",
+			"desc": "general.achievement.id.sujet_cov.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					13430
+				]
+			}
+		},
+		{
+			"id": 352,
+			"canUseAsTag": true,
+			"key": "sujet_duty",
+			"title": "general.achievement.id.sujet_duty.title",
+			"desc": "general.achievement.id.sujet_duty.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					13212
+				]
+			}
+		},
+		{
+			"id": 353,
+			"canUseAsTag": true,
+			"key": "sujet_freedom",
+			"title": "general.achievement.id.sujet_freedom.title",
+			"desc": "general.achievement.id.sujet_freedom.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					13222
+				]
+			}
+		},
+		{
+			"id": 354,
+			"canUseAsTag": true,
+			"key": "sujet_guardian",
+			"title": "general.achievement.id.sujet_guardian.title",
+			"desc": "general.achievement.id.sujet_guardian.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					17810
+				]
+			}
+		},
+		{
+			"id": 355,
+			"canUseAsTag": true,
+			"key": "sujet_merc",
+			"title": "general.achievement.id.sujet_merc.title",
+			"desc": "general.achievement.id.sujet_merc.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					13230
+				]
+			}
+		},
+		{
+			"id": 356,
+			"canUseAsTag": true,
+			"key": "sujet_morg",
+			"title": "general.achievement.id.sujet_morg.title",
+			"desc": "general.achievement.id.sujet_morg.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					18005
+				]
+			}
+		},
+		{
+			"id": 357,
+			"canUseAsTag": true,
+			"key": "sujet_shaman",
+			"title": "general.achievement.id.sujet_shaman.title",
+			"desc": "general.achievement.id.sujet_shaman.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					18004
+				]
+			}
+		},
+		{
+			"id": 358,
+			"canUseAsTag": false,
+			"key": "sujet_stels_field",
+			"title": "general.achievement.id.sujet_stels_field.title",
+			"desc": "general.achievement.id.sujet_stels_field.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					17571
+				]
+			}
+		},
+		{
+			"id": 359,
+			"canUseAsTag": true,
+			"key": "sujet_stels_no_death",
+			"title": "general.achievement.id.sujet_stels_no_death.title",
+			"desc": "general.achievement.id.sujet_stels_no_death.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					18619
+				]
+			}
+		},
+		{
+			"id": 360,
+			"canUseAsTag": false,
+			"key": "sujet_vlasov_fight_bandits",
+			"title": "general.achievement.id.sujet_vlasov_fight_bandits.title",
+			"desc": "general.achievement.id.sujet_vlasov_fight_bandits.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					16367
+				]
+			}
+		},
+		{
+			"id": 361,
+			"canUseAsTag": false,
+			"key": "sujet_vlasov_fight_stalkers",
+			"title": "general.achievement.id.sujet_vlasov_fight_stalkers.title",
+			"desc": "general.achievement.id.sujet_vlasov_fight_stalkers.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					16746
+				]
+			}
+		},
+		{
+			"id": 362,
+			"canUseAsTag": false,
+			"key": "sujet_vlasov_suicide_bandits",
+			"title": "general.achievement.id.sujet_vlasov_suicide_bandits.title",
+			"desc": "general.achievement.id.sujet_vlasov_suicide_bandits.desc",
+			"category": "zone",
+			"rarity": "common",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					16368
+				]
+			}
+		},
+		{
+			"id": 363,
+			"canUseAsTag": false,
+			"key": "sujet_vlasov_suicide_stalkers",
+			"title": "general.achievement.id.sujet_vlasov_suicide_stalkers.title",
+			"desc": "general.achievement.id.sujet_vlasov_suicide_stalkers.desc",
+			"category": "zone",
+			"rarity": "common",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					16747
+				]
+			}
+		},
+		{
+			"id": 364,
+			"canUseAsTag": false,
+			"key": "svalka_explored",
+			"title": "general.achievement.id.svalka_explored.title",
+			"desc": "general.achievement.id.svalka_explored.desc",
+			"category": "zone",
+			"rarity": "common",
+			"type": "trigger",
+			"triggerRules": {
+				"location": [
+					{
+						"locations": [
+							"svalka"
+						],
+						"area": {
+							"minX": -6000.0,
+							"minY": 0.0,
+							"minZ": -1500.0,
+							"maxX": -2700.0,
+							"maxY": 100.0,
+							"maxZ": 4900.0
+						}
+					}
+				]
+			}
+		},
+		{
+			"id": 365,
+			"canUseAsTag": false,
+			"key": "svalka_miniboss_2021",
+			"title": "general.achievement.id.svalka_miniboss_2021.title",
+			"desc": "general.achievement.id.svalka_miniboss_2021.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "counter",
+			"hidden": true,
+			"count": 1,
+			"triggerRules": {
+				"killTarget": [
+					"Крысиный рыцарь/"
+				]
+			}
+		},
+		{
+			"id": 366,
+			"canUseAsTag": false,
+			"key": "svinomatka",
+			"title": "general.achievement.id.svinomatka.title",
+			"desc": "general.achievement.id.svinomatka.desc",
+			"category": "combat",
+			"rarity": "rare",
+			"type": "counter",
+			"count": 100,
+			"triggerRules": {
+				"mutantKills": [
+					"flesh"
+				]
+			}
+		},
+		{
+			"id": 367,
+			"canUseAsTag": true,
+			"key": "taxidermist",
+			"title": "general.achievement.id.taxidermist.title",
+			"desc": "general.achievement.id.taxidermist.desc",
+			"category": "combat",
+			"rarity": "legendary",
+			"type": "multitrigger",
+			"triggerValues": [
+				"boar",
+				"chimera",
+				"dog",
+				"flesh",
+				"krovosos",
+				"pseudodog",
+				"pseudogigant",
+				"psidog",
+				"snork",
+				"tushkan"
+			]
+		},
+		{
+			"id": 368,
+			"canUseAsTag": false,
+			"key": "tchernobyl",
+			"title": "general.achievement.id.tchernobyl.title",
+			"desc": "general.achievement.id.tchernobyl.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					30576
+				]
+			}
+		},
+		{
+			"id": 369,
+			"canUseAsTag": false,
+			"key": "td_explored",
+			"title": "general.achievement.id.td_explored.title",
+			"desc": "general.achievement.id.td_explored.desc",
+			"category": "zone",
+			"rarity": "common",
+			"type": "trigger",
+			"triggerRules": {
+				"location": [
+					{
+						"locations": [
+							"td"
+						],
+						"area": {
+							"minX": -6000.0,
+							"minY": 0.0,
+							"minZ": -1500.0,
+							"maxX": -2700.0,
+							"maxY": 100.0,
+							"maxZ": 4900.0
+						}
+					}
+				]
+			}
+		},
+		{
+			"id": 370,
+			"canUseAsTag": true,
+			"key": "teller",
+			"title": "general.achievement.id.teller.title",
+			"desc": "general.achievement.id.teller.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 371,
+			"canUseAsTag": true,
+			"key": "tester",
+			"title": "general.achievement.id.tester.title",
+			"desc": "general.achievement.id.tester.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 372,
+			"canUseAsTag": true,
+			"key": "that_is_my_swamp",
+			"title": "general.achievement.id.that_is_my_swamp.title",
+			"desc": "general.achievement.id.that_is_my_swamp.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 373,
+			"canUseAsTag": false,
+			"key": "thats_mine",
+			"title": "general.achievement.id.thats_mine.title",
+			"desc": "general.achievement.id.thats_mine.desc",
+			"category": "guild_n_party",
+			"rarity": "secret",
+			"type": "counter",
+			"hidden": true,
+			"count": 500
+		},
+		{
+			"id": 374,
+			"canUseAsTag": false,
+			"key": "through_zone",
+			"title": "general.achievement.id.through_zone.title",
+			"desc": "general.achievement.id.through_zone.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger"
+		},
+		{
+			"id": 375,
+			"canUseAsTag": true,
+			"key": "tor",
+			"title": "general.achievement.id.tor.title",
+			"desc": "general.achievement.id.tor.desc",
+			"category": "zone",
+			"rarity": "common",
+			"type": "trigger"
+		},
+		{
+			"id": 376,
+			"canUseAsTag": true,
+			"key": "treasure_hunter",
+			"title": "general.achievement.id.treasure_hunter.title",
+			"desc": "general.achievement.id.treasure_hunter.desc",
+			"category": "zone",
+			"rarity": "rare",
+			"type": "counter",
+			"count": 100
+		},
+		{
+			"id": 377,
+			"canUseAsTag": true,
+			"key": "trophy_hunter",
+			"title": "general.achievement.id.trophy_hunter.title",
+			"desc": "general.achievement.id.trophy_hunter.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "counter",
+			"count": 1000
+		},
+		{
+			"id": 378,
+			"canUseAsTag": true,
+			"key": "true_stalker",
+			"title": "general.achievement.id.true_stalker.title",
+			"desc": "general.achievement.id.true_stalker.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "multitrigger",
+			"hidden": true,
+			"triggerValues": [
+				"pixel_battle_2020",
+				"dog_camp_2021",
+				"industry_scouting_10",
+				"ch4_final",
+				"pixel_battle_2023",
+				"tryasina_explored",
+				"sujet_stels_no_death",
+				"dt_explored",
+				"industry_artillery_20",
+				"bar_explored",
+				"ivent_12934",
+				"krovosos_camp_2021",
+				"blizzard_event_easter_egg_2022",
+				"agroprom_explored",
+				"rls_top_explored",
+				"bolota_rat_run",
+				"les_explored",
+				"quest_18181",
+				"kill_napalm",
+				"bar100_explored",
+				"les_miniboss_2021_winter",
+				"mogilnik_explored",
+				"limansk_miniboss_2021",
+				"pd_explored",
+				"mines_explored",
+				"rls_explored",
+				"armsklad_miniboss_2021",
+				"camp_stalker_2021",
+				"pixel_battle_2018",
+				"limansk_miniboss_2021_winter",
+				"ch4_first1",
+				"ch4_first2",
+				"pixel_battle_2019",
+				"industry_artillery_30",
+				"armsklad_miniboss_2021_winter",
+				"devora_questions3",
+				"dayx_developer",
+				"kill_grad",
+				"devora_questions4",
+				"devora_questions1",
+				"devora_questions2",
+				"camp_monolit_2021",
+				"rijik_explored",
+				"industry_scouting_30",
+				"armsklad_explored",
+				"krovosos_camp_2021_winter",
+				"warp_poor",
+				"camp_snork_2021_winter",
+				"bolota_hermit_second_talk",
+				"human_camp_2021_winter",
+				"camp_bandit_2021",
+				"rune_first_18541",
+				"svalka_explored",
+				"tushkan_camp_2021",
+				"rune_first_18542",
+				"boar_camp_2021",
+				"ivent_12837",
+				"yanov_explored",
+				"promzona_explored",
+				"closed_beta_2014",
+				"concept_artist_2019",
+				"dog_camp_2021_winter",
+				"event_mist_complete",
+				"ravent_quests_hard",
+				"zaton_miniboss_2021_winter",
+				"industry_scouting_20",
+				"quest_17750",
+				"flesh_camp_2021_winter",
+				"kill_cluster",
+				"kishka_explored",
+				"ravent_quests",
+				"kill_mines",
+				"mg_explored",
+				"event_deadtime_time_attack_mobs",
+				"quest_17515",
+				"sujet_vlasov_suicide_stalkers",
+				"rijik_miniboss_2021",
+				"quest_15733",
+				"ny24_recap",
+				"yanov_miniboss_2021_winter",
+				"yanov_miniboss_2021",
+				"rijik_miniboss_2021_winter",
+				"bolota_bandits_selected",
+				"tushkan_camp_2021_winter",
+				"ushelie_explored",
+				"quest_17860",
+				"boar_camp_2021_winter",
+				"event_deadtime_diary_found",
+				"warp_explored",
+				"flesh_camp_2021",
+				"industry_logistics_10",
+				"limansk_explored",
+				"event_deadtime_time_attack_boss",
+				"boss_pseudo_electro",
+				"td_explored",
+				"industry_aviation_30",
+				"yantar_explored",
+				"blizzard_event_quest_2022",
+				"rescue_st_ba_2021",
+				"bolota_stalkers_selected",
+				"camp_military_2021",
+				"under_miniboss_2021_winter",
+				"industry_logistics_20",
+				"limansk_ufo_found",
+				"quest_17855",
+				"rls_miniboss_2021_winter",
+				"kill_heli",
+				"kill_all",
+				"sujet_vlasov_suicide_bandits",
+				"prt_crate",
+				"ivent_12846",
+				"warp_historian",
+				"zaton_explored",
+				"quest_17859",
+				"industry_aviation_20",
+				"moryatnik_explored",
+				"zaton_miniboss_2021",
+				"camp_zombie_2021",
+				"kordon_miniboss_2021",
+				"svalka_miniboss_2021",
+				"event_deadtime_time_attack_2_mobs",
+				"bolota_myar_found",
+				"industry_logistics_30",
+				"sovhoz_explored",
+				"concept_artist_2019_winner",
+				"boss_snork_toxic",
+				"anomaly_sliced_sausage",
+				"camp_node_2021_winter",
+				"oiz",
+				"event_rofl",
+				"devora_lor",
+				"industry_aviation_10",
+				"agroprom_miniboss_2021",
+				"pixel_battle_hero",
+				"anomaly_node_2021",
+				"industry_artillery_10",
+				"ch4_explored",
+				"event_deadtime_time_attack_2_boss",
+				"ivent_12862",
+				"ivent_12900",
+				"tutorial_cracker",
+				"kill_acacia",
+				"kordon_explored"
+			]
+		},
+		{
+			"id": 379,
+			"canUseAsTag": false,
+			"key": "trumpet",
+			"title": "general.achievement.id.trumpet.title",
+			"desc": "general.achievement.id.trumpet.desc",
+			"category": "combat",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 380,
+			"canUseAsTag": false,
+			"key": "tryasina_explored",
+			"title": "general.achievement.id.tryasina_explored.title",
+			"desc": "general.achievement.id.tryasina_explored.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"location": [
+					{
+						"locations": [
+							"nbolota"
+						],
+						"area": {
+							"minX": -2701.0,
+							"minY": 0.0,
+							"minZ": 4899.0,
+							"maxX": -2700.0,
+							"maxY": 100.0,
+							"maxZ": 4900.0
+						}
+					}
+				]
+			}
+		},
+		{
+			"id": 381,
+			"canUseAsTag": true,
+			"key": "turret",
+			"title": "general.achievement.id.turret.title",
+			"desc": "general.achievement.id.turret.desc",
+			"category": "combat",
+			"rarity": "common",
+			"type": "counter",
+			"count": 500
+		},
+		{
+			"id": 382,
+			"canUseAsTag": false,
+			"key": "tushkan_camp_2021",
+			"title": "general.achievement.id.tushkan_camp_2021.title",
+			"desc": "general.achievement.id.tushkan_camp_2021.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "counter",
+			"hidden": true,
+			"count": 10,
+			"triggerRules": {
+				"worldEvent": [
+					"abstract_camp_tushkan/"
+				]
+			}
+		},
+		{
+			"id": 383,
+			"canUseAsTag": false,
+			"key": "tushkan_camp_2021_winter",
+			"title": "general.achievement.id.tushkan_camp_2021_winter.title",
+			"desc": "general.achievement.id.tushkan_camp_2021_winter.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "counter",
+			"hidden": true,
+			"count": 5,
+			"triggerRules": {
+				"worldEvent": [
+					"abstract_camp_tushkkan"
+				]
+			}
+		},
+		{
+			"id": 384,
+			"canUseAsTag": false,
+			"key": "tutorial_completed",
+			"title": "general.achievement.id.tutorial_completed.title",
+			"desc": "general.achievement.id.tutorial_completed.desc",
+			"category": "zone",
+			"rarity": "common",
+			"type": "trigger",
+			"distributorExportable": true
+		},
+		{
+			"id": 385,
+			"canUseAsTag": false,
+			"key": "tutorial_cracker",
+			"title": "general.achievement.id.tutorial_cracker.title",
+			"desc": "general.achievement.id.tutorial_cracker.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"quest": [
+					-24
+				]
+			}
+		},
+		{
+			"id": 386,
+			"canUseAsTag": true,
+			"key": "ultra_kill",
+			"title": "general.achievement.id.ultra_kill.title",
+			"desc": "general.achievement.id.ultra_kill.desc",
+			"category": "combat",
+			"rarity": "rare",
+			"type": "trigger"
+		},
+		{
+			"id": 387,
+			"canUseAsTag": true,
+			"key": "under_miniboss_2021_winter",
+			"title": "general.achievement.id.under_miniboss_2021_winter.title",
+			"desc": "general.achievement.id.under_miniboss_2021_winter.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "counter",
+			"hidden": true,
+			"count": 1,
+			"triggerRules": {
+				"killTarget": [
+					"Крысиный рыцарlь"
+				]
+			}
+		},
+		{
+			"id": 388,
+			"canUseAsTag": false,
+			"key": "unf_invest",
+			"title": "general.achievement.id.unf_invest.title",
+			"desc": "general.achievement.id.unf_invest.desc",
+			"category": "economy",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 389,
+			"canUseAsTag": false,
+			"key": "unknown_creature",
+			"title": "general.achievement.id.unknown_creature.title",
+			"desc": "general.achievement.id.unknown_creature.desc",
+			"category": "combat",
+			"rarity": "rare",
+			"type": "counter",
+			"count": 100,
+			"triggerRules": {
+				"mutantKills": [
+					"pseudodog"
+				]
+			}
+		},
+		{
+			"id": 390,
+			"canUseAsTag": false,
+			"key": "usefull_stuff",
+			"title": "general.achievement.id.usefull_stuff.title",
+			"desc": "general.achievement.id.usefull_stuff.desc",
+			"category": "economy",
+			"rarity": "common",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 391,
+			"canUseAsTag": false,
+			"key": "ushelie_explored",
+			"title": "general.achievement.id.ushelie_explored.title",
+			"desc": "general.achievement.id.ushelie_explored.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"location": [
+					{
+						"locations": [
+							"ushelie"
+						],
+						"area": {
+							"minX": -6000.0,
+							"minY": 0.0,
+							"minZ": -1500.0,
+							"maxX": -2700.0,
+							"maxY": 100.0,
+							"maxZ": 4900.0
+						}
+					}
+				]
+			}
+		},
+		{
+			"id": 392,
+			"canUseAsTag": false,
+			"key": "van_helsing",
+			"title": "general.achievement.id.van_helsing.title",
+			"desc": "general.achievement.id.van_helsing.desc",
+			"category": "combat",
+			"rarity": "rare",
+			"type": "counter",
+			"count": 100,
+			"triggerRules": {
+				"mutantKills": [
+					"krovosos"
+				]
+			}
+		},
+		{
+			"id": 393,
+			"canUseAsTag": false,
+			"key": "vestibular_appar",
+			"title": "general.achievement.id.vestibular_appar.title",
+			"desc": "general.achievement.id.vestibular_appar.desc",
+			"category": "zone",
+			"rarity": "common",
+			"type": "trigger"
+		},
+		{
+			"id": 394,
+			"canUseAsTag": true,
+			"key": "veteran",
+			"title": "general.achievement.id.veteran.title",
+			"desc": "general.achievement.id.veteran.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger"
+		},
+		{
+			"id": 395,
+			"canUseAsTag": false,
+			"key": "void",
+			"title": "general.achievement.id.void.title",
+			"desc": "general.achievement.id.void.desc",
+			"category": "zone",
+			"rarity": "common",
+			"type": "trigger"
+		},
+		{
+			"id": 396,
+			"canUseAsTag": true,
+			"key": "warp_explored",
+			"title": "general.achievement.id.warp_explored.title",
+			"desc": "general.achievement.id.warp_explored.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"location": [
+					{
+						"locations": [
+							"warp"
+						],
+						"area": {
+							"minX": 0.0,
+							"minY": 0.0,
+							"minZ": 0.0,
+							"maxX": 0.0,
+							"maxY": 0.0,
+							"maxZ": 0.0
+						}
+					}
+				]
+			}
+		},
+		{
+			"id": 397,
+			"canUseAsTag": true,
+			"key": "warp_historian",
+			"title": "general.achievement.id.warp_historian.title",
+			"desc": "general.achievement.id.warp_historian.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"dialog": [
+					-15
+				]
+			}
+		},
+		{
+			"id": 398,
+			"canUseAsTag": true,
+			"key": "warp_poor",
+			"title": "general.achievement.id.warp_poor.title",
+			"desc": "general.achievement.id.warp_poor.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"dialog": [
+					-16
+				]
+			}
+		},
+		{
+			"id": 399,
+			"canUseAsTag": false,
+			"key": "weapon_master_equip",
+			"title": "general.achievement.id.weapon_master_equip.title",
+			"desc": "general.achievement.id.weapon_master_equip.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"distributorExportable": true
+		},
+		{
+			"id": 400,
+			"canUseAsTag": true,
+			"key": "weapon_veteran_equip",
+			"title": "general.achievement.id.weapon_veteran_equip.title",
+			"desc": "general.achievement.id.weapon_veteran_equip.desc",
+			"category": "zone",
+			"rarity": "common",
+			"type": "trigger",
+			"distributorExportable": true
+		},
+		{
+			"id": 401,
+			"canUseAsTag": false,
+			"key": "welcome",
+			"title": "general.achievement.id.welcome.title",
+			"desc": "general.achievement.id.welcome.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger"
+		},
+		{
+			"id": 402,
+			"canUseAsTag": false,
+			"key": "where_r_u_going",
+			"title": "general.achievement.id.where_r_u_going.title",
+			"desc": "general.achievement.id.where_r_u_going.desc",
+			"category": "combat",
+			"rarity": "common",
+			"type": "counter",
+			"count": 50
+		},
+		{
+			"id": 403,
+			"canUseAsTag": false,
+			"key": "will_not_pass",
+			"title": "general.achievement.id.will_not_pass.title",
+			"desc": "general.achievement.id.will_not_pass.desc",
+			"category": "guild_n_party",
+			"rarity": "secret",
+			"type": "counter",
+			"hidden": true,
+			"count": 10
+		},
+		{
+			"id": 404,
+			"canUseAsTag": false,
+			"key": "workbench_warrior",
+			"title": "general.achievement.id.workbench_warrior.title",
+			"desc": "general.achievement.id.workbench_warrior.desc",
+			"category": "economy",
+			"rarity": "rare",
+			"type": "counter",
+			"hidden": true,
+			"count": 100
+		},
+		{
+			"id": 405,
+			"canUseAsTag": false,
+			"key": "yanov_explored",
+			"title": "general.achievement.id.yanov_explored.title",
+			"desc": "general.achievement.id.yanov_explored.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"location": [
+					{
+						"locations": [
+							"yanov"
+						],
+						"area": {
+							"minX": -6000.0,
+							"minY": 0.0,
+							"minZ": -1500.0,
+							"maxX": -2700.0,
+							"maxY": 100.0,
+							"maxZ": 4900.0
+						}
+					}
+				]
+			}
+		},
+		{
+			"id": 406,
+			"canUseAsTag": false,
+			"key": "yanov_miniboss_2021",
+			"title": "general.achievement.id.yanov_miniboss_2021.title",
+			"desc": "general.achievement.id.yanov_miniboss_2021.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "counter",
+			"hidden": true,
+			"count": 1,
+			"triggerRules": {
+				"killTarget": [
+					"Бульдозер/"
+				]
+			}
+		},
+		{
+			"id": 407,
+			"canUseAsTag": true,
+			"key": "yanov_miniboss_2021_winter",
+			"title": "general.achievement.id.yanov_miniboss_2021_winter.title",
+			"desc": "general.achievement.id.yanov_miniboss_2021_winter.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "counter",
+			"hidden": true,
+			"count": 1,
+			"triggerRules": {
+				"killTarget": [
+					"Бульдозерl"
+				]
+			}
+		},
+		{
+			"id": 408,
+			"canUseAsTag": false,
+			"key": "yantar_explored",
+			"title": "general.achievement.id.yantar_explored.title",
+			"desc": "general.achievement.id.yantar_explored.desc",
+			"category": "zone",
+			"rarity": "common",
+			"type": "trigger",
+			"triggerRules": {
+				"location": [
+					{
+						"locations": [
+							"yantar"
+						],
+						"area": {
+							"minX": -6000.0,
+							"minY": 0.0,
+							"minZ": -1500.0,
+							"maxX": -2700.0,
+							"maxY": 100.0,
+							"maxZ": 4900.0
+						}
+					}
+				]
+			}
+		},
+		{
+			"id": 409,
+			"canUseAsTag": false,
+			"key": "young-expl",
+			"title": "general.achievement.id.young-expl.title",
+			"desc": "general.achievement.id.young-expl.desc",
+			"category": "zone",
+			"rarity": "rare",
+			"type": "counter",
+			"count": 10
+		},
+		{
+			"id": 410,
+			"canUseAsTag": false,
+			"key": "zaton_explored",
+			"title": "general.achievement.id.zaton_explored.title",
+			"desc": "general.achievement.id.zaton_explored.desc",
+			"category": "zone",
+			"rarity": "rare",
+			"type": "trigger",
+			"triggerRules": {
+				"location": [
+					{
+						"locations": [
+							"zaton"
+						],
+						"area": {
+							"minX": -6000.0,
+							"minY": 0.0,
+							"minZ": -1500.0,
+							"maxX": -2700.0,
+							"maxY": 100.0,
+							"maxZ": 4900.0
+						}
+					}
+				]
+			}
+		},
+		{
+			"id": 411,
+			"canUseAsTag": true,
+			"key": "zaton_miniboss_2021",
+			"title": "general.achievement.id.zaton_miniboss_2021.title",
+			"desc": "general.achievement.id.zaton_miniboss_2021.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "counter",
+			"hidden": true,
+			"count": 1,
+			"triggerRules": {
+				"killTarget": [
+					"Абибасник/"
+				]
+			}
+		},
+		{
+			"id": 412,
+			"canUseAsTag": true,
+			"key": "zaton_miniboss_2021_winter",
+			"title": "general.achievement.id.zaton_miniboss_2021_winter.title",
+			"desc": "general.achievement.id.zaton_miniboss_2021_winter.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "counter",
+			"hidden": true,
+			"count": 1,
+			"triggerRules": {
+				"killTarget": [
+					"Абибасниlк"
+				]
+			}
+		},
+		{
+			"id": 413,
+			"canUseAsTag": false,
+			"key": "zubastiki",
+			"title": "general.achievement.id.zubastiki.title",
+			"desc": "general.achievement.id.zubastiki.desc",
+			"category": "combat",
+			"rarity": "rare",
+			"type": "counter",
+			"count": 100,
+			"triggerRules": {
+				"mutantKills": [
+					"tushkan"
+				]
+			}
+		},
+		{
+			"id": 414,
+			"canUseAsTag": true,
+			"key": "operations_complete_1",
+			"title": "general.achievement.id.operations_complete_1.title",
+			"desc": "general.achievement.id.operations_complete_1.desc",
+			"category": "session_modes",
+			"rarity": "secret",
+			"type": "counter",
+			"count": 1
+		},
+		{
+			"id": 415,
+			"canUseAsTag": true,
+			"key": "operations_complete_50",
+			"title": "general.achievement.id.operations_complete_50.title",
+			"desc": "general.achievement.id.operations_complete_50.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "counter",
+			"count": 50
+		},
+		{
+			"id": 416,
+			"canUseAsTag": true,
+			"key": "operations_complete_100",
+			"title": "general.achievement.id.operations_complete_100.title",
+			"desc": "general.achievement.id.operations_complete_100.desc",
+			"category": "session_modes",
+			"rarity": "rare",
+			"type": "counter",
+			"count": 100
+		},
+		{
+			"id": 417,
+			"canUseAsTag": true,
+			"key": "operations_complete_1000",
+			"title": "general.achievement.id.operations_complete_1000.title",
+			"desc": "general.achievement.id.operations_complete_1000.desc",
+			"category": "session_modes",
+			"rarity": "legendary",
+			"type": "counter",
+			"count": 1000
+		},
+		{
+			"id": 418,
+			"canUseAsTag": false,
+			"key": "operations_quest",
+			"title": "general.achievement.id.operations_quest.title",
+			"desc": "general.achievement.id.operations_quest.desc",
+			"category": "zone",
+			"rarity": "common",
+			"type": "trigger",
+			"triggerRules": {
+				"quest": [
+					30846
+				]
+			}
+		},
+		{
+			"id": 419,
+			"canUseAsTag": true,
+			"key": "operations_breach_15",
+			"title": "general.achievement.id.operations_breach_15.title",
+			"desc": "general.achievement.id.operations_breach_15.desc",
+			"category": "session_modes",
+			"rarity": "rare",
+			"type": "trigger"
+		},
+		{
+			"id": 420,
+			"canUseAsTag": true,
+			"key": "operations_focus_15",
+			"title": "general.achievement.id.operations_focus_15.title",
+			"desc": "general.achievement.id.operations_focus_15.desc",
+			"category": "session_modes",
+			"rarity": "rare",
+			"type": "trigger"
+		},
+		{
+			"id": 421,
+			"canUseAsTag": true,
+			"key": "operations_naked_crew",
+			"title": "general.achievement.id.operations_naked_crew.title",
+			"desc": "general.achievement.id.operations_naked_crew.desc",
+			"category": "session_modes",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 422,
+			"canUseAsTag": true,
+			"key": "ny25_recap",
+			"title": "general.achievement.id.ny25_recap.title",
+			"desc": "general.achievement.id.ny25_recap.desc",
+			"category": "zone",
+			"rarity": "rare",
+			"type": "trigger",
+			"hidden": true,
+			"triggerRules": {
+				"location": [
+					{
+						"locations": [
+							"kordon"
+						],
+						"area": {
+							"minX": 0.0,
+							"minY": 0.0,
+							"minZ": 0.0,
+							"maxX": 1.0,
+							"maxY": 1.0,
+							"maxZ": 1.0
+						}
+					}
+				]
+			}
+		},
+		{
+			"id": 423,
+			"canUseAsTag": true,
+			"key": "ny25_recap_top250_items_crafted",
+			"title": "general.achievement.id.ny25_recap_top250_items_crafted.title",
+			"desc": "general.achievement.id.ny25_recap_top250_items_crafted.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 424,
+			"canUseAsTag": true,
+			"key": "ny25_recap_top250_delivery_complete",
+			"title": "general.achievement.id.ny25_recap_top250_delivery_complete.title",
+			"desc": "general.achievement.id.ny25_recap_top250_delivery_complete.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 425,
+			"canUseAsTag": true,
+			"key": "ny25_recap_top250_delivery_steal",
+			"title": "general.achievement.id.ny25_recap_top250_delivery_steal.title",
+			"desc": "general.achievement.id.ny25_recap_top250_delivery_steal.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 426,
+			"canUseAsTag": true,
+			"key": "ny25_recap_top250_quests_daily",
+			"title": "general.achievement.id.ny25_recap_top250_quests_daily.title",
+			"desc": "general.achievement.id.ny25_recap_top250_quests_daily.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 427,
+			"canUseAsTag": true,
+			"key": "ny25_recap_top250_quests_weekly",
+			"title": "general.achievement.id.ny25_recap_top250_quests_weekly.title",
+			"desc": "general.achievement.id.ny25_recap_top250_quests_weekly.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 428,
+			"canUseAsTag": true,
+			"key": "ny25_recap_top250_quests_contracts",
+			"title": "general.achievement.id.ny25_recap_top250_quests_contracts.title",
+			"desc": "general.achievement.id.ny25_recap_top250_quests_contracts.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 429,
+			"canUseAsTag": true,
+			"key": "ny25_recap_top250_artifacts_picked",
+			"title": "general.achievement.id.ny25_recap_top250_artifacts_picked.title",
+			"desc": "general.achievement.id.ny25_recap_top250_artifacts_picked.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 430,
+			"canUseAsTag": true,
+			"key": "ny25_recap_top250_farmed_signals",
+			"title": "general.achievement.id.ny25_recap_top250_farmed_signals.title",
+			"desc": "general.achievement.id.ny25_recap_top250_farmed_signals.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 431,
+			"canUseAsTag": true,
+			"key": "ny25_recap_top250_farmed_camps",
+			"title": "general.achievement.id.ny25_recap_top250_farmed_camps.title",
+			"desc": "general.achievement.id.ny25_recap_top250_farmed_camps.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 432,
+			"canUseAsTag": true,
+			"key": "ny25_recap_top250_farmed_mineable",
+			"title": "general.achievement.id.ny25_recap_top250_farmed_mineable.title",
+			"desc": "general.achievement.id.ny25_recap_top250_farmed_mineable.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 433,
+			"canUseAsTag": true,
+			"key": "ny25_recap_top250_playtime",
+			"title": "general.achievement.id.ny25_recap_top250_playtime.title",
+			"desc": "general.achievement.id.ny25_recap_top250_playtime.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 434,
+			"canUseAsTag": true,
+			"key": "ny25_recap_top250_auction_turnover",
+			"title": "general.achievement.id.ny25_recap_top250_auction_turnover.title",
+			"desc": "general.achievement.id.ny25_recap_top250_auction_turnover.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 435,
+			"canUseAsTag": true,
+			"key": "ny25_recap_top250_money_gained_inside",
+			"title": "general.achievement.id.ny25_recap_top250_money_gained_inside.title",
+			"desc": "general.achievement.id.ny25_recap_top250_money_gained_inside.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 436,
+			"canUseAsTag": true,
+			"key": "ny25_recap_top250_money_gained_encaged",
+			"title": "general.achievement.id.ny25_recap_top250_money_gained_encaged.title",
+			"desc": "general.achievement.id.ny25_recap_top250_money_gained_encaged.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 437,
+			"canUseAsTag": true,
+			"key": "ny25_recap_top250_money_gained_frontline",
+			"title": "general.achievement.id.ny25_recap_top250_money_gained_frontline.title",
+			"desc": "general.achievement.id.ny25_recap_top250_money_gained_frontline.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 438,
+			"canUseAsTag": true,
+			"key": "ny25_recap_top250_money_gained_operations",
+			"title": "general.achievement.id.ny25_recap_top250_money_gained_operations.title",
+			"desc": "general.achievement.id.ny25_recap_top250_money_gained_operations.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 439,
+			"canUseAsTag": true,
+			"key": "ny25_recap_top250_money_gained_duels",
+			"title": "general.achievement.id.ny25_recap_top250_money_gained_duels.title",
+			"desc": "general.achievement.id.ny25_recap_top250_money_gained_duels.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 440,
+			"canUseAsTag": true,
+			"key": "ny25_recap_top250_frontline_industries_hours",
+			"title": "general.achievement.id.ny25_recap_top250_frontline_industries_hours.title",
+			"desc": "general.achievement.id.ny25_recap_top250_frontline_industries_hours.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 441,
+			"canUseAsTag": true,
+			"key": "ny25_recap_top250_kills",
+			"title": "general.achievement.id.ny25_recap_top250_kills.title",
+			"desc": "general.achievement.id.ny25_recap_top250_kills.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 442,
+			"canUseAsTag": true,
+			"key": "ny25_recap_top250_deaths",
+			"title": "general.achievement.id.ny25_recap_top250_deaths.title",
+			"desc": "general.achievement.id.ny25_recap_top250_deaths.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 443,
+			"canUseAsTag": true,
+			"key": "ny25_recap_top250_throw_grenades",
+			"title": "general.achievement.id.ny25_recap_top250_throw_grenades.title",
+			"desc": "general.achievement.id.ny25_recap_top250_throw_grenades.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 444,
+			"canUseAsTag": true,
+			"key": "ny25_recap_top250_uniq_armors",
+			"title": "general.achievement.id.ny25_recap_top250_uniq_armors.title",
+			"desc": "general.achievement.id.ny25_recap_top250_uniq_armors.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 445,
+			"canUseAsTag": true,
+			"key": "ny25_recap_top250_uniq_weapons",
+			"title": "general.achievement.id.ny25_recap_top250_uniq_weapons.title",
+			"desc": "general.achievement.id.ny25_recap_top250_uniq_weapons.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 446,
+			"canUseAsTag": true,
+			"key": "ny25_recap_top250_captured_outposts",
+			"title": "general.achievement.id.ny25_recap_top250_captured_outposts.title",
+			"desc": "general.achievement.id.ny25_recap_top250_captured_outposts.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 447,
+			"canUseAsTag": true,
+			"key": "ny25_recap_top250_wins_gunplay",
+			"title": "general.achievement.id.ny25_recap_top250_wins_gunplay.title",
+			"desc": "general.achievement.id.ny25_recap_top250_wins_gunplay.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 448,
+			"canUseAsTag": true,
+			"key": "ny25_recap_top250_wins_deathmatch",
+			"title": "general.achievement.id.ny25_recap_top250_wins_deathmatch.title",
+			"desc": "general.achievement.id.ny25_recap_top250_wins_deathmatch.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 449,
+			"canUseAsTag": true,
+			"key": "ny25_recap_top250_ffa_camp",
+			"title": "general.achievement.id.ny25_recap_top250_ffa_camp.title",
+			"desc": "general.achievement.id.ny25_recap_top250_ffa_camp.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 450,
+			"canUseAsTag": true,
+			"key": "ny25_recap_top250_ffa_fortification",
+			"title": "general.achievement.id.ny25_recap_top250_ffa_fortification.title",
+			"desc": "general.achievement.id.ny25_recap_top250_ffa_fortification.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 451,
+			"canUseAsTag": true,
+			"key": "ny25_recap_top250_mlg",
+			"title": "general.achievement.id.ny25_recap_top250_mlg.title",
+			"desc": "general.achievement.id.ny25_recap_top250_mlg.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 452,
+			"canUseAsTag": true,
+			"key": "ny25_recap_top250_captured_airdrops",
+			"title": "general.achievement.id.ny25_recap_top250_captured_airdrops.title",
+			"desc": "general.achievement.id.ny25_recap_top250_captured_airdrops.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 453,
+			"canUseAsTag": true,
+			"key": "ny25_recap_top250_season_pass_levels",
+			"title": "general.achievement.id.ny25_recap_top250_season_pass_levels.title",
+			"desc": "general.achievement.id.ny25_recap_top250_season_pass_levels.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 454,
+			"canUseAsTag": true,
+			"key": "ny25_recap_top250_frontline_ff_kills",
+			"title": "general.achievement.id.ny25_recap_top250_frontline_ff_kills.title",
+			"desc": "general.achievement.id.ny25_recap_top250_frontline_ff_kills.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 455,
+			"canUseAsTag": true,
+			"key": "ny25_recap_top250_journeys",
+			"title": "general.achievement.id.ny25_recap_top250_journeys.title",
+			"desc": "general.achievement.id.ny25_recap_top250_journeys.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 456,
+			"canUseAsTag": true,
+			"key": "ny25_recap_top250_kills_melee",
+			"title": "general.achievement.id.ny25_recap_top250_kills_melee.title",
+			"desc": "general.achievement.id.ny25_recap_top250_kills_melee.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 457,
+			"canUseAsTag": true,
+			"key": "ny25_recap_top250_use_medicine",
+			"title": "general.achievement.id.ny25_recap_top250_use_medicine.title",
+			"desc": "general.achievement.id.ny25_recap_top250_use_medicine.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 458,
+			"canUseAsTag": true,
+			"key": "ny25_recap_top250_boss_kiber",
+			"title": "general.achievement.id.ny25_recap_top250_boss_kiber.title",
+			"desc": "general.achievement.id.ny25_recap_top250_boss_kiber.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 459,
+			"canUseAsTag": true,
+			"key": "ny25_recap_top250_boss_morg",
+			"title": "general.achievement.id.ny25_recap_top250_boss_morg.title",
+			"desc": "general.achievement.id.ny25_recap_top250_boss_morg.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 460,
+			"canUseAsTag": true,
+			"key": "ny25_recap_top250_boss_robo_nanya",
+			"title": "general.achievement.id.ny25_recap_top250_boss_robo_nanya.title",
+			"desc": "general.achievement.id.ny25_recap_top250_boss_robo_nanya.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 461,
+			"canUseAsTag": true,
+			"key": "ny25_recap_top250_boss_shaman",
+			"title": "general.achievement.id.ny25_recap_top250_boss_shaman.title",
+			"desc": "general.achievement.id.ny25_recap_top250_boss_shaman.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 462,
+			"canUseAsTag": true,
+			"key": "ny25_recap_top250_boss_twins",
+			"title": "general.achievement.id.ny25_recap_top250_boss_twins.title",
+			"desc": "general.achievement.id.ny25_recap_top250_boss_twins.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 463,
+			"canUseAsTag": true,
+			"key": "ny25_recap_top250_boss_vagant",
+			"title": "general.achievement.id.ny25_recap_top250_boss_vagant.title",
+			"desc": "general.achievement.id.ny25_recap_top250_boss_vagant.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 464,
+			"canUseAsTag": true,
+			"key": "ny25_recap_top250_cameraman",
+			"title": "general.achievement.id.ny25_recap_top250_cameraman.title",
+			"desc": "general.achievement.id.ny25_recap_top250_cameraman.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 465,
+			"canUseAsTag": true,
+			"key": "ny25_recap_top250_forum_post",
+			"title": "general.achievement.id.ny25_recap_top250_forum_post.title",
+			"desc": "general.achievement.id.ny25_recap_top250_forum_post.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 466,
+			"canUseAsTag": true,
+			"key": "santa_claus_2025",
+			"title": "general.achievement.id.santa_claus_2025.title",
+			"desc": "general.achievement.id.santa_claus_2025.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": false
+		},
+		{
+			"id": 467,
+			"canUseAsTag": true,
+			"key": "santa_claus_assistant_2025",
+			"title": "general.achievement.id.santa_claus_assistant_2025.title",
+			"desc": "general.achievement.id.santa_claus_assistant_2025.desc",
+			"category": "zone",
+			"rarity": "rare",
+			"type": "trigger",
+			"hidden": false
+		},
+		{
+			"id": 468,
+			"canUseAsTag": true,
+			"key": "santa_claus_favorite_2025",
+			"title": "general.achievement.id.santa_claus_favorite_2025.title",
+			"desc": "general.achievement.id.santa_claus_favorite_2025.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": false
+		},
+		{
+			"id": 469,
+			"canUseAsTag": true,
+			"key": "unpacker_2025",
+			"title": "general.achievement.id.unpacker_2025.title",
+			"desc": "general.achievement.id.unpacker_2025.desc",
+			"category": "zone",
+			"rarity": "rare",
+			"type": "trigger",
+			"hidden": false
+		},
+		{
+			"id": 470,
+			"canUseAsTag": false,
+			"key": "dmz_2026_at_home",
+			"title": "general.achievement.id.dmz_2026_at_home.title",
+			"desc": "general.achievement.id.dmz_2026_at_home.desc",
+			"category": "session_modes",
+			"rarity": "secret",
+			"type": "counter",
+			"count": 25,
+			"hidden": false
+		},
+		{
+			"id": 471,
+			"canUseAsTag": true,
+			"key": "dmz_2026_batman",
+			"title": "general.achievement.id.dmz_2026_batman.title",
+			"desc": "general.achievement.id.dmz_2026_batman.desc",
+			"category": "session_modes",
+			"rarity": "secret",
+			"type": "counter",
+			"count": 15,
+			"hidden": false
+		},
+		{
+			"id": 472,
+			"canUseAsTag": true,
+			"key": "dmz_2026_most_fabulous",
+			"title": "general.achievement.id.dmz_2026_most_fabulous.title",
+			"desc": "general.achievement.id.dmz_2026_most_fabulous.desc",
+			"category": "session_modes",
+			"rarity": "secret",
+			"type": "counter",
+			"count": 15,
+			"hidden": false
+		},
+		{
+			"id": 473,
+			"canUseAsTag": true,
+			"key": "dmz_2026_popular",
+			"title": "general.achievement.id.dmz_2026_popular.title",
+			"desc": "general.achievement.id.dmz_2026_popular.desc",
+			"category": "session_modes",
+			"rarity": "secret",
+			"type": "counter",
+			"count": 15,
+			"hidden": false
+		},
+		{
+			"id": 474,
+			"canUseAsTag": true,
+			"key": "dmz_2026_crafter",
+			"title": "general.achievement.id.dmz_2026_crafter.title",
+			"desc": "general.achievement.id.dmz_2026_crafter.desc",
+			"category": "session_modes",
+			"rarity": "secret",
+			"type": "counter",
+			"count": 15,
+			"hidden": false
+		},
+		{
+			"id": 475,
+			"canUseAsTag": true,
+			"key": "dmz_2026_alive_and_well",
+			"title": "general.achievement.id.dmz_2026_alive_and_well.title",
+			"desc": "general.achievement.id.dmz_2026_alive_and_well.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "trigger",
+			"hidden": false
+		},
+		{
+			"id": 476,
+			"canUseAsTag": true,
+			"key": "dmz_2026_delta_force",
+			"title": "general.achievement.id.dmz_2026_delta_force.title",
+			"desc": "general.achievement.id.dmz_2026_delta_force.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "trigger",
+			"hidden": false
+		},
+		{
+			"id": 477,
+			"canUseAsTag": true,
+			"key": "dmz_2026_carpet_seller",
+			"title": "general.achievement.id.dmz_2026_carpet_seller.title",
+			"desc": "general.achievement.id.dmz_2026_carpet_seller.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "counter",
+			"count": 100,
+			"hidden": false
+		},
+		{
+			"id": 478,
+			"canUseAsTag": true,
+			"key": "dmz_2026_lazarus",
+			"title": "general.achievement.id.dmz_2026_lazarus.title",
+			"desc": "general.achievement.id.dmz_2026_lazarus.desc",
+			"category": "session_modes",
+			"rarity": "rare",
+			"type": "counter",
+			"count": 10,
+			"hidden": true
+		},
+		{
+			"id": 479,
+			"canUseAsTag": true,
+			"key": "dmz_2026_bullseye",
+			"title": "general.achievement.id.dmz_2026_bullseye.title",
+			"desc": "general.achievement.id.dmz_2026_bullseye.desc",
+			"category": "session_modes",
+			"rarity": "rare",
+			"type": "counter",
+			"count": 7,
+			"hidden": false
+		},
+		{
+			"id": 480,
+			"canUseAsTag": true,
+			"key": "dmz_2026_greedy",
+			"title": "general.achievement.id.dmz_2026_greedy.title",
+			"desc": "general.achievement.id.dmz_2026_greedy.desc",
+			"category": "session_modes",
+			"rarity": "rare",
+			"type": "counter",
+			"count": 10000,
+			"hidden": false
+		},
+		{
+			"id": 481,
+			"canUseAsTag": false,
+			"key": "dmz_2026_we_succeeded",
+			"title": "general.achievement.id.dmz_2026_we_succeeded.title",
+			"desc": "general.achievement.id.dmz_2026_we_succeeded.desc",
+			"category": "session_modes",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": false
+		},
+		{
+			"id": 482,
+			"canUseAsTag": false,
+			"key": "dmz_2026_dunkirk",
+			"title": "general.achievement.id.dmz_2026_dunkirk.title",
+			"desc": "general.achievement.id.dmz_2026_dunkirk.desc",
+			"category": "session_modes",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": false
+		},
+		{
+			"id": 483,
+			"canUseAsTag": true,
+			"key": "dmz_2026_80s_hero",
+			"title": "general.achievement.id.dmz_2026_80s_hero.title",
+			"desc": "general.achievement.id.dmz_2026_80s_hero.desc",
+			"category": "session_modes",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": false
+		},
+		{
+			"id": 484,
+			"canUseAsTag": true,
+			"key": "dmz_2026_quest",
+			"title": "general.achievement.id.dmz_2026_quest.title",
+			"desc": "general.achievement.id.dmz_2026_quest.desc",
+			"category": "zone",
+			"rarity": "common",
+			"type": "trigger",
+			"triggerRules": {"quest": [33402]}
+		},
+		{
+			"id": 485,
+			"canUseAsTag": true,
+			"key": "dmz_2026_tankWatch",
+			"title": "general.achievement.id.dmz_2026_quest.tankiWatch.title",
+			"desc": "general.achievement.id.dmz_2026_quest.tankiWatch.desc",
+			"category": "zone",
+			"rarity": "common",
+			"type": "trigger",
+			"triggerRules": {
+				"quest": [
+					33562
+				]
+			}
+		},
+		{
+			"id": 486,
+			"canUseAsTag": true,
+			"key": "operations_sea_alienation_15",
+			"title": "general.achievement.id.operations_sea_alienation_15.title",
+			"desc": "general.achievement.id.operations_sea_alienation_15.desc",
+			"category": "session_modes",
+			"rarity": "rare",
+			"type": "trigger"
+		},
+		{
+			"id": 487,
+			"canUseAsTag": false,
+			"key": "operations_blind_luck",
+			"title": "general.achievement.id.blind_luck.title",
+			"desc": "general.achievement.id.blind_luck.desc",
+			"category": "session_modes",
+			"rarity": "rare",
+			"type": "trigger"
+		},
+		{
+			"id": 488,
+			"canUseAsTag": false,
+			"key": "operations_under_pressure",
+			"title": "general.achievement.id.under_pressure.title",
+			"desc": "general.achievement.id.under_pressure.desc",
+			"category": "session_modes",
+			"rarity": "rare",
+			"type": "trigger"
+		},
+		{
+			"id": 489,
+			"canUseAsTag": true,
+			"key": "operations_electrician",
+			"title": "general.achievement.id.electrician.title",
+			"desc": "general.achievement.id.electrician.desc",
+			"category": "session_modes",
+			"rarity": "rare",
+			"type": "trigger"
+		},
+		{
+			"id": 490,//тут было 486, фиксили мержконфликт
+			"canUseAsTag": true,
+			"key": "unnamed_deep_bro",
+			"title": "general.achievement.id.unnamed_deep_bro.title",
+			"desc": "general.achievement.id.unnamed_deep_bro.desc",
+			"category": "zone",
+			"rarity": "common",
+			"type": "trigger",
+			"triggerRules": {
+				"quest": [
+					34002
+				]
+			}
+		},
+		{
+			"id": 491,//тут было 487, фиксили мержконфликт
+			"canUseAsTag": true,
+			"key": "unnamed_deep_no_bro",
+			"title": "general.achievement.id.unnamed_deep_no_bro.title",
+			"desc": "general.achievement.id.unnamed_deep_no_bro.desc",
+			"category": "zone",
+			"rarity": "common",
+			"type": "trigger",
+			"triggerRules": {
+				"quest": [
+					34003
+				]
+			}
+		},
+		{
+			"id": 492,//тут было 488, фиксили мержконфликт
+			"canUseAsTag": true,
+			"key": "leviathan_pray",
+			"title": "general.achievement.id.leviathan_pray.title",
+			"desc": "general.achievement.id.leviathan_pray.desc",
+			"category": "zone",
+			"rarity": "common",
+			"type": "trigger",
+			"triggerRules": {
+				"quest": [
+					34004
+				]
+			}
+		},
+		{
+			"id": 493,//тут ничего не было, не фиксили мержконфликт
+			"canUseAsTag": true,
+			"key": "leviathan_disk",
+			"title": "general.achievement.id.leviathan_disk.title",
+			"desc": "general.achievement.id.leviathan_disk.desc",
+			"category": "zone",
+			"rarity": "common",
+			"type": "trigger",
+			"triggerRules": {
+				"quest": [
+					34086
+				]
+			}
+		},
+
+		{
+			"id": 494,
+			"canUseAsTag": true,
+			"key": "april_fools_2026",
+			"title": "general.achievement.id.april_fools_2026.title",
+			"desc": "general.achievement.id.april_fools_2026.desc",
+			"category": "session_modes",
+			"rarity": "secret",
+			"type": "counter",
+			"hidden": true,
+			"count": 200,
+			"triggerRules": {
+				"location": [
+					{
+						"locations": [
+							"battlefield_1april_open"
+						]
+					}
+				]
+			}
+		},
+		{
+			"id": 495,
+			"canUseAsTag": true,
+			"key": "base_sanitar_1_voyeur",
+			"title": "general.achievement.id.base_sanitar_1_voyeur.title",
+			"desc": "general.achievement.id.base_sanitar_1_voyeur.desc",
+			"category": "zone",
+			"rarity": "common",
+			"type": "trigger",
+			"triggerRules": {
+				"quest": [33696]
+			}
+		},
+		{
+			"id": 496,
+			"canUseAsTag": true,
+			"key": "base_sanitar_1_wrong_door",
+			"title": "general.achievement.id.base_sanitar_1_wrong_door.title",
+			"desc": "general.achievement.id.base_sanitar_1_wrong_door.desc",
+			"category": "zone",
+			"rarity": "common",
+			"type": "trigger",
+			"triggerRules": {
+				"quest": [33896]
+			}
+		},
+		{
+			"id": 497,
+			"canUseAsTag": false,
+			"key": "operations_precious_cargo",
+			"title": "general.achievement.id.operations_precious_cargo.title",
+			"desc": "general.achievement.id.operations_precious_cargo.desc",
+			"category": "session_modes",
+			"rarity": "legendary",
+			"type": "trigger"
+		},
+		{
+			"id": 498,
+			"canUseAsTag": false,
+			"key": "operations_laser_show",
+			"title": "general.achievement.id.operations_laser_show.title",
+			"desc": "general.achievement.id.operations_laser_show.desc",
+			"category": "session_modes",
+			"rarity": "legendary",
+			"type": "trigger"
+		},
+		{
+			"id": 499,
+			"canUseAsTag": true,
+			"key": "ops_rating_patient_zero",
+			"title": "general.achievement.id.ops_rating_patient_zero.title",
+			"desc": "general.achievement.id.ops_rating_patient_zero.desc",
+			"category": "session_modes",
+			"rarity": "legendary",
+			"type": "trigger"
+		},
+		{
+			"id": 500,
+			"canUseAsTag": true,
+			"key": "reichstag_infantry_level10",
+			"title": "general.achievement.id.reichstag_infantry_level10.title",
+			"desc": "general.achievement.id.reichstag_infantry_level10.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "challenge",
+			"challenge": "spring26/challenges/reichstag/1",
+			"hidden": false
+		},
+		{
+			"id": 501,
+			"canUseAsTag": true,
+			"key": "reichstag_infantry_level20",
+			"title": "general.achievement.id.reichstag_infantry_level20.title",
+			"desc": "general.achievement.id.reichstag_infantry_level20.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "challenge",
+			"challenge": "spring26/challenges/reichstag/2",
+			"hidden": false
+		},
+		{
+			"id": 502,
+			"canUseAsTag": true,
+			"key": "reichstag_scout_level10",
+			"title": "general.achievement.id.reichstag_scout_level10.title",
+			"desc": "general.achievement.id.reichstag_scout_level10.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "challenge",
+			"challenge": "spring26/challenges/reichstag/3",
+			"hidden": false
+		},
+		{
+			"id": 503,
+			"canUseAsTag": true,
+			"key": "reichstag_scout_level20",
+			"title": "general.achievement.id.reichstag_scout_level20.title",
+			"desc": "general.achievement.id.reichstag_scout_level20.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "challenge",
+			"challenge": "spring26/challenges/reichstag/4",
+			"hidden": false
+		},
+		{
+			"id": 504,
+			"canUseAsTag": true,
+			"key": "reichstag_engineer_level10",
+			"title": "general.achievement.id.reichstag_engineer_level10.title",
+			"desc": "general.achievement.id.reichstag_engineer_level10.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "challenge",
+			"challenge": "spring26/challenges/reichstag/5",
+			"hidden": false
+		},
+		{
+			"id": 505,
+			"canUseAsTag": true,
+			"key": "reichstag_engineer_level20",
+			"title": "general.achievement.id.reichstag_engineer_level20.title",
+			"desc": "general.achievement.id.reichstag_engineer_level20.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "challenge",
+			"challenge": "spring26/challenges/reichstag/6",
+			"hidden": false
+		},
+		{
+			"id": 506,
+			"canUseAsTag": true,
+			"key": "reichstag_machinegunner_level10",
+			"title": "general.achievement.id.reichstag_machinegunner_level10.title",
+			"desc": "general.achievement.id.reichstag_machinegunner_level10.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "challenge",
+			"challenge": "spring26/challenges/reichstag/7",
+			"hidden": false
+		},
+		{
+			"id": 507,
+			"canUseAsTag": true,
+			"key": "reichstag_machinegunner_level20",
+			"title": "general.achievement.id.reichstag_machinegunner_level20.title",
+			"desc": "general.achievement.id.reichstag_machinegunner_level20.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "challenge",
+			"challenge": "spring26/challenges/reichstag/8",
+			"hidden": false
+		},
+		{
+			"id": 508,
+			"canUseAsTag": true,
+			"key": "reichstag_10_games",
+			"title": "general.achievement.id.reichstag_10_games.title",
+			"desc": "general.achievement.id.reichstag_10_games.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "challenge",
+			"challenge": "spring26/challenges/reichstag/9",
+			"hidden": false
+		},
+		{
+			"id": 509,
+			"canUseAsTag": true,
+			"key": "reichstag_25_games",
+			"title": "general.achievement.id.reichstag_25_games.title",
+			"desc": "general.achievement.id.reichstag_25_games.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "challenge",
+			"challenge": "spring26/challenges/reichstag/10",
+			"hidden": false
+		},
+		{
+			"id": 510,
+			"canUseAsTag": true,
+			"key": "reichstag_100_games",
+			"title": "general.achievement.id.reichstag_100_games.title",
+			"desc": "general.achievement.id.reichstag_100_games.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "challenge",
+			"challenge": "spring26/challenges/reichstag/11",
+			"hidden": false
+		},
+		{
+			"id": 511,
+			"canUseAsTag": true,
+			"key": "radioman",
+			"title": "general.achievement.id.radioman.title",
+			"desc": "general.achievement.id.radioman.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "challenge",
+			"challenge": "spring26/challenges/reichstag/12",
+			"hidden": false
+		},
+		{
+			"id": 512,
+			"canUseAsTag": true,
+			"key": "wind_correction",
+			"title": "general.achievement.id.wind_correction.title",
+			"desc": "general.achievement.id.wind_correction.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "challenge",
+			"challenge": "spring26/challenges/reichstag/13",
+			"hidden": false
+		},
+		{
+			"id": 513,
+			"canUseAsTag": true,
+			"key": "last_stand",
+			"title": "general.achievement.id.last_stand.title",
+			"desc": "general.achievement.id.last_stand.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "challenge",
+			"challenge": "spring26/challenges/reichstag/14",
+			"hidden": false
+		},
+		{
+			"id": 514,
+			"canUseAsTag": true,
+			"key": "no_capitulation",
+			"title": "general.achievement.id.no_capitulation.title",
+			"desc": "general.achievement.id.no_capitulation.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "challenge",
+			"challenge": "spring26/challenges/reichstag/15",
+			"hidden": false
+		},
+		{
+			"id": 515,
+			"canUseAsTag": true,
+			"key": "scattered",
+			"title": "general.achievement.id.scattered.title",
+			"desc": "general.achievement.id.scattered.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "challenge",
+			"challenge": "spring26/challenges/reichstag/16",
+			"hidden": false
+		},
+		{
+			"id": 516,
+			"canUseAsTag": true,
+			"key": "reichstag_7_killstreak",
+			"title": "general.achievement.id.reichstag_7_killstreak.title",
+			"desc": "general.achievement.id.reichstag_7_killstreak.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "challenge",
+			"challenge": "spring26/challenges/reichstag/17",
+			"hidden": false
+		},
+		{
+			"id": 517,
+			"canUseAsTag": true,
+			"key": "reichstag_10_killstreak",
+			"title": "general.achievement.id.reichstag_10_killstreak.title",
+			"desc": "general.achievement.id.reichstag_10_killstreak.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "challenge",
+			"challenge": "spring26/challenges/reichstag/18",
+			"hidden": false
+		},
+		{
+			"id": 518,
+			"canUseAsTag": true,
+			"key": "reichstag_scout_5_kills",
+			"title": "general.achievement.id.reichstag_scout_5_kills.title",
+			"desc": "general.achievement.id.reichstag_scout_5_kills.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "challenge",
+			"challenge": "spring26/challenges/reichstag/19",
+			"hidden": false
+		},
+		{
+			"id": 519,
+			"canUseAsTag": true,
+			"key": "reichstag_gunner_5_kills",
+			"title": "general.achievement.id.reichstag_gunner_5_kills.title",
+			"desc": "general.achievement.id.reichstag_gunner_5_kills.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "challenge",
+			"challenge": "spring26/challenges/reichstag/20",
+			"hidden": false
+		},
+		{
+			"id": 520,
+			"canUseAsTag": true,
+			"key": "reichstag_faust",
+			"title": "general.achievement.id.reichstag_faust.title",
+			"desc": "general.achievement.id.reichstag_faust.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "challenge",
+			"challenge": "spring26/challenges/reichstag/21",
+			"hidden": false
+		},
+		{
+			"id": 521,
+			"canUseAsTag": true,
+			"key": "reichstag_ptrd_kills",
+			"title": "general.achievement.id.reichstag_ptrd_kills.title",
+			"desc": "general.achievement.id.reichstag_ptrd_kills.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "challenge",
+			"challenge": "spring26/challenges/reichstag/22",
+			"hidden": false
+		},
+		{
+			"id": 522,
+			"canUseAsTag": true,
+			"key": "reichstag_pzb_kills",
+			"title": "general.achievement.id.reichstag_pzb_kills.title",
+			"desc": "general.achievement.id.reichstag_pzb_kills.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "challenge",
+			"challenge": "spring26/challenges/reichstag/23",
+			"hidden": false
+		},
+		{
+			"id": 523,
+			"canUseAsTag": true,
+			"key": "reichstag_destroy_tank",
+			"title": "general.achievement.id.reichstag_destroy_tank.title",
+			"desc": "general.achievement.id.reichstag_destroy_tank.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "challenge",
+			"challenge": "spring26/challenges/reichstag/24",
+			"hidden": false
+		},
+		{
+			"id": 524,
+			"canUseAsTag": true,
+			"key": "reichstag_flamethrower_5_kills",
+			"title": "general.achievement.id.reichstag_flamethrower_5_kills.title",
+			"desc": "general.achievement.id.reichstag_flamethrower_5_kills.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "challenge",
+			"challenge": "spring26/challenges/reichstag/25",
+			"hidden": false
+		},
+		{
+			"id": 525,
+			"canUseAsTag": true,
+			"key": "reichstag_capture_30_points",
+			"title": "general.achievement.id.reichstag_capture_30_points.title",
+			"desc": "general.achievement.id.reichstag_capture_30_points.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "challenge",
+			"challenge": "spring26/challenges/reichstag/26",
+			"hidden": false
+		},
+		{
+			"id": 526,
+			"canUseAsTag": true,
+			"key": "reichstag_10_wins",
+			"title": "general.achievement.id.reichstag_10_wins.title",
+			"desc": "general.achievement.id.reichstag_10_wins.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "challenge",
+			"challenge": "spring26/challenges/reichstag/27",
+			"hidden": false
+		},
+		{
+			"id": 527,
+			"canUseAsTag": true,
+			"key": "reichstag_heavy_kills",
+			"title": "general.achievement.id.reichstag_heavy_kills.title",
+			"desc": "general.achievement.id.reichstag_heavy_kills.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "challenge",
+			"challenge": "spring26/challenges/reichstag/28",
+			"hidden": false
+		},
+		{
+			"id": 528,
+			"canUseAsTag": true,
+			"key": "reichstag_grenade_kills",
+			"title": "general.achievement.id.reichstag_grenade_kills.title",
+			"desc": "general.achievement.id.reichstag_grenade_kills.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "challenge",
+			"challenge": "spring26/challenges/reichstag/29",
+			"hidden": false
+		},
+		{
+			"id": 529,
+			"canUseAsTag": true,
+			"key": "reichstag_kills",
+			"title": "general.achievement.id.reichstag_kills.title",
+			"desc": "general.achievement.id.reichstag_kills.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "challenge",
+			"challenge": "spring26/challenges/reichstag/30",
+			"hidden": false
+		},
+		{
+			"id": 530,
+			"canUseAsTag": true,
+			"key": "before_oft_old",
+			"title": "general.achievement.id.before_oft_old.title",
+			"desc": "general.achievement.id.before_oft_old.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger"
+		},
+		{
+			"id": 531,
+			"canUseAsTag": true,
+			"key": "sandbox_veteran",
+			"title": "general.achievement.id.sandbox_veteran.title",
+			"desc": "general.achievement.id.sandbox_veteran.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger"
+		},
+		{
+			"id": 532,
+			"canUseAsTag": true,
+			"key": "perestroechny",
+			"title": "general.achievement.id.perestroechny.title",
+			"desc": "general.achievement.id.perestroechny.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger"
+		},
+		{
+			"id": 533,
+			"canUseAsTag": true,
+			"key": "generation_x",
+			"title": "general.achievement.id.generation_x.title",
+			"desc": "general.achievement.id.generation_x.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger"
+		},
+        {
+          "id": 534,
+          "canUseAsTag": true,
+          "key": "triumph_2026_challenges_30",
+          "title": "general.achievement.id.triumph_2026_challenges_30.title",
+          "desc": "general.achievement.id.triumph_2026_challenges_30.desc",
+          "category": "zone",
+          "rarity": "legendary",
+          "type": "trigger"
+        },
+        {
+          "id": 535,
+          "canUseAsTag": true,
+          "key": "bread_crumbs_quest",
+          "title": "general.achievement.id.bread_crumbs_quest.title",
+          "desc": "general.achievement.id.bread_crumbs_quest.desc",
+          "category": "zone",
+          "rarity": "common",
+          "type": "trigger",
+          "triggerRules": {"quest": [35505]}
+		},
+		{
+			"id": 536,
+			"canUseAsTag": true,
+			"key": "pres_wipe_rating",
+			"title": "general.achievement.id.pres_wipe_rating.title",
+			"desc": "general.achievement.id.pres_wipe_rating.desc",
+			"category": "session_modes",
+			"rarity": "rare",
+			"type": "trigger"
+		},
+		{
+			"id": 537,
+			"canUseAsTag": true,
+			"key": "pres_two_batteries",
+			"title": "general.achievement.id.pres_two_batteries.title",
+			"desc": "general.achievement.id.pres_two_batteries.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "trigger"
+		},
+		{
+			"id": 538,
+			"canUseAsTag": true,
+			"key": "pres_two_rechargers",
+			"title": "general.achievement.id.pres_two_rechargers.title",
+			"desc": "general.achievement.id.pres_two_rechargers.desc",
+			"category": "session_modes",
+			"rarity": "rare",
+			"type": "trigger"
+		},
+		{
+			"id": 539,
+			"canUseAsTag": true,
+			"key": "pres_all_first",
+			"title": "general.achievement.id.pres_all_first.title",
+			"desc": "general.achievement.id.pres_all_first.desc",
+			"category": "session_modes",
+			"rarity": "rare",
+			"type": "trigger"
+		},
+		{
+			"id": 540,
+			"canUseAsTag": false,
+			"key": "pres_clutch",
+			"title": "general.achievement.id.pres_clutch.title",
+			"desc": "general.achievement.id.pres_clutch.desc",
+			"category": "session_modes",
+			"rarity": "rare",
+			"type": "trigger"
+		},
+		{
+			"id": 541,
+			"canUseAsTag": true,
+			"key": "pres_win_50",
+			"title": "general.achievement.id.pres_win_50.title",
+			"desc": "general.achievement.id.pres_win_50.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "counter",
+			"count": 50
+		},
+		{
+			"id": 542,
+			"canUseAsTag": true,
+			"key": "pres_win_500",
+			"title": "general.achievement.id.pres_win_500.title",
+			"desc": "general.achievement.id.pres_win_500.desc",
+			"category": "session_modes",
+			"rarity": "rare",
+			"type": "counter",
+			"count": 500
+		},
+		{
+			"id": 543,
+			"canUseAsTag": true,
+			"key": "pres_win_1000",
+			"title": "general.achievement.id.pres_win_1000.title",
+			"desc": "general.achievement.id.pres_win_1000.desc",
+			"category": "session_modes",
+			"rarity": "legendary",
+			"type": "counter",
+			"count": 1000
+		},
+		{
+			"id": 544,
+			"canUseAsTag": false,
+			"key": "pres_wipe_free",
+			"title": "general.achievement.id.pres_wipe_free.title",
+			"desc": "general.achievement.id.pres_wipe_free.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "trigger"
+		},
+		{
+			"id": 545,
+			"canUseAsTag": false,
+			"key": "pres_recharger",
+			"title": "general.achievement.id.pres_recharger.title",
+			"desc": "general.achievement.id.pres_recharger.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "trigger"
+		},
+		{
+			"id": 547,
+			"canUseAsTag": true,
+			"key": "pres_explosive_canister",
+			"title": "general.achievement.id.pres_explosive_canister.title",
+			"desc": "general.achievement.id.pres_explosive_canister.desc",
+			"category": "session_modes",
+			"rarity": "common",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 548,
+			"canUseAsTag": true,
+			"key": "guide_contest",
+			"title": "general.achievement.id.guide_contest.title",
+			"desc": "general.achievement.id.guide_contest.desc",
+			"category": "zone",
+			"rarity": "secret",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 549,
+			"canUseAsTag": false,
+			"key": "decay_chain_follower",
+			"title": "general.achievement.id.decay_chain_follower.title",
+			"desc": "general.achievement.id.decay_chain_follower.desc",
+			"category": "zone",
+			"rarity": "rare",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 550,
+			"canUseAsTag": true,
+			"key": "decay_chain_witness",
+			"title": "general.achievement.id.decay_chain_witness.title",
+			"desc": "general.achievement.id.decay_chain_witness.desc",
+			"category": "zone",
+			"rarity": "rare",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 551,
+			"canUseAsTag": true,
+			"key": "decay_chain_guide",
+			"title": "general.achievement.id.decay_chain_guide.title",
+			"desc": "general.achievement.id.decay_chain_guide.desc",
+			"category": "zone",
+			"rarity": "rare",
+			"type": "trigger",
+			"hidden": true
+		},
+		{
+			"id": 552,
+			"canUseAsTag": true,
+			"key": "decay_chain_solver",
+			"title": "general.achievement.id.decay_chain_solver.title",
+			"desc": "general.achievement.id.decay_chain_solver.desc",
+			"category": "zone",
+			"rarity": "legendary",
+			"type": "trigger",
+			"hidden": true
+		},
+        {
+            "id": 553,
+            "canUseAsTag": true,
+            "key": "autumn26_tainiki",
+            "title": "general.achievement.id.autumn26_tainiki.title",
+            "desc": "general.achievement.id.autumn26_tainiki.desc",
+            "category": "zone",
+            "rarity": "secret",
+            "type": "trigger",
+            "hidden": true,
+            "triggerRules": {
+                "quest": [
+                    36668
+                ]
+            }
+        },
+        {
+            "id": 554,
+            "canUseAsTag": false,
+            "key": "neurodegenerate",
+            "title": "general.achievement.id.neurodegenerate.title",
+            "desc": "general.achievement.id.neurodegenerate.desc",
+            "category": "zone",
+            "rarity": "common",
+            "type": "trigger"
+        },
+        {
+            "id": 555,
+            "canUseAsTag": false,
+            "key": "camouflage_did_not_help",
+            "title": "general.achievement.id.camouflage_did_not_help.title",
+            "desc": "general.achievement.id.camouflage_did_not_help.desc",
+            "category": "zone",
+            "rarity": "common",
+            "type": "trigger"
+        },
+        {
+            "id": 556,
+            "canUseAsTag": false,
+            "key": "not_mammoth",
+            "title": "general.achievement.id.not_mammoth.title",
+            "desc": "general.achievement.id.not_mammoth.desc",
+            "category": "quest",
+            "rarity": "common",
+            "type": "trigger"
+        }
+    ]
+}

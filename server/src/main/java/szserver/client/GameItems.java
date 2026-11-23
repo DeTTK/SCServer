@@ -24,16 +24,16 @@ public final class GameItems implements AutoCloseable {
     public GameItems(Path runtime,Path registryPath,Path manifestPath)throws Exception{
         this.runtime=runtime.toRealPath();
         if(manifestPath!=null){
-            JsonObject manifest=JsonParser.parseString(Files.readString(manifestPath)).getAsJsonObject();
+            JsonObject manifest=JsonParser.parseString(RuntimeFiles.readString(manifestPath)).getAsJsonObject();
             for(var entry:manifest.getAsJsonObject("classes_sha256").entrySet()){
                 String name=entry.getKey();if(!name.matches("[0-9]+"))throw new IllegalArgumentException("invalid_runtime_manifest_class");
-                String hash=HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(runtime.resolve("classes").resolve(name+".class"))));
+                String hash=HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(RuntimeFiles.read(runtime.resolve("classes").resolve(name+".class"))));
                 if(!hash.equals(entry.getValue().getAsString()))throw new IllegalStateException("client_runtime_release_changed:"+name);
             }
         }
-        registry=JsonParser.parseString(Files.readString(registryPath)).getAsJsonObject();
+        registry=JsonParser.parseString(RuntimeFiles.readString(registryPath)).getAsJsonObject();
         Path overrides=registryPath.resolveSibling("client-current-item-state-overrides.json");
-        if(Files.isRegularFile(overrides))for(var e:JsonParser.parseString(Files.readString(overrides)).getAsJsonObject().entrySet())registry.add(e.getKey(),e.getValue());
+        if(Files.isRegularFile(overrides))for(var e:JsonParser.parseString(RuntimeFiles.readString(overrides)).getAsJsonObject().entrySet())registry.add(e.getKey(),e.getValue());
         NativeBlockItemsRelease.verifyRuntime(runtime);
         NativeDeveloperItemsRelease.verifyRuntime(runtime);
         NativeStorageLayoutRelease.verifyRuntime(runtime);
@@ -76,7 +76,7 @@ public final class GameItems implements AutoCloseable {
     public void warmGameplay(Path definitionsPath,Path artifactSettings)throws Exception{
         NativeMedicineRelease.verify(runtime);
         if(definitions!=null)throw new IllegalStateException("gameplay_already_warmed");
-        Path fixtures=definitionsPath.getParent().toRealPath();JsonObject manifest=JsonParser.parseString(Files.readString(fixtures.resolve("native-gameplay-manifest.json"))).getAsJsonObject();
+        Path fixtures=definitionsPath.getParent().toRealPath();JsonObject manifest=JsonParser.parseString(RuntimeFiles.readString(fixtures.resolve("native-gameplay-manifest.json"))).getAsJsonObject();
         for(var entry:manifest.getAsJsonObject("classes_sha256").entrySet()){
             if(!entry.getKey().matches("[0-9]+"))throw new IllegalArgumentException("native_gameplay_manifest_class");verifyDigest(runtime.resolve("classes").resolve(entry.getKey()+".class"),entry.getValue().getAsString());
         }
@@ -87,7 +87,7 @@ public final class GameItems implements AutoCloseable {
         NativeDeveloperItemsRelease.verifyDefinitions(fixtures);
         NativeStorageLayoutRelease.verifyFile(fixtures.resolve("native-storage-layout.json"));
         JsonObject catalog=szserver.inventory.CatalogDefinitions.read(definitionsPath);Map<Integer,String> artifacts=new TreeMap<>(),armors=new TreeMap<>();Map<String,Integer> names=new TreeMap<>();
-        JsonObject nativeNames=JsonParser.parseString(Files.readString(definitionsPath.resolveSibling("native-item-names.json"))).getAsJsonObject();
+        JsonObject nativeNames=JsonParser.parseString(RuntimeFiles.readString(definitionsPath.resolveSibling("native-item-names.json"))).getAsJsonObject();
         for(var entry:nativeNames.entrySet()){int id=entry.getValue().getAsInt();JsonObject definition=catalog.getAsJsonObject(Integer.toString(id));if(definition==null||!definition.has("unlocalized_name")||!definition.get("unlocalized_name").getAsString().equals(entry.getKey()))throw new IllegalArgumentException("native_item_name_catalog_mismatch:"+entry.getKey());names.put(entry.getKey(),id);}
         for(var entry:catalog.entrySet()){
             JsonObject item=entry.getValue().getAsJsonObject();String type=item.get("type").getAsString();
@@ -100,7 +100,7 @@ public final class GameItems implements AutoCloseable {
         for(String directory:List.of("resources/configs","resources/boxes")){Path extra=fixtures.getParent().resolve(directory);if(Files.isDirectory(extra))adapter.resources(extra);}
         adapter.warmItemNames(names);adapter.warmArmor(armors);
         adapter.warmArmorUpgrades(definitionsPath.getParent().resolve("native-resources"),armors);
-        adapter.warmArtifacts(Files.readString(artifactSettings),artifacts,definitionsPath.getParent().resolve("native-resources"));containerExempt=adapter.containerExemptStats();definitions=catalog;
+        adapter.warmArtifacts(RuntimeFiles.readString(artifactSettings),artifacts,definitionsPath.getParent().resolve("native-resources"));containerExempt=adapter.containerExemptStats();definitions=catalog;
         LauncherPackets.verifyManifest(fixtures.getParent(),runtime,"native-weapon-modules.json");LauncherPackets.verifyManifest(fixtures.getParent(),runtime,"native-weapon-jamming.json");
         Map<Integer,String> moduleClasses=new HashMap<>(),moduleDefs=new HashMap<>();for(var entry:registry.entrySet())if(entry.getValue().getAsJsonObject().has("definition")){int id=Integer.parseInt(entry.getKey());if(catalog.has(entry.getKey())){moduleClasses.put(id,entry.getValue().getAsJsonObject().get("definition").getAsString());moduleDefs.put(id,catalog.get(entry.getKey()).toString());}}adapter.moduleDefinitions(moduleClasses,moduleDefs);adapter.warmCosmetics(moduleClasses,moduleDefs);firearmFactories=adapter.firearmFactories();
         medicines.clear();medicines.putAll(adapter.warmMedicines());statOrdinals=adapter.statOrdinals();for(var entry:catalog.entrySet()){
@@ -110,7 +110,7 @@ public final class GameItems implements AutoCloseable {
         }
     }
     private static float number(JsonObject item,String key,float fallback){float value=item.has(key)?item.get(key).getAsFloat():fallback;if(!Float.isFinite(value))throw new IllegalArgumentException("resource_number_nonfinite:"+key);return value;}
-    private static void verifyDigest(Path file,String expected)throws Exception{String actual=HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(file)));if(!actual.equals(expected))throw new java.io.IOException("native_gameplay_release_changed:"+file.getFileName());}
+    private static void verifyDigest(Path file,String expected)throws Exception{String actual=HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(RuntimeFiles.read(file)));if(!actual.equals(expected))throw new java.io.IOException("native_gameplay_release_changed:"+file.getFileName());}
     public Map<String,Float> artifactStats(szserver.inventory.ItemStack artifact)throws Exception{
         byte[] wire=szserver.net.InventoryPackets.stack(artifact);return adapter.artifactStats(Arrays.copyOfRange(wire,1,wire.length));
     }

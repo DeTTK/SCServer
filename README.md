@@ -1,3 +1,6 @@
+> **launtest: полная сборка из обычного Git.** См. [инструкцию](docs/player-build.md).
+> Игровая поставка собирается командой `python scripts/build_player.py`; старые готовые комплекты не нужны.
+
 # SCServer / Бскпкрафт
 
 **[Скачать установщик локалки](https://github.com/DeTTK/SCServer/releases/download/alliance-transitions-2026.11.22/BSCPCRAFT-Setup.exe)** · [полный ZIP](https://github.com/DeTTK/SCServer/releases/download/local-ready-2026.11.20/BSCPCRAFT-local-20261119.zip)

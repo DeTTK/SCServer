@@ -13,7 +13,7 @@ jobs:
   game:
     if: github.ref == 'refs/heads/launtest'
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 40
     permissions:
       contents: write
     steps:
@@ -27,7 +27,7 @@ jobs:
           path: |
             .local/deps
             .local/delivery-inputs
-          key: delivery-inputs-${{ hashFiles('bootstrap/base.lock.json', 'dependencies.lock.json') }}
+          key: delivery-inputs-${{ hashFiles('bootstrap/base.lock.json', 'bootstrap/input-manifest.json', 'dependencies.lock.json') }}
       - run: python scripts/audit_public.py
       - run: python -m unittest discover -s scripts/tests
       - run: python scripts/build.py test

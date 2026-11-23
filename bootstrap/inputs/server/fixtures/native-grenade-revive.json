@@ -1,0 +1,25 @@
+{
+  "items": [
+    12408
+  ],
+  "policy": "captured_exact_death_once_revive_plus_independent_continuous_heal",
+  "classHashes": {
+    "1208863283": "fcc64a8f4dd4f53c5d2c92e6dd20fd72ff1a36d7e80dcfb1b1be56ee770f8de7",
+    "1034632910": "8632950869a0f9209b81313bce893040e1cab30077e878c041dd4999db81a245",
+    "1585835196": "3eefc76b70e9c3ed6fb8e408e2dae003c3504dffc20dbb1f2a9d86ef9c3944a8",
+    "837608172": "e3a51f3bbf0e048e15932f9ec2e8925eba624171522c0dbd0b7599cb1e4ca3eb",
+    "626983914": "79900fdd7c61415259eaf8a9ceb60b2673b7f327cd39062cc6c95df4104e6133",
+    "1967986234": "09df3d609445f2d928a4a458db493c8fe1aee010f2ece8cef1129bc4f0cfbe38",
+    "1520486269": "80655ac90e7b5ce2de5b49d22f00747af0bef4811050dd4318b7e91b8c473b1b",
+    "1080895182": "ae4071642aa67d94a0172a4e25cc0ce295c823f6298ba84d04060fcb0f7784c2",
+    "456314467": "b14a1389d098275c603e041f174e85bd1a7152249d12f948127f579ae6c23ac8",
+    "895652713": "0c50af94bba33e21893fc6476399b5839595cd918be80f4b820a2cf822985894",
+    "1695366012": "4f9474249e5adf84daa0a10e77a39cdcb77faa2fae7a3349d439fcbb03c3dcf5",
+    "1402131154": "8c255351d4aeb621586434fce07c5d3551b1293e6a6985701f135986cffccbcf",
+    "124422489": "bd2929a73cca80601a1092b197968092a594cbd5e338f2a8afcf56f19e61dd01"
+  },
+  "resourceHashes": {
+    "D:\\StalcraftCustom\\server-java\\fixtures\\item-definitions.json": "9a0bd993105021a293ea28bac113ef8adcf92a14f51f0e48a97e5000c058fe1a"
+  },
+  "reviveHealthPolicy": "server_full_prepared_maximum_as_existing_respawn"
+}

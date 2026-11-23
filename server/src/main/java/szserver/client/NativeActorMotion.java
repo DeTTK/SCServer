@@ -15,7 +15,7 @@ public final class NativeActorMotion implements ActorMotion,ActorDynamics,ActorJ
         private Path nativeNbt;
         Loader(URL[] urls){super(urls,ClassLoader.getPlatformClassLoader());}
         Class<?> define(String name,byte[] bytes){return defineClass(name,bytes,0,bytes.length);}
-        void resources(Path path)throws Exception{addURL(path.toRealPath().toUri().toURL());}
+        void resources(Path path)throws Exception{addURL(szserver.util.GameResources.url(path));}
         @Override protected String findLibrary(String name){
             if(!name.equals("zstd-jni-1.5.0-5"))return null;
             try{
@@ -50,8 +50,8 @@ public final class NativeActorMotion implements ActorMotion,ActorDynamics,ActorJ
         ActorFeedbackGeometryRelease.verify(runtime);
         ActorBodyRelease.verify(runtime);
         ActorEffectsRelease.verify(runtime);ActorSceneLadderRelease.verify(runtime);ActorZiplineRelease.verify(runtime);ActorEquipmentRelease.verify(runtime);ActorSeatRelease.verify(runtime);
-        for(var entry:REVIEWED.entrySet()){var bytes=Files.readAllBytes(runtime.resolve("classes").resolve(entry.getKey()+".class"));if(!java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(bytes)).equals(entry.getValue()))throw new IllegalStateException("native_actor_release_mismatch:"+entry.getKey());}
-        List<URL> urls=new ArrayList<>();for(String name:List.of("classes","bootstrap","libs"))urls.add(runtime.resolve(name).toUri().toURL());try(var files=Files.list(runtime.resolve("dependencies"))){for(Path p:files.filter(p->p.toString().endsWith(".jar")).toList())urls.add(p.toUri().toURL());}loader=new Loader(urls.toArray(URL[]::new));
+        for(var entry:REVIEWED.entrySet()){var bytes=RuntimeFiles.read(runtime.resolve("classes").resolve(entry.getKey()+".class"));if(!java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(bytes)).equals(entry.getValue()))throw new IllegalStateException("native_actor_release_mismatch:"+entry.getKey());}
+        List<URL> urls=new ArrayList<>();for(String name:List.of("classes","bootstrap","libs"))urls.add(RuntimeFiles.location(runtime.resolve(name)).toUri().toURL());try(var files=Files.list(runtime.resolve("dependencies"))){for(Path p:files.filter(p->p.toString().endsWith(".jar")).toList())urls.add(p.toUri().toURL());}loader=new Loader(urls.toArray(URL[]::new));
         Class<?> u=Class.forName("sun.misc.Unsafe");Field f=u.getDeclaredField("theUnsafe");f.setAccessible(true);unsafe=f.get(null);allocate=u.getMethod("allocateInstance",Class.class);
         Class<?> w=loader.define("szserver.bridge.ActorWorld",NativeActorBridge.world()),fr=loader.define("szserver.bridge.ActorForest",NativeActorBridge.forest()),tr=loader.define("szserver.bridge.ActorTree",NativeActorBridge.tree());cellType=loader.define("szserver.bridge.ActorCell",NativeActorBridge.cell());
         Class<?> entity=Class.forName("1217489680",true,loader),aabb=Class.forName("242639986",true,loader),b=Class.forName("1994198637",true,loader),v=Class.forName("javax.vecmath.Vector3f",true,loader),sh=Class.forName("com.bulletphysics.collision.shapes.BoxShape",true,loader),tf=Class.forName("com.bulletphysics.linearmath.Transform",true,loader);

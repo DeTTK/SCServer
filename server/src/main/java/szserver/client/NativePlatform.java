@@ -22,7 +22,7 @@ final class NativePlatform {
         String resource=resource(),extension=extension(),expected=sha256();Path path=Files.createTempFile(prefix,extension);boolean verified=false;
         try{
             try(InputStream in=loader.getResourceAsStream(resource)){if(in==null)throw new IOException("bundled_zstd_jni_missing:"+resource);Files.copy(in,path,StandardCopyOption.REPLACE_EXISTING);}
-            String actual=HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(path)));
+            String actual=HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(RuntimeFiles.read(path)));
             if(!actual.equals(expected))throw new IOException("bundled_zstd_jni_mismatch");
             path.toFile().deleteOnExit();verified=true;return path;
         }catch(NoSuchAlgorithmException impossible){throw new IOException(impossible);}finally{if(!verified)Files.deleteIfExists(path);}

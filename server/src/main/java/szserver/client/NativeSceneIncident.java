@@ -17,8 +17,8 @@ final class NativeSceneIncident {
     private boolean prepared;
     NativeSceneIncident(ClientSceneCodec.Loader loader,Path runtime,Path manifest)throws Exception{
         this.loader=loader;
-        if(Files.size(manifest)>65536)throw new IOException("scene_incident_manifest_limit");
-        JsonObject spec=JsonParser.parseString(Files.readString(manifest)).getAsJsonObject();
+        if(RuntimeFiles.size(manifest)>65536)throw new IOException("scene_incident_manifest_limit");
+        JsonObject spec=JsonParser.parseString(RuntimeFiles.readString(manifest)).getAsJsonObject();
         if(spec.get("version").getAsInt()!=1||!spec.get("parserMethod").getAsString().equals("implements")||!spec.get("parserDescriptor").getAsString().equals("()L1198776129;")||spec.get("sliceStart").getAsInt()!=2581||spec.get("sliceEnd").getAsInt()!=3254)throw new IOException("scene_incident_manifest_version");
         Map<String,byte[]> classes=new HashMap<>();
         for(var entry:spec.getAsJsonObject("classesSha256").entrySet()){
@@ -28,7 +28,7 @@ final class NativeSceneIncident {
         for(String name:List.of("348115930","913250395","1788962927","1183683657","1994198637","313873871","1745367406","211097523","1660905315","1205255287"))
             if(!classes.containsKey(name))throw new IOException("scene_incident_unpinned_class:"+name);
         JsonArray sources=spec.getAsJsonArray("sources");if(sources.size()!=2)throw new IOException("scene_incident_sources");
-        byte[][] bytes=new byte[2][];for(int i=0;i<2;i++){JsonObject row=sources.get(i).getAsJsonObject();bytes[i]=pinned(Path.of(row.get("path").getAsString()),row.get("sha256").getAsString(),4*1024*1024);}
+        byte[][] bytes=new byte[2][];for(int i=0;i<2;i++){JsonObject row=sources.get(i).getAsJsonObject();bytes[i]=pinned(RuntimeFiles.reference(manifest,row.get("path").getAsString()),row.get("sha256").getAsString(),4*1024*1024);}
         // This is the unmodified native settings-construction block. It has no mode/Region API calls.
         Class<?> reader=loader.define(READER.replace('/','.'),reader(classes.get("348115930")));
         Object parsed=Class.forName("com.google.gson.JsonParser",true,loader).getMethod("parseString",String.class).invoke(null,new String(bytes[0],java.nio.charset.StandardCharsets.UTF_8));
@@ -54,7 +54,7 @@ final class NativeSceneIncident {
         prepared=true;
     }
     private static byte[] pinned(Path path,String expected,int limit)throws Exception{
-        if(Files.size(path)>limit)throw new IOException("scene_incident_source_limit");byte[] bytes=Files.readAllBytes(path);
+        if(RuntimeFiles.size(path)>limit)throw new IOException("scene_incident_source_limit");byte[] bytes=RuntimeFiles.read(path);
         if(!HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes)).equals(expected))throw new IOException("scene_incident_release_changed:"+path.getFileName());return bytes;
     }
     private static void utf(DataOutputStream out,String s)throws IOException{out.writeByte(1);out.writeUTF(s);}

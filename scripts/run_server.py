@@ -19,6 +19,7 @@ def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--bundle',type=Path,required=True,help='Compatible private Server folder')
     p.add_argument('--map',type=Path,required=True,help='Read-only original Map folder')
+    p.add_argument('--state',type=Path,default=ROOT/'.local/server-state',help='Separate persistent state directory')
     p.add_argument('--host',default='127.0.0.1',help='Bind and advertised IP; default loopback')
     p.add_argument('--port',type=int,default=29544,help='Game HTTP port; gateway +1, world +2, admin +100, dev +104')
     a=p.parse_args();bundle=a.bundle.resolve();world=a.map.resolve()
@@ -26,7 +27,8 @@ def main():
     import ipaddress
     try:ipaddress.ip_address(a.host)
     except ValueError:p.error('--host must be an IP address')
-    for parent,names in [(bundle,['fixtures','source-resources','results/runtime-manifest.json','runtime/classes','runtime/dependencies','registries/client-current-item-states.json','registries/live-gameobjects.json','registries/live-object-codecs.json','resources/configs','resources/boxes']),(world,['region','registry.json'])]:
+    runtime=bundle.parent/'Bootstrap/runtime' if (bundle.parent/'Bootstrap/runtime/game.jar').is_file() else bundle/'runtime'
+    for parent,names in [(bundle,['fixtures','source-resources','results/runtime-manifest.json','registries/client-current-item-states.json','registries/live-gameobjects.json','registries/live-object-codecs.json']),(world,['region','registry.json'])]:
         for name in names:
             if not (parent/name).exists():p.error('Missing private input: '+str(parent/name))
     jar=ROOT/'build/server.jar'
@@ -35,7 +37,7 @@ def main():
     with zipfile.ZipFile(jar) as archive:
         for name,digest in json.loads((ROOT/'config/private-resources.lock.json').read_text('utf8')).items():
             if name not in archive.namelist() or hashlib.sha256(archive.read(name)).hexdigest()!=digest:p.error('Rebuild: python scripts/build.py server --private-resources')
-    state=ROOT/'.local/server-state';state.mkdir(parents=True,exist_ok=True)
+    state=a.state.resolve();state.mkdir(parents=True,exist_ok=True)
     # Hold an OS lock through preparation and the entire Java lifetime.
     with (state/'session.lock').open('a+b') as lock:
         lock.seek(0,2)
@@ -66,6 +68,9 @@ def main():
         config=(ROOT/'desktop/server.template.properties').read_text('utf8')
         replacements={'ROOT':prop(bundle),'MAP':prop(world),'HOST':a.host,'HTTP':str(a.port),'GAME':str(a.port+1),'WORLD':str(a.port+2),'ADMIN':str(a.port+100),'DEV':str(a.port+104)}
         for key,value in replacements.items():config=config.replace('@'+key+'@',value)
+        config='\n'.join('client.runtime='+prop(runtime) if line.startswith('client.runtime=') else line for line in config.splitlines())+'\n'
+        if (bundle/'resources/configs.xeon').is_file():
+            config+='assets.configs='+prop(bundle/'resources/configs.xeon')+'\nassets.boxes='+prop(bundle/'resources/boxes.xeon')+'\nassets.overrides='+prop(bundle/'resources/overrides')+'\n'
         config=config.replace('game.bindAddress=0.0.0.0','game.bindAddress='+a.host)
         path=state/'server.properties';path.write_text(config,encoding='ascii')
         cp=os.pathsep.join(map(str,[jar]+dependencies()))

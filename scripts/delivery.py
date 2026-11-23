@@ -4,7 +4,7 @@ import argparse,base64,hashlib,importlib.util,json,os,re,shutil,subprocess,tempf
 
 ROOT=Path(__file__).resolve().parents[1]
 LOCK=json.loads((ROOT/'bootstrap/base.lock.json').read_text('utf8'))
-OUT=ROOT/'build/delivery'
+OUT=ROOT/'build/delivery-player'
 
 def run(*args,**kw):return subprocess.run(list(map(str,args)),check=True,**kw)
 def digest(path):
@@ -59,39 +59,23 @@ def commit_index(destination,message,env):
     commit=run(*args,env=env,capture_output=True,text=True).stdout.strip()
     run('git','-C',destination,'update-ref','HEAD',commit,env=env,capture_output=True)
     return commit
-def build_agent(tools,base,asm,tree,kotlin):
-    spec=importlib.util.spec_from_file_location('compat',ROOT/'client/resource-compat/build.py');m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
-    deps=tools.dependencies();classes=tools.compile_java('delivery-resource-agent',(ROOT/'client/resource-compat/src').rglob('*.java'),[asm,tree,kotlin,base,*deps])
-    with zipfile.ZipFile(base)as z:entries={n:z.read(n)for n in z.namelist()if not n.endswith('/')}
-    for p in sorted(classes.rglob('*.class')):entries[p.relative_to(classes).as_posix()]=m.shade(p.read_bytes())
-    for library in [asm,tree]:
-        with zipfile.ZipFile(library)as z:
-            for n in z.namelist():
-                if n.startswith('org/objectweb/asm/')and n.endswith('.class'):entries[n.replace('org/objectweb/asm','gamecompat/shaded/asm')]=m.shade(z.read(n))
-    path=ROOT/'build/game-resource-compat.jar';deterministic_jar(path,entries);return path
 def prepare():
     tools=source_tool();(ROOT/'build').mkdir(exist_ok=True)
-    resources=pinned(LOCK['serverResources']);agent=pinned(LOCK['clientAgent']);asm=pinned(LOCK['asm']);tree=pinned(LOCK['asmTree']);kotlin=pinned(LOCK['kotlin'])
-    run(os.sys.executable,ROOT/'scripts/import_private_resources.py','--server-jar',resources)
-    tools.server(True);tools.completion()
-    run(os.sys.executable,ROOT/'client/startup/build.py','--asm',asm)
-    run(os.sys.executable,ROOT/'client-compat/character-scale/build.py')
-    compat=build_agent(tools,agent,asm,tree,kotlin)
+    spec=importlib.util.spec_from_file_location('player_build',ROOT/'scripts/build_player.py');module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+    player=module.build(ROOT/'build/player-delivery')
+    spec=importlib.util.spec_from_file_location('foundation_export',ROOT/'scripts/export_foundation.py');exporter=importlib.util.module_from_spec(spec);spec.loader.exec_module(exporter)
+    foundation=exporter.export(player,player/'Bootstrap/java17',player/'Bootstrap/bscp-bridge.jar',ROOT/'build/foundation-delivery')
     files={
-        'server/server.jar':ROOT/'build/server.jar',
-        'server/server.template.properties':ROOT/'desktop/server.template.properties',
-        'client/compat/startup-guard.jar':ROOT/'build/startup-guard.jar',
-        'client/compat/character-scale.jar':ROOT/'build/character-scale.jar',
-        'client/compat/game-resource-compat.jar':compat,
-        'mods/command-completion/command-completion.jar':ROOT/'build/command-completion.jar'}
-    if OUT.exists():
-        if not OUT.resolve().is_relative_to(ROOT/'build')or OUT.is_symlink():raise ValueError('Unsafe owned output')
-        shutil.rmtree(OUT)
-    OUT.mkdir(parents=True)
+        'server/server.jar':player/'Server/server.jar',
+        'server/server.template.properties':player/'Server/server.template.properties',
+        **{'client/compat/'+name:player/'Client/compat'/name for name in ('startup-guard.jar','character-scale.jar','game-resource-compat.jar','weapon-events.jar')},
+        'mods/command-completion/command-completion.jar':player/'Client/mods/command-completion.jar'}
+    OUT.mkdir(parents=True,exist_ok=False)
     for name,src in files.items():dst=OUT/name;dst.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(src,dst)
     rows=file_inventory(OUT)
-    (ROOT/'build/delivery-verification.json').write_text(json.dumps({'files':rows,'bytes':sum(r['size']for r in rows),'baseId':LOCK['id']},indent=2),'utf8')
-    print('Prepared',len(rows),'game files;',sum(r['size']for r in rows),'bytes; base',LOCK['id'])
+    (ROOT/'build/delivery-verification.json').write_text(json.dumps({'files':rows,'bytes':sum(r['size']for r in rows),'foundation':foundation},indent=2),'utf8')
+    print('Prepared source-built game and complete Git foundation',foundation['id'])
+
 def sign(raw,key):
     with tempfile.TemporaryDirectory(prefix='bscp-delivery-sign-')as tmp:
         folder=Path(tmp);private=folder/'key.pem';private.write_text(key,'utf8');private.chmod(0o600)
@@ -107,17 +91,13 @@ def publish():
     if not re.fullmatch('[0-9a-f]{40}',source):raise ValueError('Invalid source commit')
     latest=run('git','ls-remote','origin','refs/heads/'+channel,capture_output=True,text=True).stdout.split()[0]
     if latest!=source:print('Superseded source build; not publishing');return
-    manifest={'schemaVersion':1,'channel':channel,'sourceCommit':source,'sequence':int(os.environ['GITHUB_RUN_NUMBER']),
+    manifest={'schemaVersion':2,'minimumLauncherVersion':'0.4.1','channel':channel,'sourceCommit':source,'sequence':int(os.environ['GITHUB_RUN_NUMBER']),
         'baseId':LOCK['id'],'files':file_inventory(OUT),'changelog':run('git','log','-1','--format=%s',capture_output=True,text=True).stdout.strip(),
         'mods':[{'id':'command-completion','name':'Подсказки команд','side':'client','required':True,'path':'mods/command-completion/command-completion.jar'}]}
-    foundation_lock=ROOT/'delivery/foundation.lock.json';foundation_payload=None
-    if foundation_lock.is_file():
-        lock=json.loads(foundation_lock.read_text('utf8'));foundation=lock['foundation'];manifest['foundation']=foundation;manifest['baseId']=foundation['id']
-        source_path=lock.get('descriptorPath',foundation['path']);safe_path(source_path)
-        commit=lock['buildCommit']
-        if not re.fullmatch('[0-9a-f]{40}',commit):raise ValueError('Invalid pinned foundation commit')
-        foundation_payload=pinned({'file':foundation['id']+'.json','url':f'https://raw.githubusercontent.com/DeTTK/SCServer/{commit}/{source_path}','sha256':foundation['sha256']}).read_bytes()
-        if len(foundation_payload)!=foundation['size']or json.loads(foundation_payload)['id']!=foundation['id']:raise ValueError('Foundation descriptor mismatch')
+    export=json.loads((ROOT/'build/foundation-delivery/foundation-export.json').read_text('utf8'))
+    foundation=export['foundation'];manifest['foundation']=foundation;manifest['baseId']=foundation['id']
+    foundation_output=ROOT/'build/foundation-delivery'
+    foundation_payload=(foundation_output/'bootstrap/foundation.json').read_bytes()
     default_map=ROOT/'map/default.json'
     if default_map.is_file():manifest['defaultMap']=json.loads(default_map.read_text('utf8'))
     raw=json.dumps(manifest,ensure_ascii=False,sort_keys=True,separators=(',',':')).encode()
@@ -148,13 +128,17 @@ def publish():
                 if row['path']not in current:run('git','-C',destination,'rm','--cached','--ignore-unmatch','--',row['path'],env=env,capture_output=True)
     else:run('git','-C',destination,'symbolic-ref','HEAD','refs/heads/'+branch,env=env)
     shutil.copytree(OUT,destination,dirs_exist_ok=True)
+    foundation_paths=[]
+    for source_file in foundation_output.rglob('*'):
+        if source_file.is_file() and source_file.name!='foundation-export.json':
+            relative=source_file.relative_to(foundation_output).as_posix();safe_path(relative);target=destination/relative;target.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(source_file,target);foundation_paths.append(relative)
     (destination/'delivery.json').write_bytes(raw);(destination/'delivery.json.sig').write_bytes(signature)
     metadata={'bootstrap/base.json':json.dumps({'id':manifest['baseId'],'mode':'complete-indexed-foundation'if'foundation'in manifest else'installed-foundation'}),'map/base.json':json.dumps({'mode':'indexed-foundation'if'foundation'in manifest else'existing-world-base','defaultMap':manifest.get('defaultMap'),'existingWorldsRebased':False}),'launcher/README.md':'Launcher EXE updates belong to GitHub Releases.\n','README.md':'Complete generated game delivery. Develop in launtest; do not edit this branch.\n'}
     # Canonical descriptor and its signed manifest change in the same Git commit.
     if foundation_payload is not None:metadata[manifest['foundation']['path']]=foundation_payload.decode('utf8')
     for name,body in metadata.items():
         p=destination/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_text(body,'utf8')
-    run('git','-C',destination,'add','--',*[r['path']for r in manifest['files']],'delivery.json','delivery.json.sig',*metadata,env=env)
+    run('git','-C',destination,'add','--',*[r['path']for r in manifest['files']],'delivery.json','delivery.json.sig',*metadata,*foundation_paths,env=env)
     commit_index(destination,'Build launtest from '+source[:12],env)
     latest=run('git','ls-remote','origin','refs/heads/'+channel,capture_output=True,text=True).stdout.split()[0]
     if latest!=source:print('Source advanced before activation; not publishing');return

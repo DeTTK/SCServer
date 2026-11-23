@@ -7,7 +7,7 @@ public final class AreaRelations {
     public static void verify(java.nio.file.Path root,java.nio.file.Path runtime)throws Exception{
         var m=com.google.gson.JsonParser.parseString(java.nio.file.Files.readString(root.resolve("fixtures/native-grenade-policy.json"))).getAsJsonObject();for(var e:m.getAsJsonObject("classHashes").entrySet()){if(!e.getKey().matches("[0-9]+"))throw new java.io.IOException("area_native_class");verifyHash(runtime.resolve("classes/"+e.getKey()+".class"),e.getValue().getAsString());}verifyHash(root.resolve("fixtures/native-resources/assets/bundle/alliances.json"),m.get("resourceSha256").getAsString());
     }
-    private static void verifyHash(java.nio.file.Path path,String expected)throws Exception{if(!java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(java.nio.file.Files.readAllBytes(path))).equals(expected))throw new java.io.IOException("area_native_release_changed:"+path);}
+    private static void verifyHash(java.nio.file.Path path,String expected)throws Exception{if(!java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(szserver.client.RuntimeFiles.read(path))).equals(expected))throw new java.io.IOException("area_native_release_changed:"+path);}
     public enum Mode { DEFAULT,WILD,SUPER_WILD,SAME_ORIGIN_TRUCE,FULL_TRUCE }
     public record Actor(UUID character,String faction,String origin,UUID clan,Long party,boolean hunter){
         public Actor{Objects.requireNonNull(character);if(faction==null||faction.isBlank()||faction.length()>128||origin==null||origin.isBlank()||origin.length()>128)throw new IllegalArgumentException("area_actor_identity");}

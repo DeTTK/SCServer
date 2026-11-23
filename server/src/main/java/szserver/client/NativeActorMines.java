@@ -39,13 +39,13 @@ final class NativeActorMines {
             Map.entry("843651061","0466d718441bb82810363cbe8293ffb5db5ba11efd760e9403750895e05e5a7e"),
             Map.entry("1123841866","e803d5e87b992f65a0b6be4211cc7712a47e5304261f6564e0cb11d9ee3b2624")
         ).entrySet()){
-            String actual=HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(runtime.resolve("classes").resolve(entry.getKey()+".class"))));
+            String actual=HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(RuntimeFiles.read(runtime.resolve("classes").resolve(entry.getKey()+".class"))));
             if(!actual.equals(entry.getValue()))throw new IllegalStateException("native_actor_mine_release:"+entry.getKey());
         }
         Path file=resources.resolve("assets/stalker/items/other/mines.json");
-        if(Files.size(file)>65536)throw new IllegalArgumentException("actor_mine_definitions_size");
+        if(RuntimeFiles.size(file)>65536)throw new IllegalArgumentException("actor_mine_definitions_size");
         JsonObject definition=null;
-        for(var value:JsonParser.parseString(Files.readString(file)).getAsJsonArray()){
+        for(var value:JsonParser.parseString(RuntimeFiles.readString(file)).getAsJsonArray()){
             var row=value.getAsJsonObject();if(row.get("item_id").getAsInt()==4006){if(definition!=null||!row.get("type").getAsString().equals("landmine"))throw new IllegalArgumentException("actor_mine_definition");definition=row;}
         }
         if(definition==null)throw new IllegalArgumentException("actor_mine_definition_missing");

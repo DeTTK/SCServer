@@ -1,0 +1,26 @@
+{
+  "source": "E:\\\u041f\u0440\u043e\u0435\u043a\u0442\u044b\\SZCustomServer\\var\\registries\\stock-configs\\be9fb09c0950055497d5974dcc3fadeb3f6770248872d9b156a361017f742da5\\configs\\assets\\stalker\\sickness.json",
+  "resourceSha256": "cda166bde3b33e389a6b2dfe9278bc4326dc76ca6a1933f886a6d3699c6296e9",
+  "classHashes": {
+    "136359471": "e98d9a56f8cedf4d7f56247328d24c5abbc8378f09465ce39ed23fe5f5e57e1c",
+    "1077465001": "4f861b35f85770356fe9a6d3bd24ddf8529db6d895ccbfb5b2e473e00ef10300",
+    "1156991726": "6f0701b9d99b1f86e74abe617583a45043de504e4fc6d380b5a1712ec076f80d",
+    "1201171520": "0d3a74ff57ea74174ea2b42e918781bb10a17c5d6bc1a1d275c04d61a1e53d96",
+    "1953060942": "3e4ac6d367d476d9549b4aa5ca442812c0b63b9ba1b59a7a7b8de59d8c23d40a",
+    "1505583363": "c59aa63e66896e9566b777597e65e3dcfc70c48d6730ef0498d756b515338ab3",
+    "1924679062": "2bfa58b451c7d850a9824c6cb55db774e986e12ae292678b6332f7522ed9e4e8",
+    "964863275": "0424232b838e6ed4a2b6cce8e7d05b49da2c102e2953914bd41d788b3427ccd7",
+    "1608929782": "3124fd539a9c749982c4f1279f69249cffa67c1d5e7731bfe9ff82bbb1bf1fa5",
+    "1281655698": "6355104be7405660f6dd673656eac6098bd8b1d790864159fac868ba2734f169",
+    "313873871": "92a18f48dcfca060647ad49f38d316f22bb706ef0001c24fe225a4331eff90f6",
+    "722574430": "368b2fe493d126f425b588f8abb2c060d3a81ee99973bc07c86a1b74ddddf1cf",
+    "690713104": "f3c5c4762ef23839e56678140c1413a45f137fedac6515bbb2095fa4d776d660",
+    "942928950": "784bf6e9aaa0608dfe32a15b3fe99f9215f3d3156765cf817c7ceb8407d722a3",
+    "106093408": "75a1101b291e04e47b67f961c66079ea634a95642fa308d51fa0980967b79af4"
+  },
+  "nativePureMethodsVerified": true,
+  "nativeTickOracleAvailable": false,
+  "graphicalHandlerVerified": false,
+  "verification": "results/sickness-functional.json",
+  "serverIntegrationPolicy": "20 Hz typed integrator; native server tick body is stripped; offline decay without damage"
+}

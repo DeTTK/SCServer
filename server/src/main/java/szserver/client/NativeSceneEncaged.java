@@ -18,8 +18,8 @@ final class NativeSceneEncaged {
     private boolean prepared;
     NativeSceneEncaged(ClientSceneCodec.Loader loader,Path runtime,Path manifest)throws Exception{
         this.loader=loader;
-        if(Files.size(manifest)>65536)throw new IOException("scene_encaged_manifest_limit");
-        JsonObject spec=JsonParser.parseString(Files.readString(manifest)).getAsJsonObject();
+        if(RuntimeFiles.size(manifest)>65536)throw new IOException("scene_encaged_manifest_limit");
+        JsonObject spec=JsonParser.parseString(RuntimeFiles.readString(manifest)).getAsJsonObject();
         if(spec.get("version").getAsInt()!=1||!spec.get("parserMethod").getAsString().equals("public")||!spec.get("parserDescriptor").getAsString().equals("(Ljava/lang/String;)L94498622;")||spec.get("sliceStart").getAsInt()!=2854||spec.get("sliceEnd").getAsInt()!=3259)throw new IOException("scene_encaged_manifest_version");
         Map<String,byte[]> classes=new HashMap<>();
         for(var entry:spec.getAsJsonObject("classesSha256").entrySet()){
@@ -29,7 +29,7 @@ final class NativeSceneEncaged {
         for(String name:List.of("1634824458","651500106","317956473","496016126","1865184146","1036856485","10442891","1189340399","489960719","1997612548","1518398188","1460119004","887772526","313873871"))
             if(!classes.containsKey(name))throw new IOException("scene_encaged_unpinned_class:"+name);
         JsonArray sources=spec.getAsJsonArray("sources");if(sources.size()!=2)throw new IOException("scene_encaged_sources");
-        byte[][] bytes=new byte[2][];for(int i=0;i<2;i++){var row=sources.get(i).getAsJsonObject();bytes[i]=pinned(Path.of(row.get("path").getAsString()),row.get("sha256").getAsString(),4*1024*1024);}
+        byte[][] bytes=new byte[2][];for(int i=0;i<2;i++){var row=sources.get(i).getAsJsonObject();bytes[i]=pinned(RuntimeFiles.reference(manifest,row.get("path").getAsString()),row.get("sha256").getAsString(),4*1024*1024);}
         Class<?> bridge=loader.define(BRIDGE.replace('/','.'),reader(classes.get("1634824458")));
         Object parsed=Class.forName("com.google.gson.JsonParser",true,loader).getMethod("parseString",String.class).invoke(null,new String(bytes[0],java.nio.charset.StandardCharsets.UTF_8));
         Object json=parsed.getClass().getMethod("getAsJsonObject").invoke(parsed);
@@ -71,7 +71,7 @@ final class NativeSceneEncaged {
         for(var entry:object.entrySet())normalize(entry.getValue(),depth+1);
     }
     private static byte[] pinned(Path path,String expected,int limit)throws Exception{
-        if(Files.size(path)>limit)throw new IOException("scene_encaged_source_limit");byte[] bytes=Files.readAllBytes(path);
+        if(RuntimeFiles.size(path)>limit)throw new IOException("scene_encaged_source_limit");byte[] bytes=RuntimeFiles.read(path);
         if(!HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes)).equals(expected))throw new IOException("scene_encaged_release_changed:"+path.getFileName());return bytes;
     }
     private record MethodCode(String name,String descriptor,int start,int length,int stack,int locals){}

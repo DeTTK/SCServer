@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "scope": "Native name lookup only; does not register or grant an item, start a client side or load a gameplay mode.",
+  "sources": [
+    {
+      "path": "E:\\\u041f\u0440\u043e\u0435\u043a\u0442\u044b\\SZCustomServer\\var\\registries\\stock-configs\\6684101b8958b0286178b39bd809518e20a7029338e4a1ed39201ec388a7d8c3\\configs\\assets\\customitems\\items\\secret_keys_items.json",
+      "sha256": "53c10d9099df21e776543b475462811d64b49768a3dc51cf12e8c7ddbef356d9"
+    }
+  ],
+  "names": {
+    "keyholder.small": 10600,
+    "keyholder.medium": 10601,
+    "keyholder.big": 10602,
+    "keyholder.large": 10603,
+    "key.safe_factory": 10650,
+    "key.safe_hospital": 10651,
+    "key.safe_military": 10652,
+    "key.safe_murmur": 10653,
+    "key.safe_science": 10654,
+    "key.safe_zivcas": 10655,
+    "key.safe_inside": 10656
+  },
+  "classesSha256": {
+    "985191831": "c4de5c62512394cd14f738f652e225f29baae920aa6f668b3093024f22b5c393",
+    "498192453": "540f0f8b5b450764a978ea6d2e2688805d0bdf7f3f2d2fc877bfcfaa450ca49e",
+    "690713104": "f3c5c4762ef23839e56678140c1413a45f137fedac6515bbb2095fa4d776d660"
+  }
+}

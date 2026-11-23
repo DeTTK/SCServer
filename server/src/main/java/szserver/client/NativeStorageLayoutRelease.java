@@ -12,7 +12,7 @@ final class NativeStorageLayoutRelease {
         Map.entry("1028727254","921604c8ee1f5276ccefc8f7f0ca2caf10977a01ca80d23ad2fb306af7083fed"),
         Map.entry("1968301976","bc3a61e0e8caeda3ff66b923ba89ae2cf534daaf90cf185c801d0b86d1d6b8f1"),
         Map.entry("175688206","742d30deafd4018a48dfd3f2348556f080403e872bcd3b2a7a09f5c2f1550d9e"));
-    private static String hash(Path file)throws Exception{return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(file)));}
+    private static String hash(Path file)throws Exception{return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(RuntimeFiles.read(file)));}
     static void verifyRuntime(Path runtime)throws Exception{for(var e:CLASSES.entrySet())if(!hash(runtime.resolve("classes").resolve(e.getKey()+".class")).equals(e.getValue()))throw new IllegalStateException("native_storage_runtime_changed:"+e.getKey());}
     static void verifyFile(Path file)throws Exception{if(!hash(file).equals("15d20053512147be39b42aa14a6bcbb0442483d6d323b3d2e627b528dd0eb6a1"))throw new IllegalStateException("native_storage_layout_changed");}
 }

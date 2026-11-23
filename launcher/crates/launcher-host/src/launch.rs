@@ -1,5 +1,7 @@
 use anyhow::{Result, bail};
-use bscp_launcher_core::{GameLayout, Settings, component_base, component_file};
+use bscp_launcher_core::{
+    GameLayout, Settings, component_base, component_file, runtime_part, runtime_root,
+};
 use std::{
     collections::BTreeMap,
     path::{Path, PathBuf},
@@ -109,10 +111,7 @@ pub fn server_config(source: &Path, map: &Path, data: &Path, s: &Settings) -> Re
     }
     for (k, v) in [
         ("data.directory", prop(path(data))),
-        (
-            "client.runtime",
-            prop(path(&component_file(source, "runtime")?)),
-        ),
+        ("client.runtime", prop(path(&runtime_root(source)?))),
         ("world.regions", prop(path(map))),
         ("http.host", "127.0.0.1".into()),
         ("game.bindAddress", "0.0.0.0".into()),
@@ -122,6 +121,12 @@ pub fn server_config(source: &Path, map: &Path, data: &Path, s: &Settings) -> Re
         ("game.administratorCharacters", "".into()),
     ] {
         values.insert(k.into(), v);
+    }
+    let resources = component_base(source)?.join("resources");
+    if resources.join("configs.xeon").is_file() {
+        for (key, relative) in [("assets.configs", "configs.xeon"), ("assets.boxes", "boxes.xeon"), ("assets.overrides", "overrides")] {
+            values.insert(key.into(), prop(path(&resources.join(relative))));
+        }
     }
     Ok(values
         .into_iter()
@@ -140,7 +145,7 @@ pub fn server(
     for p in [
         component_file(source, "server.jar")?,
         component_file(source, "lib/gson-2.13.2.jar")?,
-        component_file(source, "runtime/dependencies/zstd-jni-1.5.0-5.jar")?,
+        runtime_root(source)?.join("dependencies/zstd-jni-1.5.0-5.jar"),
         agent.to_owned(),
     ] {
         need(&p)?
@@ -157,7 +162,13 @@ pub fn server(
         "runtime/dependencies/zstd-jni-1.5.0-5.jar",
     ]
     .into_iter()
-    .map(|p| component_file(source, p).map(|p| path(&p)))
+    .map(|p| {
+        if let Some(relative) = p.strip_prefix("runtime/") {
+            runtime_root(source).map(|r| path(&r.join(relative)))
+        } else {
+            component_file(source, p).map(|p| path(&p))
+        }
+    })
     .collect::<Result<Vec<_>>>()?
     .join(";");
     c.args(["-Djava.awt.headless=true", "-Xms256m"])
@@ -185,17 +196,23 @@ pub fn client(
     java: &Path,
     qa: Option<&Path>,
 ) -> Result<tokio::process::Command> {
-    for p in [
-        "runtime/bootstrap/StandardJvmBootstrap.class",
-        "runtime/classes",
-        "runtime/dependencies",
-        "runtime/libs",
-        "runtime/natives",
+    let runtime = runtime_root(source)?;
+    for name in [
+        "classes",
+        "bootstrap",
+        "libs",
+        "imgui-compat",
+        "dependencies",
+        "natives",
+    ] {
+        need(&runtime_part(&runtime, name))?;
+    }
+    for name in [
         "compat/game-resource-compat.jar",
         "compat/startup-guard.jar",
         "compat/weapon-events.jar",
     ] {
-        need(&component_file(source, p)?)?
+        need(&component_file(source, name)?)?;
     }
     std::fs::create_dir_all(profile.join("game"))?;
     let mut c = base(java, session)?;
@@ -215,7 +232,7 @@ pub fn client(
         ])
         .arg(format!("-javaagent:{}={}", path(guard), path(session)));
     }
-    let natives = component_file(source, "runtime/natives")?;
+    let natives = runtime.join("natives");
     let native_search = [
         natives.clone(),
         g.native_bin.clone().unwrap_or(natives.clone()),
@@ -288,25 +305,11 @@ pub fn client(
         path(&session.join("agent.properties"))
     ));
     let mut cp = vec![
-        component_file(source, "runtime/bootstrap")?,
-        component_file(source, "runtime/classes")?,
-        component_file(source, "runtime/imgui-compat")?,
+        runtime_part(&runtime, "bootstrap"),
+        runtime_part(&runtime, "classes"),
+        runtime_part(&runtime, "imgui-compat"),
     ];
-    // Changed class directories precede their unchanged foundation directories.
-    let foundation = component_base(source)?;
-    if foundation != source {
-        for relative in [
-            "runtime/bootstrap",
-            "runtime/classes",
-            "runtime/imgui-compat",
-        ] {
-            let p = foundation.join(relative);
-            if p.is_dir() && !cp.contains(&p) {
-                cp.push(p);
-            }
-        }
-    }
-    for e in std::fs::read_dir(component_file(source, "runtime/dependencies")?)? {
+    for e in std::fs::read_dir(runtime.join("dependencies"))? {
         let p = e?.path();
         if p.extension().is_some_and(|x| x == "jar")
             && !p
@@ -318,7 +321,7 @@ pub fn client(
             cp.push(p)
         }
     }
-    cp.push(component_file(source, "runtime/libs")?);
+    cp.push(runtime_part(&runtime, "libs"));
     cp.push(g.mod_assets.clone());
     if let Some(p) = &g.patch_assets {
         cp.push(p.clone())
@@ -352,13 +355,15 @@ mod tests {
     use super::*;
     #[test]
     fn properties_escape_utf16_and_windows_paths() {
-        assert_eq!(prop("X:\\Тест=a"), "X\\:/\\u0422\\u0435\\u0441\\u0442\\=a");
+        assert_eq!(prop("X:\\Тест=a"), "D\\:/\\u0422\\u0435\\u0441\\u0442\\=a");
     }
     #[test]
     fn config_forces_managed_data_and_restricted_http() {
         let root = std::env::temp_dir().join(format!("bscp-config-test-{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&root).unwrap();
         std::fs::write(root.join("server.template.properties"),"http.host=0.0.0.0\ngame.playerPermission=admin\nhttp.port=@HTTP@\ndata.directory=relative\n").unwrap();
+        std::fs::create_dir_all(root.join("resources")).unwrap();
+        std::fs::write(root.join("resources/configs.xeon"), b"archive").unwrap();
         let config = server_config(
             &root,
             &root.join("map"),
@@ -366,6 +371,9 @@ mod tests {
             &Settings::default(),
         )
         .unwrap();
+        assert!(config.contains("assets.configs="));
+        assert!(config.contains("assets.boxes="));
+        assert!(config.contains("assets.overrides="));
         assert!(config.contains("http.host=127.0.0.1\n"));
         assert!(config.contains("game.playerPermission=stalker\n"));
         assert!(config.contains("http.port=29545\n"));

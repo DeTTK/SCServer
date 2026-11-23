@@ -16,6 +16,6 @@ Map.entry("850786143","6a94498e82efc0f6c863396cf75e62290218d2c94f0a9f314764228f8
 Map.entry("207310501","fce12358daf5a0f71f2ed13f4149ea3bc1f37fc114fc6fd0dab34ac5c28f0403"),
 Map.entry("1824362651","ad54b8ce5f5908fa73972d219c95e8dd12dee6cce0888deb62096dc749d5edbc"),
 Map.entry("211097523","4a9a19a8416399a0a331d3f9ac430c44c00609c9cdf1a503f0d2649c7b12194a"));
- static void verifyRuntime(Path runtime)throws Exception{for(var e:HASHES.entrySet()){String h=HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(runtime.resolve("classes").resolve(e.getKey()+".class"))));if(!h.equals(e.getValue()))throw new IllegalStateException("native_inventory_catalog_release_changed:"+e.getKey());}}
+ static void verifyRuntime(Path runtime)throws Exception{for(var e:HASHES.entrySet()){String h=HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(RuntimeFiles.read(runtime.resolve("classes").resolve(e.getKey()+".class"))));if(!h.equals(e.getValue()))throw new IllegalStateException("native_inventory_catalog_release_changed:"+e.getKey());}}
  private NativeInventoryCatalogRelease(){}
 }

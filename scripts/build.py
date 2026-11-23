@@ -111,6 +111,8 @@ def tests():
     results.append('medicine exact-root admission, native quick selection inputs, nullable categories, cooldown, expiry and saved persistence flags')
     subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.world.RegionRecordBoundsTests'],check=True)
     subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.world.MergedMapCompatibilityTests'],check=True)
+    subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.client.RuntimeFilesTests'],check=True)
+    subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.util.XeonArchiveTests'],check=True)
     subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.LootboxTests'],check=True)
     subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.WorldItemTests'],check=True)
     subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.world.WorldItemPhysicsTests'],check=True)

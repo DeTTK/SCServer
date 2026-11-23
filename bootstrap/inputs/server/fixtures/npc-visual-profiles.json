@@ -1,0 +1,108 @@
+{
+  "version": 1,
+  "nativeProfileClass": "936207013",
+  "nativeProfileSha256": "364604d52bcbebcc545ddd569147104d8d6fab0355540a315ffd70e6e66cbf4b",
+  "profiles": [
+    {
+      "index": 0,
+      "key": "human",
+      "skin": "universal_01",
+      "animations": "npcDefault",
+      "name": "NPC",
+      "type": 24,
+      "uuidOffset": 113,
+      "data": "AAAAAAADTlBDAC5jdXN0b21ucGNzOnRleHR1cmVzL2VudGl0eS9odW1hbm1hbGUvU3RldmUucG5nAApucGNEZWZhdWx0AAAFAQABAAEAAAABLQAAAAEAAAEAAAAAAAAADHVuaXZlcnNhbF8wMQEBAQFucGMtdmlDdZFscHJvZmlsAAB9AAAAAAAABG5vbmUAAAAAAAAAAAAAAQAAAAAAAAAAAAD/AAAAAAAAAAAA"
+    },
+    {
+      "index": 1,
+      "key": "zombie_01",
+      "skin": "zombie_01",
+      "animations": "npcZombie",
+      "name": "Зомби",
+      "type": 24,
+      "uuidOffset": 116,
+      "data": "AAAAAAAK0JfQvtC80LHQuAAuY3VzdG9tbnBjczp0ZXh0dXJlcy9lbnRpdHkvaHVtYW5tYWxlL1N0ZXZlLnBuZwAJbnBjWm9tYmllAAAFAQABAAEAAAABLQAAAAEAAAEAAAAAAAAACXpvbWJpZV8wMQEBAQFucGMtdmlDdZFscHJvZmlsAAB9AAAAAAAABG5vbmUAAAAAAAAAAAAAAQAAAAAAAAAAAAD/AAAAAAAAAAAA"
+    },
+    {
+      "index": 2,
+      "key": "zombie_02",
+      "skin": "zombie_02",
+      "animations": "npcZombie",
+      "name": "Зомби",
+      "type": 24,
+      "uuidOffset": 116,
+      "data": "AAAAAAAK0JfQvtC80LHQuAAuY3VzdG9tbnBjczp0ZXh0dXJlcy9lbnRpdHkvaHVtYW5tYWxlL1N0ZXZlLnBuZwAJbnBjWm9tYmllAAAFAQABAAEAAAABLQAAAAEAAAEAAAAAAAAACXpvbWJpZV8wMgEBAQFucGMtdmlDdZFscHJvZmlsAAB9AAAAAAAABG5vbmUAAAAAAAAAAAAAAQAAAAAAAAAAAAD/AAAAAAAAAAAA"
+    },
+    {
+      "index": 3,
+      "key": "zombie_03",
+      "skin": "zombie_03",
+      "animations": "npcZombie",
+      "name": "Зомби",
+      "type": 24,
+      "uuidOffset": 116,
+      "data": "AAAAAAAK0JfQvtC80LHQuAAuY3VzdG9tbnBjczp0ZXh0dXJlcy9lbnRpdHkvaHVtYW5tYWxlL1N0ZXZlLnBuZwAJbnBjWm9tYmllAAAFAQABAAEAAAABLQAAAAEAAAEAAAAAAAAACXpvbWJpZV8wMwEBAQFucGMtdmlDdZFscHJvZmlsAAB9AAAAAAAABG5vbmUAAAAAAAAAAAAAAQAAAAAAAAAAAAD/AAAAAAAAAAAA"
+    },
+    {
+      "index": 4,
+      "key": "zombie_04",
+      "skin": "zombie_04",
+      "animations": "npcZombie",
+      "name": "Зомби",
+      "type": 24,
+      "uuidOffset": 116,
+      "data": "AAAAAAAK0JfQvtC80LHQuAAuY3VzdG9tbnBjczp0ZXh0dXJlcy9lbnRpdHkvaHVtYW5tYWxlL1N0ZXZlLnBuZwAJbnBjWm9tYmllAAAFAQABAAEAAAABLQAAAAEAAAEAAAAAAAAACXpvbWJpZV8wNAEBAQFucGMtdmlDdZFscHJvZmlsAAB9AAAAAAAABG5vbmUAAAAAAAAAAAAAAQAAAAAAAAAAAAD/AAAAAAAAAAAA"
+    },
+    {
+      "index": 5,
+      "key": "zombie_05",
+      "skin": "zombie_05",
+      "animations": "npcZombie",
+      "name": "Зомби",
+      "type": 24,
+      "uuidOffset": 116,
+      "data": "AAAAAAAK0JfQvtC80LHQuAAuY3VzdG9tbnBjczp0ZXh0dXJlcy9lbnRpdHkvaHVtYW5tYWxlL1N0ZXZlLnBuZwAJbnBjWm9tYmllAAAFAQABAAEAAAABLQAAAAEAAAEAAAAAAAAACXpvbWJpZV8wNQEBAQFucGMtdmlDdZFscHJvZmlsAAB9AAAAAAAABG5vbmUAAAAAAAAAAAAAAQAAAAAAAAAAAAD/AAAAAAAAAAAA"
+    },
+    {
+      "index": 6,
+      "key": "zombie_06",
+      "skin": "zombie_06",
+      "animations": "npcZombie",
+      "name": "Зомби",
+      "type": 24,
+      "uuidOffset": 116,
+      "data": "AAAAAAAK0JfQvtC80LHQuAAuY3VzdG9tbnBjczp0ZXh0dXJlcy9lbnRpdHkvaHVtYW5tYWxlL1N0ZXZlLnBuZwAJbnBjWm9tYmllAAAFAQABAAEAAAABLQAAAAEAAAEAAAAAAAAACXpvbWJpZV8wNgEBAQFucGMtdmlDdZFscHJvZmlsAAB9AAAAAAAABG5vbmUAAAAAAAAAAAAAAQAAAAAAAAAAAAD/AAAAAAAAAAAA"
+    },
+    {
+      "index": 7,
+      "key": "relaxed",
+      "skin": "universal_01",
+      "animations": "npcRelaxedSlim",
+      "name": "NPC",
+      "type": 24,
+      "uuidOffset": 117,
+      "data": "AAAAAAADTlBDAC5jdXN0b21ucGNzOnRleHR1cmVzL2VudGl0eS9odW1hbm1hbGUvU3RldmUucG5nAA5ucGNSZWxheGVkU2xpbQAABQEAAQABAAAAAS0AAAABAAABAAAAAAAAAAx1bml2ZXJzYWxfMDEBAQEBbnBjLXZpQ3WRbHByb2ZpbAAAfQAAAAAAAARub25lAAAAAAAAAAAAAAEAAAAAAAAAAAAA/wAAAAAAAAAAAA\u003d\u003d"
+    },
+    {
+      "index": 8,
+      "key": "relaxed_heavy",
+      "skin": "universal_01",
+      "animations": "npcRelaxedHeavy",
+      "name": "NPC",
+      "type": 24,
+      "uuidOffset": 118,
+      "data": "AAAAAAADTlBDAC5jdXN0b21ucGNzOnRleHR1cmVzL2VudGl0eS9odW1hbm1hbGUvU3RldmUucG5nAA9ucGNSZWxheGVkSGVhdnkAAAUBAAEAAQAAAAEtAAAAAQAAAQAAAAAAAAAMdW5pdmVyc2FsXzAxAQEBAW5wYy12aUN1kWxwcm9maWwAAH0AAAAAAAAEbm9uZQAAAAAAAAAAAAABAAAAAAAAAAAAAP8AAAAAAAAAAAA\u003d"
+    },
+    {
+      "index": 9,
+      "key": "shnir",
+      "skin": "shnir",
+      "animations": "npcShnir",
+      "name": "NPC",
+      "type": 24,
+      "uuidOffset": 104,
+      "data": "AAAAAAADTlBDAC5jdXN0b21ucGNzOnRleHR1cmVzL2VudGl0eS9odW1hbm1hbGUvU3RldmUucG5nAAhucGNTaG5pcgAABQEAAQABAAAAAS0AAAABAAABAAAAAAAAAAVzaG5pcgEBAQFucGMtdmlDdZFscHJvZmlsAAB9AAAAAAAABG5vbmUAAAAAAAAAAAAAAQAAAAAAAAAAAAD/AAAAAAAAAAAA"
+    }
+  ],
+  "nativeFists": "AABSQwAAAP//AAAAAA\u003d\u003d"
+}

@@ -7,3 +7,6 @@
 *.png -text
 *.webp -text
 *.ttf -text
+
+bootstrap/inputs/** binary
+map/data/** binary

@@ -375,7 +375,7 @@ impl Supervisor {
         }
         Ok(())
     }
-    pub async fn execute(&self, r: Value) -> Result<Value> {
+    pub async fn execute(self: &Arc<Self>, r: Value) -> Result<Value> {
         let cmd = r["Command"].as_str().unwrap_or("");
         let args = &r["Arguments"];
         let a = |k: &str| -> Result<String> {
@@ -491,20 +491,34 @@ impl Supervisor {
             }
             "update" => {
                 self.require_stopped()?;
-                let layout = self.layout.clone();
-                Ok(tokio::task::spawn_blocking(move || -> Result<Value> {
-                    let s = layout.load()?;
-                    Ok(serde_json::to_value(if s.game_branch.is_empty() {
-                        serde_json::to_value(
-                            UpdateService::new(&layout)?.install(&s.feed_url, None)?,
-                        )?
+                let host = self.clone();
+                self.state("Updating", "Проверяем игровые компоненты…");
+                let result = tokio::task::spawn_blocking(move || -> Result<Value> {
+                    let s = host.layout.load()?;
+                    let progress_host = host.clone();
+                    let progress = move |text: String| progress_host.state("Updating", &text);
+                    if s.game_branch.is_empty() {
+                        Ok(serde_json::to_value(
+                            UpdateService::new(&host.layout)?
+                                .install(&s.feed_url, Some(&progress))?,
+                        )?)
                     } else {
-                        serde_json::to_value(
-                            RepositoryChannel::new(&layout)?.install(&s.game_branch, None)?,
-                        )?
-                    })?)
+                        Ok(serde_json::to_value(
+                            RepositoryChannel::new(&host.layout)?
+                                .install(&s.game_branch, Some(&progress))?,
+                        )?)
+                    }
                 })
-                .await??)
+                .await?;
+                self.state(
+                    "Stopped",
+                    if result.is_ok() {
+                        "Игра обновлена. Готов к запуску"
+                    } else {
+                        "Обновление прервано; прежняя установка сохранена"
+                    },
+                );
+                result
             }
             "rollback" => {
                 self.require_stopped()?;

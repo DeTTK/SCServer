@@ -37,6 +37,6 @@ final class NativeItemRulesRelease {
         Map.entry("62393481","1d303c830b73c78f591271ab33c4129650c28cf3874647107dde7d4a0567254f"),
         Map.entry("1366800141","94f14ec8c4ac992b20763969bae2b6ee2bb151ca9eb16e79fac10b46c6453dba"),
         Map.entry("211097523","4a9a19a8416399a0a331d3f9ac430c44c00609c9cdf1a503f0d2649c7b12194a"));
-    static void verify(Path runtime)throws Exception{for(var entry:HASHES.entrySet()){String actual=HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(runtime.resolve("classes").resolve(entry.getKey()+".class"))));if(!actual.equals(entry.getValue()))throw new IOException("native_item_rules_release_changed:"+entry.getKey());}}
+    static void verify(Path runtime)throws Exception{for(var entry:HASHES.entrySet()){String actual=HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(RuntimeFiles.read(runtime.resolve("classes").resolve(entry.getKey()+".class"))));if(!actual.equals(entry.getValue()))throw new IOException("native_item_rules_release_changed:"+entry.getKey());}}
     private NativeItemRulesRelease(){}
 }
