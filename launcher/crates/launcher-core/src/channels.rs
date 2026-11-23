@@ -295,7 +295,8 @@ impl RepositoryChannel {
         fs::create_dir_all(&roots)?;
         let destination = child(&roots, &available.revision)?;
         if destination.exists() {
-            verify_revision(&destination, &available.manifest)?;
+            tracker.planned();
+            verify_revision(&destination, &available.manifest, Some(&tracker))?;
             let previous = if old.revision == available.revision {
                 old.previous
             } else {
@@ -311,6 +312,7 @@ impl RepositoryChannel {
                 ..Default::default()
             };
             write_json(&state.join("installed.json"), &value)?;
+            tracker.complete();
             return Ok(value);
         }
         let complete_base = if available.manifest.foundation.is_some() {
@@ -369,7 +371,7 @@ impl RepositoryChannel {
                 no_links(&previous)?;
                 let reuse = if previous.is_file()
                     && fs::metadata(&previous)?.len() == f.size
-                    && sha(&previous)? == f.sha256
+                    && tracker.hash_file(&previous, f.size)? == f.sha256
                 {
                     Some(previous)
                 } else {
@@ -393,7 +395,11 @@ impl RepositoryChannel {
                     tracker.item(
                         &id,
                         f.size,
-                        UpdateService::available_download(&package, &cache)?,
+                        UpdateService::available_download_observed(
+                            &package,
+                            &cache,
+                            Some(&|e| tracker.observe(&id, e)),
+                        )?,
                     );
                 }
                 plans.push((f, cache, package, id, reuse));
@@ -428,10 +434,11 @@ impl RepositoryChannel {
                 } else {
                     &cache
                 };
-                if fs::hard_link(source, &target).is_err() {
-                    fs::copy(source, &target)?;
-                }
-                ensure!(sha(&target)? == f.sha256, "CHANNEL_FILE_HASH");
+                tracker.link_or_copy(source, &target, f.size)?;
+                ensure!(
+                    tracker.hash_file(&target, f.size)? == f.sha256,
+                    "CHANNEL_FILE_HASH"
+                );
                 tracker.file_done();
             }
             for (name, base) in [("Client", &client), ("Server", &server)] {
@@ -453,7 +460,7 @@ impl RepositoryChannel {
             );
             atomic_write(&stage.join(".manifest"), &raw)?;
             atomic_write(&stage.join(".manifest.sig"), &sig)?;
-            verify_revision(&stage, &available.manifest)?;
+            verify_revision(&stage, &available.manifest, Some(&tracker))?;
             self.cancelled()?;
             fs::rename(&stage, &destination)?;
             let value = ChannelInstalled {
@@ -475,6 +482,13 @@ impl RepositoryChannel {
     }
     /// Startup checks must not spawn a supervisor for an already verified revision.
     pub fn is_current(&self, available: &ChannelAvailable) -> Result<bool> {
+        self.is_current_observed(available, None)
+    }
+    pub fn is_current_observed(
+        &self,
+        available: &ChannelAvailable,
+        callback: Option<&Progress>,
+    ) -> Result<bool> {
         let settings = self.layout.load()?;
         if settings.game_branch != available.manifest.channel || !hex_valid(&available.revision, 64)
         {
@@ -487,7 +501,13 @@ impl RepositoryChannel {
         }
         let folder = child(&revisions(&self.layout, &settings), &available.revision)?;
         no_links(&folder)?;
-        Ok(verify_revision(&folder, &available.manifest).is_ok())
+        let tracker = callback.map(|callback| TransferTracker::new(Some(callback)));
+        if let Some(tracker) = &tracker {
+            tracker.planned();
+        }
+        let valid = verify_revision(&folder, &available.manifest, tracker.as_ref()).is_ok();
+        progress(callback, "");
+        Ok(valid)
     }
     pub fn cached(&self, branch: &str) -> Result<Option<ChannelAvailable>> {
         let state = state_dir(&self.layout, branch)?;
@@ -520,7 +540,7 @@ impl RepositoryChannel {
         let raw = fs::read(folder.join(".manifest"))?;
         let sig = fs::read(folder.join(".manifest.sig"))?;
         let m = self.authenticate(&raw, &sig, branch)?;
-        verify_revision(&folder, &m)?;
+        verify_revision(&folder, &m, None)?;
         let value = ChannelInstalled {
             revision: old.previous,
             previous: old.revision,
@@ -532,7 +552,18 @@ impl RepositoryChannel {
         Ok(value)
     }
 }
-fn verify_revision(folder: &Path, manifest: &ChannelManifest) -> Result<()> {
+fn verify_revision(
+    folder: &Path,
+    manifest: &ChannelManifest,
+    tracker: Option<&TransferTracker<'_>>,
+) -> Result<()> {
+    if let Some(tracker) = tracker {
+        tracker.stage("verify", "Проверяем сборку", manifest.files.len());
+        tracker.disk_stage(
+            "Проверка файлов",
+            Some(manifest.files.iter().map(|f| f.size).sum()),
+        );
+    }
     for f in &manifest.files {
         let (component, relative) = f.target.split_once('/').context("CHANNEL_TARGET")?;
         let target = child(
@@ -544,10 +575,19 @@ fn verify_revision(folder: &Path, manifest: &ChannelManifest) -> Result<()> {
             relative,
         )?;
         ensure!(
-            target.is_file() && fs::metadata(&target)?.len() == f.size && sha(&target)? == f.sha256,
+            target.is_file()
+                && fs::metadata(&target)?.len() == f.size
+                && sha_observed(&target, |bytes| {
+                    if let Some(tracker) = tracker {
+                        tracker.disk_advance(bytes);
+                    }
+                })? == f.sha256,
             "CHANNEL_CONTENTS: файл сборки повреждён: {}",
             f.target
         );
+        if let Some(tracker) = tracker {
+            tracker.file_done();
+        }
     }
     Ok(())
 }

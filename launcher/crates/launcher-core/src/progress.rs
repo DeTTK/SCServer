@@ -37,22 +37,23 @@ pub struct TransferSnapshot {
     pub reused_bytes: u64,
     pub bytes_per_second: f64,
     pub eta_seconds: Option<u64>,
+    #[serde(default)]
+    pub disk_stage: String,
+    #[serde(default)]
+    pub disk_done_bytes: u64,
+    #[serde(default)]
+    pub disk_total_bytes: Option<u64>,
     pub files_done: usize,
     pub files_total: usize,
 }
 impl TransferSnapshot {
     pub fn fraction(&self) -> f32 {
-        match self.phase.as_str() {
-            "complete" => 1.0,
-            "download" if self.total_known => {
-                if self.total_bytes == 0 {
-                    1.0
-                } else {
-                    self.downloaded_bytes as f32 / self.total_bytes as f32
-                }
-            }
-            "install" if self.files_total > 0 => self.files_done as f32 / self.files_total as f32,
-            _ => -1.0,
+        if !self.total_known {
+            -1.0
+        } else if self.total_bytes == 0 {
+            1.0
+        } else {
+            (self.downloaded_bytes as f64 / self.total_bytes as f64).clamp(0.0, 1.0) as f32
         }
     }
 }
@@ -60,15 +61,43 @@ impl TransferSnapshot {
 #[derive(Clone, Copy, Debug)]
 pub enum DownloadEvent {
     Available(u64),
-    Received { bytes: u64, available: u64 },
+    Written {
+        available: u64,
+    },
+    Activity {
+        done: u64,
+        total: Option<u64>,
+        stage: &'static str,
+    },
+    NetworkWait {
+        seconds: u64,
+    },
+    Received {
+        bytes: u64,
+        available: u64,
+    },
 }
 pub type DownloadObserver<'a> = dyn Fn(DownloadEvent) + Send + Sync + 'a;
 
 struct State {
     snapshot: TransferSnapshot,
+    stage_title: String,
+    waiting: bool,
+    writing_download: bool,
     items: HashMap<String, (u64, u64, u64)>,
     samples: VecDeque<(Instant, u64)>,
     emitted: Option<Instant>,
+}
+impl State {
+    fn disk(&mut self, stage: &str, done: u64, total: Option<u64>, writing_download: bool) {
+        if self.snapshot.disk_stage != stage {
+            self.snapshot.disk_stage.clear();
+            self.snapshot.disk_stage.push_str(stage);
+        }
+        self.snapshot.disk_done_bytes = done;
+        self.snapshot.disk_total_bytes = total;
+        self.writing_download = writing_download;
+    }
 }
 pub struct TransferTracker<'a> {
     state: Mutex<State>,
@@ -84,6 +113,9 @@ impl<'a> TransferTracker<'a> {
                     ..Default::default()
                 },
                 items: HashMap::new(),
+                stage_title: String::new(),
+                waiting: false,
+                writing_download: false,
                 samples: VecDeque::new(),
                 emitted: None,
             }),
@@ -128,12 +160,12 @@ impl<'a> TransferTracker<'a> {
                     }
                 })
                 .unwrap_or(0.0);
-            s.snapshot.bytes_per_second = if s.snapshot.phase == "download" {
-                rate
-            } else {
-                0.0
-            };
-            s.snapshot.eta_seconds = if s.snapshot.phase == "download" && rate >= 1.0 {
+            let streaming = s.snapshot.phase == "download"
+                && !s.waiting
+                && (s.snapshot.disk_stage.is_empty() || s.writing_download)
+                && s.snapshot.remaining_bytes > 0;
+            s.snapshot.bytes_per_second = if streaming { rate } else { 0.0 };
+            s.snapshot.eta_seconds = if streaming && rate >= 1.0 {
                 Some((s.snapshot.remaining_bytes as f64 / rate).ceil() as u64)
             } else {
                 None
@@ -154,10 +186,14 @@ impl<'a> TransferTracker<'a> {
             }
             s.snapshot.phase = phase.into();
             s.snapshot.title = title.into();
-            if phase != "verify" {
-                s.snapshot.files_done = 0;
-                s.snapshot.files_total = files;
+            s.stage_title = title.into();
+            s.waiting = false;
+            s.disk("", 0, None, false);
+            if phase == "checking" {
+                s.snapshot.total_known = false;
             }
+            s.snapshot.files_done = 0;
+            s.snapshot.files_total = files;
         });
     }
     pub fn item(&self, id: &str, size: u64, available: u64) {
@@ -174,25 +210,83 @@ impl<'a> TransferTracker<'a> {
     }
     pub fn observe(&self, id: &str, event: DownloadEvent) {
         self.update(matches!(event, DownloadEvent::Available(_)), |s| {
-            if let Some((size, available, cached)) = s.items.get_mut(id) {
-                match event {
-                    DownloadEvent::Available(value) => {
+            if s.waiting && !matches!(event, DownloadEvent::NetworkWait { .. }) {
+                s.snapshot.title.clone_from(&s.stage_title);
+                s.waiting = false;
+            }
+            match event {
+                DownloadEvent::NetworkWait { seconds } => {
+                    s.waiting = true;
+                    s.snapshot.title = format!("Ожидаем данные от сервера · {seconds} с");
+                    s.disk("", 0, None, false);
+                }
+                DownloadEvent::Activity { done, total, stage } => s.disk(stage, done, total, false),
+                DownloadEvent::Written { available } => {
+                    if let Some(&(size, _, _)) = s.items.get(id) {
+                        s.disk("Запись загрузки", available.min(size), Some(size), true);
+                    }
+                }
+                DownloadEvent::Available(value) => {
+                    s.disk("", 0, None, false);
+                    if let Some((size, available, cached)) = s.items.get_mut(id) {
                         *available = value.min(*size);
                         let retained = (*cached).min(*available);
                         s.snapshot.cached_bytes =
                             s.snapshot.cached_bytes.saturating_sub(*cached - retained);
                         *cached = retained;
                     }
-                    DownloadEvent::Received {
-                        bytes,
-                        available: value,
-                    } => {
+                }
+                DownloadEvent::Received {
+                    bytes,
+                    available: value,
+                } => {
+                    if !s.writing_download {
+                        s.disk("", 0, None, false);
+                    }
+                    if let Some((size, available, _)) = s.items.get_mut(id) {
                         *available = value.min(*size);
                         s.snapshot.downloaded_bytes =
                             s.snapshot.downloaded_bytes.saturating_add(bytes);
                     }
                 }
             }
+        });
+    }
+    pub fn disk_stage(&self, stage: &str, total: Option<u64>) {
+        self.update(false, |s| s.disk(stage, 0, total, false));
+    }
+    pub(crate) fn hash_file(&self, path: &std::path::Path, size: u64) -> crate::Result<String> {
+        self.disk_stage("Проверка файла", Some(size));
+        crate::sha_observed(path, |bytes| self.disk_advance(bytes))
+    }
+    pub(crate) fn link_or_copy(
+        &self,
+        source: &std::path::Path,
+        target: &std::path::Path,
+        size: u64,
+    ) -> crate::Result<()> {
+        use std::io::{Read, Write};
+        if std::fs::hard_link(source, target).is_ok() {
+            return Ok(());
+        }
+        self.disk_stage("Копирование файла", Some(size));
+        let mut input = std::fs::File::open(source)?;
+        let mut output = std::fs::File::create_new(target)?;
+        let mut buffer = [0; 131072];
+        loop {
+            let count = input.read(&mut buffer)?;
+            if count == 0 {
+                break;
+            }
+            output.write_all(&buffer[..count])?;
+            self.disk_advance(count as u64);
+        }
+        output.set_permissions(input.metadata()?.permissions())?;
+        Ok(())
+    }
+    pub fn disk_advance(&self, bytes: u64) {
+        self.update(false, |s| {
+            s.snapshot.disk_done_bytes = s.snapshot.disk_done_bytes.saturating_add(bytes);
         });
     }
     pub fn reused(&self, bytes: u64) {
@@ -209,6 +303,7 @@ impl<'a> TransferTracker<'a> {
         self.update(true, |s| {
             s.snapshot.total_known = true;
             s.snapshot.phase = "complete".into();
+            s.disk("", 0, None, false);
             s.snapshot.title = "Игра установлена".into();
             s.snapshot.files_done = s.snapshot.files_total;
         });
@@ -294,6 +389,54 @@ mod tests {
         );
         assert_eq!(s.fraction(), 1.0);
         assert_eq!(s.eta_seconds, None);
+    }
+    #[test]
+    fn network_wait_write_and_hash_have_independent_counters() {
+        let tracker = TransferTracker::new(None);
+        tracker.item("a", 100, 20);
+        tracker.planned();
+        tracker.stage("download", "Загрузка", 0);
+        tracker.observe(
+            "a",
+            DownloadEvent::Received {
+                bytes: 30,
+                available: 50,
+            },
+        );
+        tracker.observe("a", DownloadEvent::Written { available: 50 });
+        let written = tracker.snapshot();
+        assert_eq!(written.disk_total_bytes, Some(100));
+        assert_eq!(written.disk_done_bytes, 50);
+        assert_eq!(written.downloaded_bytes, 30);
+        assert_eq!(written.fraction(), 30.0 / 80.0);
+        tracker.observe("a", DownloadEvent::NetworkWait { seconds: 8 });
+        assert!(tracker.snapshot().title.contains("8 с"));
+        tracker.observe(
+            "a",
+            DownloadEvent::Received {
+                bytes: 50,
+                available: 100,
+            },
+        );
+        tracker.observe(
+            "a",
+            DownloadEvent::Activity {
+                stage: "Сохранение",
+                done: 0,
+                total: None,
+            },
+        );
+        let saving = tracker.snapshot();
+        assert_eq!(saving.title, "Загрузка");
+        assert_eq!(saving.fraction(), 1.0);
+        assert_eq!(saving.disk_total_bytes, None);
+        tracker.stage("verify", "Проверяем", 4);
+        tracker.disk_stage("Проверка файлов", Some(800));
+        tracker.disk_advance(200);
+        let verify = tracker.snapshot();
+        assert_eq!(verify.disk_done_bytes, 200);
+        assert_eq!(verify.fraction(), 1.0);
+        assert_eq!(verify.downloaded_bytes, 80);
     }
     #[test]
     fn speed_and_eta_use_the_remaining_global_bytes() {

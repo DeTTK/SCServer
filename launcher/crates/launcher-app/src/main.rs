@@ -14,6 +14,14 @@ fn start() -> anyhow::Result<()> {
         .unwrap_or(std::env::current_exe()?.parent().unwrap().to_path_buf());
     let layout = bscp_launcher_core::Layout::new(root);
     layout.init()?;
+    match bscp_launcher_core::SelfUpdater::handoff_pending(&layout, &std::env::current_exe()?) {
+        Ok(true) => return Ok(()),
+        Ok(false) => {}
+        Err(error) => {
+            let _ = bscp_launcher_core::RotatingLog::new(layout.at("logs"), "launcher")
+                .line(&format!("launcher update deferred: {error:#}"));
+        }
+    }
     if let Some(exe) = bscp_launcher_core::UpdateService::new(&layout)?.verified_launcher()? {
         let current = std::env::current_exe()?.canonicalize()?;
         if current != exe.canonicalize()? {
@@ -80,6 +88,17 @@ fn start() -> anyhow::Result<()> {
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
+    if let Some(index) = args.iter().position(|v| v == "--apply-launcher-update") {
+        let result = args
+            .get(index + 1)
+            .ok_or_else(|| anyhow::anyhow!("Missing launcher update plan"))
+            .and_then(|p| bscp_launcher_core::SelfUpdater::apply_plan(std::path::Path::new(p)));
+        if let Err(error) = result {
+            eprintln!("{error:#}");
+            std::process::exit(1);
+        }
+        return;
+    }
     let diagnostic_root = args
         .iter()
         .position(|arg| arg == "--root")

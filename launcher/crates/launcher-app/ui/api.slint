@@ -3,8 +3,9 @@ export struct ServerRow { id: string, title: string, address: string, status: st
 export struct ChangeRow { title: string, body: string }
 
 export struct TransferView {
-    visible: bool, operation: string, sequence: int,
+    visible: bool, completed: bool, operation: string, sequence: int,
     title: string, percent: string, fraction: float,
+    disk-label: string, disk-fraction: float, disk-amount: string,
     downloaded: string, remaining: string, speed: string, eta: string, detail: string,
 }
 

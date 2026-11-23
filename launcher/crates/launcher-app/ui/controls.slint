@@ -223,7 +223,7 @@ export component TransferStatus inherits Rectangle {
         padding: 14px; spacing: 10px;
         HorizontalLayout {
             Label { text: root.view.title; horizontal-stretch: 1; font-size: 15px; }
-            Label { text: root.view.percent; color: Theme.accent; }
+            Hint { text: root.view.percent; color: Theme.accent; }
         }
         Rectangle {
             height: 6px; background: Theme.rule; border-radius: 3px;
@@ -241,6 +241,19 @@ export component TransferStatus inherits Rectangle {
                 Label { text: metric.val; font-size: 14px; }
             }
         }
-        Hint { text: root.view.detail; wrap: word-wrap; overflow: clip; }
+        HorizontalLayout {
+            spacing: 12px;
+            Hint { text: root.view.disk-label; color: Theme.accent-pressed; }
+            Hint { text: root.view.disk-amount; }
+            Hint { text: root.view.detail; horizontal-stretch: 1; horizontal-alignment: right; }
+        }
+    }
+    if root.view.disk-fraction >= 0: Rectangle {
+        x: 0; y: parent.height - self.height; height: 2px; width: parent.width;
+        background: Theme.rule;
+        Rectangle {
+            x: 0; width: parent.width * clamp(root.view.disk-fraction, 0, 1); height: parent.height;
+            background: Theme.online;
+        }
     }
 }

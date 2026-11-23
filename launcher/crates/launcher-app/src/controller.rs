@@ -152,6 +152,11 @@ fn refresh(ui: &slint::Weak<AppWindow>, layout: &Layout, drafts: bool) -> Result
     let s = layout.load()?;
     let worlds = WorldStore::new(layout.data(&s))?.list()?;
     let favorites: Vec<ServerEntry> = read_json(&layout.at("config/servers.json"))?;
+    let update_hint = SelfUpdater::pending_version(layout)
+        .ok()
+        .flatten()
+        .map(|version| format!("Лаунчер {version} готов · применится при следующем запуске"))
+        .unwrap_or_default();
     let history: Vec<ServerEntry> = read_json(&layout.at("config/server-history.json"))?;
     let bundle = load_bundle(layout, &s);
     let selected = worlds
@@ -181,6 +186,7 @@ fn refresh(ui: &slint::Weak<AppWindow>, layout: &Layout, drafts: bool) -> Result
             ui.set_bundle_path(bundle.into());
         }
         ui.set_configured(configured);
+        ui.set_launcher_update_hint(update_hint.into());
         ui.set_selected_world_id(s.selected_world.into());
         ui.set_selected_world_title(selected.into());
         ui.set_worlds(rows(
@@ -294,6 +300,39 @@ fn display_bytes(bytes: u64) -> String {
 }
 fn transfer_view(s: &TransferSnapshot) -> crate::TransferView {
     let fraction = s.fraction();
+    let percent = if !s.total_known {
+        "Сеть · расчёт объёма".to_owned()
+    } else if s.total_bytes == 0 {
+        "Скачивание не требуется".to_owned()
+    } else if s.remaining_bytes == 0 {
+        "Сеть · скачано".to_owned()
+    } else {
+        format!(
+            "Сеть · {}%",
+            u128::from(s.downloaded_bytes) * 100 / u128::from(s.total_bytes)
+        )
+    };
+    let mut disk_label = String::new();
+    let mut disk_fraction = -1.0;
+    let mut disk_amount = String::new();
+    if !s.disk_stage.is_empty() {
+        disk_label = format!("Диск · {}", s.disk_stage);
+        if let Some(total) = s.disk_total_bytes.filter(|&v| v > 0) {
+            disk_fraction = (s.disk_done_bytes.min(total) as f64 / total as f64) as f32;
+            disk_amount = format!(
+                "{} / {}",
+                display_bytes(s.disk_done_bytes),
+                display_bytes(total)
+            );
+        }
+    } else if s.files_total > 0 && matches!(s.phase.as_str(), "checking" | "install") {
+        disk_label = "Диск · файлы".into();
+        disk_fraction = s.files_done as f32 / s.files_total as f32;
+        disk_amount = format!("{} / {}", s.files_done, s.files_total);
+    } else if s.phase == "complete" {
+        disk_label = "Диск · готово".into();
+        disk_fraction = 1.0;
+    }
     let speed =
         if s.phase == "download" && s.bytes_per_second >= 1.0 && s.bytes_per_second.is_finite() {
             format!("{}/с", display_bytes(s.bytes_per_second as u64))
@@ -307,7 +346,8 @@ fn transfer_view(s: &TransferSnapshot) -> crate::TransferView {
             }
             Some(seconds) if seconds >= 60 => format!("≈ {} мин {} с", seconds / 60, seconds % 60),
             Some(seconds) => format!("≈ {seconds} с"),
-            None => "Расчёт…".into(),
+            None if s.bytes_per_second > 0.0 => "Расчёт…".into(),
+            None => "—".into(),
         }
     } else {
         "—".into()
@@ -325,31 +365,20 @@ fn transfer_view(s: &TransferSnapshot) -> crate::TransferView {
             display_bytes(s.cached_bytes)
         ));
     }
-    if s.files_total > 0 {
-        detail.push(format!("Файлы: {} / {}", s.files_done, s.files_total));
-    }
-    if detail.is_empty() {
-        detail.push(
-            if s.phase == "complete" {
-                "Все файлы готовы"
-            } else {
-                "Проверяем целостность файлов"
-            }
-            .into(),
-        );
+    if s.files_total > 0 && !s.disk_stage.is_empty() {
+        detail.push(format!("Файлы {} / {}", s.files_done, s.files_total));
     }
     crate::TransferView {
         visible: true,
+        completed: s.phase == "complete",
         operation: s.operation.clone().into(),
         sequence: s.sequence.min(i32::MAX as u64) as i32,
         title: s.title.clone().into(),
-        percent: if fraction >= 0.0 {
-            format!("{:.0}%", fraction * 100.0)
-        } else {
-            String::new()
-        }
-        .into(),
+        percent: percent.into(),
         fraction,
+        disk_label: disk_label.into(),
+        disk_fraction,
+        disk_amount: disk_amount.into(),
         downloaded: if s.total_known {
             format!(
                 "{} из {}",
@@ -398,6 +427,9 @@ fn operation_done(ui: &slint::Weak<AppWindow>, result: Result<String>) {
         ui.set_progress_text("".into());
         match result {
             Ok(text) => {
+                if !ui.get_transfer_view().completed {
+                    ui.set_transfer_view(Default::default());
+                }
                 ui.set_error("".into());
                 ui.set_error_field("".into());
                 if !text.is_empty() {
@@ -925,12 +957,35 @@ pub fn bind(ui: &AppWindow, layout: Layout) -> Binding {
     std::thread::spawn(move || {
         let host = HostClient::new(&layout);
         let mut previous = String::new();
+        let mut updating = false;
         while poll_alive.load(Ordering::Relaxed) {
-            std::thread::sleep(Duration::from_secs(3));
+            std::thread::sleep(if updating {
+                Duration::from_millis(400)
+            } else {
+                Duration::from_secs(3)
+            });
             if !poll_alive.load(Ordering::Relaxed) {
                 break;
             }
-            let Ok(view) = host.status() else { continue };
+            let Ok(view) = host.status() else {
+                updating = false;
+                continue;
+            };
+            updating = view.state == "Updating";
+            if updating {
+                let _ = poll_ui.upgrade_in_event_loop(move |ui| {
+                    if ui.get_busy() {
+                        if let Some(snapshot) = view.transfer {
+                            apply_progress(&ui, ProgressUpdate::Transfer(snapshot));
+                        } else {
+                            apply_progress(&ui, ProgressUpdate::Message(view.detail.clone()));
+                        }
+                        ui.set_status("Обновляем игровые файлы…".into());
+                    }
+                    ui.set_server_state(view.detail.into());
+                });
+                continue;
+            }
             let changed = view.detail != previous;
             previous = view.detail.clone();
             let metrics = if matches!(view.state.as_str(), "Ready" | "Starting") {
@@ -955,15 +1010,6 @@ pub fn bind(ui: &AppWindow, layout: Layout) -> Binding {
                 ));
                 ui.set_client_running(view.client_running);
                 ui.set_server_state(view.detail.clone().into());
-                if view.state == "Updating" && ui.get_busy() {
-                    if let Some(snapshot) = view.transfer.clone() {
-                        apply_progress(&ui, ProgressUpdate::Transfer(snapshot));
-                    } else {
-                        ui.set_progress_text(view.detail.clone().into());
-                    }
-                    ui.set_status("Обновляем игровые файлы…".into());
-                }
-
                 ui.set_server_address(address.into());
                 ui.set_relay_invite(view.relay_invite.into());
                 ui.set_relay_status(view.relay_status.into());
@@ -1173,6 +1219,21 @@ fn execute(
         }
         Work::Init => {
             refresh(ui, layout, true)?;
+            match SelfUpdater::stage_latest(layout, cancel.clone(), Some(progress)) {
+                Ok(Some(version)) => {
+                    let _ = ui.upgrade_in_event_loop(move |ui| {
+                        ui.set_launcher_update_hint(
+                            format!("Лаунчер {version} готов · применится при следующем запуске")
+                                .into(),
+                        )
+                    });
+                }
+                Ok(None) => {}
+                Err(error) => {
+                    let _ = RotatingLog::new(layout.at("logs"), "launcher")
+                        .line(&format!("launcher update check: {error:#}"));
+                }
+            }
             let _ = ui.upgrade_in_event_loop(|ui| {
                 ui.set_setup_visible(!ui.get_configured());
                 ui.set_setup_step(0);
@@ -1193,7 +1254,7 @@ fn execute(
                     Ok(available) => {
                         let view = HostClient::new(layout).status().unwrap_or_default();
                         if s.setup_completed
-                            && !service.is_current(&available)?
+                            && !service.is_current_observed(&available, Some(progress))?
                             && !view.client_running
                             && !matches!(
                                 view.state.as_str(),
@@ -1910,7 +1971,7 @@ mod transfer_tests {
             ..Default::default()
         };
         let view = transfer_view(&s);
-        assert_eq!(view.percent, "40%");
+        assert_eq!(view.percent, "Сеть · 40%");
         assert_eq!(view.downloaded, "1,0 МБ из 2,5 МБ");
         assert_eq!(view.speed, "1,5 МБ/с");
         assert_eq!(view.eta, "≈ 1 мин 1 с");
@@ -1921,6 +1982,27 @@ mod transfer_tests {
         assert_eq!(view.remaining, "—");
         assert_eq!(view.eta, "—");
         assert_eq!(view.fraction, -1.0);
+    }
+    #[test]
+    fn disk_postprocessing_keeps_network_complete_and_unknown_disk_unquantified() {
+        let mut snapshot = TransferSnapshot {
+            phase: "verify".into(),
+            total_known: true,
+            total_bytes: 90,
+            downloaded_bytes: 90,
+            disk_stage: "Проверка файлов".into(),
+            disk_done_bytes: 15,
+            disk_total_bytes: Some(60),
+            ..Default::default()
+        };
+        let view = transfer_view(&snapshot);
+        assert_eq!(view.fraction, 1.0);
+        assert_eq!(view.disk_fraction, 0.25);
+        assert_eq!(view.percent, "Сеть · скачано");
+        snapshot.disk_total_bytes = None;
+        let view = transfer_view(&snapshot);
+        assert_eq!(view.disk_fraction, -1.0);
+        assert!(view.disk_amount.is_empty());
     }
 }
 

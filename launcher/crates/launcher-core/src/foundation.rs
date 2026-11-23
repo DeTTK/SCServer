@@ -313,7 +313,7 @@ impl RepositoryChannel {
                     if recovery
                         && dest.is_file()
                         && fs::metadata(&dest)?.len() == file.size
-                        && sha(&dest)? == file.sha256
+                        && tracker.hash_file(&dest, file.size)? == file.sha256
                     {
                         tracker.reused(file.size);
                         ready.push(file);
@@ -329,7 +329,7 @@ impl RepositoryChannel {
                         no_links(&previous)?;
                         if previous.is_file()
                             && fs::metadata(&previous)?.len() == file.size
-                            && sha(&previous)? == file.sha256
+                            && tracker.hash_file(&previous, file.size)? == file.sha256
                         {
                             tracker.reused(file.size);
                             reuse.push((file, previous));
@@ -364,8 +364,12 @@ impl RepositoryChannel {
                     size: object.size,
                     ..Default::default()
                 };
-                let available = UpdateService::available_download(&package, &path)?;
                 let id = format!("foundation/{hash}");
+                let available = UpdateService::available_download_observed(
+                    &package,
+                    &path,
+                    Some(&|e| tracker.observe(&id, e)),
+                )?;
                 tracker.item(&id, package.size, available);
                 downloads.push((id, package, path));
             }
@@ -385,7 +389,7 @@ impl RepositoryChannel {
             for file in &ready {
                 self.cancelled()?;
                 ensure!(
-                    sha(&target(&stage, &file.path)?)? == file.sha256,
+                    tracker.hash_file(&target(&stage, &file.path)?, file.size)? == file.sha256,
                     "FOUNDATION_REUSE_CHANGED"
                 );
                 tracker.file_done();
@@ -394,10 +398,11 @@ impl RepositoryChannel {
                 self.cancelled()?;
                 let dest = target(&stage, &file.path)?;
                 fs::create_dir_all(dest.parent().unwrap())?;
-                if fs::hard_link(previous, &dest).is_err() {
-                    fs::copy(previous, &dest)?;
-                }
-                ensure!(sha(&dest)? == file.sha256, "FOUNDATION_REUSE_CHANGED");
+                tracker.link_or_copy(previous, &dest, file.size)?;
+                ensure!(
+                    tracker.hash_file(&dest, file.size)? == file.sha256,
+                    "FOUNDATION_REUSE_CHANGED"
+                );
                 tracker.file_done();
             }
             for file in &pending {
@@ -405,6 +410,10 @@ impl RepositoryChannel {
                 no_links(&parent)?;
                 fs::create_dir_all(parent)?;
             }
+            tracker.disk_stage(
+                "Распаковка файлов",
+                Some(pending.iter().map(|f| f.size).sum()),
+            );
             self.write_fresh_files_progress(
                 &pending,
                 &stage,
@@ -520,6 +529,9 @@ impl RepositoryChannel {
                             };
                             actual.update(&decoded);
                             output.write_all(&decoded)?;
+                            if let Some(tracker) = tracker {
+                                tracker.disk_advance(decoded.len() as u64);
+                            }
                         }
                         ensure!(
                             hex::encode(actual.finalize()) == file.sha256,

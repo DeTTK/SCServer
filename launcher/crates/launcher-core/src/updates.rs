@@ -83,6 +83,8 @@ pub struct UpdateService {
     pub layout: Layout,
     http: reqwest::blocking::Client,
     pub cancel: Arc<AtomicBool>,
+    #[cfg(test)]
+    transport_override: Option<String>,
 }
 impl UpdateService {
     pub fn new(layout: &Layout) -> Result<Self> {
@@ -100,6 +102,8 @@ impl UpdateService {
             .timeout(Duration::from_secs(20))
             .build()?,
             cancel: Arc::new(AtomicBool::new(false)),
+            #[cfg(test)]
+            transport_override: None,
         })
     }
     pub fn with_cancel(mut self, cancel: Arc<AtomicBool>) -> Self {
@@ -133,7 +137,16 @@ impl UpdateService {
         let mut url = Self::url(value)?;
         for _ in 0..5 {
             self.cancelled()?;
-            let mut request = self.http.get(url.clone());
+            #[cfg(test)]
+            let request_url = self
+                .transport_override
+                .as_deref()
+                .map(reqwest::Url::parse)
+                .transpose()?
+                .unwrap_or_else(|| url.clone());
+            #[cfg(not(test))]
+            let request_url = url.clone();
+            let mut request = self.http.get(request_url);
             if offset > 0 {
                 request = request.header(reqwest::header::RANGE, format!("bytes={offset}-"));
             }
@@ -257,10 +270,17 @@ impl UpdateService {
     }
 
     pub fn available_download(p: &Package, destination: &Path) -> Result<u64> {
+        Self::available_download_observed(p, destination, None)
+    }
+    pub fn available_download_observed(
+        p: &Package,
+        destination: &Path,
+        observer: Option<&crate::DownloadObserver<'_>>,
+    ) -> Result<u64> {
         no_links(destination)?;
         if destination.is_file()
             && fs::metadata(destination)?.len() == p.size
-            && sha(destination)? == p.sha256
+            && observed_hash(destination, observer)? == p.sha256
         {
             return Ok(p.size);
         }
@@ -268,7 +288,7 @@ impl UpdateService {
         no_links(&part)?;
         if part.is_file() {
             let size = fs::metadata(&part)?.len();
-            if size < p.size || size == p.size && sha(&part)? == p.sha256 {
+            if size < p.size || size == p.size && observed_hash(&part, observer)? == p.sha256 {
                 return Ok(size);
             }
         }
@@ -282,107 +302,213 @@ impl UpdateService {
         callback: Option<&Progress>,
         observer: Option<&crate::DownloadObserver<'_>>,
     ) -> Result<()> {
-        self.cancelled()?;
-        Self::url(&p.url)?;
-        if !valid_hash(&p.sha256) || p.size == 0 {
-            bail!("DOWNLOAD_METADATA: invalid pinned size/hash")
-        };
-        no_links(destination)?;
-        fs::create_dir_all(destination.parent().context("download parent")?)?;
-        if destination.is_file()
-            && fs::metadata(destination)?.len() == p.size
-            && sha(destination)? == p.sha256
-        {
-            if let Some(f) = observer {
-                f(crate::DownloadEvent::Available(p.size));
+        // A blocking request has a finite deadline. Preserve its partial file and
+        // resume a slow body instead of turning a 20-second segment into a failed install.
+        let started = std::time::Instant::now();
+        let mut idle_failures = 0;
+        loop {
+            let part = PathBuf::from(format!("{}.part", destination.display()));
+            let before = fs::metadata(&part).map(|m| m.len()).unwrap_or(0);
+            let result = self.download_attempt(p, destination, callback, observer);
+            match result {
+                Ok(()) => return Ok(()),
+                Err(error) => {
+                    self.cancelled()?;
+                    let retryable = error.chain().any(|e| {
+                        e.downcast_ref::<reqwest::Error>()
+                            .is_some_and(|e| e.is_timeout() || e.is_connect() || e.is_body())
+                    }) || error.to_string().starts_with("DOWNLOAD_INCOMPLETE")
+                        || error.chain().any(|e| {
+                            e.downcast_ref::<std::io::Error>().is_some_and(|e| {
+                                matches!(
+                                    e.kind(),
+                                    std::io::ErrorKind::UnexpectedEof
+                                        | std::io::ErrorKind::ConnectionReset
+                                        | std::io::ErrorKind::ConnectionAborted
+                                        | std::io::ErrorKind::TimedOut
+                                )
+                            })
+                        });
+                    let after = fs::metadata(&part).map(|m| m.len()).unwrap_or(0);
+                    if after > before {
+                        idle_failures = 0
+                    } else {
+                        idle_failures += 1;
+                    }
+                    if !retryable
+                        || idle_failures >= 4
+                        || started.elapsed() > Duration::from_secs(1200)
+                    {
+                        return Err(error.context(
+                            "DOWNLOAD_RETRY: partial data retained; retry installation to continue",
+                        ));
+                    }
+                    progress(
+                        callback,
+                        "Соединение прервано. Продолжаем загрузку с сохранённого места…",
+                    );
+                    for _ in 0..10 {
+                        self.cancelled()?;
+                        std::thread::sleep(Duration::from_millis(100));
+                    }
+                }
             }
-            return Ok(());
-        };
-        let part = PathBuf::from(format!("{}.part", destination.display()));
-        no_links(&part)?;
-        let mut offset = if part.exists() {
-            fs::metadata(&part)?.len()
-        } else {
-            0
-        };
-        if offset >= p.size {
-            if offset == p.size && sha(&part)? == p.sha256 {
+        }
+    }
+    fn download_attempt(
+        &self,
+        p: &Package,
+        destination: &Path,
+        callback: Option<&Progress>,
+        observer: Option<&crate::DownloadObserver<'_>>,
+    ) -> Result<()> {
+        use std::sync::atomic::{AtomicU64, Ordering};
+        let epoch = std::time::Instant::now();
+        let last = AtomicU64::new(0);
+        let waiting = AtomicBool::new(false);
+        let done = AtomicBool::new(false);
+        std::thread::scope(|scope| {
+            let heartbeat = scope.spawn(|| {
+                while !done.load(Ordering::Relaxed) {
+                    std::thread::park_timeout(Duration::from_millis(250));
+                    let seconds = epoch
+                        .elapsed()
+                        .as_millis()
+                        .saturating_sub(last.load(Ordering::Relaxed) as u128)
+                        / 1000;
+                    if waiting.load(Ordering::Relaxed) && seconds >= 2 {
+                        if let Some(f) = observer {
+                            f(crate::DownloadEvent::NetworkWait {
+                                seconds: seconds as u64,
+                            });
+                        }
+                    }
+                }
+            });
+            let result = (|| {
+                self.cancelled()?;
+                Self::url(&p.url)?;
+                if !valid_hash(&p.sha256) || p.size == 0 {
+                    bail!("DOWNLOAD_METADATA: invalid pinned size/hash")
+                };
+                no_links(destination)?;
+                fs::create_dir_all(destination.parent().context("download parent")?)?;
+                if destination.is_file()
+                    && fs::metadata(destination)?.len() == p.size
+                    && observed_hash(destination, observer)? == p.sha256
+                {
+                    if let Some(f) = observer {
+                        f(crate::DownloadEvent::Available(p.size));
+                    }
+                    return Ok(());
+                };
+                let part = PathBuf::from(format!("{}.part", destination.display()));
+                no_links(&part)?;
+                let mut offset = if part.exists() {
+                    fs::metadata(&part)?.len()
+                } else {
+                    0
+                };
+                if offset >= p.size {
+                    if offset == p.size && observed_hash(&part, observer)? == p.sha256 {
+                        if destination.exists() {
+                            fs::remove_file(destination)?;
+                        }
+                        fs::rename(part, destination)?;
+                        if let Some(f) = observer {
+                            f(crate::DownloadEvent::Available(p.size));
+                        }
+                        return Ok(());
+                    }
+                    fs::remove_file(&part)?;
+                    offset = 0;
+                }
+                waiting.store(true, Ordering::Relaxed);
+                last.store(epoch.elapsed().as_millis() as u64, Ordering::Relaxed);
+                let mut response = self.send(&p.url, offset)?;
+                waiting.store(false, Ordering::Relaxed);
+                if response.status() == reqwest::StatusCode::PARTIAL_CONTENT {
+                    let expected = format!("bytes {offset}-");
+                    let range = response
+                        .headers()
+                        .get(reqwest::header::CONTENT_RANGE)
+                        .context("DOWNLOAD_RANGE")?
+                        .to_str()?;
+                    if !range.starts_with(&expected) || !range.ends_with(&format!("/{}", p.size)) {
+                        bail!("DOWNLOAD_RANGE: invalid resumed range")
+                    }
+                } else if response.status() == reqwest::StatusCode::OK {
+                    offset = 0
+                } else {
+                    bail!("DOWNLOAD_STATUS: unexpected HTTP response")
+                };
+                if let Some(f) = observer {
+                    f(crate::DownloadEvent::Available(offset));
+                }
+                let mut out = OpenOptions::new()
+                    .write(true)
+                    .create(true)
+                    .truncate(offset == 0)
+                    .append(offset > 0)
+                    .open(&part)?;
+                let mut count = offset;
+                let mut b = [0; 131072];
+                let mut last_text = std::time::Instant::now();
+                loop {
+                    self.cancelled()?;
+                    waiting.store(true, Ordering::Relaxed);
+                    last.store(epoch.elapsed().as_millis() as u64, Ordering::Relaxed);
+                    let n = response.read(&mut b)?;
+                    waiting.store(false, Ordering::Relaxed);
+                    if n == 0 {
+                        break;
+                    };
+                    count = count.checked_add(n as u64).context("DOWNLOAD_SIZE")?;
+                    if let Some(f) = observer {
+                        f(crate::DownloadEvent::Received {
+                            bytes: n as u64,
+                            available: count,
+                        });
+                    }
+                    if count > p.size {
+                        bail!("DOWNLOAD_SIZE: exceeds authenticated size")
+                    };
+                    out.write_all(&b[..n])?;
+                    if let Some(f) = observer {
+                        f(crate::DownloadEvent::Written { available: count });
+                    }
+                    if observer.is_none() && last_text.elapsed() > Duration::from_millis(500) {
+                        progress(callback, format!("{}: {}%", p.id, count * 100 / p.size));
+                        last_text = std::time::Instant::now();
+                    }
+                }
+                if let Some(f) = observer {
+                    f(crate::DownloadEvent::Activity {
+                        done: count,
+                        total: Some(p.size),
+                        stage: "Сохраняем загрузку на диск",
+                    });
+                }
+                out.sync_all()?;
+                drop(out);
+                if count != p.size {
+                    bail!("DOWNLOAD_INCOMPLETE: resume on next attempt")
+                };
+                if observed_hash(&part, observer)? != p.sha256 {
+                    fs::remove_file(part)?;
+                    bail!("DOWNLOAD_HASH: downloaded hash mismatch")
+                };
                 if destination.exists() {
                     fs::remove_file(destination)?;
                 }
                 fs::rename(part, destination)?;
-                if let Some(f) = observer {
-                    f(crate::DownloadEvent::Available(p.size));
-                }
-                return Ok(());
-            }
-            fs::remove_file(&part)?;
-            offset = 0;
-        }
-        let mut response = self.send(&p.url, offset)?;
-        if response.status() == reqwest::StatusCode::PARTIAL_CONTENT {
-            let expected = format!("bytes {offset}-");
-            let range = response
-                .headers()
-                .get(reqwest::header::CONTENT_RANGE)
-                .context("DOWNLOAD_RANGE")?
-                .to_str()?;
-            if !range.starts_with(&expected) || !range.ends_with(&format!("/{}", p.size)) {
-                bail!("DOWNLOAD_RANGE: invalid resumed range")
-            }
-        } else if response.status() == reqwest::StatusCode::OK {
-            offset = 0
-        } else {
-            bail!("DOWNLOAD_STATUS: unexpected HTTP response")
-        };
-        if let Some(f) = observer {
-            f(crate::DownloadEvent::Available(offset));
-        }
-        let mut out = OpenOptions::new()
-            .write(true)
-            .create(true)
-            .truncate(offset == 0)
-            .append(offset > 0)
-            .open(&part)?;
-        let mut count = offset;
-        let mut b = [0; 131072];
-        let mut last = std::time::Instant::now();
-        loop {
-            self.cancelled()?;
-            let n = response.read(&mut b)?;
-            if n == 0 {
-                break;
-            };
-            count = count.checked_add(n as u64).context("DOWNLOAD_SIZE")?;
-            if let Some(f) = observer {
-                f(crate::DownloadEvent::Received {
-                    bytes: n as u64,
-                    available: count,
-                });
-            }
-            if count > p.size {
-                bail!("DOWNLOAD_SIZE: exceeds authenticated size")
-            };
-            out.write_all(&b[..n])?;
-            if observer.is_none() && last.elapsed() > Duration::from_millis(500) {
-                progress(callback, format!("{}: {}%", p.id, count * 100 / p.size));
-                last = std::time::Instant::now();
-            }
-        }
-        out.sync_all()?;
-        drop(out);
-        if count != p.size {
-            bail!("DOWNLOAD_INCOMPLETE: resume on next attempt")
-        };
-        if sha(&part)? != p.sha256 {
-            fs::remove_file(part)?;
-            bail!("DOWNLOAD_HASH: downloaded hash mismatch")
-        };
-        if destination.exists() {
-            fs::remove_file(destination)?;
-        }
-        fs::rename(part, destination)?;
-        Ok(())
+                Ok(())
+            })();
+            done.store(true, Ordering::Relaxed);
+            heartbeat.thread().unpark();
+            let _ = heartbeat.join();
+            result
+        })
     }
     pub fn contents(root: &Path, p: &Package) -> Result<BTreeMap<String, String>> {
         if p.file_index_sha256.is_empty() {
@@ -546,6 +672,27 @@ impl UpdateService {
         }
         Ok(None)
     }
+}
+fn observed_hash(path: &Path, observer: Option<&crate::DownloadObserver<'_>>) -> Result<String> {
+    let total = fs::metadata(path)?.len();
+    let mut done = 0;
+    if let Some(f) = observer {
+        f(crate::DownloadEvent::Activity {
+            done: 0,
+            total: Some(total),
+            stage: "Проверяем загруженный файл",
+        });
+    }
+    sha_observed(path, |bytes| {
+        done += bytes;
+        if let Some(f) = observer {
+            f(crate::DownloadEvent::Activity {
+                done,
+                total: Some(total),
+                stage: "Проверяем загруженный файл",
+            });
+        }
+    })
 }
 fn read_bounded(path: &Path, limit: u64) -> Result<Vec<u8>> {
     no_links(path)?;
@@ -762,6 +909,98 @@ mod tests {
         let mut body = String::new();
         response.read_to_string(&mut body).unwrap();
         assert_eq!(body, "abc");
+        worker.join().unwrap();
+    }
+    #[test]
+    fn interrupted_body_resumes_with_range_and_reports_disk_and_wait_separately() {
+        use std::{net::TcpListener, sync::Mutex};
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = listener.local_addr().unwrap();
+        let worker = std::thread::spawn(move || {
+            for index in 0..2 {
+                let (mut socket, _) = listener.accept().unwrap();
+                socket
+                    .set_read_timeout(Some(Duration::from_secs(10)))
+                    .unwrap();
+                let mut request = vec![];
+                let mut byte = [0];
+                while !request.ends_with(b"\r\n\r\n") {
+                    socket.read_exact(&mut byte).unwrap();
+                    request.push(byte[0]);
+                }
+                let text = String::from_utf8(request).unwrap().to_lowercase();
+                if index == 0 {
+                    assert!(!text.contains("range:"));
+                    socket
+                        .write_all(
+                            b"HTTP/1.1 200 OK\r\nContent-Length: 6\r\nConnection: close\r\n\r\nabc",
+                        )
+                        .unwrap();
+                } else {
+                    assert!(text.contains("range: bytes=3-"));
+                    std::thread::sleep(Duration::from_millis(2250));
+                    socket.write_all(b"HTTP/1.1 206 Partial Content\r\nContent-Length: 3\r\nContent-Range: bytes 3-5/6\r\nConnection: close\r\n\r\ndef").unwrap();
+                }
+            }
+        });
+        let temp = tempfile::tempdir().unwrap();
+        let layout = Layout::new(temp.path());
+        layout.init().unwrap();
+        let mut service = UpdateService::new(&layout).unwrap();
+        service.transport_override = Some(format!("http://{address}/"));
+        let p = Package {
+            id: "fixture".into(),
+            url: "https://github.com/DeTTK/SCServer/releases/download/test/file".into(),
+            size: 6,
+            sha256: hex::encode(Sha256::digest(b"abcdef")),
+            ..Default::default()
+        };
+        let events = Mutex::new(Vec::new());
+        let path = temp.path().join("cache/object");
+        service
+            .download_observed(
+                &p,
+                &path,
+                None,
+                Some(&|event| events.lock().unwrap().push(event)),
+            )
+            .unwrap();
+        assert_eq!(fs::read(path).unwrap(), b"abcdef");
+        let events = events.into_inner().unwrap();
+        assert_eq!(
+            events
+                .iter()
+                .filter_map(|e| if let DownloadEvent::Received { bytes, .. } = e {
+                    Some(bytes)
+                } else {
+                    None
+                })
+                .sum::<u64>(),
+            6
+        );
+        assert!(
+            events
+                .iter()
+                .any(|e| matches!(e, DownloadEvent::Available(3)))
+        );
+        assert!(
+            events
+                .iter()
+                .any(|e| matches!(e, DownloadEvent::NetworkWait { seconds: 2.. }))
+        );
+        assert!(events.iter().any(|e| matches!(
+            e,
+            DownloadEvent::Activity {
+                done: 6,
+                total: Some(6),
+                ..
+            }
+        )));
+        assert!(
+            events
+                .iter()
+                .any(|e| matches!(e, DownloadEvent::Written { available: 6 }))
+        );
         worker.join().unwrap();
     }
     use rsa::{

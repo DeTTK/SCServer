@@ -15,6 +15,25 @@ fn main() -> anyhow::Result<()> {
     ui.set_version(env!("CARGO_PKG_VERSION").into());
     ui.set_port("29545".into());
     ui.set_server_memory_setting("2048".into());
+    if view == "transfer" {
+        ui.set_page("home".into());
+        ui.set_busy(true);
+        ui.set_transfer_view(TransferView {
+            visible: true,
+            title: "Устанавливаем игровые файлы".into(),
+            percent: "Сеть · скачано".into(),
+            fraction: 1.0,
+            downloaded: "1,6 ГБ из 1,6 ГБ".into(),
+            remaining: "0 Б".into(),
+            speed: "—".into(),
+            eta: "—".into(),
+            disk_label: "Диск · Распаковка файлов".into(),
+            disk_fraction: 0.42,
+            disk_amount: "2,1 ГБ / 5,0 ГБ".into(),
+            detail: "Файлы 380 / 964".into(),
+            ..Default::default()
+        });
+    }
     if view == "home" {
         ui.set_page("home".into());
         ui.set_nickname("Player".into());

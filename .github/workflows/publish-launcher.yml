@@ -1,0 +1,66 @@
+name: Publish native launcher
+on:
+  workflow_run:
+    workflows: ['Source checks']
+    types: [completed]
+    branches: [launtest]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: native-launcher-release
+  cancel-in-progress: false
+jobs:
+  release:
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_repository.full_name == github.repository)
+    runs-on: windows-2022
+    timeout-minutes: 50
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
+          persist-credentials: false
+      - name: Resolve version and existing release
+        id: version
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $line=Select-String -Path launcher/Cargo.toml -Pattern '^version = "([0-9]+\.[0-9]+\.[0-9]+)"$'
+          if(-not $line){throw 'Missing launcher version'}
+          $version=$line.Matches.Groups[1].Value
+          $tag="launcher-v$version-launtest"
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+          gh release view $tag --repo $env:GITHUB_REPOSITORY *> $null
+          "exists=$($LASTEXITCODE -eq 0)".ToLowerInvariant() >> $env:GITHUB_OUTPUT
+          exit 0
+      - name: Install Rust stable
+        if: steps.version.outputs.exists != 'true'
+        run: rustup toolchain install stable --profile minimal
+      - uses: actions/cache@v5
+        if: steps.version.outputs.exists != 'true'
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            launcher/target
+          key: launcher-release-${{ runner.os }}-${{ hashFiles('launcher/Cargo.lock') }}
+      - if: steps.version.outputs.exists != 'true'
+        run: cargo +stable build --manifest-path launcher/Cargo.toml --release --bin BSCPCRAFT --locked -j 4
+      - if: steps.version.outputs.exists != 'true'
+        run: ./launcher/tests/single-exe.ps1 -Executable ./launcher/target/release/BSCPCRAFT.exe
+      - name: Publish standalone executable
+        if: steps.version.outputs.exists != 'true'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          $exe='launcher/target/release/BSCPCRAFT.exe'
+          $hash=(Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  BSCPCRAFT.exe" | Set-Content SHA256SUMS.txt -Encoding utf8NoBOM
+          $sha=git rev-parse HEAD
+          gh release create $env:RELEASE_TAG $exe SHA256SUMS.txt --repo $env:GITHUB_REPOSITORY --target $sha --prerelease --title "BSCPCRAFT $env:RELEASE_TAG" --notes 'Native portable launcher for launtest. The game and Java are installed separately from the build branch. Executable updates are verified and applied on the next launch.'
+          if($LASTEXITCODE -ne 0){throw 'Launcher release failed'}

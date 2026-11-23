@@ -480,6 +480,9 @@ pub fn files(root: &Path) -> Result<Vec<PathBuf>> {
     Ok(out)
 }
 pub fn sha(path: &Path) -> Result<String> {
+    sha_observed(path, |_| {})
+}
+pub fn sha_observed(path: &Path, mut processed: impl FnMut(u64)) -> Result<String> {
     no_links(path)?;
     let mut h = Sha256::new();
     let mut f = File::open(path)?;
@@ -490,6 +493,7 @@ pub fn sha(path: &Path) -> Result<String> {
             break;
         }
         h.update(&b[..n]);
+        processed(n as u64);
     }
     Ok(hex::encode(h.finalize()))
 }
