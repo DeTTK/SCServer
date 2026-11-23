@@ -29,6 +29,7 @@ struct Draft {
     feed: String,
     branch: String,
     world: String,
+    desktop_shortcut: bool,
 }
 impl Draft {
     fn read(ui: &AppWindow) -> Self {
@@ -45,6 +46,7 @@ impl Draft {
             feed: ui.get_feed_url().to_string(),
             branch: ui.get_game_branch().to_string(),
             world: ui.get_first_world_name().to_string(),
+            desktop_shortcut: ui.get_desktop_shortcut(),
         }
     }
     fn settings(&self, old: &Settings, layout: &Layout) -> Result<Settings> {
@@ -1142,6 +1144,13 @@ fn execute(
                         "Основа установлена. Обновление ветки: {}",
                         friendly_error(&e).1
                     );
+                }
+            }
+            if draft.desktop_shortcut {
+                progress("Создаём ярлык на рабочем столе…".into());
+                match create_launcher_shortcut(&std::env::current_exe()?, &layout.root, None) {
+                    Ok(_) => completion.push_str(" Ярлык создан на рабочем столе."),
+                    Err(_) => completion.push_str(" Ярлык создать не удалось. Игра подготовлена; лаунчер можно открыть напрямую."),
                 }
             }
             refresh(ui, layout, true)?;

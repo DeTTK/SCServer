@@ -64,6 +64,7 @@ fn main() -> Result<()> {
         .renderer_name("software".into())
         .select()?;
     let ui = AppWindow::new()?;
+    ui.set_desktop_shortcut(false);
     ui.window()
         .set_position(slint::PhysicalPosition::new(-30000, -30000));
     let _binding = controller::bind(&ui, layout.clone());

@@ -48,6 +48,7 @@ export component AppWindow inherits Window {
     in-out property <string> feed-url;
     in-out property <string> game-branch;
     in property <[string]> branches;
+    in-out property <bool> desktop-shortcut: true;
     in-out property <string> first-world-name: "Основной мир";
     in-out property <string> address;
     in-out property <bool> setup-visible;
@@ -74,7 +75,8 @@ export component AppWindow inherits Window {
     callback update-action(string);
     callback report(string, bool);
 
-    title: "BSCPCRAFT";
+    title: "BSCPCRAFT · Билдерс СК";
+    icon: @image-url("assets/brand-logo.png");
     init => { Palette.color-scheme = dark; }
     preferred-width: 1280px; preferred-height: 808px;
     min-width: 1088px; min-height: 688px;
@@ -93,20 +95,18 @@ export component AppWindow inherits Window {
             width: root.setup-visible ? clamp(root.width * 0.29, 280px, 390px) : (root.width >= 1280px ? 208px : 184px);
             background: Theme.panel; clip: true;
             if root.setup-visible: Image {
-                source: @image-url("assets/outpost.png"); image-fit: cover;
+                source: @image-url("assets/brand-character.png"); image-fit: cover;
                 width: parent.width; height: parent.height;
             }
-            if root.setup-visible: Rectangle { background: @linear-gradient(180deg, #17191bf5 0%, #18191bd4 56%, #18191b36 100%); }
+            if root.setup-visible: Rectangle { background: @linear-gradient(180deg, #0a0a0cf5 0%, #0a0a0cdf 54%, #0a0a0c28 100%); }
             VerticalLayout {
                 padding-left: 14px; padding-right: 14px; padding-top: 24px; padding-bottom: 16px; spacing: 8px;
-                HorizontalLayout {
-                    height: 44px; spacing: 8px; padding-left: 8px;
-                    Rectangle {
-                        width: 5px; height: 23px; y: (parent.height - self.height) / 2; background: Theme.amber; border-radius: 1px;
-                    }
-                    Label { text: "BSCPCRAFT"; font-family: Theme.display-font; font-size: root.width >= 1280px || root.setup-visible ? 23px : 21px; horizontal-stretch: 1; }
+                VerticalLayout {
+                    height: 118px; spacing: 4px;
+                    Image { source: @image-url("assets/brand-wordmark.png"); image-fit: contain; height: 84px; }
+                    Label { text: ".PROD / BSCPCRAFT"; font-size: 10px; font-weight: 650; color: Theme.muted; horizontal-alignment: center; }
                 }
-                Rectangle { height: 12px; }
+                Rectangle { height: 4px; }
                 if !root.setup-visible: VerticalLayout {
                     spacing: 4px; vertical-stretch: 0;
                     for p in [{id:"home", name:"Главная", icon:"\u{e80f}"},{id:"worlds", name:"Мои миры", icon:"\u{e81e}"},{id:"server", name:"Мой сервер", icon:"\u{e839}"}]: Action {
@@ -120,8 +120,8 @@ export component AppWindow inherits Window {
                         spacing: 12px; height: 38px;
                         Rectangle {
                             width: 29px; height: 29px; border-radius: 15px;
-                            background: i == root.setup-step ? Theme.amber : Theme.panel;
-                            border-width: 1px; border-color: i == root.setup-step ? Theme.amber : Theme.outline;
+                            background: i == root.setup-step ? Theme.accent : Theme.panel;
+                            border-width: 1px; border-color: i == root.setup-step ? Theme.accent : Theme.outline;
                             Label {
                                 text: i < root.setup-step ? "✓" : i + 1; font-size: 13px; font-weight: 650;
                                 color: i == root.setup-step ? Theme.ink : Theme.text; horizontal-alignment: center;
@@ -189,7 +189,7 @@ export component AppWindow inherits Window {
                     game-path <=> root.game-path; data-path <=> root.data-path; nickname <=> root.nickname; bundle-path <=> root.bundle-path;
                     client-path <=> root.client-path; server-path <=> root.server-path; client-memory <=> root.client-memory;
                     server-memory-setting <=> root.server-memory-setting; port <=> root.port;
-                    feed-url <=> root.feed-url; game-branch <=> root.game-branch; branches: root.branches; first-world-name <=> root.first-world-name;
+                    feed-url <=> root.feed-url; game-branch <=> root.game-branch; branches: root.branches; first-world-name <=> root.first-world-name; desktop-shortcut <=> root.desktop-shortcut;
                     transfer-view: root.transfer-view;
                     busy: root.busy; error: root.error; error-field: root.error-field; progress: root.progress; progress-text: root.progress-text; status: root.status;
                     browse(field) => { root.browse(field); } install(source) => { root.install-components(source); }
@@ -216,7 +216,7 @@ export component AppWindow inherits Window {
         }
     }
     if root.dialog != "": Rectangle {
-        Image { source: @image-url("assets/outpost.png"); image-fit: cover; width: parent.width; height: parent.height; }
+        Image { source: @image-url("assets/brand-character.png"); image-fit: cover; width: parent.width; height: parent.height; }
         LauncherDialog {
             kind <=> root.dialog; value <=> root.dialog-value; favorite-name <=> root.favorite-name; favorite-nick <=> root.favorite-nick;
             world-title: root.selected-world-title; version: root.version; error: root.error; busy: root.busy; backups: root.backups;

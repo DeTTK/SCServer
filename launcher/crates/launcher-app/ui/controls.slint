@@ -33,7 +33,7 @@ export component Action inherits Rectangle {
     in property <bool> large;
     callback activated;
     private property <bool> accent: root.kind == "primary" && root.enabled;
-    private property <color> fg: !root.enabled ? Theme.disabled-text : root.accent ? Theme.ink : root.kind == "danger" ? Theme.danger : root.selected ? Theme.amber : Theme.text;
+    private property <color> fg: !root.enabled ? Theme.disabled-text : root.accent ? Theme.ink : root.kind == "danger" ? Theme.danger : root.selected ? Theme.accent : Theme.text;
     preferred-width: button-content.preferred-width + (root.align-left ? 28px : 24px);
     min-width: 28px;
     height: root.large ? 48px : Theme.field-height;
@@ -41,7 +41,7 @@ export component Action inherits Rectangle {
     border-width: 1px;
     border-color: root.kind == "secondary" && root.enabled ? Theme.outline : transparent;
     background: !root.enabled ? (root.kind == "plain" ? transparent : Theme.raised)
-        : root.accent ? (tap.pressed ? Theme.amber-pressed : tap.has-hover ? Theme.amber-hover : Theme.amber)
+        : root.accent ? (tap.pressed ? Theme.accent-pressed : tap.has-hover ? Theme.accent-hover : Theme.accent)
         : tap.pressed ? Theme.pressed : tap.has-hover ? Theme.hover
         : root.selected ? Theme.selected : root.kind == "plain" ? transparent
         : root.kind == "danger" ? Theme.danger-surface : Theme.raised;
@@ -62,7 +62,7 @@ export component Action inherits Rectangle {
     }
     if root.selected && root.kind == "plain": Rectangle {
         x: 0px; y: (parent.height - self.height) / 2; width: 3px; height: 18px;
-        border-radius: 1px; background: Theme.amber;
+        border-radius: 1px; background: Theme.accent;
     }
     keys := FocusScope {
         enabled: root.enabled;
@@ -109,7 +109,7 @@ export component Entry inherits Rectangle {
                 enabled: root.enabled; single-line: !root.multiline;
                 vertical-alignment: root.multiline ? top : center;
                 wrap: root.multiline ? word-wrap : no-wrap;
-                selection-background-color: Theme.amber; selection-foreground-color: Theme.ink;
+                selection-background-color: Theme.accent; selection-foreground-color: Theme.ink;
                 accessible-label: root.label;
                 cursor-position-changed(p) => {
                     inner.content-x = clamp(clamp(inner.content-x, 1px - p.x, inner.width - 2px - p.x), inner.width - inner.content-width, 0px);
@@ -162,10 +162,10 @@ export component RowButton inherits Rectangle {
     accessible-enabled: root.enabled;
     accessible-action-default => { if root.enabled { root.activated(); } }
     forward-focus: keys;
-    if root.selected: Rectangle { x: 0px; width: 3px; height: parent.height - 20px; y: 10px; background: Theme.amber; }
+    if root.selected: Rectangle { x: 0px; width: 3px; height: parent.height - 20px; y: 10px; background: Theme.accent; }
     HorizontalLayout {
         padding-left: 12px; padding-right: 12px; spacing: 12px;
-        if root.glyph != "": Icon { text: root.glyph; color: root.selected ? Theme.amber : Theme.muted; width: 22px; }
+        if root.glyph != "": Icon { text: root.glyph; color: root.selected ? Theme.accent : Theme.muted; width: 22px; }
         VerticalLayout {
             alignment: center; spacing: 2px; horizontal-stretch: 1;
             Label { text: root.title; font-size: 15px; font-weight: 600; height: 21px; }
@@ -210,7 +210,7 @@ export component Notice inherits Rectangle {
     }
     if root.progress >= 0: Rectangle {
         x: 0px; height: 3px; y: parent.height - self.height;
-        width: parent.width * clamp(root.progress, 0, 1); background: Theme.amber;
+        width: parent.width * clamp(root.progress, 0, 1); background: Theme.accent;
     }
 }
 
@@ -223,14 +223,14 @@ export component TransferStatus inherits Rectangle {
         padding: 14px; spacing: 10px;
         HorizontalLayout {
             Label { text: root.view.title; horizontal-stretch: 1; font-size: 15px; }
-            Label { text: root.view.percent; color: Theme.amber; }
+            Label { text: root.view.percent; color: Theme.accent; }
         }
         Rectangle {
             height: 6px; background: Theme.rule; border-radius: 3px;
             if root.view.fraction >= 0: Rectangle {
                 x: 0; y: 0;
                 width: parent.width * clamp(root.view.fraction, 0, 1); height: parent.height;
-                background: Theme.amber; border-radius: 3px;
+                background: Theme.accent; border-radius: 3px;
             }
         }
         HorizontalLayout {

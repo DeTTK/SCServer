@@ -14,5 +14,21 @@
   "launcher/design/qa/native-screens.webp": {
     "size": 130154,
     "sha256": "355cedbe13e326e0cf3c30de4f787fda8a97203d2879ad933e04a27d81f6095b"
+  },
+  "launcher/crates/launcher-app/ui/assets/brand-character.png": {
+    "size": 1001986,
+    "sha256": "2588b70190c07b99381f8dd67b562078aeb20686cbe1d293b335bd7a9f48bf0f"
+  },
+  "launcher/crates/launcher-app/ui/assets/brand-logo.png": {
+    "size": 16008,
+    "sha256": "9fcb0d6ab4be504922c67233badc701e47b85d05bc4fe6d32d40b3e1b678133d"
+  },
+  "launcher/crates/launcher-app/ui/assets/brand-wordmark.png": {
+    "size": 33916,
+    "sha256": "742c16be1969a64603d0e375d3b28475c73bd6581bd9ff8b06f33bd512a88421"
+  },
+  "launcher/crates/launcher-app/ui/assets/launcher.ico": {
+    "size": 31095,
+    "sha256": "3fbeafd691c977527b7b47c88cc95f7e61fe75340f25cc917e034bff5f7e4f44"
   }
 }

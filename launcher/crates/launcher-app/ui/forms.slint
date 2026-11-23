@@ -27,6 +27,7 @@ export component Configuration inherits VerticalLayout {
     in-out property <string> game-branch;
     in property <[string]> branches;
     in-out property <string> first-world-name;
+    in-out property <bool> desktop-shortcut: true;
     private property <bool> inline-error:
         ((root.wizard ? root.step == 0 : root.tab == "basic") && (root.error-field == "game" || root.error-field == "data" || root.error-field == "nick"))
         || (root.wizard && (root.step == 2 && root.error-field == "world"))
@@ -77,6 +78,17 @@ export component Configuration inherits VerticalLayout {
             if root.wizard && root.step == 2: VerticalLayout {
                 spacing: 16px;
                 Field { label: "Название первого мира"; value <=> root.first-world-name; enabled: !root.busy; error: root.error-field == "world" ? root.error : ""; }
+                HorizontalLayout {
+                    alignment: start;
+                    Action {
+                        label: "Создать ярлык BSCPCRAFT на рабочем столе";
+                        kind: "plain"; align-left: true; accessible-role: checkbox;
+                        checkable: true; checked: root.desktop-shortcut;
+                        glyph: root.desktop-shortcut ? "\u{e73d}" : "\u{e739}";
+                        enabled: !root.busy; activated => { root.desktop-shortcut = !root.desktop-shortcut; }
+                    }
+                }
+                Hint { text: "Ярлык запустит этот лаунчер с выбранной папкой данных."; wrap: word-wrap; overflow: clip; }
                 Rule {}
                 for row in [{name:"Игра", val:root.game-path},{name:"Данные и миры", val:root.data-path},{name:"Ветка игры", val:root.game-branch},{name:"Игрок", val:root.nickname}]: VerticalLayout {
                     spacing: 2px; Hint { text: row.name; } Label { text: row.val; wrap: word-wrap; overflow: clip; }

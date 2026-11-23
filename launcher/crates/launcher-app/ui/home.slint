@@ -25,8 +25,8 @@ export component Home inherits HorizontalLayout {
         hero := Rectangle {
             height: clamp(parent.width * 0.42, 204px, 320px);
             background: Theme.panel; border-radius: 7px; clip: true;
-            Image { source: @image-url("assets/outpost.png"); image-fit: cover; width: parent.width; height: parent.height; }
-            Rectangle { background: @linear-gradient(180deg, transparent 36%, #14161791 66%, #111314f4 100%); }
+            Image { source: @image-url("assets/brand-character.png"); image-fit: contain; x: parent.width * 0.14; width: parent.width * 0.86; height: parent.height; }
+            Rectangle { background: @linear-gradient(180deg, #08080a00 34%, #08080a8c 66%, #08080af5 100%); }
             hero-content := HorizontalLayout {
                 x: 18px; y: parent.height - self.height - 16px;
                 width: parent.width - 36px; height: 48px; spacing: 12px;
@@ -67,7 +67,7 @@ export component Home inherits HorizontalLayout {
                     spacing: 12px;
                     Rectangle {
                         width: 5px;
-                        Rectangle { y: 8px; width: 5px; height: 5px; border-radius: 1px; background: Theme.amber; }
+                        Rectangle { y: 8px; width: 5px; height: 5px; border-radius: 1px; background: Theme.accent; }
                     }
                     VerticalLayout {
                         spacing: 4px;
