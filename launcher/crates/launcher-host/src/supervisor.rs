@@ -1497,7 +1497,7 @@ mod log_stream_tests {
     async fn run_context_is_prepared_safely_from_async_lifecycle() {
         let temp = tempfile::tempdir().unwrap();
         let layout = Layout::new(temp.path());
-        layout.init().unwrap();
+        offline_test_layout(&layout);
         let folder = layout.at("state/sessions/context-fixture");
         std::fs::create_dir_all(&folder).unwrap();
         let host = Supervisor::new(layout.clone(), None, None).unwrap();
@@ -1510,7 +1510,7 @@ mod log_stream_tests {
     async fn updated_game_bridge_wins_over_stale_launcher_sidecar() {
         let temp = tempfile::tempdir().unwrap();
         let layout = Layout::new(temp.path());
-        layout.init().unwrap();
+        offline_test_layout(&layout);
         let mut settings = layout.load().unwrap();
         settings.game_branch.clear();
         layout.save(&settings).unwrap();
@@ -1555,7 +1555,7 @@ mod log_stream_tests {
     async fn process_exit_waiter_keeps_exit_code_and_stderr() {
         let temp = tempfile::tempdir().unwrap();
         let layout = Layout::new(temp.path());
-        layout.init().unwrap();
+        offline_test_layout(&layout);
         write_json(
             &layout.at("config/telemetry.json"),
             &TelemetryConfig::default(),
@@ -1753,6 +1753,17 @@ impl Drop for DeliveryActivity {
     }
 }
 
+#[cfg(test)]
+fn offline_test_layout(layout: &Layout) {
+    layout.init().unwrap();
+    // Unit fixtures must never send mock process data to the public collector.
+    // Exporter tests explicitly replace this with their loopback receiver.
+    write_json(
+        &layout.at("config/telemetry.json"),
+        &TelemetryConfig::default(),
+    )
+    .unwrap();
+}
 #[cfg(all(test, windows))]
 mod reuse_tests {
     use super::*;
@@ -1760,7 +1771,7 @@ mod reuse_tests {
     async fn exited_client_releases_its_profile_before_an_immediate_reconnect() {
         let temp = tempfile::tempdir().unwrap();
         let layout = Layout::new(temp.path());
-        layout.init().unwrap();
+        offline_test_layout(&layout);
         let host = Supervisor::new(layout.clone(), None, None).unwrap();
         let lease = ClientProfile::lease(&layout.client_data(&layout.load().unwrap())).unwrap();
         {
@@ -1781,7 +1792,7 @@ mod reuse_tests {
     async fn repeated_start_keeps_the_owned_server_and_existing_client() {
         let temp = tempfile::tempdir().unwrap();
         let layout = Layout::new(temp.path());
-        layout.init().unwrap();
+        offline_test_layout(&layout);
         let host = Supervisor::new(layout, None, None).unwrap();
         let owned = Owned {
             pid: std::process::id(),
@@ -1815,7 +1826,7 @@ mod metrics_tests {
     async fn monitor_survives_owned_client_and_exits_after_it_stops() {
         let root = tempfile::tempdir().unwrap();
         let layout = Layout::new(root.path());
-        layout.init().unwrap();
+        offline_test_layout(&layout);
         let host = Supervisor::new(layout, None, None).unwrap();
         host.running.lock().unwrap().client = Some(Owned {
             pid: std::process::id(),
@@ -1850,7 +1861,7 @@ mod metrics_tests {
     ) -> (Arc<Supervisor>, Owned, tokio::task::JoinHandle<()>) {
         let root = std::env::temp_dir().join(format!("bscp-rust-metrics-{}", uuid::Uuid::new_v4()));
         let layout = Layout::new(&root);
-        layout.init().unwrap();
+        offline_test_layout(&layout);
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let port = listener.local_addr().unwrap().port();
         let pid = std::process::id();
@@ -1943,7 +1954,7 @@ mod metrics_tests {
     async fn session_logs_are_uploaded_after_process_exit_and_idle_activity_is_released() {
         let temp = tempfile::tempdir().unwrap();
         let layout = Layout::new(temp.path());
-        layout.init().unwrap();
+        offline_test_layout(&layout);
         let folder = layout.at("state/sessions/upload-test");
         std::fs::create_dir_all(&folder).unwrap();
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
