@@ -13,6 +13,7 @@ public final class GameplayPacketAliases {
         Map.entry(InventoryPackets.DELETE_REQUEST,InventoryPackets.DELETE_ID),
         Map.entry(PortalPackets.INTERACT_CLASS,PortalPackets.INTERACT_ID),
         Map.entry(PortalPackets.STATUS_CLASS,PortalPackets.STATUS_ID),
+        Map.entry(szserver.net.SuicideCommand.REQUEST,szserver.net.SuicideCommand.PACKET_ID),
         Map.entry("423821855",1842),Map.entry("1491633278",1628),
         Map.entry("23110596",212),Map.entry("1932940545",1527),
         Map.entry("1859052360",1449),Map.entry("953021737",366),
