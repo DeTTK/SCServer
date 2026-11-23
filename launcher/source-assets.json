@@ -1,0 +1,18 @@
+{
+  "launcher/crates/launcher-app/ui/assets/outpost.png": {
+    "size": 2259006,
+    "sha256": "da7f3254ebe2dc916d062c412effab581810da3312a5b0391e9ae5e83ddc5203"
+  },
+  "launcher/crates/launcher-app/ui/assets/RussoOne-Regular.ttf": {
+    "size": 39124,
+    "sha256": "bc0abcc660bd8b7ad3000ecb2898a27c58a29a50f7ec81652fa12e75148d09df"
+  },
+  "launcher/design/qa/native-home.webp": {
+    "size": 54058,
+    "sha256": "70e73cd58a94b44b98c02a92f24840c855dff0bfdcdf5dcaa76079ffb1283213"
+  },
+  "launcher/design/qa/native-screens.webp": {
+    "size": 130154,
+    "sha256": "355cedbe13e326e0cf3c30de4f787fda8a97203d2879ad933e04a27d81f6095b"
+  }
+}

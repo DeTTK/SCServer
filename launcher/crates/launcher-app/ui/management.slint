@@ -1,0 +1,147 @@
+import { WorldRow } from "api.slint";
+import { Theme } from "theme.slint";
+import { Action, EmptyState, Entry, Hint, Icon, Label, Rule, RowButton, Scroller, SectionTitle } from "controls.slint";
+
+export component WorldsPage inherits HorizontalLayout {
+    in property <[WorldRow]> worlds;
+    in property <string> world-id;
+    in property <string> world-title;
+    in property <bool> busy;
+    callback select-world(string);
+    callback ask(string);
+    callback act(string);
+    private property <bool> more;
+    spacing: 20px;
+    VerticalLayout {
+        horizontal-stretch: 6; min-width: 290px; spacing: 16px;
+        HorizontalLayout {
+            height: 38px; spacing: 8px; alignment: start;
+            Action { label: "Создать мир"; glyph: "\u{e710}"; kind: "primary"; enabled: !root.busy; activated => { root.ask("create"); } }
+            Action { label: "Импортировать…"; enabled: !root.busy; activated => { root.act("import"); } }
+        }
+        Rule {}
+        Scroller {
+            VerticalLayout {
+                alignment: start; spacing: 4px;
+                if root.worlds.length == 0: EmptyState { title: "Сохранённых миров пока нет"; detail: "Создайте мир или импортируйте его из архива."; }
+                for w in root.worlds: RowButton {
+                    enabled: !root.busy; title: w.title; detail: w.detail; glyph: "\u{e81e}"; selected: root.world-id == w.id;
+                    activated => { if !root.busy { root.select-world(w.id); root.more = false; } }
+                }
+            }
+        }
+    }
+    Rectangle {
+        min-width: 270px; horizontal-stretch: 4; background: Theme.panel; border-radius: 7px;
+        VerticalLayout {
+            padding: 20px; spacing: 14px; alignment: start;
+            Hint { text: "Выбран для запуска"; }
+            SectionTitle { text: root.world-title == "" ? "Мир не выбран" : root.world-title; wrap: word-wrap; overflow: clip; }
+            Rule {}
+            if root.world-id == "": Hint { text: "Выберите сохранение в списке миров."; wrap: word-wrap; }
+            if root.world-id != "": VerticalLayout {
+                spacing: 6px;
+                Action { label: "Переименовать"; glyph: "\u{e70f}"; kind: "plain"; align-left: true; enabled: !root.busy; activated => { root.ask("rename"); } }
+                Action { label: "Создать копию"; glyph: "\u{e8c8}"; kind: "plain"; align-left: true; enabled: !root.busy; activated => { root.ask("clone"); } }
+                Action { label: "Резервные копии"; glyph: "\u{e81c}"; kind: "plain"; align-left: true; enabled: !root.busy; activated => { root.act("backups"); } }
+                Action { label: "Открыть папку"; glyph: "\u{e8b7}"; kind: "plain"; align-left: true; enabled: !root.busy; activated => { root.act("open"); } }
+                Rule {}
+                Action { label: "Другие действия"; glyph: root.more ? "\u{e70e}" : "\u{e70d}"; kind: "plain"; align-left: true; activated => { root.more = !root.more; } }
+                if root.more: Action { label: "Экспортировать…"; kind: "secondary"; enabled: !root.busy; activated => { root.act("export"); } }
+                if root.more: Action { label: "Удалить мир…"; kind: "danger"; enabled: !root.busy; activated => { root.ask("delete"); } }
+            }
+        }
+    }
+}
+
+component Reading inherits VerticalLayout {
+    in property <string> title;
+    in property <string> value;
+    spacing: 3px; vertical-stretch: 0;
+    Hint { text: root.title; }
+    Label { text: root.value == "" ? "Нет данных" : root.value; font-size: 17px; font-weight: 600; wrap: word-wrap; overflow: clip; }
+}
+export component ServerPage inherits HorizontalLayout {
+    in property <bool> running;
+    in property <bool> busy;
+    in property <string> state;
+    in property <string> address;
+    in property <string> uptime;
+    in property <string> memory;
+    in property <[string]> players;
+    in property <bool> players-known;
+    callback act(string);
+    spacing: 20px;
+    VerticalLayout {
+        horizontal-stretch: 6; min-width: 310px; spacing: 16px;
+        SectionTitle { text: "Состояние сервера"; height: 32px; }
+        Rule {}
+        Scroller {
+            VerticalLayout {
+                spacing: 18px; alignment: start;
+                Reading { title: "Статус"; value: root.state; }
+                Reading { title: "Адреса подключения"; value: root.address; }
+                Rule {}
+                HorizontalLayout { spacing: 18px; Reading { title: "Время работы"; value: root.uptime; } Reading { title: "Память"; value: root.memory; } }
+            }
+        }
+        HorizontalLayout {
+            spacing: 8px; alignment: start; height: 38px;
+            Action { label: "Сохранить мир"; glyph: "\u{e74e}"; enabled: root.running && !root.busy; activated => { root.act("save"); } }
+            Action { label: "Остановить…"; kind: "danger"; enabled: root.running && !root.busy; activated => { root.act("stop"); } }
+        }
+    }
+    Rectangle {
+        horizontal-stretch: 4; min-width: 270px; border-radius: 7px; background: Theme.panel;
+        VerticalLayout {
+            padding: 20px; spacing: 16px;
+            SectionTitle { text: root.players-known ? "Игроки (" + root.players.length + ")" : "Игроки"; height: 32px; }
+            Rule {}
+            Scroller {
+                VerticalLayout {
+                    spacing: 8px; alignment: start;
+                    if root.players.length == 0: EmptyState {
+                        title: root.state == "" ? "Состояние неизвестно" : !root.running ? "Сервер остановлен" : root.players-known ? "Сейчас никого нет" : "Список недоступен";
+                        detail: root.state == "" ? "Дождитесь ответа службы лаунчера." : !root.running ? "После запуска здесь появятся подключённые игроки." : root.players-known ? "Подключившиеся игроки появятся здесь." : "Дождитесь ответа сервера или обновите данные.";
+                    }
+                    for p in root.players: HorizontalLayout {
+                        height: 30px; spacing: 10px;
+                        Icon { width: 20px; text: "\u{e77b}"; } Label { text: p; horizontal-stretch: 1; }
+                    }
+                }
+            }
+            HorizontalLayout { alignment: start; Action { label: "Обновить"; glyph: "\u{e72c}"; enabled: !root.busy; activated => { root.act("refresh"); } } }
+        }
+    }
+}
+
+export component ReportPage inherits VerticalLayout {
+    in property <bool> busy;
+    in-out property <string> description;
+    in-out property <bool> performance;
+    callback submit;
+    spacing: 16px;
+    SectionTitle { text: "Диагностический архив"; height: 30px; }
+    Hint { text: "Опишите сбой и создайте локальный ZIP с журналами. Вы сами выбираете, кому передать файл."; wrap: word-wrap; overflow: clip; }
+    Rule {}
+    Label { text: "Что произошло?"; font-weight: 600; height: 20px; }
+    Entry { label: "Описание проблемы"; multiline: true; placeholder: "Опишите действия перед сбоем и результат"; value <=> root.description; enabled: !root.busy; }
+    HorizontalLayout {
+        alignment: start;
+        Action {
+            kind: "plain"; align-left: true;
+            accessible-role: checkbox; checkable: true; checked: root.performance;
+            label: "Включить профиль производительности JFR"; glyph: root.performance ? "\u{e73d}" : "\u{e739}";
+            enabled: !root.busy; activated => { root.performance = !root.performance; }
+        }
+    }
+    Hint { text: "Профиль помогает разобраться с зависаниями и падением частоты кадров."; wrap: word-wrap; overflow: clip; }
+    Rectangle { vertical-stretch: 1; }
+    Rule {}
+    HorizontalLayout {
+        alignment: end;
+        Action { label: "Создать архив…"; glyph: "\u{e896}"; kind: "primary"; enabled: !root.busy; activated => { root.submit(); } }
+    }
+}
+
+

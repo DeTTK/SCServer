@@ -1,0 +1,130 @@
+import { WorldRow, ServerRow, ChangeRow } from "api.slint";
+import { Theme } from "theme.slint";
+import { Action, Entry, EmptyState, Hint, Icon, Label, Rule, RowButton, SectionTitle, Scroller } from "controls.slint";
+
+export component Home inherits HorizontalLayout {
+    in property <[WorldRow]> worlds;
+    in property <[ServerRow]> favorites;
+    in property <[ServerRow]> project-servers;
+    in property <[ChangeRow]> changes;
+    in property <string> world-id;
+    in property <string> world-title;
+    in-out property <string> address;
+    in property <bool> busy;
+    in property <length> server-column-width: 320px;
+    callback select-world(string);
+    callback manage-worlds;
+    callback connect(string);
+    callback add-favorite;
+    private property <bool> projects;
+    private property <[ServerRow]> servers: projects ? project-servers : favorites;
+    spacing: 22px;
+    VerticalLayout {
+        min-width: 290px; horizontal-stretch: 6; spacing: 18px;
+        hero := Rectangle {
+            height: clamp(parent.width * 0.42, 204px, 320px);
+            background: Theme.panel; border-radius: 7px; clip: true;
+            Image { source: @image-url("assets/outpost.png"); image-fit: cover; width: parent.width; height: parent.height; }
+            Rectangle { background: @linear-gradient(180deg, transparent 36%, #14161791 66%, #111314f4 100%); }
+            hero-content := HorizontalLayout {
+                x: 18px; y: parent.height - self.height - 16px;
+                width: parent.width - 36px; height: 48px; spacing: 12px;
+                VerticalLayout {
+                    alignment: center; horizontal-stretch: 1;
+                    Hint { text: "Мир для запуска"; color: Theme.text; height: 19px; }
+                    Label { text: root.world-title == "" ? "Мир не выбран" : root.world-title; font-size: 24px; font-weight: 650; height: 31px; }
+                }
+                Rectangle {
+                    width: 108px; height: 38px;
+                    Action { label: "Сменить"; glyph: "\u{e70d}"; width: parent.width; activated => {
+                        if root.worlds.length > 0 { picker.show(); } else { root.manage-worlds(); }
+                    } }
+                    picker := PopupWindow {
+                        x: parent.width - self.width; y: parent.height + 4px;
+                        width: 300px; height: min(286px, 16px + root.worlds.length * 62px);
+                        Rectangle {
+                            background: Theme.panel; border-color: Theme.outline; border-width: 1px; border-radius: Theme.radius;
+                            Scroller {
+                                x: 6px; y: 6px; width: parent.width - 12px; height: parent.height - 12px;
+                                VerticalLayout {
+                                    for w in root.worlds: RowButton { title: w.title; detail: w.detail; selected: w.id == root.world-id; activated => { root.select-world(w.id); picker.close(); } }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        SectionTitle { text: "Что нового"; height: 30px; }
+        Rule {}
+        Scroller {
+            vertical-stretch: 1;
+            VerticalLayout {
+                alignment: start; spacing: 14px;
+                if root.changes.length == 0: EmptyState { title: "Записей пока нет"; detail: "Здесь появятся изменения игры из журнала выпуска."; }
+                for note in root.changes: HorizontalLayout {
+                    spacing: 12px;
+                    Rectangle {
+                        width: 5px;
+                        Rectangle { y: 8px; width: 5px; height: 5px; border-radius: 1px; background: Theme.amber; }
+                    }
+                    VerticalLayout {
+                        spacing: 4px;
+                        Label { text: note.title; font-size: 16px; font-weight: 600; wrap: word-wrap; overflow: clip; }
+                        Hint { text: note.body; wrap: word-wrap; overflow: clip; }
+                    }
+                }
+            }
+        }
+    }
+    Rectangle {
+        width: root.server-column-width;
+        background: Theme.panel; border-radius: 7px;
+        VerticalLayout {
+            padding: 18px; spacing: 14px;
+            SectionTitle { text: "Серверы"; height: 30px; }
+            HorizontalLayout {
+                spacing: 6px; height: 38px; alignment: start;
+                Action { label: "Избранные"; kind: "plain"; selected: !root.projects; activated => { root.projects = false; } }
+                Action { label: "Проекта"; kind: "plain"; selected: root.projects; activated => { root.projects = true; } }
+            }
+            Rule {}
+            Scroller {
+                vertical-stretch: 1;
+                VerticalLayout {
+                    spacing: 4px; alignment: start;
+                    if root.servers.length == 0: VerticalLayout {
+                        padding-top: 10px; spacing: 12px;
+                        EmptyState {
+                            title: root.projects ? "Список пока пуст" : "Нет избранных серверов";
+                            detail: root.projects ? "Опубликованные серверы проекта появятся здесь." : "Добавьте адрес сервера, чтобы вернуться к нему позже.";
+                        }
+                        if !root.projects: HorizontalLayout {
+                            alignment: start;
+                            Action { label: "Добавить сервер"; glyph: "\u{e710}"; enabled: !root.busy; activated => { root.add-favorite(); } }
+                        }
+                    }
+                    for s in root.servers: RowButton {
+                        enabled: !root.busy; title: s.title == "" ? s.address : s.title;
+                        detail: s.title == "" ? "" : s.address; meta: s.status; online: s.online;
+                        glyph: "\u{e839}"; selected: s.address == root.address && root.address != "";
+                        activated => { root.address = s.address; }
+                    }
+                }
+            }
+            if !root.projects && root.servers.length > 0: HorizontalLayout {
+                alignment: start;
+                Action { label: "Добавить сервер"; glyph: "\u{e710}"; kind: "plain"; enabled: !root.busy; activated => { root.add-favorite(); } }
+            }
+            Rule {}
+            Label { text: "Адрес подключения"; font-weight: 600; height: 20px; }
+            Entry {
+                label: "Адрес подключения"; placeholder: "IP или домен с портом"; value <=> root.address;
+                enabled: !root.busy; accepted => { if root.address != "" { root.connect(root.address); } }
+            }
+        }
+    }
+}
+
+
+

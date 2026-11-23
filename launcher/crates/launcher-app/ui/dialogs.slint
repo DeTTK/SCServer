@@ -1,0 +1,84 @@
+import { AboutSlint } from "std-widgets.slint";
+import { WorldRow } from "api.slint";
+import { Theme } from "theme.slint";
+import { Action, EmptyState, Field, Hint, Label, Notice, RowButton, Rule, Scroller, SectionTitle } from "controls.slint";
+
+export component LauncherDialog inherits FocusScope {
+    in-out property <string> kind;
+    in-out property <string> value;
+    in-out property <string> favorite-name;
+    in-out property <string> favorite-nick;
+    in property <string> world-title;
+    in property <string> version;
+    in property <string> error;
+    in property <bool> busy;
+    in property <[WorldRow]> backups;
+    callback submit;
+    callback backup;
+    private property <string> backup-title;
+    private property <string> verb: root.kind == "create" ? "Создать мир" : root.kind == "rename" ? "Сохранить название"
+        : root.kind == "clone" ? "Создать копию" : root.kind == "delete" ? "Удалить мир"
+        : root.kind == "restore" ? "Восстановить" : root.kind == "stop" ? "Остановить сервер" : "Сохранить сервер";
+    private property <string> heading: root.kind == "about" ? "О лаунчере" : root.kind == "favorite" ? "Избранный сервер" : root.kind == "backups" ? "Резервные копии"
+        : root.kind == "delete" ? "Удалить мир?" : root.kind == "restore" ? "Восстановить мир?" : root.kind == "stop" ? "Остановить сервер?"
+        : root.kind == "rename" ? "Переименовать мир" : root.kind == "clone" ? "Копия мира" : "Новый мир";
+    init => { root.focus(); }
+    function dismiss() { if !root.busy { root.kind = root.kind == "restore" ? "backups" : ""; } }
+    key-pressed(e) => { if e.text == Key.Escape { root.dismiss(); return accept; } return reject; }
+    Rectangle { background: Theme.scrim; }
+    Rectangle {
+        width: min(560px, parent.width - 64px); height: min(parent.height - 64px, content.preferred-height + 4px);
+        x: (parent.width - self.width) / 2; y: (parent.height - self.height) / 2;
+        background: Theme.panel; border-color: Theme.outline; border-width: 1px; border-radius: 8px;
+        content := VerticalLayout {
+            padding: 24px; spacing: 16px;
+            SectionTitle { text: root.heading; }
+            Rule {}
+            if root.kind == "about": VerticalLayout {
+                spacing: 12px; Label { text: "BSCPCRAFT"; font-family: Theme.display-font; font-size: 24px; }
+                Hint { text: "Лаунчер " + root.version; }
+                HorizontalLayout { alignment: start; height: 128px; AboutSlint { width: 224px; } }
+            }
+            if root.kind == "create" || root.kind == "rename" || root.kind == "clone": Field { label: "Название мира"; value <=> root.value; enabled: !root.busy; }
+            if root.kind == "delete" || root.kind == "restore" || root.kind == "stop": Label {
+                wrap: word-wrap; overflow: clip;
+                text: root.kind == "delete" ? "Мир «" + root.world-title + "» будет удалён. Отменить это действие нельзя."
+                    : root.kind == "restore" ? "Сохранение мира «" + root.world-title + "» будет заменено резервной копией «" + root.backup-title + "»."
+                    : "Игроки будут отключены от сервера.";
+            }
+            if root.kind == "delete": Field { label: "Введите название мира для удаления"; value <=> root.value; enabled: !root.busy; }
+            if root.kind == "favorite": VerticalLayout {
+                spacing: 14px;
+                Field { label: "Название сервера"; value <=> root.favorite-name; enabled: !root.busy; }
+                Field { label: "Адрес подключения"; value <=> root.value; enabled: !root.busy; placeholder: "IP или домен с портом"; }
+                Field { label: "Ник на этом сервере"; value <=> root.favorite-nick; enabled: !root.busy; hint: "Оставьте пустым, чтобы использовать ник из профиля."; }
+            }
+            if root.kind == "backups": VerticalLayout {
+                spacing: 12px; Hint { text: root.world-title; }
+                if root.backups.length == 0: EmptyState { title: "Копий пока нет"; detail: "Создайте первую резервную копию выбранного мира."; }
+                if root.backups.length > 0: Hint { text: "Выберите копию для восстановления."; }
+                if root.backups.length > 0: Scroller {
+                    height: min(240px, root.backups.length * 62px);
+                    VerticalLayout {
+                        for b in root.backups: RowButton {
+                            title: b.title; detail: b.detail; glyph: "\u{e81c}";
+                            activated => { if !root.busy { root.value = b.id; root.backup-title = b.title; root.kind = "restore"; } }
+                        }
+                    }
+                }
+            }
+            if root.error != "" && root.kind != "about": Notice { message: root.error; failed: true; }
+            if root.busy: Notice { message: "Выполняется операция…"; }
+            Rule {}
+            HorizontalLayout {
+                height: 38px; alignment: end; spacing: 8px;
+                Action { label: root.kind == "about" || root.kind == "backups" ? "Закрыть" : "Отмена"; enabled: !root.busy; activated => { root.dismiss(); } }
+                if root.kind == "backups": Action { kind: "primary"; label: "Создать резервную копию"; enabled: !root.busy; activated => { root.backup(); } }
+                if root.kind != "about" && root.kind != "backups": Action {
+                    kind: root.kind == "delete" || root.kind == "restore" || root.kind == "stop" ? "danger" : "primary";
+                    label: root.verb; enabled: !root.busy && (root.kind != "delete" || root.value == root.world-title); activated => { root.submit(); }
+                }
+            }
+        }
+    }
+}

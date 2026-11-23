@@ -1,0 +1,228 @@
+import { Palette } from "std-widgets.slint";
+import "assets/RussoOne-Regular.ttf";
+import { Theme } from "theme.slint";
+import { Action, Hint, Icon, Label, Notice, Rule } from "controls.slint";
+import { Home } from "home.slint";
+import { WorldsPage, ServerPage, ReportPage } from "management.slint";
+import { Configuration } from "forms.slint";
+import { LauncherDialog } from "dialogs.slint";
+import { WorldRow, ServerRow, ChangeRow } from "api.slint";
+export { WorldRow, ServerRow, ChangeRow } from "api.slint";
+export component AppWindow inherits Window {
+    // Pages and user-visible information. Models contain real data supplied by Rust.
+    in-out property <string> page: "home";
+    in property <string> version;
+    in property <string> status;
+    in property <string> error;
+    in property <string> error-field;
+    in property <bool> busy;
+    in property <string> progress-text;
+    in property <float> progress: -1;
+    in property <bool> configured;
+    in property <[WorldRow]> worlds;
+    in property <string> selected-world-id;
+    in property <string> selected-world-title;
+    in property <[ServerRow]> favorites;
+    in property <[ServerRow]> project-servers;
+    in property <[ChangeRow]> changes;
+    in property <[WorldRow]> backups;
+    in property <bool> server-running;
+    in property <bool> client-running;
+    in property <string> server-state;
+    in property <string> server-address;
+    in property <string> server-uptime;
+    in property <string> server-memory;
+    in property <[string]> players;
+    in property <bool> players-known;
+    // Draft inputs survive page and step changes. Rust may replace them after a save or browse.
+    in-out property <string> game-path;
+    in-out property <string> data-path;
+    in-out property <string> nickname;
+    in-out property <string> bundle-path;
+    in-out property <string> client-path;
+    in-out property <string> server-path;
+    in-out property <string> client-memory;
+    in-out property <string> server-memory-setting;
+    in-out property <string> advertised-host;
+    in-out property <string> port;
+    in-out property <string> feed-url;
+    in-out property <string> game-branch;
+    in property <[string]> branches;
+    in-out property <string> first-world-name: "Основной мир";
+    in-out property <string> address;
+    in-out property <bool> setup-visible;
+    in-out property <int> setup-step;
+    in-out property <string> settings-tab: "basic";
+    // Rust closes a successful dialog by assigning "". Failed submissions retain the draft.
+    in-out property <string> dialog;
+    in-out property <string> dialog-value;
+    in-out property <string> dialog-id;
+    in-out property <string> favorite-name;
+    in-out property <string> favorite-nick;
+
+    callback navigate(string);
+    callback launch(bool);
+    callback connect(string);
+    callback select-world(string);
+    callback world-action(string, string, string);
+    callback favorite-action(string, string, string, string);
+    callback server-action(string);
+    callback browse(string);
+    callback setup-action(string);
+    callback save-settings();
+    callback install-components(string);
+    callback update-action(string);
+    callback report(string, bool);
+
+    title: "BSCPCRAFT";
+    init => { Palette.color-scheme = dark; }
+    preferred-width: 1280px; preferred-height: 808px;
+    min-width: 1088px; min-height: 688px;
+    default-font-family: Theme.body-font; default-font-size: 14px;
+    background: Theme.canvas;
+    private property <string> report-description;
+    private property <bool> report-performance;
+    private property <string> page-title: root.page == "worlds" ? "Мои миры" : root.page == "server" ? "Мой сервер" : root.page == "diagnostics" ? "Диагностика" : root.page == "settings" ? "Настройки" : "Главная";
+    function ask-world(kind: string) {
+        root.dialog-id = root.selected-world-id;
+        root.dialog-value = kind == "rename" ? root.selected-world-title : kind == "clone" ? root.selected-world-title + " — копия" : "";
+        root.dialog = kind;
+    }
+    if root.dialog == "": HorizontalLayout {
+        Rectangle {
+            width: root.setup-visible ? clamp(root.width * 0.29, 280px, 390px) : (root.width >= 1280px ? 208px : 184px);
+            background: Theme.panel; clip: true;
+            if root.setup-visible: Image {
+                source: @image-url("assets/outpost.png"); image-fit: cover;
+                width: parent.width; height: parent.height;
+            }
+            if root.setup-visible: Rectangle { background: @linear-gradient(180deg, #17191bf5 0%, #18191bd4 56%, #18191b36 100%); }
+            VerticalLayout {
+                padding-left: 14px; padding-right: 14px; padding-top: 24px; padding-bottom: 16px; spacing: 8px;
+                HorizontalLayout {
+                    height: 44px; spacing: 8px; padding-left: 8px;
+                    Rectangle {
+                        width: 5px; height: 23px; y: (parent.height - self.height) / 2; background: Theme.amber; border-radius: 1px;
+                    }
+                    Label { text: "BSCPCRAFT"; font-family: Theme.display-font; font-size: root.width >= 1280px || root.setup-visible ? 23px : 21px; horizontal-stretch: 1; }
+                }
+                Rectangle { height: 12px; }
+                if !root.setup-visible: VerticalLayout {
+                    spacing: 4px; vertical-stretch: 0;
+                    for p in [{id:"home", name:"Главная", icon:"\u{e80f}"},{id:"worlds", name:"Мои миры", icon:"\u{e81e}"},{id:"server", name:"Мой сервер", icon:"\u{e839}"}]: Action {
+                        label: p.name; glyph: p.icon; kind: "plain"; align-left: true; height: 44px; selected: root.page == p.id;
+                        activated => { root.navigate(p.id); }
+                    }
+                }
+                if root.setup-visible: VerticalLayout {
+                    padding-left: 10px; padding-right: 8px; spacing: 18px; alignment: start;
+                    for step-title[i] in ["Расположение", "Компоненты", "Подготовка"]: HorizontalLayout {
+                        spacing: 12px; height: 38px;
+                        Rectangle {
+                            width: 29px; height: 29px; border-radius: 15px;
+                            background: i == root.setup-step ? Theme.amber : Theme.panel;
+                            border-width: 1px; border-color: i == root.setup-step ? Theme.amber : Theme.outline;
+                            Label {
+                                text: i < root.setup-step ? "✓" : i + 1; font-size: 13px; font-weight: 650;
+                                color: i == root.setup-step ? Theme.ink : Theme.text; horizontal-alignment: center;
+                            }
+                        }
+                        Label { text: step-title; color: i == root.setup-step ? Theme.text : Theme.muted; horizontal-stretch: 1; font-size: 16px; font-weight: i == root.setup-step ? 650 : 400; }
+                    }
+                }
+                Rectangle { vertical-stretch: 1; }
+                if !root.setup-visible: VerticalLayout {
+                    spacing: 4px; vertical-stretch: 0;
+                    Rule {}
+                    for p in [{id:"diagnostics",name:"Диагностика",icon:"\u{e9d9}"},{id:"settings",name:"Настройки",icon:"\u{e713}"}]: Action {
+                        label: p.name; glyph: p.icon; kind: "plain"; align-left: true; height: 42px; selected: root.page == p.id;
+                        activated => { root.navigate(p.id); }
+                    }
+                    Rule {}
+                    Action { label: "О лаунчере"; glyph: "\u{e946}"; kind: "plain"; align-left: true; activated => { root.dialog = "about"; } }
+                    if root.version != "": Hint { text: "Версия " + root.version; height: 18px; }
+                }
+            }
+        }
+        Rectangle { width: 1px; background: Theme.rule; }
+        VerticalLayout {
+            padding-left: root.width >= 1280px ? 32px : 24px; padding-right: root.width >= 1280px ? 32px : 24px;
+            padding-top: 24px; padding-bottom: 20px; spacing: 18px;
+            HorizontalLayout {
+                height: 44px; spacing: 12px;
+                Label { text: root.setup-visible ? "Первый запуск" : root.page-title; font-weight: 650; font-size: 32px; horizontal-stretch: 1; }
+                if root.setup-visible: Hint { text: "Шаг " + (root.setup-step + 1) + " из 3"; }
+                if !root.setup-visible && root.nickname != "": HorizontalLayout {
+                    width: min(208px, self.preferred-width); spacing: 8px;
+                    Icon { width: 20px; text: "\u{e77b}"; }
+                    Label { text: root.nickname; }
+                }
+            }
+            if !root.setup-visible && root.page == "home": Home {
+                vertical-stretch: 1; worlds: root.worlds; favorites: root.favorites; project-servers: root.project-servers; changes: root.changes;
+                world-id: root.selected-world-id; world-title: root.selected-world-title; address <=> root.address; busy: root.busy;
+                server-column-width: clamp((root.width - 250px) * 0.36, 310px, 460px);
+                select-world(id) => { root.select-world(id); } manage-worlds => { root.navigate("worlds"); }
+                connect(address) => { root.connect(address); }
+                add-favorite => { root.dialog-value = root.address; root.favorite-name = ""; root.favorite-nick = ""; root.dialog = "favorite"; }
+            }
+            if !root.setup-visible && root.page == "worlds": WorldsPage {
+                vertical-stretch: 1; worlds: root.worlds; world-id: root.selected-world-id; world-title: root.selected-world-title; busy: root.busy;
+                select-world(id) => { root.select-world(id); } ask(kind) => { root.ask-world(kind); }
+                act(op) => { root.dialog-id = root.selected-world-id; root.world-action(op, root.selected-world-id, ""); }
+            }
+            if !root.setup-visible && root.page == "server": ServerPage {
+                vertical-stretch: 1; running: root.server-running; busy: root.busy; state: root.server-state; address: root.server-address;
+                uptime: root.server-uptime; memory: root.server-memory; players: root.players; players-known: root.players-known;
+                act(op) => { if op == "stop" { root.dialog = "stop"; } else { root.server-action(op); } }
+            }
+            if !root.setup-visible && root.page == "diagnostics": ReportPage {
+                vertical-stretch: 1; busy: root.busy; description <=> root.report-description; performance <=> root.report-performance;
+                submit => { root.report(root.report-description, root.report-performance); }
+            }
+            if root.setup-visible || root.page == "settings": Rectangle {
+                vertical-stretch: 1;
+                Configuration {
+                    x: 0px; width: min(parent.width, 828px); height: parent.height;
+                    vertical-stretch: 1; wizard: root.setup-visible; step: root.setup-step; tab <=> root.settings-tab;
+                    game-path <=> root.game-path; data-path <=> root.data-path; nickname <=> root.nickname; bundle-path <=> root.bundle-path;
+                    client-path <=> root.client-path; server-path <=> root.server-path; client-memory <=> root.client-memory;
+                    server-memory-setting <=> root.server-memory-setting; advertised-host <=> root.advertised-host; port <=> root.port;
+                    feed-url <=> root.feed-url; game-branch <=> root.game-branch; branches: root.branches; first-world-name <=> root.first-world-name;
+                    busy: root.busy; error: root.error; error-field: root.error-field; progress: root.progress; progress-text: root.progress-text; status: root.status;
+                    browse(field) => { root.browse(field); } install(source) => { root.install-components(source); }
+                    step-action(op) => { root.setup-action(op); } update(op) => { root.update-action(op); } save => { root.save-settings(); }
+                }
+            }
+            if !root.setup-visible && root.page != "settings" && (root.error != "" || root.busy || root.progress-text != ""): Notice {
+                failed: root.error != ""; message: root.error != "" ? root.error : root.progress-text != "" ? root.progress-text : "Выполняется операция…";
+                progress: root.busy && root.error == "" ? root.progress : -1;
+            }
+            if !root.setup-visible && root.page != "settings" && root.page != "diagnostics": VerticalLayout {
+                spacing: 12px; vertical-stretch: 0;
+                Rule {}
+                if root.status != "": Hint { text: root.status; wrap: word-wrap; overflow: clip; }
+                HorizontalLayout {
+                    height: 48px; spacing: 10px;
+                    Action { label: "Синглплеер"; glyph: "\u{e768}"; kind: "primary"; large: true; horizontal-stretch: 5; enabled: !root.busy && !root.client-running; activated => { root.launch(true); } }
+                    Action { label: "Подключиться"; glyph: "\u{e71b}"; large: true; horizontal-stretch: 4; enabled: !root.busy && !root.client-running && root.address != ""; activated => { root.connect(root.address); } }
+                    Action { label: "Создать сервер"; glyph: "\u{e710}"; large: true; horizontal-stretch: 4; enabled: !root.busy && !root.server-running; activated => { root.launch(false); } }
+                }
+            }
+            if !root.setup-visible && (root.page == "settings" || root.page == "diagnostics") && root.status != "": Hint { text: root.status; wrap: word-wrap; overflow: clip; }
+        }
+    }
+    if root.dialog != "": Rectangle {
+        Image { source: @image-url("assets/outpost.png"); image-fit: cover; width: parent.width; height: parent.height; }
+        LauncherDialog {
+            kind <=> root.dialog; value <=> root.dialog-value; favorite-name <=> root.favorite-name; favorite-nick <=> root.favorite-nick;
+            world-title: root.selected-world-title; version: root.version; error: root.error; busy: root.busy; backups: root.backups;
+            backup => { root.world-action("backup", root.dialog-id, ""); }
+            submit => {
+                if root.dialog == "favorite" { root.favorite-action("save", root.favorite-name, root.dialog-value, root.favorite-nick); }
+                else if root.dialog == "stop" { root.dialog = ""; root.server-action("stop"); }
+                else { root.world-action(root.dialog, root.dialog-id, root.dialog-value); }
+            }
+        }
+    }
+}

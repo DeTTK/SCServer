@@ -1,0 +1,25 @@
+[package]
+name = "bscp-launcher-host"
+version.workspace = true
+edition = "2024"
+[lib]
+name = "bscp_launcher_host"
+[[bin]]
+name = "bscp-host"
+path = "src/main.rs"
+[dependencies]
+bscp-launcher-core = { path = "../launcher-core" }
+anyhow = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "stream"] }
+sha2 = "0.10"
+hex = "0.4"
+rand = "0.8"
+fs2 = "0.4"
+regex = "1"
+chrono = "0.4"
+uuid = { version = "1", features = ["v4"] }
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Security", "Win32_Security_Authorization", "Win32_System_Threading", "Win32_System_Memory", "Win32_System_Pipes"] }
+

@@ -1,0 +1,31 @@
+[package]
+name = "bscp-launcher-core"
+version.workspace = true
+edition = "2024"
+
+[lib]
+name = "bscp_launcher_core"
+
+[dependencies]
+anyhow = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+uuid = { version = "1", features = ["v4", "serde"] }
+sha2 = { version = "0.10", features = ["oid"] }
+hex = "0.4"
+fs2 = "0.4"
+zip = { version = "2", default-features = false, features = ["deflate"] }
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "rustls-tls"] }
+rsa = { version = "0.9", features = ["pem", "sha2"] }
+chrono = { version = "0.4", features = ["serde"] }
+regex = "1"
+flate2 = "1"
+p256 = { version = "0.13", features = ["ecdsa", "pkcs8"] }
+base64 = "0.22"
+rand_core = { version = "0.6", features = ["getrandom"] }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Storage_FileSystem", "Win32_Security_Authorization", "Win32_Foundation"] }
+
+[dev-dependencies]
+tempfile = "3"

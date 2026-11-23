@@ -1,0 +1,216 @@
+import { Theme } from "theme.slint";
+import { ScrollView } from "std-widgets.slint";
+
+export component Label inherits Text {
+    font-family: Theme.body-font;
+    font-size: 14px;
+    color: Theme.text;
+    vertical-alignment: center;
+    overflow: elide;
+    min-width: 0px;
+}
+export component Hint inherits Label { color: Theme.muted; font-size: 13px; }
+export component SectionTitle inherits Label { font-size: 21px; font-weight: 650; }
+export component Rule inherits Rectangle { height: 1px; background: Theme.rule; }
+export component Icon inherits Text {
+    font-family: Theme.icon-font;
+    font-size: 17px;
+    color: Theme.muted;
+    horizontal-alignment: center;
+    vertical-alignment: center;
+    accessible-role: none;
+}
+export component Action inherits Rectangle {
+    in property <string> label;
+    in property <string> glyph;
+    in property <string> kind: "secondary";
+    in property <bool> selected;
+    in property <bool> enabled: true;
+    in property <bool> align-left;
+    in property <bool> checkable;
+    in property <bool> checked;
+    in property <bool> large;
+    callback activated;
+    private property <bool> accent: root.kind == "primary" && root.enabled;
+    private property <color> fg: !root.enabled ? Theme.disabled-text : root.accent ? Theme.ink : root.kind == "danger" ? Theme.danger : root.selected ? Theme.amber : Theme.text;
+    preferred-width: button-content.preferred-width + (root.align-left ? 28px : 24px);
+    min-width: 28px;
+    height: root.large ? 48px : Theme.field-height;
+    border-radius: Theme.radius;
+    border-width: keys.has-focus ? 2px : 1px;
+    border-color: keys.has-focus ? Theme.focus : root.kind == "secondary" && root.enabled ? Theme.outline : transparent;
+    background: !root.enabled ? (root.kind == "plain" ? transparent : Theme.raised)
+        : root.accent ? (tap.pressed ? Theme.amber-pressed : tap.has-hover ? Theme.amber-hover : Theme.amber)
+        : tap.pressed ? Theme.pressed : tap.has-hover ? Theme.hover
+        : root.selected ? Theme.selected : root.kind == "plain" ? transparent
+        : root.kind == "danger" ? Theme.danger-surface : Theme.raised;
+    accessible-role: button;
+    accessible-label: root.label;
+    accessible-enabled: root.enabled;
+    accessible-checkable: root.checkable;
+    accessible-checked: root.checked;
+    accessible-action-default => { if root.enabled { root.activated(); } }
+    forward-focus: keys;
+    button-content := HorizontalLayout {
+        x: root.align-left ? 14px : (parent.width - self.width) / 2;
+        width: min(parent.width - 16px, self.preferred-width);
+        height: parent.height;
+        spacing: 9px;
+        if root.glyph != "": Icon { text: root.glyph; color: root.fg; width: 19px; }
+        Label { text: root.label; color: root.fg; font-weight: root.accent || root.selected ? 650 : 500; font-size: root.large ? 15px : 14px; }
+    }
+    if root.selected && root.kind == "plain": Rectangle {
+        x: 0px; y: (parent.height - self.height) / 2; width: 3px; height: 18px;
+        border-radius: 1px; background: Theme.amber;
+    }
+    keys := FocusScope {
+        enabled: root.enabled;
+        key-pressed(e) => {
+            if (e.text == " " || e.text == Key.Return) { root.activated(); return accept; }
+            return reject;
+        }
+    }
+    tap := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: pointer;
+        clicked => { keys.focus(); root.activated(); }
+    }
+}
+export component Entry inherits Rectangle {
+    in property <string> label;
+    in property <string> placeholder;
+    in-out property <string> value <=> edit.text;
+    in property <bool> enabled: true;
+    in property <bool> invalid;
+    in property <bool> multiline;
+    callback accepted;
+    forward-focus: edit;
+    height: root.multiline ? 124px : Theme.field-height;
+    min-width: 44px;
+    horizontal-stretch: 1;
+    background: Theme.field;
+    border-radius: Theme.radius;
+    border-width: edit.has-focus ? 2px : 1px;
+    border-color: root.invalid ? Theme.danger : edit.has-focus ? Theme.focus : Theme.outline;
+    if root.value == "": Hint {
+        x: 12px; y: root.multiline ? 9px : 0px; width: parent.width - 24px;
+        height: root.multiline ? 22px : parent.height; text: root.placeholder;
+    }
+    Rectangle {
+        x: 12px; y: root.multiline ? 9px : 0px;
+        width: parent.width - 24px; height: parent.height - self.y * 2; clip: true;
+        inner := Flickable {
+            content-width: root.multiline ? self.width : max(self.width, edit.preferred-width + 2px);
+            content-height: root.multiline ? max(self.height, edit.preferred-height) : self.height;
+            edit := TextInput {
+                x: 0px; y: 0px; width: inner.content-width; height: inner.content-height; font-family: Theme.body-font;
+                font-size: 14px; color: root.enabled ? Theme.text : Theme.disabled-text;
+                enabled: root.enabled; single-line: !root.multiline;
+                vertical-alignment: root.multiline ? top : center;
+                wrap: root.multiline ? word-wrap : no-wrap;
+                selection-background-color: Theme.amber; selection-foreground-color: Theme.ink;
+                accessible-label: root.label;
+                cursor-position-changed(p) => {
+                    inner.content-x = clamp(clamp(inner.content-x, 1px - p.x, inner.width - 2px - p.x), inner.width - inner.content-width, 0px);
+                    if root.multiline {
+                        inner.content-y = clamp(clamp(inner.content-y, -p.y, inner.height - 20px - p.y), inner.height - inner.content-height, 0px);
+                    }
+                }
+                accepted => { root.accepted(); }
+            }
+        }
+    }
+}
+export component Field inherits VerticalLayout {
+    in property <string> label;
+    in property <string> hint;
+    in property <string> placeholder;
+    in property <string> error;
+    in property <bool> folder;
+    in property <bool> enabled: true;
+    in-out property <string> value <=> input.value;
+    callback browse;
+    spacing: 6px;
+    vertical-stretch: 0;
+    Label { text: root.label; font-weight: 600; height: 19px; }
+    HorizontalLayout {
+        height: Theme.field-height; spacing: 8px;
+        input := Entry { label: root.label; placeholder: root.placeholder; invalid: root.error != ""; enabled: root.enabled; }
+        if root.folder: Action { width: 108px; label: "Обзор…"; glyph: "\u{e8b7}"; enabled: root.enabled; activated => { root.browse(); } }
+    }
+    if root.hint != "" || root.error != "": Hint {
+        text: root.error != "" ? root.error : root.hint; color: root.error != "" ? Theme.danger : Theme.muted;
+        wrap: word-wrap; overflow: clip; vertical-stretch: 0;
+    }
+}
+export component RowButton inherits Rectangle {
+    in property <string> title;
+    in property <string> detail;
+    in property <string> meta;
+    in property <string> glyph;
+    in property <bool> selected;
+    in property <bool> online;
+    in property <bool> enabled: true;
+    callback activated;
+    height: 62px;
+    border-radius: Theme.radius;
+    background: tap.pressed ? Theme.pressed : tap.has-hover ? Theme.hover : root.selected ? Theme.selected : transparent;
+    border-color: keys.has-focus ? Theme.focus : transparent;
+    border-width: 2px;
+    accessible-role: button;
+    accessible-label: root.title + ". " + root.detail + " " + root.meta;
+    accessible-enabled: root.enabled;
+    accessible-action-default => { if root.enabled { root.activated(); } }
+    forward-focus: keys;
+    if root.selected: Rectangle { x: 0px; width: 3px; height: parent.height - 20px; y: 10px; background: Theme.amber; }
+    HorizontalLayout {
+        padding-left: 12px; padding-right: 12px; spacing: 12px;
+        if root.glyph != "": Icon { text: root.glyph; color: root.selected ? Theme.amber : Theme.muted; width: 22px; }
+        VerticalLayout {
+            alignment: center; spacing: 2px; horizontal-stretch: 1;
+            Label { text: root.title; font-size: 15px; font-weight: 600; height: 21px; }
+            if root.detail != "": Hint { text: root.detail; height: 18px; }
+        }
+        if root.meta != "": Hint { text: root.meta; color: root.online ? Theme.online : Theme.muted; max-width: 110px; }
+    }
+    keys := FocusScope {
+        enabled: root.enabled;
+        key-pressed(e) => { if (e.text == Key.Return || e.text == " ") { root.activated(); return accept; } return reject; }
+    }
+    tap := TouchArea { enabled: root.enabled; mouse-cursor: pointer; clicked => { keys.focus(); root.activated(); } }
+}
+export component EmptyState inherits VerticalLayout {
+    in property <string> title;
+    in property <string> detail;
+    spacing: 5px; vertical-stretch: 0;
+    Label { text: root.title; font-size: 16px; font-weight: 600; wrap: word-wrap; overflow: clip; }
+    Hint { text: root.detail; wrap: word-wrap; overflow: clip; }
+}
+export component Scroller inherits ScrollView {
+    horizontal-scrollbar-policy: always-off;
+    content-width: self.visible-width;
+}
+export component Notice inherits Rectangle {
+    in property <string> message;
+    in property <bool> failed;
+    in property <float> progress: -1;
+    background: root.failed ? Theme.danger-surface : Theme.raised;
+    border-radius: Theme.radius;
+    min-height: clamp(notice-text.preferred-height + 20px, 38px, 104px);
+    preferred-height: self.min-height;
+    vertical-stretch: 0;
+    Scroller {
+        x: 12px; y: 8px; width: parent.width - 24px; height: parent.height - 16px;
+        content-height: notice-text.preferred-height;
+        notice-text := Label {
+            x: 0px; y: 0px; width: root.width - 42px; height: self.preferred-height;
+            text: root.message; font-size: 13px; color: root.failed ? Theme.danger : Theme.text;
+            wrap: word-wrap; overflow: clip;
+        }
+    }
+    if root.progress >= 0: Rectangle {
+        x: 0px; height: 3px; y: parent.height - self.height;
+        width: parent.width * clamp(root.progress, 0, 1); background: Theme.amber;
+    }
+}
+

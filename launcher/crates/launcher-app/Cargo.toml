@@ -1,0 +1,23 @@
+[package]
+name = "bscp-launcher-app"
+version.workspace = true
+edition.workspace = true
+build = "build.rs"
+
+[[bin]]
+name = "BSCPCRAFT"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1"
+bscp-launcher-core = { path = "../launcher-core" }
+bscp-launcher-host = { path = "../launcher-host" }
+serde_json = "1"
+slint = { version = "=1.19.0", default-features = false, features = ["std", "backend-winit", "renderer-femtovg", "renderer-software", "accessibility", "compat-1-18"] }
+rfd = { version = "0.15", default-features = false }
+uuid = { version = "1", features = ["v4"] }
+sha2 = "0.10"
+hex = "0.4"
+
+[build-dependencies]
+slint-build = "=1.19.0"

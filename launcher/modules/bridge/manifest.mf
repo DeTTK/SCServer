@@ -1,0 +1,4 @@
+Manifest-Version: 1.0
+Premain-Class: bscp.next.Bridge
+Can-Retransform-Classes: false
+

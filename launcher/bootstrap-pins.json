@@ -1,0 +1,64 @@
+{
+  "Base": {
+    "Id": "base",
+    "Url": "https://github.com/DeTTK/SCServer/releases/download/local-ready-2026.11.20/BSCPCRAFT-local-20261119.zip",
+    "Sha256": "644af9116bf0931884e778455179137e70e088f9e1fa77c66c00aad6d505752a",
+    "Size": 1312415473
+  },
+  "Patches": [
+    {
+      "Id": "Agent",
+      "Url": "https://github.com/DeTTK/SCServer/releases/download/native-f5-2026.11.23/game-resource-compat-f5-20261123.jar",
+      "Sha256": "665593b602e0610d8de23e1b446030243f417c175e01891dc35875fcd347912a",
+      "Size": 228698,
+      "Target": "Client/compat/game-resource-compat.jar"
+    },
+    {
+      "Id": "Startup",
+      "Url": "https://github.com/DeTTK/SCServer/releases/download/unit-format-warmup-2026.11.22/startup-guard-20261122.jar",
+      "Sha256": "00dab163374e9f393775c1bd7e34422956ef3fb83ff83f45227eae4dda405298",
+      "Size": 137094,
+      "Target": "Client/compat/startup-guard.jar"
+    },
+    {
+      "Id": "Server",
+      "Url": "https://github.com/DeTTK/SCServer/releases/download/native-cosmetics-2026.11.23/server-native-cosmetics-20261123.jar",
+      "Sha256": "50fc35338787784d619310a886e0210ad60269fe33687faeedb40b316342a810",
+      "Size": 6605431,
+      "Target": "Server/server.jar"
+    },
+    {
+      "Id": "Completion",
+      "Url": "https://github.com/DeTTK/SCServer/releases/download/alliance-transitions-2026.11.22/command-completion.jar",
+      "Sha256": "4c8e18e6a0b533d7347c926529950a9ae429b057f18f1bb8a9703326eb312b7f",
+      "Size": 17289,
+      "Target": "Client/mods/command-completion.jar"
+    },
+    {
+      "Id": "Scale",
+      "Url": "https://github.com/DeTTK/SCServer/releases/download/character-scale-2026.11.22/character-scale.jar",
+      "Sha256": "952b4a4423aa140bd2223d68335eedb58acf276bcaaea585ab6057f801f1aaeb",
+      "Size": 24131,
+      "Target": "Client/compat/character-scale.jar"
+    }
+  ],
+  "Native": {
+    "Id": "native",
+    "Url": "https://github.com/DeTTK/SCServer/releases/download/native-startup-2026.11.21/BSCPCRAFT-native-libraries-20261121.zip",
+    "Sha256": "e92212cf14279f7615c0f2c00ad3d51c798532fa735a8d0b9d6b46be3959d8fc",
+    "Size": 15812300
+  },
+  "NativeFiles": {
+    "fmod/x64/fmod.dll": "dad8b479225db203c7d6750f7817421680c09dfb5ff8e93f45d49499487bab28",
+    "fmod/x64/fmodstudio.dll": "fb99c94e3d51231e32923c69123dbbae4385c199411ce697318526aa8aadf032",
+    "eos/x64/EOSSDK-Win64-Shipping.dll": "4ee17bb5cb3ebb580bba995cb384d30fe24ad6a1a50074e340045dcdb3280ced",
+    "eos/x64/xaudio2_9redist.dll": "0e01f400baa09694cacfd2cfbff0d721c17b56785d2d6e29b6fdd117f70ccc1e",
+    "stove/BaseSDK.dll": "7826c5fc75aa8b0cf9b450251fcb566adc7da34142f735be146a083252b5ca89",
+    "stove/GameSupportSDK.dll": "65a23d7b9b073ecc2ffced5844d4eead588606bc3648d9843674abcae807076a",
+    "stove/IAPSDK.dll": "82a34ff749a60719b9359a2666605af29ae9c34984ca8e959975c2fda0959039",
+    "stove/LogSDK.dll": "70bd612686bfc07aa74d14f0c1dfe218ec2c4ffc481530294e4b96a030c2644c",
+    "stove/OwnershipSDK.dll": "01c524cc0c7dcdadf7d44a85d1188a8be7b0a3546fa366b8008655509f316aa4",
+    "stove/PCBangSDK.dll": "bbe4c14a321a1c78dc89a091ab73fce9743e5adcc9ef7ac85eff18095723ddbb",
+    "stove/WebView2Loader.dll": "74f16550da608ec233a3e54871ec72657dff34cdef068193c1a7b554b670a1a3"
+  }
+}
