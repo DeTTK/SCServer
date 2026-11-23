@@ -2,6 +2,26 @@
 use anyhow::{Context, Result, bail};
 use std::path::{Path, PathBuf};
 
+// Windows Shell COM rejects verbatim filesystem prefixes produced by canonicalize().
+#[cfg(windows)]
+fn shell_path(path: &Path) -> PathBuf {
+    use std::os::windows::ffi::{OsStrExt, OsStringExt};
+    let wide: Vec<u16> = path.as_os_str().encode_wide().collect();
+    let prefix: Vec<u16> = r"\\?\".encode_utf16().collect();
+    if !wide.starts_with(&prefix) {
+        return path.to_path_buf();
+    }
+    let unc: Vec<u16> = r"UNC\".encode_utf16().collect();
+    let normalized = if wide[4..].starts_with(&unc) {
+        let mut p = vec![92, 92];
+        p.extend_from_slice(&wide[8..]);
+        p
+    } else {
+        wide[4..].to_vec()
+    };
+    PathBuf::from(std::ffi::OsString::from_wide(&normalized))
+}
+
 /// `destination` is supplied only by diagnostics/tests; None uses the Windows Desktop folder.
 pub fn create_launcher_shortcut(
     executable: &Path,
@@ -12,12 +32,13 @@ pub fn create_launcher_shortcut(
     {
         use std::os::windows::process::CommandExt;
         use std::process::{Command, Stdio};
-        let executable = std::path::absolute(executable)?;
-        let root = std::path::absolute(root)?;
+        let executable = shell_path(&std::path::absolute(executable)?);
+        let root = shell_path(&std::path::absolute(root)?);
+        let destination = destination.map(shell_path);
         if !executable.is_file() {
             bail!("SHORTCUT_TARGET: launcher executable is missing");
         }
-        if let Some(path) = destination {
+        if let Some(path) = destination.as_deref() {
             if path.extension().and_then(|v| v.to_str()) != Some("lnk") {
                 bail!("SHORTCUT_PATH: .lnk required");
             }
@@ -51,7 +72,10 @@ $shortcut.Save()
             ])
             .env("BSCP_SHORTCUT_EXE", &executable)
             .env("BSCP_SHORTCUT_ROOT", &root)
-            .env("BSCP_SHORTCUT_FILE", destination.unwrap_or(Path::new("")))
+            .env(
+                "BSCP_SHORTCUT_FILE",
+                destination.as_deref().unwrap_or(Path::new("")),
+            )
             .stdin(Stdio::null())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
@@ -91,6 +115,17 @@ $shortcut.Save()
 mod tests {
     use super::*;
     #[test]
+    fn shell_paths_accept_verbatim_drive_and_unc_without_losing_unicode() {
+        assert_eq!(
+            shell_path(Path::new(r"\\?\C:\Игрок\BSCPCRAFT.exe")),
+            PathBuf::from(r"C:\Игрок\BSCPCRAFT.exe")
+        );
+        assert_eq!(
+            shell_path(Path::new(r"\\?\UNC\server\Игрок\BSCPCRAFT.exe")),
+            PathBuf::from(r"\\server\Игрок\BSCPCRAFT.exe")
+        );
+    }
+    #[test]
     fn shell_link_preserves_unicode_paths_profile_and_icon() {
         let temp = tempfile::tempdir().unwrap();
         let root = temp.path().join("Профиль игрока");
@@ -100,16 +135,21 @@ mod tests {
         let executable = folder.join("BSCPCRAFT.exe");
         std::fs::copy(std::env::current_exe().unwrap(), &executable).unwrap();
         let link = temp.path().join("Тест.lnk");
-        create_launcher_shortcut(&executable, &root, Some(&link)).unwrap();
+        create_launcher_shortcut(
+            &std::fs::canonicalize(&executable).unwrap(),
+            &std::fs::canonicalize(&root).unwrap(),
+            Some(&std::fs::canonicalize(temp.path()).unwrap().join("Тест.lnk")),
+        )
+        .unwrap();
         use std::os::windows::process::CommandExt;
         let output = std::process::Command::new("powershell.exe").args(["-NoProfile", "-NonInteractive", "-Command",
             "[Console]::OutputEncoding=[Text.UTF8Encoding]::new($false);$s=(New-Object -ComObject WScript.Shell).CreateShortcut($env:BSCP_TEST_LINK);@{target=$s.TargetPath;arguments=$s.Arguments;icon=$s.IconLocation;working=$s.WorkingDirectory}|ConvertTo-Json -Compress"])
-            .env("BSCP_TEST_LINK", &link).creation_flags(0x08000000).output().unwrap();
+            .env("BSCP_TEST_LINK", shell_path(&link)).creation_flags(0x08000000).output().unwrap();
         assert!(output.status.success());
         let value: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
-        assert_eq!(Path::new(value["target"].as_str().unwrap()), executable);
-        assert_eq!(value["arguments"], format!("--root \"{}\"", root.display()));
+        assert_eq!(Path::new(value["target"].as_str().unwrap()), shell_path(&executable));
+        assert_eq!(value["arguments"], format!("--root \"{}\"", shell_path(&root).display()));
         assert!(value["icon"].as_str().unwrap().contains("BSCPCRAFT.exe"));
-        assert_eq!(Path::new(value["working"].as_str().unwrap()), folder);
+        assert_eq!(Path::new(value["working"].as_str().unwrap()), shell_path(&folder));
     }
 }
