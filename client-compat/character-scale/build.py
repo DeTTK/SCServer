@@ -19,9 +19,11 @@ with tempfile.TemporaryDirectory(prefix='character-scale-',dir=repo/'build') as 
     hashes=json.loads((root/'native-hashes.json').read_text('utf8'))
     (classes/'playerscale-native.properties').write_text(''.join(k+'='+v+'\n' for k,v in hashes.items()),'utf8')
     with zipfile.ZipFile(output,'w',zipfile.ZIP_DEFLATED) as jar:
-        jar.writestr('META-INF/MANIFEST.MF','Manifest-Version: 1.0\nPremain-Class: playerscale.ScaleAgent\n\n')
-        for file in classes.rglob('*'):
-            if file.is_file():jar.write(file,file.relative_to(classes).as_posix())
+        manifest=zipfile.ZipInfo('META-INF/MANIFEST.MF',(2020,1,1,0,0,0));manifest.compress_type=zipfile.ZIP_DEFLATED
+        jar.writestr(manifest,'Manifest-Version: 1.0\nPremain-Class: playerscale.ScaleAgent\n\n')
+        for file in sorted(classes.rglob('*')):
+            if file.is_file():
+                entry=zipfile.ZipInfo(file.relative_to(classes).as_posix(),(2020,1,1,0,0,0));entry.compress_type=zipfile.ZIP_DEFLATED;jar.writestr(entry,file.read_bytes())
     tests=[*(repo/'shared/player-scale/src').rglob('*.java'),*(root/'tests').rglob('*.java')]
     subprocess.run([tool('javac'),'--release','17','-encoding','UTF-8','-d',str(helpers),*map(str,tests)],check=True)
     subprocess.run([tool('java'),'-cp',str(helpers),'playerscale.ScaleTests'],check=True)

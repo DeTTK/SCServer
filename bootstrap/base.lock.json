@@ -1,0 +1,30 @@
+{
+  "id": "bootstrap-ad0119c8978df19a",
+  "mode": "existing-verified-foundation",
+  "description": "Launtest updates an installed verified Client/Server/Map foundation. CI never rebuilds or republishes original game classes, Java or the map.",
+  "serverResources": {
+    "file": "server-resources.jar",
+    "url": "https://github.com/DeTTK/SCServer/releases/download/native-rules-2026.11.23/server-native-rules-20261123.jar",
+    "sha256": "67cadfc4e7f33def0c4e760857d686de393514b2c7f429551739c639dca754f5"
+  },
+  "clientAgent": {
+    "file": "base-resource-agent.jar",
+    "url": "https://github.com/DeTTK/SCServer/releases/download/native-f5-2026.11.23/game-resource-compat-f5-20261123.jar",
+    "sha256": "665593b602e0610d8de23e1b446030243f417c175e01891dc35875fcd347912a"
+  },
+  "asm": {
+    "file": "asm-9.7.1.jar",
+    "url": "https://repo.maven.apache.org/maven2/org/ow2/asm/asm/9.7.1/asm-9.7.1.jar",
+    "sha256": "8cadd43ac5eb6d09de05faecca38b917a040bb9139c7edeb4cc81c740b713281"
+  },
+  "asmTree": {
+    "file": "asm-tree-9.7.1.jar",
+    "url": "https://repo.maven.apache.org/maven2/org/ow2/asm/asm-tree/9.7.1/asm-tree-9.7.1.jar",
+    "sha256": "9929881f59eb6b840e86d54570c77b59ce721d104e6dfd7a40978991c2d3b41f"
+  },
+  "kotlin": {
+    "file": "kotlin-stdlib-2.0.20.jar",
+    "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-stdlib/2.0.20/kotlin-stdlib-2.0.20.jar",
+    "sha256": "fb169596659a518357c4b2c16f43dc75ab1c4980565ed4b4a317a050e5e39006"
+  }
+}

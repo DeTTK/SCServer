@@ -21,6 +21,7 @@ for directory,dirs,names in os.walk(ROOT,followlinks=False):
         elif path.is_symlink() or getattr(path.lstat(),'st_file_attributes',0)&0x400:
             findings.append({'path':path.relative_to(ROOT).as_posix(),'kind':'linked_directory'});dirs.remove(name)
     for name in names:
+        if name=='.git':continue # Git worktree administrative pointer is never a published source file.
         path=Path(directory)/name;rel=path.relative_to(ROOT)
         if path.is_symlink() or getattr(path.lstat(),'st_file_attributes',0)&0x400:findings.append({'path':rel.as_posix(),'kind':'linked_file'});continue
         files+=1;size=path.stat().st_size;total+=size
