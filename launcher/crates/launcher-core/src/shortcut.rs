@@ -182,9 +182,14 @@ mod tests {
             std::fs::canonicalize(Path::new(&text(&target))).unwrap(),
             std::fs::canonicalize(&executable).unwrap()
         );
+        let arguments = text(&arguments);
+        let argument_root = arguments
+            .strip_prefix("--root \"")
+            .and_then(|v| v.strip_suffix('"'))
+            .expect("one quoted portable root argument");
         assert_eq!(
-            text(&arguments),
-            format!("--root \"{}\"", shell_path(&root).display())
+            std::fs::canonicalize(argument_root).unwrap(),
+            std::fs::canonicalize(&root).unwrap()
         );
         assert_eq!(
             std::fs::canonicalize(Path::new(&text(&icon))).unwrap(),
