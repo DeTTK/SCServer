@@ -550,8 +550,9 @@ mod delayed_tests {
             listener.local_addr().unwrap().port()
         ))
         .unwrap();
+        let (backend_ready, wait_ready) = tokio::sync::oneshot::channel::<()>();
         let server = tokio::spawn(async move {
-            tokio::time::sleep(Duration::from_millis(350)).await;
+            wait_ready.await.unwrap();
             for _ in 0..4 {
                 let (mut stream, _) = listener.accept().await.unwrap();
                 let mut header = Vec::new();
@@ -586,18 +587,21 @@ mod delayed_tests {
             }
         });
         let file = layout.at("state/deferred.json");
-        let start = std::time::Instant::now();
-        let (proxy, alias) = SignedProxy::start_delayed(
-            remote,
-            LocalIdentity::load(&layout).unwrap(),
-            "Player",
-            file.clone(),
-            false,
+        let (proxy, alias) = tokio::time::timeout(
+            Duration::from_secs(10),
+            SignedProxy::start_delayed(
+                remote,
+                LocalIdentity::load(&layout).unwrap(),
+                "Player",
+                file.clone(),
+                false,
+            ),
         )
         .await
+        .expect("proxy waited for backend readiness")
         .unwrap();
-        assert!(start.elapsed() < Duration::from_millis(300));
         assert!(!file.exists());
+        backend_ready.send(()).unwrap();
         let response = reqwest::Client::new()
             .get(format!("{}characters/list", proxy.url()))
             .query(&[("session", alias)])
@@ -605,7 +609,6 @@ mod delayed_tests {
             .await
             .unwrap();
         assert!(response.status().is_success());
-        assert!(start.elapsed() >= Duration::from_millis(350));
         server.await.unwrap();
         let encoded: String = serde_json::from_slice(&std::fs::read(file).unwrap()).unwrap();
         use base64::Engine;

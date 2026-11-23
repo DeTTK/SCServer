@@ -22,7 +22,35 @@ fn shell_path(path: &Path) -> PathBuf {
     PathBuf::from(std::ffi::OsString::from_wide(&normalized))
 }
 
-/// `destination` is supplied only by diagnostics/tests; None uses the Windows Desktop folder.
+#[cfg(windows)]
+struct Apartment(bool);
+#[cfg(windows)]
+impl Apartment {
+    fn enter() -> Result<Self> {
+        use windows::Win32::System::Com::{COINIT_APARTMENTTHREADED, CoInitializeEx};
+        let result = unsafe { CoInitializeEx(None, COINIT_APARTMENTTHREADED) };
+        if result.0 == 0x80010106u32 as i32 {
+            return Ok(Self(false));
+        }
+        result.ok().context("SHORTCUT_COM")?;
+        Ok(Self(true))
+    }
+}
+#[cfg(windows)]
+impl Drop for Apartment {
+    fn drop(&mut self) {
+        if self.0 {
+            unsafe { windows::Win32::System::Com::CoUninitialize() }
+        }
+    }
+}
+#[cfg(windows)]
+fn wide(value: impl AsRef<std::ffi::OsStr>) -> Vec<u16> {
+    use std::os::windows::ffi::OsStrExt;
+    value.as_ref().encode_wide().chain(Some(0)).collect()
+}
+
+/// Optional desktop link. Uses the Unicode Shell API directly, independent of system ANSI locale.
 pub fn create_launcher_shortcut(
     executable: &Path,
     root: &Path,
@@ -30,84 +58,66 @@ pub fn create_launcher_shortcut(
 ) -> Result<PathBuf> {
     #[cfg(windows)]
     {
-        use std::os::windows::process::CommandExt;
-        use std::process::{Command, Stdio};
+        use windows::{
+            Win32::{
+                System::Com::{
+                    CLSCTX_INPROC_SERVER, CoCreateInstance, CoTaskMemFree, IPersistFile,
+                },
+                UI::Shell::{
+                    FOLDERID_Desktop, IShellLinkW, KF_FLAG_DEFAULT, SHGetKnownFolderPath, ShellLink,
+                },
+            },
+            core::{Interface, PCWSTR, w},
+        };
+        let _apartment = Apartment::enter()?;
         let executable = shell_path(&std::path::absolute(executable)?);
         let root = shell_path(&std::path::absolute(root)?);
-        let destination = destination.map(shell_path);
         if !executable.is_file() {
-            bail!("SHORTCUT_TARGET: launcher executable is missing");
+            bail!("SHORTCUT_TARGET: launcher executable is missing")
         }
-        if let Some(path) = destination.as_deref() {
-            if path.extension().and_then(|v| v.to_str()) != Some("lnk") {
-                bail!("SHORTCUT_PATH: .lnk required");
-            }
+        let destination = match destination {
+            Some(p) => shell_path(p),
+            None => unsafe {
+                let raw = SHGetKnownFolderPath(&FOLDERID_Desktop, KF_FLAG_DEFAULT, None)
+                    .context("SHORTCUT_DESKTOP")?;
+                let text = raw.to_string();
+                CoTaskMemFree(Some(raw.0.cast()));
+                PathBuf::from(text?).join("BSCPCRAFT.lnk")
+            },
+        };
+        if destination.extension().and_then(|v| v.to_str()) != Some("lnk") {
+            bail!("SHORTCUT_PATH: .lnk required")
         }
-        let script = r#"
-$ErrorActionPreference='Stop'
-[Console]::OutputEncoding=[Text.UTF8Encoding]::new($false)
-$link=$env:BSCP_SHORTCUT_FILE
-if(-not $link){$link=Join-Path ([Environment]::GetFolderPath('Desktop')) 'BSCPCRAFT.lnk'}
-$shell=New-Object -ComObject WScript.Shell
-$shortcut=$shell.CreateShortcut($link)
-$shortcut.TargetPath=$env:BSCP_SHORTCUT_EXE
-$quotedRoot=[regex]::Replace($env:BSCP_SHORTCUT_ROOT,'(\\+)$','$1$1')
-$shortcut.Arguments='--root "'+$quotedRoot+'"'
-$shortcut.WorkingDirectory=[IO.Path]::GetDirectoryName($env:BSCP_SHORTCUT_EXE)
-$shortcut.IconLocation=$env:BSCP_SHORTCUT_EXE+',0'
-$shortcut.Description='BSCPCRAFT / Builders SK'
-$shortcut.Save()
-[Console]::Write($link)
-"#;
-        let powershell =
-            PathBuf::from(std::env::var_os("SystemRoot").context("Windows directory unavailable")?)
-                .join("System32/WindowsPowerShell/v1.0/powershell.exe");
-        let mut child = Command::new(powershell)
-            .args([
-                "-NoLogo",
-                "-NoProfile",
-                "-NonInteractive",
-                "-Command",
-                script,
-            ])
-            .env("BSCP_SHORTCUT_EXE", &executable)
-            .env("BSCP_SHORTCUT_ROOT", &root)
-            .env(
-                "BSCP_SHORTCUT_FILE",
-                destination.as_deref().unwrap_or(Path::new("")),
-            )
-            .stdin(Stdio::null())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .creation_flags(0x08000000)
-            .spawn()
-            .context("SHORTCUT_CREATE: Windows shell unavailable")?;
-        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(15);
-        while child.try_wait()?.is_none() {
-            if std::time::Instant::now() >= deadline {
-                let _ = child.kill();
-                let _ = child.wait();
-                bail!("SHORTCUT_CREATE: Windows shell timed out");
-            }
-            std::thread::sleep(std::time::Duration::from_millis(50));
+        let root_text = root.to_string_lossy();
+        let trailing = root_text.chars().rev().take_while(|c| *c == '\\').count();
+        let arguments = format!("--root \"{}{}\"", root_text, "\\".repeat(trailing));
+        let executable_w = wide(executable.as_os_str());
+        let arguments_w = wide(std::ffi::OsStr::new(&arguments));
+        let working_w = wide(executable.parent().context("SHORTCUT_TARGET")?.as_os_str());
+        let destination_w = wide(destination.as_os_str());
+        unsafe {
+            let link: IShellLinkW = CoCreateInstance(&ShellLink, None, CLSCTX_INPROC_SERVER)
+                .context("SHORTCUT_CREATE")?;
+            link.SetPath(PCWSTR(executable_w.as_ptr()))
+                .context("SHORTCUT_TARGET")?;
+            link.SetArguments(PCWSTR(arguments_w.as_ptr()))?;
+            link.SetWorkingDirectory(PCWSTR(working_w.as_ptr()))?;
+            link.SetIconLocation(PCWSTR(executable_w.as_ptr()), 0)?;
+            link.SetDescription(w!("BSCPCRAFT / Builders SK"))?;
+            let persist: IPersistFile = link.cast()?;
+            persist
+                .Save(PCWSTR(destination_w.as_ptr()), true)
+                .context("SHORTCUT_SAVE")?;
         }
-        let output = child.wait_with_output()?;
-        if !output.status.success() {
-            bail!(
-                "SHORTCUT_CREATE: {}",
-                String::from_utf8_lossy(&output.stderr).trim()
-            );
+        if !destination.is_file() {
+            bail!("SHORTCUT_CREATE: shortcut was not created")
         }
-        let path = PathBuf::from(String::from_utf8(output.stdout)?.trim());
-        if !path.is_file() {
-            bail!("SHORTCUT_CREATE: shortcut was not created");
-        }
-        Ok(path)
+        Ok(destination)
     }
     #[cfg(not(windows))]
     {
         let _ = (executable, root, destination);
-        bail!("SHORTCUT_PLATFORM: desktop shortcuts are supported on Windows");
+        bail!("SHORTCUT_PLATFORM: desktop shortcuts are supported on Windows")
     }
 }
 
@@ -141,24 +151,40 @@ mod tests {
             Some(&std::fs::canonicalize(temp.path()).unwrap().join("Тест.lnk")),
         )
         .unwrap();
-        use std::os::windows::process::CommandExt;
-        let output = std::process::Command::new("powershell.exe").args(["-NoProfile", "-NonInteractive", "-Command",
-            "[Console]::OutputEncoding=[Text.UTF8Encoding]::new($false);$s=(New-Object -ComObject WScript.Shell).CreateShortcut($env:BSCP_TEST_LINK);@{target=$s.TargetPath;arguments=$s.Arguments;icon=$s.IconLocation;working=$s.WorkingDirectory}|ConvertTo-Json -Compress"])
-            .env("BSCP_TEST_LINK", shell_path(&link)).creation_flags(0x08000000).output().unwrap();
-        assert!(output.status.success());
-        let value: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+        use windows::{
+            Win32::{
+                System::Com::{CLSCTX_INPROC_SERVER, CoCreateInstance, IPersistFile, STGM_READ},
+                UI::Shell::{IShellLinkW, ShellLink},
+            },
+            core::{Interface, PCWSTR},
+        };
+        let _apartment = Apartment::enter().unwrap();
+        let mut target = vec![0u16; 32768];
+        let mut arguments = vec![0u16; 32768];
+        let mut icon = vec![0u16; 32768];
+        let mut working = vec![0u16; 32768];
+        let mut icon_index = 0;
+        unsafe {
+            let shell: IShellLinkW =
+                CoCreateInstance(&ShellLink, None, CLSCTX_INPROC_SERVER).unwrap();
+            let persist: IPersistFile = shell.cast().unwrap();
+            persist
+                .Load(PCWSTR(wide(shell_path(&link)).as_ptr()), STGM_READ)
+                .unwrap();
+            shell.GetPath(&mut target, std::ptr::null_mut(), 0).unwrap();
+            shell.GetArguments(&mut arguments).unwrap();
+            shell.GetWorkingDirectory(&mut working).unwrap();
+            shell.GetIconLocation(&mut icon, &mut icon_index).unwrap();
+        }
+        let text =
+            |s: &[u16]| String::from_utf16(&s[..s.iter().position(|x| *x == 0).unwrap()]).unwrap();
+        assert_eq!(Path::new(&text(&target)), shell_path(&executable));
         assert_eq!(
-            Path::new(value["target"].as_str().unwrap()),
-            shell_path(&executable)
-        );
-        assert_eq!(
-            value["arguments"],
+            text(&arguments),
             format!("--root \"{}\"", shell_path(&root).display())
         );
-        assert!(value["icon"].as_str().unwrap().contains("BSCPCRAFT.exe"));
-        assert_eq!(
-            Path::new(value["working"].as_str().unwrap()),
-            shell_path(&folder)
-        );
+        assert_eq!(Path::new(&text(&icon)), shell_path(&executable));
+        assert_eq!(icon_index, 0);
+        assert_eq!(Path::new(&text(&working)), shell_path(&folder));
     }
 }

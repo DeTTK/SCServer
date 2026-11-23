@@ -712,6 +712,7 @@ dependencies = [
  "sha2 0.10.9",
  "tempfile",
  "uuid",
+ "windows",
  "windows-sys 0.61.2",
  "zip",
 ]

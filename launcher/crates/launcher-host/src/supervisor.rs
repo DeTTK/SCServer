@@ -981,9 +981,10 @@ impl Supervisor {
             &o,
         )?;
         if self.qa.is_some() {
+            let control_port = launch::qa_control_port()?;
             write_json(
                 &self.layout.root.join("state/qa-client.json"),
-                &json!({"pid":pid,"folder":folder,"control":41780,"guard":41781,"proxy":proxy.url()}),
+                &json!({"pid":pid,"folder":folder,"control":control_port,"guard":control_port+1,"proxy":proxy.url()}),
             )?;
         }
         let mut r = self.running.lock().unwrap();

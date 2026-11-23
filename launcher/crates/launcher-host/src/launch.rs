@@ -6,6 +6,18 @@ use std::{
     collections::BTreeMap,
     path::{Path, PathBuf},
 };
+pub(crate) fn qa_control_port() -> Result<u16> {
+    let control_port = std::env::var("BSCP_ISOLATED_QA_CONTROL_PORT")
+        .ok()
+        .map(|v| v.parse::<u16>())
+        .transpose()
+        .map_err(|_| anyhow::anyhow!("QA_PORT: invalid isolated control port"))?
+        .unwrap_or(41780);
+    if !(1024..=65000).contains(&control_port) {
+        bail!("QA_PORT: invalid isolated control port")
+    }
+    Ok(control_port)
+}
 pub fn prop(s: impl AsRef<str>) -> String {
     let mut out = String::new();
     for c in s.as_ref().replace('\\', "/").chars() {
@@ -228,15 +240,7 @@ pub fn client(
             session.join("launcher-next-qa.marker"),
             "isolated launcher integration",
         )?;
-        let control_port = std::env::var("BSCP_ISOLATED_QA_CONTROL_PORT")
-            .ok()
-            .map(|v| v.parse::<u16>())
-            .transpose()
-            .map_err(|_| anyhow::anyhow!("QA_PORT: invalid isolated control port"))?
-            .unwrap_or(41780);
-        if !(1024..=65000).contains(&control_port) {
-            bail!("QA_PORT: invalid isolated control port")
-        }
+        let control_port = qa_control_port()?;
         c.args([
             "-Dstandard.jvm.headless.control=true",
             "-Dstandard.jvm.headless.hideWindow=true",
