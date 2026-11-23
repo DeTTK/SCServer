@@ -442,7 +442,9 @@ public final class GameInventory implements AutoCloseable {
         double[] origin=position.clone(),motion=velocity.clone();c.busy=true;
         try{factories.execute(()->{try{
             var policy=items.dropPolicy(item);if(!policy.allowed())throw new IllegalArgumentException("item_cannot_be_dropped");long now=System.currentTimeMillis();
-            WorldItem drop=new WorldItem(UUID.randomUUID(),id,world,item,origin[0],origin[1],origin[2],motion[0],motion[1],motion[2],now,now+300_000,policy.pickupOwner());
+            // Thrown bolts are spent projectiles: they trigger an anomaly and vanish, unlike a 5-minute loot drop.
+            long lifetime=catalog.get(item.id()).type().equals("bolt")?15_000L:300_000L;
+            WorldItem drop=new WorldItem(UUID.randomUUID(),id,world,item,origin[0],origin[1],origin[2],motion[0],motion[1],motion[2],now,now+lifetime,policy.pickupOwner());
             Inventory.Plan plan=before.replace(Collections.singletonMap(address,null),item.count());
             completion(()->{if(c.deathClear||!admissionAllowed(id)){c.busy=false;failure.accept("world_item_owner_changed");return;}persist(id,c,plan,null,null,drop,null,success,failure);});
         }catch(Exception|LinkageError error){completion(()->{c.busy=false;failure.accept(Objects.toString(error.getMessage(),"world_item_drop_failed"));});}});}catch(RejectedExecutionException full){c.busy=false;failure.accept("inventory_factory_queue_full");}
