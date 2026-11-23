@@ -31,7 +31,7 @@ final class NativeMedicineEffects {
     }
     private Object bank(Map<String,Float> values)throws Exception{Object bank=bankCtor.newInstance();for(var entry:values.entrySet()){Object key=statKeys.get(entry.getKey());if(!Float.isFinite(entry.getValue()))throw new IOException("medicine_native_stat");if(key==null)continue;bankPut.invoke(bank,key,entry.getValue());}return bank;}
     Map<String,Float> aggregate(Collection<Map<String,Float>> banks)throws Exception{
-        if(banks.size()>128)throw new IOException("medicine_stat_bank_limit");Object target=componentCtor.newInstance(false,false);
+        if(banks.isEmpty())return Map.of();if(banks.size()>128)throw new IOException("medicine_stat_bank_limit");Object target=componentCtor.newInstance(false,false);
         for(var values:banks){Object builder=builderCtor.newInstance();attachBank.invoke(builder,bank(values));attachKind.invoke(builder,medicineKind);register.invoke(target,make.invoke(builder));}
         rebuild.invoke(target);return export.read(effectiveBank.get(target));
     }

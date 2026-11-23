@@ -26,7 +26,7 @@ import com.google.gson.JsonObject;
  * Fixed tick deadlines; bounded reliable windows; native serializers warmed before listening.
  * Durable account/ticket IO runs on bounded login and storage workers.
  */
-public final class GameServer implements AutoCloseable {
+public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
     private static final int MAX_SESSIONS=32,WINDOW=128,MAX_QUEUE=2048,FRAGMENT=1100;
     private record LauncherReload(long deadline,long life,int hand,UUID firearm,UUID launcher,int ammo,ItemStack expected) {}
     private record ShotKey(long seed,int sequence){}
@@ -48,6 +48,12 @@ public final class GameServer implements AutoCloseable {
     private record Sent(byte[] payload,long last,int attempts){}
     private static final class Teleport {World.Vec target;boolean surface,respawnRequested;int phase;long deadline,nextRetry;CompletableFuture<Integer> height;CompletableFuture<Void> save;TerrainProjection.Prepared center;String reply;Teleport(World.Vec target,boolean surface,String reply,long now){this.target=target;this.surface=surface;this.reply=reply;deadline=now+8_000_000_000L;}}
     private record ParseTarget(Session session,int lane){}
+    public GameInventory creativeInventory(){return inventories;}
+    public Collection<Session> creativeSessions(){return List.copyOf(sessions.values());}
+    public boolean creativeDeveloper(Session session){return session.ready&&administrator(session);}
+    public UUID creativeCharacter(Session session){return character(session);}
+    public void creativeSend(Session session,byte[] packet){enqueueOrRetire(session,packet);}
+    public void creativeDeny(Session session,String error){denyNativeGrant(session,error);}
     private static final class Lane {boolean parsing;int rx,tx;final Map<Integer,byte[]> received=new HashMap<>();final LinkedHashMap<Integer,Sent> sent=new LinkedHashMap<>();final ArrayDeque<byte[]> queued=new ArrayDeque<>();final ReliableInput stream=new ReliableInput();}
     private record ScaleChange(Session requester,double[] position,playerscale.ScaleValue scale,CompletableFuture<Integer> query,long deadline){}
     private long scaleRevision;private String lastScaleError="";
@@ -55,7 +61,7 @@ public final class GameServer implements AutoCloseable {
         final GameItems.Medicine medicine;final Inventory.Address address;final ItemStack original;final long started,death;final int hand;final boolean initiallyFull;boolean charged;int effect;
         MedicineUse(Session s,GameItems.Medicine medicine,Inventory.Address address,ItemStack original,long now){this.medicine=medicine;this.address=address;this.original=original;started=now;death=s.deathGeneration;hand=s.handContainer;initiallyFull=s.hp>=s.maxHp-.001f;}
     }
-    private static final class Session {
+    static final class Session {
         float characterScale=1,configuredScale=1;boolean scaleCapable,scaleSaving,scaleRestore;long scaleHelloAt;ScaleChange scaleChange;
         final PlayerAnimation animation=new PlayerAnimation();final PlayerReplication replication=new PlayerReplication();final PlayerReplication botReplication=new PlayerReplication();final PlayerReplication cloneReplication=new PlayerReplication();final PlayerMotion motion=new PlayerMotion();String forcedAnimation;long lastCompletion;final Map<Integer,String> poses=new HashMap<>();
         boolean vehicleCapable,vehicleArticulation,vehicleFleet,vehicleContacts,vehicleInteractions;long vehicleCommandAt;
@@ -451,7 +457,7 @@ public final class GameServer implements AutoCloseable {
             inventories.cosmetic(character(s),target,source,selection,slot,id==598,plan->inventoryChanged(s,plan,()->enqueue(s,0,InventoryPackets.ack(owner,sequence))),error->{inventorySnapshot(s,0);enqueue(s,0,InventoryPackets.ack(owner,sequence));enqueue(s,0,GamePackets.chat(error));});return;}
         if(id==UnderbarrelPackets.UNLOAD_ID){unloadLauncher(s,UnderbarrelPackets.unload(body));return;}
         if(id==1449){var in=Wire.input(body);int owner=in.readShort(),sequence=in.readShort();Inventory.Address target=nullableAddress(in),source=nullableAddress(in);int selection=in.readInt(),slot=in.readUnsignedByte();if(owner!=0||target==null||target.aggregate()==2||source!=null&&source.aggregate()==2||selection<0||slot>=18||in.available()!=0)throw new IOException("module_request");inventories.module(character(s),target,source,selection,slot,plan->inventoryChanged(s,plan,()->enqueue(s,0,InventoryPackets.ack(owner,sequence))),error->{inventorySnapshot(s,0);enqueue(s,0,InventoryPackets.ack(owner,sequence));enqueue(s,0,GamePackets.chat(error));});return;}
-        if(id==1138){var in=Wire.input(body);int owner=in.readShort(),sequence=in.readShort();Inventory.Address target=nullableAddress(in),source=nullableAddress(in);int slot=in.readInt();if(owner!=0||!new Inventory.Address(0,3,0).equals(target)||source!=null&&source.aggregate()!=1||in.available()!=0)throw new IOException("artifact_socket_request");inventories.socket(character(s),source,slot,plan->inventoryChanged(s,plan,()->enqueue(s,0,InventoryPackets.ack(owner,sequence))),error->{inventorySnapshot(s,0);enqueue(s,0,InventoryPackets.ack(owner,sequence));enqueue(s,0,GamePackets.chat(error));});return;}
+        if(id==1138){var request=inventories.itemSlotRequest(false,body);int owner=request.owner(),sequence=request.sequence(),slot=request.slot();Inventory.Address target=request.target(),source=request.source();if(owner!=0||target==null||!StorageLayout.validAddress(target)||source!=null&&!StorageLayout.validAddress(source))throw new IOException("artifact_socket_request");if(!validInventoryTransfer(s,new InventoryTransfer(id,new InventoryPackets.Request(owner,sequence,target,source==null?List.of():List.of(source),0,false,-1),s.inventoryScreen.page()))){inventorySnapshot(s,owner);enqueue(s,0,InventoryPackets.ack(owner,sequence));return;}inventories.socket(character(s),target,source,slot,plan->inventoryChanged(s,plan,()->enqueue(s,0,InventoryPackets.ack(owner,sequence))),error->{inventorySnapshot(s,0);enqueue(s,0,InventoryPackets.ack(owner,sequence));enqueue(s,0,GamePackets.chat(error));});return;}
         if(id==1060){receiveChat(s,body);return;}
         if(id==10203){enqueue(s,0,Wire.frame(10204,body));return;}
         if(id==1345||id==1978){if(s.respawning)return;ClientPackets.Input input=nativePackets.input(body,id==1978);if(input.tick()<s.clientTick)return;s.clientTick=input.tick();if(vehicles.driving(s)!=null){if(input.yaw()!=null){s.yaw=input.yaw();s.pitch=input.pitch();}if(vehicleActions.windowView(s,System.nanoTime())){s.animation.input(input.motion());inputButtons(s,input.buttons());}s.lastInput=System.nanoTime();inputs++;return;}if(!input.blockBatch().deltas().isEmpty())nativeBlockBatch(s,input.blockBatch());boolean acceptedPosition=false;if(input.position()!=null){double[] pos=input.position();if(Math.abs(pos[0])<=30_000_001&&Math.abs(pos[2])<=30_000_001&&Math.abs(pos[1])<=30_000_001){if(!s.scaleSaving&&s.scaleChange==null&&s.teleport==null&&s.teleportGuard.accept(point(pos),System.nanoTime())){s.pos=pos;acceptedPosition=true;requestPortal(s,false);}else staleTeleportInputs++;}}if(input.yaw()!=null){s.yaw=input.yaw();s.pitch=input.pitch();}s.motion.input(input,acceptedPosition);s.posture.input(input,s.motion.ground());if(input.mode()==5&&s.mode!=5&&s.hp>0)s.stamina=staminaRules.enterSprint(s.stamina);s.mode=input.mode();s.lastInput=System.nanoTime();if(input.stamina()!=null){s.reportedStamina=input.stamina();s.observedStamina=input.stamina();}s.speed=s.motion.speed();s.velocity=s.motion.velocity();s.ground=s.motion.ground();s.animation.input(input.motion());inputButtons(s,input.buttons());inputs++;return;}
@@ -1174,7 +1180,7 @@ public final class GameServer implements AutoCloseable {
     }
     private void advanceSickness(Session s,long wall){
         if(s.gameplayMode!=PlayerRules.Mode.STALKER){if(!s.sickness.states().isEmpty()||!s.sicknessExposure.isEmpty()){clearSickness(s);refreshStats(s);savePlayerState(s);}return;}
-        var contacts=AreaExposure.select(grenadeAreaScenes.contacts(grenadeAreas.states(),s.pos,CharacterScale.height(s.posture.locomotion(),s.characterScale),wall),areaRelations,areaActor(s),this::liveAreaOwner,AreaRelations.Mode.DEFAULT);syncAreaEffects(s,contacts,wall);boolean contactsChanged=!contacts.equals(s.selectedAreas);s.selectedAreas=contacts;var zone=AreaExposure.bank(contacts);if(contactsChanged||!zone.equals(s.sicknessExposure)){float oldHp=s.hp,oldMax=s.maxHp;s.sicknessExposure=zone;refreshStats(s);if(s.hp!=oldHp||s.maxHp!=oldMax)vitals(s);}areaHealing(s,contacts,wall);Map<String,SicknessRules.State> after=new TreeMap<>();Map<String,Float> damage=new LinkedHashMap<>();boolean changed=false;
+        var contacts=AreaExposure.select(grenadeAreaScenes.contacts(grenadeAreas.states(),s.pos,CharacterScale.height(s.posture.locomotion(),s.characterScale),wall),areaRelations,areaActor(s),this::liveAreaOwner,AreaRelations.Mode.DEFAULT);syncAreaEffects(s,contacts,wall);boolean contactsChanged=!contacts.equals(s.selectedAreas);s.selectedAreas=contacts;var zone=inventories.medicineStats(contacts.stream().map(c->c.profile().stats()).toList());if(contactsChanged||!zone.equals(s.sicknessExposure)){float oldHp=s.hp,oldMax=s.maxHp;s.sicknessExposure=zone;refreshStats(s);if(s.hp!=oldHp||s.maxHp!=oldMax)vitals(s);}areaHealing(s,contacts,wall);Map<String,SicknessRules.State> after=new TreeMap<>();Map<String,Float> damage=new LinkedHashMap<>();boolean changed=false;
         for(var p:sicknessRules.profiles()){
             var before=s.sickness.states().getOrDefault(p.kind(),sicknessRules.empty(p.kind()));float dose=s.sicknessExposure.getOrDefault(p.accumulation(),0f);
             if(before.power()==0&&dose==0&&s.stats.getOrDefault(p.accumulation(),0f)<=0)continue;
@@ -1392,7 +1398,10 @@ public final class GameServer implements AutoCloseable {
         },error->rejected.run());
     }
     private void inventoryRequest(Session s,int id,byte[] body)throws Exception{
-        if(BoltCosmetics.handle(this,s,id,body))return;
+        if(id==1627){var request=inventories.itemSlotRequest(true,body);Inventory.Address source=request.source();Runnable ack=()->enqueue(s,0,InventoryPackets.ack(request.owner(),request.sequence()));
+            if(request.owner()!=0||request.target()==null||!StorageLayout.validAddress(request.target())||request.target().aggregate()==2||source!=null&&(!StorageLayout.validAddress(source)||source.aggregate()!=1||source.equals(request.target()))){inventorySnapshot(s,0);ack.run();return;}
+            inventories.bolt(character(s),request.target(),source,plan->inventoryChanged(s,plan,ack),error->{inventorySnapshot(s,0);ack.run();enqueue(s,0,GamePackets.chat(error));});return;}
+
         var request=InventoryPackets.read(id,body,s.inventoryScreen.page());var transfer=new InventoryTransfer(id,request,s.inventoryScreen.page());
         var entry=new InventoryTransferQueue.Entry<>(transfer,null,1,System.nanoTime());
         if(!validInventoryTransfer(s,transfer)){rejectInventoryTransfers(s,List.of(entry));return;}
@@ -1412,7 +1421,7 @@ public final class GameServer implements AutoCloseable {
     private static double[] vector(World.Vec p){return new double[]{p.x(),p.y(),p.z()};}
     private double[][] placementCandidates(Session s,boolean restore){LinkedHashSet<World.Vec> values=new LinkedHashSet<>();World.Vec saved=restore?locations.position(character(s)):null;if(saved!=null)values.add(saved);values.addAll(locations.spawnCandidates(character(s),point(configuredSpawn(s))));return values.stream().map(GameServer::vector).toArray(double[][]::new);}
     private void beginPlacement(Session s,double[][] candidates){s.candidates=candidates;s.candidate=0;s.positioned=false;s.placement=null;s.placementDeadline=System.nanoTime()+3_000_000_000L;s.nextPlacement=0;}
-    private void restoreJoinState(Session s){s.configuredScale=inventories.scale(character(s)).factor();s.characterScale=1;s.grenadeDeath=CharacterRevival.read(inventories.gameplay(character(s))).filter(CharacterRevival::active).map(CharacterRevival::death).orElse(null);s.pulses=inventories.pulseEffects(character(s),System.currentTimeMillis());s.effects=CharacterEffects.read(inventories.gameplay(character(s)),medicines,System.currentTimeMillis());refreshStats(s);s.restoredState=locations.state(character(s));if(s.restoredState!=null){s.sickness=s.restoredState.sickness().restored(sicknessRules,System.currentTimeMillis());s.selectedAreas=s.gameplayMode==PlayerRules.Mode.STALKER&&s.restoredState.health()>0?AreaExposure.select(grenadeAreaScenes.contacts(grenadeAreas.states(),s.pos,CharacterScale.height(s.posture.locomotion(),s.characterScale),System.currentTimeMillis()),areaRelations,areaActor(s),this::liveAreaOwner,AreaRelations.Mode.DEFAULT):List.of();s.sicknessExposure=AreaExposure.bank(s.selectedAreas);refreshStats(s);s.hp=Math.min(s.maxHp,s.restoredState.health());s.stamina=Math.min(s.maxStamina,s.restoredState.stamina());s.observedStamina=s.stamina;s.restoredState=null;}}
+    private void restoreJoinState(Session s){s.configuredScale=inventories.scale(character(s)).factor();s.characterScale=1;s.grenadeDeath=CharacterRevival.read(inventories.gameplay(character(s))).filter(CharacterRevival::active).map(CharacterRevival::death).orElse(null);s.pulses=inventories.pulseEffects(character(s),System.currentTimeMillis());s.effects=CharacterEffects.read(inventories.gameplay(character(s)),medicines,System.currentTimeMillis());refreshStats(s);s.restoredState=locations.state(character(s));if(s.restoredState!=null){s.sickness=s.restoredState.sickness().restored(sicknessRules,System.currentTimeMillis());s.selectedAreas=s.gameplayMode==PlayerRules.Mode.STALKER&&s.restoredState.health()>0?AreaExposure.select(grenadeAreaScenes.contacts(grenadeAreas.states(),s.pos,CharacterScale.height(s.posture.locomotion(),s.characterScale),System.currentTimeMillis()),areaRelations,areaActor(s),this::liveAreaOwner,AreaRelations.Mode.DEFAULT):List.of();s.sicknessExposure=inventories.medicineStats(s.selectedAreas.stream().map(c->c.profile().stats()).toList());refreshStats(s);s.hp=Math.min(s.maxHp,s.restoredState.health());s.stamina=Math.min(s.maxStamina,s.restoredState.stamina());s.observedStamina=s.stamina;s.restoredState=null;}}
     private void completeJoin(Session s){if(sessions.get(s.address)==s&&!s.ready&&s.inventoryReady&&s.positioned&&!vitalsPending(character(s))&&!locations.stateSavePending(character(s))){
             if(s.joinVitals==null){UUID id=character(s);var receipt=VitalsReceipt.read(inventories.gameplay(id),inventories.inventory(id).revision());s.joinVitals=locations.recoverVitalsAt(id,receipt,point(s.pos));}
             if(!s.joinVitals.isDone())return;
@@ -1775,7 +1784,7 @@ public final class GameServer implements AutoCloseable {
             Inventory.Address selected=s.adminSelected;
             if(selected==null){Integer hint=s.creativeHints.get(s.creativeSelected);if(hint!=null)selected=inventory(s).items().entrySet().stream().filter(e->e.getKey().aggregate()<2&&e.getValue().id()==hint).map(Map.Entry::getKey).findFirst().orElse(null);}
             if(selected==null)selected=new Inventory.Address(0,s.handContainer,0);ItemStack weapon=inventory(s).at(selected);
-            if(weapon==null||WeaponProfile.from(inventories.catalog().get(weapon.id()).properties())==null)throw new IllegalArgumentException("admin_ammo_weapon_missing");
+            if(weapon==null||!inventories.firearm(weapon.id()))throw new IllegalArgumentException("admin_ammo_weapon_missing");
             queueNativeGrant(s,new NativeGrant(s,null,selected,weapon,s.life,System.nanoTime()+10_000_000_000L,0));
         }catch(IllegalArgumentException error){denyNativeGrant(s,error.getMessage());}
     }
@@ -1799,7 +1808,7 @@ public final class GameServer implements AutoCloseable {
         if(request.give()!=null){inventories.grantConfig(character(target),request.give().config(),request.give().destination(),target.pos,success,failure);return;}
         ItemStack current=inventory(target).at(request.weapon());
         if(current==null||current.id()!=request.expected().id()){failure.accept("admin_ammo_weapon_changed");return;}
-        try{WeaponProfile profile=WeaponProfile.from(inventories.catalog().get(current.id()).properties());int ammo=profile.ammunition().get(0);int count=inventories.catalog().get(ammo).stackLimit();inventories.give(character(target),ammo,count,0,new JsonObject(),success,failure);}
+        try{inventories.giveAmmunition(character(target),current,current.id(),null,success,failure);}
         catch(IllegalArgumentException error){failure.accept(error.getMessage());}
     }
     private boolean physicalActive(Session s){return s.physicalCycle!=null&&s.physicalCycle.identity().equals(s.firearm);}
@@ -2021,7 +2030,7 @@ public final class GameServer implements AutoCloseable {
         if(selected!=s.weapon.ammo()){inventories.weapon(character(s),s.handContainer,selected,weapon->{if(sessions.get(s.address)!=s)return;s.weapon=weapon;s.magazines=weapon.magazines();s.firearm=weapon.identity();s.rounds=weapon.rounds();refreshReserve(s);startReload(s);},error->enqueue(s,0,GamePackets.chat(error)));}else{refreshReserve(s);startReload(s);}
     }
     private void startReload(Session s){
-        double duration=s.rounds==0?s.weapon.profile().reload():s.weapon.profile().tacticalReload();if(!Double.isFinite(duration)||duration<=0||duration>120)throw new IllegalArgumentException("reload_duration");s.reloadAt=System.nanoTime()+(long)(duration*1_000_000_000L);s.animation.reload((float)duration);
+        double duration=s.weapon.profile().reloadDuration(s.rounds);if(!Double.isFinite(duration)||duration<=0||duration>120)throw new IllegalArgumentException("reload_duration");s.reloadAt=System.nanoTime()+(long)(duration*1_000_000_000L);s.animation.reload((float)duration);
         enqueue(s,0,Wire.dynamic("990569665",Wire.bytes(o->{o.writeUTF("reload");o.writeFloat((float)duration);o.writeBoolean(s.rounds==0);o.writeBoolean(false);o.writeUTF("reload");})));
         for(Session viewer:sessions.values())if(viewer.ready){int entity=viewer==s?0:s.entity;enqueue(viewer,0,Wire.dynamic("1072250159",Wire.bytes(o->{o.writeInt(entity);o.writeFloat((float)(duration*.87));o.writeFloat((float)(duration*.96));o.writeFloat((float)duration);o.write(GamePackets.stack(s.weapon.ammo(),(administrator(s)?s.weapon.capacity()-s.rounds:Math.min(s.weapon.capacity()-s.rounds,s.reserve)),new byte[0]));o.writeBoolean(s.rounds==0);o.writeBoolean(s.rounds!=0);o.writeBoolean(false);o.writeInt(-2);o.writeShort(0);})) );}
     }

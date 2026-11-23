@@ -8,12 +8,13 @@ import java.util.*;
 public final class CreativeGrantSlots {
     public static final int CAPACITY=84;
     private final BitSet occupied=new BitSet(CAPACITY);
-    private final int[] factories=new int[CAPACITY];
+    private final int[] factories=new int[CAPACITY];private final byte[][] nativeStacks=new byte[CAPACITY][];
     public CreativeGrantSlots(){Arrays.fill(factories,-1);}
     public void echo(int slot,byte[] raw){
         if(slot<0||slot>=CAPACITY)throw new IllegalArgumentException("creative_inventory_slot");
-        occupied.set(slot,raw!=null);factories[slot]=raw==null?-1:((raw[1]&255)<<8)|(raw[2]&255);
+        nativeStacks[slot]=raw==null?null:raw.clone();occupied.set(slot,raw!=null);factories[slot]=raw==null?-1:((raw[1]&255)<<8)|(raw[2]&255);
     }
+    public byte[] nativeStack(int slot){return slot<0||slot>=CAPACITY||nativeStacks[slot]==null?null:nativeStacks[slot].clone();}
     public int factory(int slot){return slot<0||slot>=CAPACITY?-1:factories[slot];}
     public Map<Integer,ItemStack> place(List<ItemStack> stacks,Integer requested){
         if(stacks.isEmpty()||stacks.size()>CAPACITY)throw new IllegalArgumentException("creative_inventory_full");
@@ -25,5 +26,5 @@ public final class CreativeGrantSlots {
         }
         return Collections.unmodifiableMap(result);
     }
-    public void granted(Map<Integer,ItemStack> stacks){for(var entry:stacks.entrySet()){occupied.set(entry.getKey());factories[entry.getKey()]=entry.getValue().id();}}
+    public void granted(Map<Integer,ItemStack> stacks){for(var entry:stacks.entrySet()){occupied.set(entry.getKey());factories[entry.getKey()]=entry.getValue().id();nativeStacks[entry.getKey()]=InventoryPackets.stack(entry.getValue());}}
 }

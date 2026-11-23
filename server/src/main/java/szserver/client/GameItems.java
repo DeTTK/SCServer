@@ -61,7 +61,8 @@ public final class GameItems implements AutoCloseable {
         public String cooldownKey(){return group==null?"item/"+id:group;}
     }
     public record MedicineEffect(int id,long until,Medicine medicine){}
-    private final Map<Integer,Medicine> medicines=new HashMap<>();
+    private final Map<Integer,Medicine> medicines=new HashMap<>();private Set<Integer> firearmFactories=Set.of();
+    public boolean firearm(int id){return firearmFactories.contains(id);}
     private final Map<Integer,szserver.inventory.ExplosiveProfile> explosives=new HashMap<>();
     public Map<Integer,szserver.inventory.ExplosiveProfile> explosives(){return Map.copyOf(explosives);}
     private Map<String,Integer> statOrdinals=Map.of();
@@ -101,7 +102,7 @@ public final class GameItems implements AutoCloseable {
         adapter.warmArmorUpgrades(definitionsPath.getParent().resolve("native-resources"),armors);
         adapter.warmArtifacts(Files.readString(artifactSettings),artifacts,definitionsPath.getParent().resolve("native-resources"));containerExempt=adapter.containerExemptStats();definitions=catalog;
         LauncherPackets.verifyManifest(fixtures.getParent(),runtime,"native-weapon-modules.json");LauncherPackets.verifyManifest(fixtures.getParent(),runtime,"native-weapon-jamming.json");
-        Map<Integer,String> moduleClasses=new HashMap<>(),moduleDefs=new HashMap<>();for(var entry:registry.entrySet())if(entry.getValue().getAsJsonObject().has("definition")){int id=Integer.parseInt(entry.getKey());if(catalog.has(entry.getKey())){moduleClasses.put(id,entry.getValue().getAsJsonObject().get("definition").getAsString());moduleDefs.put(id,catalog.get(entry.getKey()).toString());}}adapter.moduleDefinitions(moduleClasses,moduleDefs);adapter.warmCosmetics(moduleClasses,moduleDefs);
+        Map<Integer,String> moduleClasses=new HashMap<>(),moduleDefs=new HashMap<>();for(var entry:registry.entrySet())if(entry.getValue().getAsJsonObject().has("definition")){int id=Integer.parseInt(entry.getKey());if(catalog.has(entry.getKey())){moduleClasses.put(id,entry.getValue().getAsJsonObject().get("definition").getAsString());moduleDefs.put(id,catalog.get(entry.getKey()).toString());}}adapter.moduleDefinitions(moduleClasses,moduleDefs);adapter.warmCosmetics(moduleClasses,moduleDefs);firearmFactories=adapter.firearmFactories();
         medicines.clear();medicines.putAll(adapter.warmMedicines());statOrdinals=adapter.statOrdinals();for(var entry:catalog.entrySet()){
             JsonObject item=entry.getValue().getAsJsonObject();int id=Integer.parseInt(entry.getKey());
             if(item.get("type").getAsString().equals("grenade"))explosives.put(id,adapter.explosive(id,(item.has("explosive_props")?item.getAsJsonObject("explosive_props"):item).toString()));
@@ -139,22 +140,13 @@ public final class GameItems implements AutoCloseable {
     public Map<String,Float> equipmentStats(Collection<szserver.inventory.ItemStack> equipment)throws Exception{return equipmentSummary(equipment).total();}
     public EquipmentStats equipmentSummary(Collection<szserver.inventory.ItemStack> equipment)throws Exception{
         if(definitions==null)throw new IllegalStateException("gameplay_not_warmed");Map<String,Float> stats=new TreeMap<>(),artifactTotal=new TreeMap<>();
-        for(var item:equipment){JsonObject definition=definitions.getAsJsonObject(Integer.toString(item.id()));String type=definition.get("type").getAsString();
-            if(!Set.of("armor","backpack","container","tradepack","extreme_tradepack").contains(type))continue;
-            if(type.equals("armor")){byte[] wire=szserver.net.InventoryPackets.stack(item);mergeStats(stats,adapter.armorStats(Arrays.copyOfRange(wire,1,wire.length)));}
-            else mergeStats(stats,adapter.numericStats(definition.toString()));JsonObject row=registry.getAsJsonObject(Integer.toString(item.id()));
-            if(!row.has("state")||!definition.has("artefakt_slots"))continue;
-            int slots=definition.get("artefakt_slots").getAsInt();if(slots<0||slots>128)throw new IllegalArgumentException("artifact_slots_limit");
-            Map<String,Float> artifacts=new TreeMap<>();for(byte[] raw:adapter.artifacts(row.get("state").getAsString(),item.state(),slots))mergeStats(artifacts,adapter.artifactStats(raw));
-            float effectiveness=definition.has("effectiveness")?definition.get("effectiveness").getAsFloat():1,protection=definition.has("inner_protection_factor")?definition.get("inner_protection_factor").getAsFloat():1;
-            if(!Float.isFinite(effectiveness)||!Float.isFinite(protection))throw new IllegalArgumentException("container_factor_nonfinite");
-            for(var entry:artifacts.entrySet()){float value=entry.getValue();if(!containerExempt.contains(entry.getKey()))value*=effectiveness;
-                if(value>0&&Set.of("radiation_accumulation","thermal_accumulation","biological_accumulation","psycho_accumulation").contains(entry.getKey()))value*=protection;
-                String key=entry.getKey();stats.merge(key,value,(a,b)->szserver.inventory.StatValues.add(key,a,b));artifactTotal.merge(key,value,(a,b)->szserver.inventory.StatValues.add(key,a,b));
-            }
+        for(var item:equipment){
+            byte[] wire=szserver.net.InventoryPackets.stack(item);var nativeBanks=adapter.containerStats(Arrays.copyOfRange(wire,1,wire.length));mergeStats(stats,nativeBanks.total());mergeStats(artifactTotal,nativeBanks.artifacts());
+
         }return new EquipmentStats(Map.copyOf(stats),Map.copyOf(artifactTotal));
     }
     private static void mergeStats(Map<String,Float> into,Map<String,Float> from){from.forEach((key,value)->into.merge(key,value,(a,b)->szserver.inventory.StatValues.add(key,a,b)));}
+    public ClientStateAdapter.FactoryMetadataExport exportFactoryMetadata()throws Exception{return adapter.exportFactoryMetadata();}
     public int verifiedCodecs(){return verified.size();}
     public int size(){return registry.size();}
     /** The native common appearance is sufficient only without a factory-specific codec. */
@@ -175,6 +167,7 @@ public final class GameItems implements AutoCloseable {
         else throw new IllegalArgumentException("equipment_appearance_missing:"+stack.id());
         int mask=stack.equipmentMask();result[4]=(byte)((mask&(1<<8))!=0?1:0);result[5]=(byte)((mask&(1<<9))!=0?1:0);result[6]=(byte)((mask&(1<<11))!=0?1:0);return result;
     }
+    public szserver.inventory.WeaponProfile weaponProfile(szserver.inventory.ItemStack item)throws Exception{if(item==null)return null;byte[] raw=szserver.net.InventoryPackets.stack(item);return adapter.weaponProfile(Arrays.copyOfRange(raw,1,raw.length));}
     public byte[] magazine(byte[] state,int ammo,int rounds)throws Exception{return adapter.magazine(state,ammo,rounds);}
     public ClientStateAdapter.Magazine inspectMagazine(byte[] state)throws Exception{return adapter.inspectMagazine(state);}
     private String stateKind(szserver.inventory.ItemStack item){return registry.getAsJsonObject(Integer.toString(item.id())).get("state").getAsString();}
@@ -236,15 +229,18 @@ public final class GameItems implements AutoCloseable {
     }
     public String artifactResearchTag()throws Exception{return adapter.artifactResearchTag();}
     public ModuleEdit socket(szserver.inventory.ItemStack parent,int slot,szserver.inventory.ItemStack artifact)throws Exception{
-        JsonObject definition=registry.getAsJsonObject(Integer.toString(parent.id()));String kind=definition.get("state").getAsString();if(!Set.of("1782792945","1176431411").contains(kind))throw new IllegalArgumentException("artifact_container_state");
-        if(artifact!=null){JsonObject row=registry.getAsJsonObject(Integer.toString(artifact.id()));byte[] state=artifact.state();if(artifact.count()!=1||row==null||!row.has("state")||!row.get("state").getAsString().equals("1609149377")||state.length<5||state[4]!=1)throw new IllegalArgumentException("artifact_not_researched");}
-        byte[] wire=artifact==null?null:szserver.net.InventoryPackets.stack(artifact);var result=adapter.socket(kind,parent.state(),slot,wire==null?null:Arrays.copyOfRange(wire,1,wire.length));return new ModuleEdit(parent.state(result.state()),result.previous()==null?null:readStack(result.previous()));
+        if(parent.count()!=1||artifact!=null&&artifact.count()!=1)throw new IllegalArgumentException("artifact_socket_count");return nativeSlot(parent,artifact,slot,false);
+    }
+    public ModuleEdit bolt(szserver.inventory.ItemStack parent,szserver.inventory.ItemStack source)throws Exception{if(parent.count()!=1)throw new IllegalArgumentException("bolt_target_count");return nativeSlot(parent,source==null?null:source.count(1),0,true);}
+    private ModuleEdit nativeSlot(szserver.inventory.ItemStack parent,szserver.inventory.ItemStack source,int slot,boolean bolt)throws Exception{
+        byte[] p=szserver.net.InventoryPackets.stack(parent),a=source==null?null:szserver.net.InventoryPackets.stack(source);var edit=adapter.nativeSlot(stateKind(parent),Arrays.copyOfRange(p,1,p.length),a==null?null:Arrays.copyOfRange(a,1,a.length),slot,bolt);return new ModuleEdit(parent.state(edit.state()),edit.previous()==null?null:readStack(edit.previous()));
     }
     public szserver.inventory.ItemStack initializeBuiltins(szserver.inventory.ItemStack weapon)throws Exception{
         JsonObject definition=definitions.getAsJsonObject(Integer.toString(weapon.id())),row=registry.getAsJsonObject(Integer.toString(weapon.id()));if(row==null||!row.has("state"))return weapon;String kind=row.get("state").getAsString();
         if(!Set.of("1535556086","259689215").contains(kind)||definition.keySet().stream().noneMatch(key->key.startsWith("inbuilt_")))return geometry(weapon);
         byte[] state=adapter.initialModules(weapon.id(),kind,weapon.state());return geometry(Arrays.equals(state,weapon.state())?weapon:weapon.state(state));
     }
+    public ClientStateAdapter.ItemSlotRequest itemSlotRequest(boolean bolt,byte[] raw)throws Exception{return adapter.itemSlotRequest(bolt,raw);}
     public ClientStateAdapter.InventoryPoint inventoryPoint(byte[] body)throws Exception{return adapter.inventoryPoint(body);}
     public szserver.inventory.ItemStack moduleCharge(szserver.inventory.ItemStack module)throws Exception{byte[] charge=adapter.moduleCharge(stateKind(module),module.state());return charge==null?null:readStack(charge);}
     public record ModuleBatch(szserver.inventory.ItemStack weapon,List<szserver.inventory.ItemStack> removed){}
@@ -256,7 +252,7 @@ public final class GameItems implements AutoCloseable {
         JsonObject definition=registry.getAsJsonObject(Integer.toString(weapon.id()));String kind=definition.get("state").getAsString();if(!Set.of("1535556086","259689215").contains(kind))throw new IllegalArgumentException("module_target_not_firearm");
         szserver.inventory.ItemStack attached=source;
         if(source==null&&selection>0){boolean allowed=false;if(definition.has("builtin_modules"))for(JsonElement id:definition.getAsJsonArray("builtin_modules"))if(id.getAsInt()==selection)allowed=true;if(!allowed)throw new IllegalArgumentException("module_not_builtin");attached=createStack(selection,1,0,new JsonObject());}
-        if(attached!=null){JsonObject row=registry.getAsJsonObject(Integer.toString(attached.id()));if(row==null||!row.has("state")||!Set.of("1806321611","342965638","743110253").contains(row.get("state").getAsString()))throw new IllegalArgumentException("attachment_not_weapon_module");boolean allowed=!row.has("module_slots");if(row.has("module_slots"))for(JsonElement number:row.getAsJsonArray("module_slots"))if(number.getAsInt()==slot)allowed=true;if(!allowed)throw new IllegalArgumentException("module_slot_incompatible");attached=attached.count(1);if(source==null)attached=attached.state(adapter.builtinModule(row.get("state").getAsString(),attached.state()));}
+        if(attached!=null){JsonObject row=registry.getAsJsonObject(Integer.toString(attached.id()));if(row==null||!row.has("state")||!Set.of("1806321611","342965638","743110253").contains(row.get("state").getAsString()))throw new IllegalArgumentException("attachment_not_weapon_module");attached=attached.count(1);if(source==null)attached=attached.state(adapter.builtinModule(row.get("state").getAsString(),attached.state()));}
         byte[] gunWire=szserver.net.InventoryPackets.stack(weapon),wire=attached==null?null:szserver.net.InventoryPackets.stack(attached);
         var result=adapter.nativeModule(Arrays.copyOfRange(gunWire,1,gunWire.length),kind,slot,wire==null?null:Arrays.copyOfRange(wire,1,wire.length));
         List<szserver.inventory.ItemStack> removed=new ArrayList<>();for(byte[] raw:result.removed())removed.add(readStack(raw));return new ModuleBatch(geometry(weapon.state(result.state())),List.copyOf(removed));

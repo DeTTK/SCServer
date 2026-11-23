@@ -43,5 +43,6 @@ class NativeItemFactories {
         Class<?> type=type(name);Object descriptor=prepared(id,type),prior=registry[id];registry[id]=null;
         try{Object value=type.getConstructor(resource).newInstance(descriptor);if(skin.isInstance(value))skin.getMethod("implements",resource).invoke(value,descriptors.get(id));factories.put(id,value);return value;}finally{registry[id]=prior;}
     }
-    <T> T bound(java.util.concurrent.Callable<T> action)throws Exception{Map<Integer,Object> prior=new HashMap<>();for(var e:factories.entrySet()){prior.put(e.getKey(),registry[e.getKey()]);registry[e.getKey()]=e.getValue();}try{return action.call();}finally{for(var e:prior.entrySet())registry[e.getKey()]=e.getValue();}}
+    <T> T bound(java.util.concurrent.Callable<T> action)throws Exception{return bound(factories.keySet(),action);}
+    <T> T bound(Collection<Integer> ids,java.util.concurrent.Callable<T> action)throws Exception{Map<Integer,Object> prior=new HashMap<>();for(int id:ids){Object factory=factories.get(id);if(factory==null)continue;prior.put(id,registry[id]);registry[id]=factory;}try{return action.call();}finally{for(var e:prior.entrySet())registry[e.getKey()]=e.getValue();}}
 }

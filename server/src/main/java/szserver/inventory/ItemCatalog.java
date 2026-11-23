@@ -15,7 +15,7 @@ public final class ItemCatalog {
     public static ItemCatalog legacyGeometry(Path file)throws Exception{return new ItemCatalog(file,true);}
     private ItemCatalog(Path file,boolean legacyGeometry) throws Exception {
         this.legacyGeometry=legacyGeometry;
-        JsonObject data=CatalogDefinitions.read(file);
+        JsonObject data=CatalogDefinitions.read(file);Map<Integer,NativeItemMetadata.Row> nativeRows=legacyGeometry?Map.of():NativeItemMetadata.read(file);
         Map<String,JsonObject> objects=new HashMap<>();for(var entry:data.entrySet()){JsonObject row=entry.getValue().getAsJsonObject();if(row.has("object_id"))objects.put(row.get("object_id").getAsString(),row);}
         for (var row:data.entrySet()) {
             JsonObject p=row.getValue().getAsJsonObject();int id=Integer.parseInt(row.getKey());
@@ -24,7 +24,7 @@ public final class ItemCatalog {
             String[] size=(legacyGeometry?text(p,"slot_size",fallback):inheritedSize(p,objects,fallback)).toLowerCase(Locale.ROOT).split("x");
             if(size.length!=2)throw new IllegalArgumentException("invalid_item_size:"+id);
             int width=dimension(size[0]),height=dimension(size[1]);
-            int limit=NativeStackRules.limit(id,p,objects,legacyGeometry);
+            int limit;if(nativeRows.isEmpty())limit=NativeStackRules.limit(id,p,objects,legacyGeometry);else{var nativeRow=nativeRows.get(id);if(nativeRow==null)throw new IllegalArgumentException("native_item_metadata_missing:"+id);width=nativeRow.width();height=nativeRow.height();limit=nativeRow.limit();}
             double weight=p.has("weight")?p.get("weight").getAsDouble():0;
             // Native stack counts are signed 32-bit; 100000 is a storage rule, not a resource cap.
             if(limit<1||!Double.isFinite(weight)||weight<0)throw new IllegalArgumentException("invalid_item_definition:"+id);

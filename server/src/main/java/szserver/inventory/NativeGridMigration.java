@@ -10,7 +10,7 @@ import java.util.*;
 /** One-time repair and atomic checkpoint under ServerDataLease, before game listeners. */
 public final class NativeGridMigration {
     private NativeGridMigration(){}
-    private static final String POLICY="native-inventory-rules-v3";
+    private static final String POLICY="native-inventory-rules-v4";
     private static Map<String,Object> status(Path data)throws Exception{
         Path file=data.resolve("characters.sjournal"),marker=data.resolve("native-grid-migration.json");
         if(!Files.exists(file))return Map.of("status","not-needed");

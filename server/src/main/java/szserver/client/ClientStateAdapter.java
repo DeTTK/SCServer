@@ -41,7 +41,7 @@ public final class ClientStateAdapter implements AutoCloseable {
     public void resources(Path root)throws IOException{loader.resources(root);}
 
     public ClientStateAdapter(Path runtime) throws Exception {
-        runtime = runtime.toRealPath();
+        runtime = runtime.toRealPath();NativeItemRulesRelease.verify(runtime);
         if (!Files.isDirectory(runtime.resolve("classes")))
             throw new IOException("Missing canonical runtime classes: " + runtime);
         // Array call-site guards are tied to reviewed bytecode. Refuse a changed
@@ -471,7 +471,7 @@ public final class ClientStateAdapter implements AutoCloseable {
     }
     public record Attachment(byte[] state,byte[] previous,boolean builtin) {}
     public String artifactResearchTag()throws Exception{return (String)Class.forName("1609149377",true,loader).getField("synchronized").get(null);}
-    private NativeCosmetics cosmetics;
+    private NativeCosmetics cosmetics;private NativeItemSlots itemSlots;private NativeItemSlotPackets itemSlotPackets;
     private NativeMedicines nativeMedicines;private NativeMedicineEffects medicineEffects;private NativeMedicinePackets medicinePackets;
     public Map<Integer,GameItems.Medicine> warmMedicines()throws Exception{nativeMedicines=new NativeMedicines(cosmetics,this::bank);medicineEffects=new NativeMedicineEffects(cosmetics,this::bank);medicinePackets=new NativeMedicinePackets(cosmetics);return nativeMedicines.profiles();}
     public boolean medicineAllowed(int id,String mode,String location)throws Exception{return nativeMedicines.allowed(id,mode,location);}
@@ -479,7 +479,16 @@ public final class ClientStateAdapter implements AutoCloseable {
     public MedicineRequest medicineRequest(byte[] raw)throws Exception{return medicinePackets.read(raw);}
     public Map<String,Float> medicineStats(Collection<Map<String,Float>> banks)throws Exception{return medicineEffects.aggregate(banks);}
     public byte[] medicineEffects(List<Integer> removed,Collection<GameItems.MedicineEffect> added,long now)throws Exception{return medicineEffects.delta(removed,added,now);}
-    public void warmCosmetics(Map<Integer,String> classes,Map<Integer,String> definitions)throws Exception{cosmetics=new NativeCosmetics(loader,definitions,classes);}
+    public record FactoryMetadataExport(Map<Integer,Map<String,Integer>> rows,Map<Integer,String> errors){}
+    public FactoryMetadataExport exportFactoryMetadata()throws Exception{
+        Map<Integer,Map<String,Integer>> rows=new TreeMap<>();Map<Integer,String> errors=new TreeMap<>();Class<?> shape=Class.forName("61438557",true,loader);Method geometry=NativeMethods.staticMethod(Class.forName("1824362651",true,loader),"while",shape,cosmetics.stack),limit=NativeMethods.instance(cosmetics.stack,"finally",int.class);
+        for(int id:new TreeSet<>(cosmetics.classes.keySet()))try{cosmetics.factory(id);rows.put(id,cosmetics.bound(()->{Object item=cosmetics.stack.getConstructor(int.class,int.class,int.class).newInstance(id,1,0),size=geometry.invoke(null,item);return Map.of("limit",(Integer)limit.invoke(item),"width",shape.getField("try").getInt(size),"height",shape.getField("enum").getInt(size));}));}catch(Exception|LinkageError e){Throwable cause=e;while(cause instanceof InvocationTargetException&&cause.getCause()!=null)cause=cause.getCause();errors.put(id,cause.getClass().getSimpleName());}
+        return new FactoryMetadataExport(Map.copyOf(rows),Map.copyOf(errors));
+    }
+    public Set<Integer> firearmFactories()throws Exception{Set<Integer> ids=new HashSet<>();Class<?> gun=Class.forName("1745367406",true,loader);for(var entry:moduleFactoryClasses.entrySet())if(gun.isAssignableFrom(Class.forName(entry.getValue(),true,loader)))ids.add(entry.getKey());return Set.copyOf(ids);}
+    public void warmCosmetics(Map<Integer,String> classes,Map<Integer,String> definitions)throws Exception{cosmetics=new NativeCosmetics(loader,definitions,classes);itemSlots=new NativeItemSlots(cosmetics,this::bank);itemSlotPackets=new NativeItemSlotPackets(cosmetics);}
+    public record ItemSlotRequest(int owner,int sequence,szserver.inventory.Inventory.Address target,szserver.inventory.Inventory.Address source,int slot){}
+    public ItemSlotRequest itemSlotRequest(boolean bolt,byte[] raw)throws Exception{return itemSlotPackets.read(bolt,raw);}
     public record CosmeticSkin(byte[] state,int previous,boolean unchanged){}
     public CosmeticSkin nativeSkin(String kind,byte[] raw,int item,int selected)throws Exception{var change=cosmetics.skin(item,decode(codec(kind),raw),selected);return new CosmeticSkin(encode(codec(kind),change.state()),change.previous(),change.unchanged());}
     public Attachment nativePaint(String kind,byte[] raw,int slot,byte[] attached,boolean virtual)throws Exception{Stack original=readStack(raw);var change=cosmetics.paint(original.id(),decode(codec(kind),original.state()),kind,slot,raw,attached,virtual);return new Attachment(encode(codec(kind),change.state()),change.previous(),change.builtin());}
@@ -496,10 +505,8 @@ public final class ClientStateAdapter implements AutoCloseable {
         Class<?> result=Class.forName(descriptor[1],true,loader);Method read=Arrays.stream(Class.forName("1046176253",true,loader).getMethods()).filter(m->m.getName().equals(descriptor[0])&&Arrays.equals(m.getParameterTypes(),new Class<?>[]{DataInput.class})&&m.getReturnType()==result).findFirst().orElseThrow();int code=kind.equals("1490492938")?slot:-slot-1;
         return read.invoke(null,new DataInputStream(new ByteArrayInputStream(new byte[]{(byte)code})));
     }
-    public Attachment socket(String kind,byte[] raw,int slot,byte[] attached)throws Exception{
-        if(slot<0||slot>127)throw new IOException("artifact_socket_slot");Object state=decode(codec(kind),raw);Map<Object,Object> artifacts=(Map<Object,Object>)state.getClass().getField("instanceof").get(state);Object key=Class.forName("830745898",true,loader).getMethod("private",int.class).invoke(null,slot),old=artifacts.get(key);
-        Object replacement=attached==null?null:Class.forName("211097523",true,loader).getConstructor(DataInput.class).newInstance(new BoundedNativeInput(attached));if(replacement==null)artifacts.remove(key);else artifacts.put(key,replacement);byte[] previous=null;if(old!=null){ByteArrayOutputStream bytes=new ByteArrayOutputStream();old.getClass().getMethod("switch",DataOutput.class).invoke(old,new DataOutputStream(bytes));previous=bytes.toByteArray();}return new Attachment(encode(codec(kind),state),previous,false);
-    }
+    public Attachment nativeSlot(String kind,byte[] parent,byte[] attached,int slot,boolean bolt)throws Exception{var edit=itemSlots.edit(parent,attached,slot,bolt);Stack changed=readStack(edit.stack());return new Attachment(changed.state(),edit.previous(),false);}
+    public GameItems.EquipmentStats containerStats(byte[] raw)throws Exception{return itemSlots.container(raw);}
     public byte[] builtinModule(String kind,byte[] raw)throws Exception{Object state=decode(codec(kind),raw);state.getClass().getField("instanceof").setBoolean(state,true);return encode(codec(kind),state);}
     public Attachment attachment(String kind,byte[] raw,int slot,byte[] attached)throws Exception{
         if(slot<0||slot>=18)throw new IOException("module_slot");Object state=decode(codec(kind),raw);Object[] slots=(Object[])Class.forName("1536296909",true,loader).getField("slots").get(null);Map<Object,Object> modules=(Map<Object,Object>)state.getClass().getField("abstract").get(state);Object key=slots[slot],old=modules.get(key);boolean builtin=false;
@@ -518,29 +525,11 @@ public final class ClientStateAdapter implements AutoCloseable {
         String name=moduleFactoryClasses.get(id),definition=moduleDefinitions.get(id);if(name==null||definition==null)throw new IOException("module_factory_definition_missing:"+id);
         Class<?> type=Class.forName(name,true,loader),gun=Class.forName("1745367406",true,loader),module=Class.forName("62393481",true,loader);
         if(!gun.isAssignableFrom(type)&&!module.isAssignableFrom(type))throw new IOException("module_factory_kind:"+id);
-        Class<?> resource=Class.forName("1422486348",true,loader),json=Class.forName("com.google.gson.JsonObject",true,loader),base=Class.forName("1366800141",true,loader);
-        Object[] registry=(Object[])base.getField("import").get(null);Object prior=registry[id];
-        // <default> explicitly clears an inherited resource field. It is not
-        // an item name; apply the same omission as the original resource merge.
-        com.google.gson.JsonObject normalized=com.google.gson.JsonParser.parseString(definition).getAsJsonObject();
-        for(String key:new ArrayList<>(normalized.keySet())){var value=normalized.get(key);if(value.isJsonPrimitive()&&value.getAsJsonPrimitive().isString()&&value.getAsString().equalsIgnoreCase("<default>"))normalized.remove(key);}
-        // The resource loader normally registers fractional slot_size before
-        // constructing a factory. Reproduce that step in this headless loader.
-        if(normalized.has("slot_size")){
-            String[] dimensions=normalized.get("slot_size").getAsString().split("x");if(dimensions.length!=2)throw new IOException("native_module_geometry");
-            float width=Float.parseFloat(dimensions[0]),height=Float.parseFloat(dimensions[1]);if(!Float.isFinite(width)||!Float.isFinite(height)||width<=0||height<=0||width>256||height>256)throw new IOException("native_module_geometry");
-            Class<?> size=Class.forName("1824362651",true,loader);size.getMethod("catch",int.class,size).invoke(null,id,size.getConstructor(float.class,float.class).newInstance(width,height));
-        }
-        try{Object descriptor=resource.getConstructor(String.class,json,int.class,String.class,Integer.class,String.class).newInstance("server_module_"+id,nativeJson(normalized.toString()),id,null,null,null);
-            Object factory=type.getConstructor(resource).newInstance(descriptor);nativeModuleFactories.put(id,factory);return factory;
-        }finally{registry[id]=prior;}
+        Object value=cosmetics.factory(id);nativeModuleFactories.put(id,value);return value;
     }
-    /** Codec registry always stays neutral. Bind real factories only around pure rule/initializer calls. */
-    private <T> T withModuleFactories(java.util.concurrent.Callable<T> operation)throws Exception{
-        Object[] registry=(Object[])Class.forName("1366800141",true,loader).getField("import").get(null);Map<Integer,Object> prior=new HashMap<>();
-        for(var entry:nativeModuleFactories.entrySet()){prior.put(entry.getKey(),registry[entry.getKey()]);registry[entry.getKey()]=entry.getValue();}
-        try{return operation.call();}finally{for(var entry:prior.entrySet())registry[entry.getKey()]=entry.getValue();}
-    }
+    Object childFactory(int id)throws Exception{String name=moduleFactoryClasses.get(id);if(name==null)throw new IOException("module_factory_definition_missing:"+id);Class<?> type=Class.forName(name,true,loader);if(Class.forName("871813794",true,loader).isAssignableFrom(type)){Object value=cosmetics.factory(id);nativeModuleFactories.put(id,value);return value;}return moduleFactory(id);}
+    /** Original global item registry is always restored, including failed native predicates. */
+    private <T> T withModuleFactories(java.util.concurrent.Callable<T> operation)throws Exception{return cosmetics.bound(nativeModuleFactories.keySet(),operation);}
     private Object moduleStack(byte[] raw)throws Exception{return Class.forName("211097523",true,loader).getConstructor(DataInput.class).newInstance(new BoundedNativeInput(raw));}
     private int moduleId(Object stack)throws Exception{return (Integer)Arrays.stream(stack.getClass().getMethods()).filter(method->method.getName().equals("continue")&&method.getParameterCount()==0&&method.getReturnType()==int.class).findFirst().orElseThrow(()->new IOException("native_module_item_id_missing")).invoke(stack);}
     private byte[] moduleWire(Object stack)throws Exception{return szserver.net.Wire.bytes(out->stack.getClass().getMethod("switch",DataOutput.class).invoke(stack,out));}
@@ -557,6 +546,18 @@ public final class ClientStateAdapter implements AutoCloseable {
     public int[] weaponGeometry(byte[] raw)throws Exception{
         Object stack=prepareModuleGun(raw);
         return withModuleFactories(()->{Object size=Class.forName("1824362651",true,loader).getMethod("while",stack.getClass()).invoke(null,stack);return new int[]{size.getClass().getField("try").getInt(size),size.getClass().getField("enum").getInt(size)};});
+    }
+    /** Prepared on the inventory worker using the actual equipped state and its module factories. */
+    public szserver.inventory.WeaponProfile weaponProfile(byte[] raw)throws Exception{
+        int id=new DataInputStream(new ByteArrayInputStream(raw)).readUnsignedShort();String name=moduleFactoryClasses.get(id);Class<?> gun=Class.forName("1745367406",true,loader);if(name==null||!gun.isAssignableFrom(Class.forName(name,true,loader)))return null;
+        Object value=prepareModuleGun(raw),factory=moduleFactory(id);Class<?> stack=value.getClass(),timing=Class.forName("1042667109",true,loader);Object complete=timing.getField("RELOAD_COMPLETE_DURATION").get(null);
+        return withModuleFactories(()->{int capacity=(Integer)NativeMethods.instance(gun,"default",int.class,stack).invoke(factory,value);int[] ammunition=(int[])NativeMethods.instance(gun,"protected",int[].class,stack).invoke(factory,value);if(ammunition.length==0)return null;
+            double reload=(Float)NativeMethods.instance(gun,"synchronized",float.class,stack,timing).invoke(factory,value,complete),tactical=(Float)NativeMethods.instance(gun,"switch",float.class,stack,timing).invoke(factory,value,complete);
+            double modifier=(Float)NativeMethods.instance(gun,"continue",float.class,stack).invoke(factory,value);if(!Double.isFinite(modifier)||modifier<=0)throw new IOException("weapon_reload_modifier");
+            List<Double> reloadByRounds=new ArrayList<>();if(gun.getField("cs").getBoolean(factory)){Class<?> player=Class.forName("200241649",true,loader);Method duration=NativeMethods.instance(gun,"void",float.class,stack,int.class,int.class,timing,player);for(int rounds=0;rounds<=capacity;rounds++)reloadByRounds.add(rounds==capacity?0.0:((Float)duration.invoke(factory,value,rounds,capacity-rounds,complete,null)).doubleValue()*modifier);reload=reloadByRounds.get(0)/modifier;tactical=reloadByRounds.get(Math.min(1,capacity))/modifier;}
+
+            return new szserver.inventory.WeaponProfile(capacity,Arrays.stream(ammunition).boxed().toList(),gun.getField("synchronized").getFloat(factory),gun.getField("throw").getFloat(factory),(Float)NativeMethods.instance(gun,"import",float.class,stack).invoke(factory,value),(Float)NativeMethods.instance(gun,"float",float.class,stack).invoke(factory,value),(Float)NativeMethods.instance(gun,"throws",float.class,stack).invoke(factory,value),(Float)NativeMethods.instance(gun,"private",float.class,stack).invoke(factory,value),reload*modifier,tactical*modifier,gun.getField("i").getFloat(factory),reloadByRounds);
+        });
     }
     /** Actual native gun initializer populates resource inbuilt_* slots; caller gives this only to a new item. */
     public byte[] initialModules(int id,String kind,byte[] state)throws Exception{
@@ -581,11 +582,11 @@ public final class ClientStateAdapter implements AutoCloseable {
             Object[] slots=(Object[])Class.forName("1536296909",true,loader).getField("slots").get(null);if(slot<0||slot>=slots.length)throw new IOException("module_slot");Object key=slots[slot];Map<Object,Object> map=moduleMap(stack);Object old=map.get(key);
             if(old!=null){Object mode=module.getMethod("extends",stack.getClass()).invoke(null,old);if(!(Boolean)mode.getClass().getMethod("super").invoke(mode))throw new IOException("module_locked");}
             if(next!=null&&!(Boolean)gun.getMethod("interface",stack.getClass(),base,keyType).invoke(factory,stack,definition,key))throw new IOException("module_mount_incompatible");
-            List<Object> removed=new ArrayList<>();if(old!=null)addRemovedModule(old,stateType,removed);if(next==null)map.remove(key);else map.put(key,next);
+            List<Object> removed=new ArrayList<>();if(old!=null)addRemovedModule(old,stateType,removed);Method setter=NativeMethods.instance(Class.forName("1579742958",true,loader),"public",void.class,stack.getClass(),stack.getClass(),Object.class);setter.invoke(factory,stack,next,key);map=moduleMap(stack);Object installed=map.get(key);if((next==null)!=(installed==null)||next!=null&&!Arrays.equals(moduleWire(next),moduleWire(installed)))throw new IOException("module_native_set_rejected");
             for(int pass=0;pass<slots.length;pass++){boolean changed=false;for(Object childKey:slots){Object child=map.get(childKey);if(child==null||childKey==key)continue;Object childFactory=moduleFactory(moduleId(child));
                 if(!(Boolean)gun.getMethod("interface",stack.getClass(),base,keyType).invoke(factory,stack,childFactory,childKey)){
                     Object mode=module.getMethod("extends",stack.getClass()).invoke(null,child);if(!(Boolean)mode.getClass().getMethod("super").invoke(mode))throw new IOException("module_locked_dependency");
-                    map.remove(childKey);addRemovedModule(child,stateType,removed);changed=true;
+                    setter.invoke(factory,stack,null,childKey);map=moduleMap(stack);if(map.containsKey(childKey))throw new IOException("module_native_remove_rejected");addRemovedModule(child,stateType,removed);changed=true;
                 }}if(!changed)break;}
             Object state=stack.getClass().getMethod("for",Class.class).invoke(stack,Class.forName(kind,true,loader));return new NativeModuleChange(state,List.copyOf(removed));
         });List<byte[]> removed=new ArrayList<>();for(Object value:nativeChange.removed())removed.add(moduleWire(value));return new ModuleChange(encode(codec(kind),nativeChange.state()),List.copyOf(removed));

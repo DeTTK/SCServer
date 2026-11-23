@@ -1,0 +1,137 @@
+{
+  "result": "PASS",
+  "scope": "native item rules; not a full native world/combat replacement",
+  "serverSha256": "67cadfc4e7f33def0c4e760857d686de393514b2c7f429551739c639dca754f5",
+  "sourceTests": {
+    "result": "PASS",
+    "checks": [
+      "inventory sort merges identical stacks, packs by family, covers bag/storage and packet 1506 layout",
+      "native stack constructor defaults, game-object stacksize inheritance and bounded durable bulk-transfer FIFO",
+      "medicine exact-root admission, native quick selection inputs, nullable categories, cooldown, expiry and saved persistence flags",
+      "native return descriptor, bridge, parameters and static exclusion: 5 PASS",
+      "region slot/overflow/truncation/CRC/healthy-neighbour bounds",
+      "native unlimited protection remains finite; unrelated invalid stats rejected",
+      "authored admin Gauss accepted; nonfinite weapon parameters rejected",
+      "global inventory receipts defer missing map positions, restore after placement and remain idempotent across checkpoint/restart",
+      "character scale native dimensions, bounded commands, optional-save recovery, native ready bounds and ceiling admission",
+      "native grid migration preserves complete items; full bag overflow and interrupted-marker retry",
+      {
+        "journalAssertions": 12047,
+        "records": 12032
+      },
+      "gateway same/fresh-token retry, invalid identity/session, single-use world claim",
+      "72 full HTTP/gateway/world cycles, Unicode identities, concurrent protocols and cold one-shot recovery",
+      "aimed portal UUID/lifecycle, native object states and locks, state-specific door collision, clone donor ID lifetime, editor read/write ordering"
+    ],
+    "gameFilesUsed": false,
+    "networkSessionTested": false
+  },
+  "comparisons": {
+    "catalogueDefinitions": 8788,
+    "equipmentStates": 977,
+    "weaponBaseFactories": 576,
+    "compatibleMagazineVariants": 28,
+    "nativeMagazineDenials": 227
+  },
+  "realClient": {
+    "particleInstallRemove": true,
+    "artifactInBagInstallRemove": true,
+    "originalRequestReaders": true,
+    "normalAndStepwiseReload": true,
+    "medicineNormalQuickAnimated": true,
+    "adminAmmoMatchesNativeWeapon": true,
+    "legacyGeometryMigration": true,
+    "coldInventoryAndEffectRecovery": true,
+    "physicalAndRawInputBlocked": true,
+    "audioMuted": true,
+    "hidden": true
+  },
+  "cosmeticsRegression": {
+    "result": "PASS",
+    "matchedPreviousVerifiedRelease": true,
+    "cases": [
+      "SKIN PASS [20866, 13200]",
+      "SKIN FAIL [9417, 13200] java.io.IOException: skin_incompatible",
+      "SKIN PASS [20000, 13200]",
+      "SKIN FAIL [25000, 18050] java.io.IOException: skin_incompatible",
+      "PAINT PASS [20296, 17579, 0]",
+      "PAINT PASS [25161, 17100, 0]",
+      "PAINT PASS [25354, 19629, 1]",
+      "PAINT PASS [12061, 18836, 0]",
+      "PAINT PASS [25138, 19594, 1]",
+      "PAINT PASS [25077, 19063, 1]",
+      "Checks 8"
+    ],
+    "positiveRoundTrips": 8,
+    "identicalNativeCompatibilityDenials": 2
+  },
+  "installer": {
+    "result": "PASS",
+    "cases": [
+      {
+        "manual": false,
+        "serverAndClientUpdated": true,
+        "launcherUpdated": true,
+        "newUiAgentInstalled": true,
+        "commandCompletionInstalled": true,
+        "existingModSettingsPreserved": true,
+        "previousUiAgentRetained": true,
+        "scaleManifestAdded": true,
+        "worldAndCharactersPreserved": true,
+        "serverRollbackPreserved": true,
+        "repeatNoOp": true,
+        "fullBundleRedownloaded": false
+      },
+      {
+        "manual": true,
+        "serverAndClientUpdated": true,
+        "launcherUpdated": true,
+        "newUiAgentInstalled": true,
+        "commandCompletionInstalled": true,
+        "existingModSettingsPreserved": true,
+        "previousUiAgentRetained": true,
+        "scaleManifestAdded": true,
+        "worldAndCharactersPreserved": true,
+        "serverRollbackPreserved": true,
+        "repeatNoOp": true,
+        "fullBundleRedownloaded": false
+      }
+    ],
+    "setupSha256": "940b4cf6949a15a5cdc3b895854deb8e781a843d7ec884e138204682dc524ee0"
+  },
+  "adapterMicrobenchmark": {
+    "before": {
+      "startupMillis": 2235.883701,
+      "usedHeapAfterGC": 208618152,
+      "createWeaponMillisPerOperation": [
+        0.204552798,
+        0.1975018,
+        0.1821458
+      ],
+      "containerBankMillisPerOperation": [
+        0.210439002,
+        0.1671512,
+        0.160769402
+      ]
+    },
+    "after": {
+      "startupMillis": 2350.846,
+      "usedHeapAfterGC": 209900800,
+      "createWeaponMillisPerOperation": [
+        0.211935602,
+        0.173347,
+        0.1800902
+      ],
+      "containerBankMillisPerOperation": [
+        0.1612,
+        0.1378058,
+        0.135361
+      ]
+    }
+  },
+  "limits": [
+    "Windows real-client QA; Linux not exercised in this run",
+    "Damage/melee/vitals formulas, world physics and loot roller remain server implementations",
+    "Microbenchmark is not a game FPS measurement"
+  ]
+}

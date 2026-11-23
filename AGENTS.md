@@ -13,7 +13,7 @@ python -m unittest discover -s scripts/tests # 5 Python-тестов (game layou
 python scripts/build.py test # сборка server.jar + SDK + command-completion, 14 серверных наборов + CompletionTest
 python scripts/build.py sdk # build/mod-api.jar, build/hello-mod.jar
 python scripts/build.py server # build/server.jar (без игровых ресурсов)
-python scripts/build.py server --private-resources # + 5 закреплённых приватных ресурсов
+python scripts/build.py server --private-resources # + 6 закреплённых приватных ресурсов
 python scripts/build.py command-completion # build/command-completion.jar + его тесты
 python scripts/build.py desktop # только Windows: build/desktop/*.exe
 python client-compat/character-scale/build.py # build/character-scale.jar + ScaleTests
@@ -92,7 +92,7 @@ python scripts/build.py server --private-resources
 python scripts/run_server.py --bundle "C:/LocalGame/Server" --map "C:/LocalGame/Map"
 ```
 
-- Импортёр копирует ровно **5** ресурсов из `config/private-resources.lock.json` (`szserver/inventory/lootbox-tables.json.gz`, `szserver/weather-default.json.zst`, `szserver/npc/npc-editor-defaults.json`, `szserver/client/npc-visual-profiles.json`, `assets/bundle/feature_flags.json`) в `.local/server-resources`; классы не копируются; несовпадение SHA-256 — ошибка.
+- Импортёр копирует ровно **6** ресурсов из `config/private-resources.lock.json` (`szserver/inventory/lootbox-tables.json.gz`, `szserver/weather-default.json.zst`, `szserver/npc/npc-editor-defaults.json`, `szserver/client/npc-visual-profiles.json`, `assets/bundle/feature_flags.json`, `szserver/inventory/native-item-metadata.json.gz`) в `.local/server-resources`; классы не копируются; несовпадение SHA-256 — ошибка.
 - `run_server.py`: состояние в `.local/server-state/data` (отдельно от пользовательских сохранений), OS-lock против параллельного запуска, читает Map только для чтения, собирает `server.properties` из `desktop/server.template.properties`. По умолчанию `127.0.0.1:29544`: game HTTP, gateway +1, world +2, admin +100 (`http://127.0.0.1:29644/health`), dev +104. Админ-токен — `.local/server-state/data/admin-token.txt`. Остановка — Ctrl+C и дождаться сохранения/завершения Java.
 - `build.py test` **пересобирает `server.jar` без ресурсов** — перед игрой снова выполните `build.py server --private-resources`; `run_server.py` проверит JAR и откажется запускать.
 - `scripts/local.py configure|doctor|open-server|open-client` подключает готовый бинарный комплект (пути в `.local/paths.json`), не подменяя его своим `build/server.jar`. Windows-only для `open-*`.
