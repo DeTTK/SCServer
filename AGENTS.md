@@ -16,7 +16,7 @@
 Публичное название проекта — **BSCPCRAFT / Бскпкрафт**, интеграция — **BSCP**. Имя репозитория остаётся `SCServer`.
 Это исходники локального сервера и клиентской обвязки для игры BSCPCRAFT (stalzone.gay), собранные из собственного кода поверх приватной совместимой игровой базы. Лицензия намеренно не выбрана (файла `LICENSE` нет), см. `NOTICE.md`.
 
-В репозитории **нет** обычных манифестов сборки (`pom.xml`, `build.gradle`, `package.json`, `pyproject.toml`, `Cargo.toml`, `Makefile`). Сборка — это Python-скрипты из `scripts/`, которые вызывают `javac`/`java` и Windows `.NET Framework` компилятор напрямую.
+Нативный лаунчер собирается через `launcher/Cargo.toml`; игровая поставка — через `scripts/build_player.py`, вызывающий JDK 17. Прежние .NET-оболочки собираются отдельно и не входят в новую поставку.
 
 ## Быстрый старт для агента
 
@@ -40,10 +40,10 @@ python client-compat/character-scale/build.py # build/character-scale.jar + Scal
 - **Сервер:** Java 17, без фреймворков; TCP/UDP-сеть на `java.net` (`ServerSocket`, `DatagramSocket`, `HttpServer`), JSON через Gson, сжатие через zstd-jni. Один entrypoint — `szserver.ServerMain` (аргумент — путь к `server.properties`).
 - **Зависимости** закреплены в `dependencies.lock.json` (Maven URL + SHA-256) и скачиваются в игнорируемый `.local/deps`:
 `gson-2.13.2.jar`, `zstd-jni-1.5.0-5.jar`. Без совпадения хеша сборка падает.
-- **Клиентская часть:** Java-агенты/трансформеры (ASM через `jdk.internal.org.objectweb.asm`, `--add-exports`), bootstrap на штатной JVM; исходники клиента в репозитории, но приватный игровой ABI не входит.
+- **Клиентская часть:** Java-агенты/трансформеры (ASM через `jdk.internal.org.objectweb.asm`, `--add-exports`), bootstrap на штатной JVM; наши исходники в репозитории; закрытый игровой ABI закреплён в `bootstrap/input-manifest.json`.
 - **Desktop:** C# под .NET Framework (WinForms), компилируется `csc.exe`, не MSBuild-проект.
 - **Скрипты:** Python 3 только стандартная библиотека; стиль — плотные строки, минимум отступов.
-- Сборка и тесты не используют Maven/Gradle/Node/npm. Клиентские исходники обращаются также к Kotlin, LWJGL и ImGui, но этих компонентов в независимом CI-рецепте нет (`THIRD_PARTY.md`).
+- Сборка и тесты не используют Maven/Gradle/Node/npm. Клиентские исходники обращаются также к Kotlin, LWJGL и ImGui, их закреплённые игровые зависимости включены в полную Git-сборку (`docs/player-build.md`).
 
 ## Структура репозитория
 
@@ -93,11 +93,11 @@ python scripts/build.py test
 - Покрытие: границы/CRC регионов, потоковое восстановление журнала (12 047 проверок, ~98 МиБ, heap 64 МиБ), кейсы, физика и журнал предметов на земле, размер персонажа, миграция сетки инвентаря, аномалии, gateway retry и 72 полных цикла аутентификации (HTTP → gateway → world, Unicode-логины).
 - `server/src/test/java/szserver/client/ActorAnomalyMotionTests.java` в `build.py test` **не входит**: ему нужны приватные игровые ресурсы.
 - Smoke-тест в настоящем клиенте — отдельный ручной прогон с отключённым звуком и заблокированным физическим вводом (включая Raw Input) и скрытым окном. Успешная компиляция и `build.py test` **не** доказывают вход в мир, сетевую сессию или визуальные окна. Результаты таких прогонов фиксируются в `validation-*.json` и `docs/STATUS.md`.
-- CI: `.github/workflows/source-checks.yml` на push/PR/dispatch, матрица ubuntu-24.04 + windows-2022, Temurin 17: `audit_public.py` → unittest → `build.py test` → `client-compat/character-scale/build.py`; `build.py desktop` только на Windows. Автоматического скачивания игровых файлов в CI нет.
+- CI: `.github/workflows/source-checks.yml` на push/PR/dispatch, матрица ubuntu-24.04 + windows-2022, Temurin 17: `audit_public.py` → unittest → `build.py test` → `client-compat/character-scale/build.py`; `build.py desktop` только на Windows. Полный игровой CI отдельно собирает поставку из закреплённых Git-входов.
 
 ## Запуск сервера и игры (приватные входные данные)
 
-Исходники без внешних файлов собираются и тестируются, но **игровой запуск** требует приватный совместимый комплект `Client/Server/Map` и установленную игру. Эти данные в Git не входят (`docs/PRIVATE_INPUTS.md`).
+Для `launtest` игровой комплект создаёт `scripts/build_player.py` из Git. Прежний ручной сценарий ниже и `docs/PRIVATE_INPUTS.md` сохранены для старых комплектов. Для клиента по-прежнему выбираются оригинальные графические/звуковые ресурсы установленной игры.
 
 ```sh
 python scripts/import_private_resources.py --server-jar "C:/LocalGame/Server/server.jar"

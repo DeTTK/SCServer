@@ -1,0 +1,80 @@
+{
+  "result": "PASS",
+  "sourceCommit": "415ded672be964b5d5b7a5e45e8de091100af818",
+  "cleanGitCheckout": true,
+  "buildInputs": "ordinary Git objects plus SHA-pinned Maven tooling",
+  "prebuiltLocalGameBundles": false,
+  "files": 726,
+  "expandedBytes": 1078518782,
+  "looseClasses": 0,
+  "extractedConfigsExist": false,
+  "extractedBoxesExist": false,
+  "gitInputManifestSha256": "7cbf1e755e38c11984a2b038861804794c51803e029c78401a604a9b461de36d",
+  "server": {
+    "healthy": true,
+    "ready": true,
+    "geometry": {
+      "ready": true,
+      "retainedBytes": 298443816,
+      "packedBytes": 202094500,
+      "chunks": 144669,
+      "error": "",
+      "assetCache": {
+        "failures": 0,
+        "evictions": 0,
+        "loads": 2998,
+        "caseIndexEntries": 5390,
+        "limitBytes": 33554432,
+        "cached": 2998,
+        "caseIndexBytes": 2370180,
+        "caseFallbacks": 2,
+        "retainedBytes": 1938820
+      },
+      "nativeGeneration": "",
+      "rebuilds": 0,
+      "partitions": 64,
+      "shapes": 867827
+    },
+    "players": [
+      {
+        "entity": 3,
+        "health": 100.0,
+        "queued": 0,
+        "capacity": 30,
+        "name": "GitPackedQA",
+        "ammo": 12714,
+        "position": [
+          4696.5,
+          61.0,
+          -4311.5
+        ],
+        "unacked": 1,
+        "reserve": 90,
+        "rounds": 30
+      }
+    ],
+    "characterSessions": {
+      "historyLimit": 4096,
+      "replaced": 0,
+      "stale": 0,
+      "histories": 1,
+      "accepted": 2,
+      "owners": 1
+    }
+  },
+  "client": {
+    "autoJoin": true,
+    "profile": "isolated QA profile",
+    "packagedBootstrap": true,
+    "generatedPacketAbi": "PASS"
+  },
+  "tests": {
+    "python": 12,
+    "rust": 48,
+    "javaSuite": "PASS",
+    "bridgeHooks": "PASS",
+    "freshServerBridgeShapes": "PASS",
+    "bootstrapGeneratedPackets": "PASS"
+  },
+  "existingWorldsRebased": false
+}

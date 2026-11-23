@@ -3,7 +3,7 @@
 
 # SCServer / Бскпкрафт
 
-**[Скачать установщик локалки](https://github.com/DeTTK/SCServer/releases/download/alliance-transitions-2026.11.22/BSCPCRAFT-Setup.exe)** · [полный ZIP](https://github.com/DeTTK/SCServer/releases/download/local-ready-2026.11.20/BSCPCRAFT-local-20261119.zip)
+**Прежняя поставка: [скачать установщик локалки](https://github.com/DeTTK/SCServer/releases/download/alliance-transitions-2026.11.22/BSCPCRAFT-Setup.exe)** · [полный ZIP](https://github.com/DeTTK/SCServer/releases/download/local-ready-2026.11.20/BSCPCRAFT-local-20261119.zip)
 
 Локальный запуск сервера БСКПКрафт (stalzone.gay) сервер + клиент
 
@@ -20,14 +20,18 @@
 
 - `server/` — код Java-сервера.
 - `client/` — загрузчик модов и правки совместимости клиента.
-- `desktop/` — исходники лаунчера и окна управления сервером.
+- `launcher/` — нативный Rust + Slint лаунчер и supervisor.
+- `bootstrap/inputs/`, `map/data/` — закреплённые входы полной игровой сборки.
+- `desktop/` — прежние Windows-оболочки, в новую поставку не входят.
 - `sdk/` — API для модов и простой пример `HelloMod`.
 - `scripts/` — скрипты сборки и запуска.
 - `docs/` — подробные инструкции, если коротких ниже не хватило.
 - `build/` — сюда попадает собранное. Папка появится после сборки.
 - `.local/` — местные настройки, зависимости и данные тестового сервера. В Git не отправляются.
 
-Для игры нужны совместимые папки `Client`, `Server`, `Map` и установленный клиент Бскпкрафта. [Исходная карта скачивается здесь](https://github.com/DeTTK/SCServer/releases/download/original-map-2026.11.20/Map-20261118.zip) — 254 МБ, без серверных построек. Распакуйте архив рядом с `Client` и `Server`: должны появиться `Map/region` и `Map/registry.json`. Сам `git clone` карту и готовые клиентские/серверные файлы не скачивает.
+В ветке `launtest` обычный `git clone` получает все входы для сборки дополнительного runtime, сервера и основной карты. Выполните `python scripts/build_player.py` с JDK 17 и Python 3.10+: результат находится в `build/player-git/player/`. Готовый старый комплект и игровые Releases для сборки не нужны. Оригинальные графические/звуковые ресурсы установленной игры игрок выбирает отдельно в лаунчере. Подробности: [полная сборка из Git](docs/player-build.md).
+
+Ниже сохранены инструкции для прежней поставки `main` и отдельных инструментов разработки. Для нового лаунчера используйте рецепт выше.
 
 ## Скачать и запустить
 
