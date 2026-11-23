@@ -30,6 +30,7 @@ struct Draft {
     branch: String,
     world: String,
     desktop_shortcut: bool,
+    relay_enabled: bool,
 }
 impl Draft {
     fn read(ui: &AppWindow) -> Self {
@@ -47,6 +48,7 @@ impl Draft {
             branch: ui.get_game_branch().to_string(),
             world: ui.get_first_world_name().to_string(),
             desktop_shortcut: ui.get_desktop_shortcut(),
+            relay_enabled: ui.get_relay_enabled(),
         }
     }
     fn settings(&self, old: &Settings, layout: &Layout) -> Result<Settings> {
@@ -73,6 +75,7 @@ impl Draft {
         if !(512..=65536).contains(&s.server_memory_mb) {
             bail!("SERVER_MEMORY_INVALID: Укажите память сервера от 512 до 65536 МБ.")
         }
+        s.relay_enabled = self.relay_enabled;
         s.base_port = self
             .port
             .parse()
@@ -122,6 +125,7 @@ fn set_draft(ui: &AppWindow, s: &Settings) {
     ui.set_client_memory(s.client_memory_mb.to_string().into());
     ui.set_server_memory_setting(s.server_memory_mb.to_string().into());
     ui.set_port(s.base_port.to_string().into());
+    ui.set_relay_enabled(s.relay_enabled);
     ui.set_feed_url(s.feed_url.clone().into());
     ui.set_game_branch(s.game_branch.clone().into());
     ui.set_branches(rows(vec![SharedString::from(s.game_branch.as_str())]));
@@ -891,6 +895,8 @@ pub fn bind(ui: &AppWindow, layout: Layout) -> Binding {
                 }
 
                 ui.set_server_address(address.into());
+                ui.set_relay_invite(view.relay_invite.into());
+                ui.set_relay_status(view.relay_status.into());
                 ui.set_server_uptime("Нет данных".into());
                 ui.set_server_memory("Нет данных".into());
                 if changed && !ui.get_busy() && ui.get_configured() {
@@ -1147,7 +1153,12 @@ fn execute(
             )?;
             let _ = ui.upgrade_in_event_loop(|ui| ui.set_page("server".into()));
             refresh(ui, layout, false)?;
-            Ok("Мир запущен".into())
+            Ok(if client {
+                "Клиент запускается; подключение начнётся после готовности сервера"
+            } else {
+                "Сервер запускается"
+            }
+            .into())
         }
         Work::Connect(address, nickname) => {
             let favorites: Vec<ServerEntry> = read_json(&layout.at("config/servers.json"))?;
@@ -1353,11 +1364,15 @@ fn execute(
             if action == "delete" {
                 list.retain(|s| s.address != address);
             } else {
-                let normalized = bscp_launcher_host::network::endpoint(address.trim())?.to_string();
+                let normalized = bscp_launcher_host::network::normalize_address(address.trim())?;
                 let entry = ServerEntry {
                     id: uuid::Uuid::new_v4().simple().to_string(),
                     name: if name.trim().is_empty() {
-                        address.trim().into()
+                        if bscp_launcher_host::relay::is_invite(&address) {
+                            "Сервер друзей".into()
+                        } else {
+                            address.trim().into()
+                        }
                     } else {
                         name.trim().into()
                     },
@@ -1526,12 +1541,12 @@ fn remember_server(
     address: &str,
     nickname: &str,
 ) -> Result<()> {
-    let normalized = bscp_launcher_host::network::endpoint(address.trim())?.to_string();
+    let normalized = bscp_launcher_host::network::normalize_address(address.trim())?;
     let file = layout.at("config/server-history.json");
     let mut history: Vec<ServerEntry> = read_json(&file)?;
     let matches = |entry: &ServerEntry| {
-        bscp_launcher_host::network::endpoint(entry.address.trim())
-            .is_ok_and(|url| url.as_str() == normalized)
+        bscp_launcher_host::network::normalize_address(entry.address.trim())
+            .is_ok_and(|url| url == normalized)
     };
     let previous = history.iter().find(|entry| matches(entry)).cloned();
     let favorite = favorites.iter().find(|entry| matches(entry));
@@ -1546,7 +1561,13 @@ fn remember_server(
             name: favorite
                 .map(|e| e.name.clone())
                 .or_else(|| previous.map(|e| e.name))
-                .unwrap_or_else(|| address.trim().into()),
+                .unwrap_or_else(|| {
+                    if bscp_launcher_host::relay::is_invite(address) {
+                        "Сервер друзей".into()
+                    } else {
+                        address.trim().into()
+                    }
+                }),
             address: normalized,
             nickname: nickname.into(),
         },
@@ -1556,11 +1577,11 @@ fn remember_server(
 }
 
 fn connection_nickname(favorites: &[ServerEntry], address: &str, fallback: &str) -> Result<String> {
-    let normalized = bscp_launcher_host::network::endpoint(address.trim())?;
+    let normalized = bscp_launcher_host::network::normalize_address(address.trim())?;
     let nickname = favorites
         .iter()
         .find(|entry| {
-            bscp_launcher_host::network::endpoint(entry.address.trim())
+            bscp_launcher_host::network::normalize_address(entry.address.trim())
                 .is_ok_and(|url| url == normalized)
         })
         .map(|entry| entry.nickname.trim())

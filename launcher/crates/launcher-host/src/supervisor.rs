@@ -28,6 +28,7 @@ struct Owned {
     remote: String,
     proxy_port: u16,
     pending_client: bool,
+    server_release: String,
 }
 #[derive(Default)]
 struct Running {
@@ -36,6 +37,8 @@ struct Running {
     world_lease: Option<Lease>,
     client_lease: Option<Lease>,
     proxy: Option<SignedProxy>,
+    server_tunnel: Option<crate::relay::Tunnel>,
+    client_tunnel: Option<crate::relay::Tunnel>,
     blocked: Option<String>,
 }
 pub struct Supervisor {
@@ -171,7 +174,34 @@ impl Supervisor {
         if self.retiring.load(std::sync::atomic::Ordering::Acquire) {
             v["State"] = json!("Exiting");
         }
+        let r = self.running.lock().unwrap();
+        v["RelayInvite"] = json!(
+            r.server_tunnel
+                .as_ref()
+                .map(|t| t.invite.as_str())
+                .unwrap_or("")
+        );
         v
+    }
+    async fn enable_relay(&self, base: u16) {
+        let s = self.layout.load().unwrap_or_default();
+        if !s.relay_enabled || self.running.lock().unwrap().server_tunnel.is_some() {
+            return;
+        }
+        self.view.lock().unwrap()["RelayStatus"] = json!("Подключаем ретранслятор…");
+        match crate::relay::Tunnel::host(base, &s.relay_url).await {
+            Ok(t) => {
+                self.running.lock().unwrap().server_tunnel = Some(t);
+                self.view.lock().unwrap()["RelayStatus"] = json!(
+                    "Приглашение доступно. Соединение выбирается автоматически: напрямую или через ретранслятор."
+                );
+            }
+            Err(e) => {
+                self.view.lock().unwrap()["RelayStatus"] = json!(format!(
+                    "Ретранслятор недоступен: {e}. Сервер доступен по обычному адресу."
+                ));
+            }
+        }
     }
     fn worlds(&self) -> Result<WorldStore> {
         WorldStore::new(self.layout.data(&self.layout.load()?))
@@ -450,7 +480,22 @@ impl Supervisor {
                 );
             }
             "probe" => {
-                let u = network::endpoint(&a("address")?)?;
+                let address = a("address")?;
+                if crate::relay::is_invite(&address) {
+                    self.deliveries
+                        .fetch_add(1, std::sync::atomic::Ordering::AcqRel);
+                    let _activity = DeliveryActivity(self.deliveries.clone());
+                    let settings = self.layout.load()?;
+                    return Ok(
+                        match crate::relay::Tunnel::join(&address, &settings.relay_url).await {
+                            Ok(_) => {
+                                json!({"online":true,"detail":"Приглашение доступно"})
+                            }
+                            Err(_) => json!({"online":false,"detail":"Приглашение недоступно"}),
+                        },
+                    );
+                }
+                let u = network::endpoint(&address)?;
                 let start = std::time::Instant::now();
                 let probe = self.http.get(u.join("health")?).send().await;
                 return Ok(match probe {
@@ -476,7 +521,14 @@ impl Supervisor {
                     .await
                 {
                     if !e.to_string().starts_with("START_PENDING") {
-                        self.state("Failed", &e.to_string());
+                        let active = self
+                            .running
+                            .lock()
+                            .unwrap()
+                            .server
+                            .as_ref()
+                            .is_some_and(alive);
+                        self.state(if active { "Starting" } else { "Failed" }, &e.to_string());
                     }
                     return Err(e);
                 }
@@ -650,15 +702,36 @@ impl Supervisor {
         Ok(())
     }
     async fn start(&self, id: &str, with_client: bool) -> Result<()> {
-        if self
-            .running
-            .lock()
-            .unwrap()
-            .server
-            .as_ref()
-            .is_some_and(alive)
         {
-            bail!("SERVER_RUNNING")
+            let mut running = self.running.lock().unwrap();
+            if running.server.as_ref().is_some_and(|o| !alive(o)) {
+                running.server = None;
+                running.world_lease = None;
+                running.server_tunnel = None;
+            }
+        }
+        let existing = self.running.lock().unwrap().server.clone().filter(alive);
+        if let Some(existing) = existing {
+            if with_client
+                && !self
+                    .running
+                    .lock()
+                    .unwrap()
+                    .client
+                    .as_ref()
+                    .is_some_and(alive)
+            {
+                let mut settings = self.layout.load()?;
+                settings.selected_world = existing.world.clone();
+                self.layout.save(&settings)?;
+                self.start_client(
+                    &format!("http://127.0.0.1:{}/", existing.admin_port - 100),
+                    &settings.nickname,
+                )
+                .await?;
+            }
+            self.enable_relay(existing.admin_port - 100).await;
+            return Ok(());
         }
         let s = self.layout.load()?;
         s.validate()?;
@@ -666,7 +739,7 @@ impl Supervisor {
         self.state("Preparing", "Подготавливаем мир…");
         let prepare_layout = self.layout.clone();
         let prepare_id = id.to_owned();
-        let mut world = tokio::task::spawn_blocking(move || {
+        let world = tokio::task::spawn_blocking(move || {
             crate::world_tools::prepare(
                 &prepare_layout,
                 &prepare_id,
@@ -738,7 +811,8 @@ impl Supervisor {
                 .into_owned(),
             world: id.into(),
             admin_port: s.base_port as u16 + 100,
-            pending_client: with_client,
+            pending_client: false,
+            server_release: server_digest,
             ..Default::default()
         };
         write_json(
@@ -751,32 +825,31 @@ impl Supervisor {
             r.world_lease = Some(lease);
         }
         self.state("Starting", "Сервер загружает мир");
-        for _ in 0..800 {
-            if !alive(&o) {
-                self.state("Failed", "Сервер завершился при загрузке");
-                bail!("SERVER_EXIT")
+        if with_client {
+            if let Err(e) = self
+                .start_client(&format!("http://127.0.0.1:{}/", s.base_port), &s.nickname)
+                .await
+            {
+                self.state(
+                    "Starting",
+                    &format!("Сервер запускается. Клиент не запущен: {e}"),
+                );
+                return Err(e);
             }
-            if let Ok(h) = self.admin(&o, "health", false).await {
-                if h["ready"] == true {
-                    self.verify(&o).await?;
-                    launch::need(&session.join("server-patches.ok"))?;
-                    world.server_release = server_digest.clone();
-                    world.last_played = Some(chrono::Utc::now().to_rfc3339());
-                    worlds.save(&world)?;
-                    self.state("Ready", "Мир запущен");
-                    if with_client {
-                        self.clear_pending()?;
-                        self.start_client(&format!("127.0.0.1:{}", s.base_port), &s.nickname)
-                            .await?;
-                    }
-                    return Ok(());
-                }
-            }
-            tokio::time::sleep(Duration::from_millis(750)).await;
         }
-        bail!("START_PENDING: server is still loading; inspect logs before stopping")
+        self.enable_relay(s.base_port).await;
+        Ok(())
     }
     async fn start_client(&self, address: &str, nickname: &str) -> Result<()> {
+        {
+            let mut running = self.running.lock().unwrap();
+            if running.client.as_ref().is_some_and(|o| !alive(o)) {
+                running.client = None;
+                running.client_lease = None;
+                running.proxy = None;
+                running.client_tunnel = None;
+            }
+        }
         if self
             .running
             .lock()
@@ -798,17 +871,73 @@ impl Supervisor {
         let source = self.layout.bundle(&s, "client")?;
         let game = GameLayout::resolve(self.layout.resolve(&s.game_path))?;
         let java = self.java(&source)?;
-        let remote = network::endpoint(address)?;
+        let tunnel = if crate::relay::is_invite(address) {
+            Some(crate::relay::Tunnel::join(address, &s.relay_url).await?)
+        } else {
+            None
+        };
+        let remote = if let Some(t) = &tunnel {
+            network::endpoint(&format!("http://127.0.0.1:{}/", t.backend_port))?
+        } else {
+            network::endpoint(address)?
+        };
         let identity = LocalIdentity::load(&self.layout)?;
         let login = format!("bscp-{}", identity.id);
-        let proxy = SignedProxy::start(remote.clone(), identity, None).await?;
-        let native = proxy.session(nickname).await?;
+        let local_starting = tunnel.is_none()
+            && matches!(remote.host_str(), Some("127.0.0.1" | "localhost" | "[::1]"))
+            && self
+                .running
+                .lock()
+                .unwrap()
+                .server
+                .as_ref()
+                .is_some_and(|o| {
+                    alive(o) && remote.port_or_known_default() == Some(o.admin_port - 100)
+                });
         let folder = self
             .layout
             .root
             .join("state/sessions")
             .join(format!("client-{}", uuid::Uuid::new_v4().simple()));
+        std::fs::create_dir_all(&folder)?;
+        owner_only(&folder, true)?;
+        let alias_supported = local_starting
+            && native_parallel_start_supported(&self.layout.bundle(&s, "server")?).unwrap_or(false);
+        let (proxy, native) = if local_starting {
+            SignedProxy::start_delayed(
+                remote.clone(),
+                identity,
+                nickname,
+                folder.join("native-session.json"),
+                alias_supported,
+            )
+            .await?
+        } else {
+            let p = SignedProxy::start(remote.clone(), identity, None).await?;
+            let n = p.session(nickname).await?;
+            (p, n)
+        };
         self.agent_config(&folder, "client", None, Some(&native), "")?;
+        if local_starting {
+            let mut file = std::fs::OpenOptions::new()
+                .append(true)
+                .open(folder.join("agent.properties"))?;
+            writeln!(file, "deferredSessionAlias={alias_supported}")?;
+            writeln!(
+                file,
+                "deferredSessionFile={}",
+                launch::prop(&launch::path(&folder.join("native-session.json")))
+            )?;
+        }
+        if let Some(t) = &tunnel {
+            let file = folder.join("agent.properties");
+            let mut config = std::fs::OpenOptions::new().append(true).open(file)?;
+            writeln!(
+                config,
+                "relayRemoteBase={}\nrelayGamePort={}\nrelayWorldPort={}",
+                t.remote_base, t.game_port, t.world_port
+            )?;
+        }
         let profile = ClientProfile::prepare(&self.layout.client_data(&s), &source)?;
         let child = launch::client(
             &source,
@@ -839,7 +968,11 @@ impl Supervisor {
                 .strip_prefix(&self.layout.root)?
                 .to_string_lossy()
                 .into_owned(),
-            remote: remote.to_string(),
+            remote: if tunnel.is_some() {
+                address.to_owned()
+            } else {
+                remote.to_string()
+            },
             proxy_port: proxy.port,
             ..Default::default()
         };
@@ -857,6 +990,7 @@ impl Supervisor {
         r.client = Some(o);
         r.client_lease = Some(lease);
         r.proxy = Some(proxy);
+        r.client_tunnel = tunnel;
         Ok(())
     }
     async fn stop(&self) -> Result<()> {
@@ -874,11 +1008,13 @@ impl Supervisor {
                 let mut r = self.running.lock().unwrap();
                 r.server = None;
                 r.world_lease = None;
+                r.server_tunnel = None;
                 drop(r);
                 write_json(
                     &self.layout.root.join("state/rust-server-ownership.json"),
                     &Owned::default(),
                 )?;
+                self.view.lock().unwrap()["RelayStatus"] = json!("");
                 self.state("Stopped", "Мир сохранён, сервер остановлен");
                 return Ok(());
             }
@@ -949,6 +1085,7 @@ impl Supervisor {
                     r.client = None;
                     r.client_lease = None;
                     r.proxy = None;
+                    r.client_tunnel = None;
                     let _ = write_json(
                         &self.layout.root.join("state/rust-client-ownership.json"),
                         &Owned::default(),
@@ -961,10 +1098,18 @@ impl Supervisor {
                     }
                     r.server = None;
                     r.world_lease = None;
+                    r.server_tunnel = None;
                 }
                 (exited, r.server.clone())
             };
             if exited {
+                if let Some(client) = self.running.lock().unwrap().client.as_ref() {
+                    let file = self.layout.at(&client.session).join("native-session.json");
+                    if !file.exists() {
+                        let _ = write_json(&file, &String::new());
+                    }
+                }
+                self.view.lock().unwrap()["RelayStatus"] = json!("");
                 self.state(
                     "Failed",
                     "Процесс сервера завершился вне команды остановки; проверьте журнал",
@@ -983,6 +1128,15 @@ impl Supervisor {
                                 .join("server-patches.ok")
                                 .is_file()
                         {
+                            if let Ok(worlds) = self.worlds() {
+                                if let Ok(mut world) = worlds.get(&o.world) {
+                                    if !o.server_release.is_empty() {
+                                        world.server_release = o.server_release.clone();
+                                    }
+                                    world.last_played = Some(chrono::Utc::now().to_rfc3339());
+                                    let _ = worlds.save(&world);
+                                }
+                            }
                             self.state("Ready", "Мир запущен");
                             if o.pending_client {
                                 let result: Result<()> = async {
@@ -1140,7 +1294,11 @@ mod log_stream_tests {
         let temp = tempfile::tempdir().unwrap();
         let layout = Layout::new(temp.path());
         layout.init().unwrap();
-        write_json(&layout.at("config/telemetry.json"), &TelemetryConfig::default()).unwrap();
+        write_json(
+            &layout.at("config/telemetry.json"),
+            &TelemetryConfig::default(),
+        )
+        .unwrap();
         let folder = layout.at("state/sessions/pipe-test");
         std::fs::create_dir_all(&folder).unwrap();
         let mut command = tokio::process::Command::new("powershell.exe");
@@ -1324,6 +1482,61 @@ struct DeliveryActivity(Arc<std::sync::atomic::AtomicUsize>);
 impl Drop for DeliveryActivity {
     fn drop(&mut self) {
         self.0.fetch_sub(1, std::sync::atomic::Ordering::AcqRel);
+    }
+}
+
+#[cfg(all(test, windows))]
+mod reuse_tests {
+    use super::*;
+    #[tokio::test]
+    async fn exited_client_releases_its_profile_before_an_immediate_reconnect() {
+        let temp = tempfile::tempdir().unwrap();
+        let layout = Layout::new(temp.path());
+        layout.init().unwrap();
+        let host = Supervisor::new(layout.clone(), None, None).unwrap();
+        let lease = ClientProfile::lease(&layout.client_data(&layout.load().unwrap())).unwrap();
+        {
+            let mut running = host.running.lock().unwrap();
+            running.client = Some(Owned {
+                pid: u32::MAX,
+                started: 1,
+                ..Default::default()
+            });
+            running.client_lease = Some(lease);
+        }
+        let error = host.start_client("127.0.0.1", "Player").await.unwrap_err();
+        assert!(!error.to_string().contains("WORLD_BUSY"));
+        assert!(host.running.lock().unwrap().client.is_none());
+        assert!(ClientProfile::lease(&layout.client_data(&layout.load().unwrap())).is_ok());
+    }
+    #[tokio::test]
+    async fn repeated_start_keeps_the_owned_server_and_existing_client() {
+        let temp = tempfile::tempdir().unwrap();
+        let layout = Layout::new(temp.path());
+        layout.init().unwrap();
+        let host = Supervisor::new(layout, None, None).unwrap();
+        let owned = Owned {
+            pid: std::process::id(),
+            started: process_time(std::process::id()).unwrap(),
+            world: "already-running-world".into(),
+            admin_port: 29645,
+            ..Default::default()
+        };
+        host.running.lock().unwrap().server = Some(owned.clone());
+        host.start("a-different-selected-world", false)
+            .await
+            .unwrap();
+        host.running.lock().unwrap().client = Some(owned.clone());
+        host.start("a-different-selected-world", true)
+            .await
+            .unwrap();
+        let running = host.running.lock().unwrap();
+        assert_eq!(
+            running.server.as_ref().unwrap().world,
+            "already-running-world"
+        );
+        assert_eq!(running.server.as_ref().unwrap().pid, owned.pid);
+        assert_eq!(running.client.as_ref().unwrap().pid, owned.pid);
     }
 }
 #[cfg(all(test, windows))]

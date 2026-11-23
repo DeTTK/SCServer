@@ -1,0 +1,46 @@
+{
+  "result": "PASS",
+  "feature": "Iroh NAT hosting and parallel client startup",
+  "transport": {
+    "forcedPublicRelay": true,
+    "directIpTransportsDisabledInNetworkTest": true,
+    "backendAndGameTcp": true,
+    "udpPayloadBytes": [
+      40,
+      4096,
+      32000
+    ],
+    "invalidCapabilityRejected": true,
+    "portsReleasedAfterDrop": true
+  },
+  "nativeLifecycle": {
+    "dedicatedThenSingle": {
+      "sameServerPid": true,
+      "clientRunning": true,
+      "sessionResolved": true,
+      "framesObserved": true
+    },
+    "actualGameThroughInvite": {
+      "clientRunning": true,
+      "framesObserved": true,
+      "sameServerPid": true,
+      "portMappingConfigured": true
+    },
+    "coldSingle": {
+      "parallelAliasMode": true,
+      "commandMs": 563.0000000819564,
+      "initialState": "Starting",
+      "clientPid": 38972,
+      "clientCreatedBeforeReadinessObserved": true,
+      "relayDisabled": true
+    }
+  },
+  "limits": [
+    "Native game rendered through invite; character entering the world and a second physical network have not been verified.",
+    "Public n0 relay used for prototype; own relay not deployed."
+  ],
+  "bridgeTests": "PASS: signed origin, alias registration/canonical session preservation, gateway/UDP grants, port remapping, deferred session and nonblocking alias",
+  "singleExeLifecycle": "PASS: no idle host, explicit self-host and automatic idle exit",
+  "nativeBytes": 20529664,
+  "nativeSha256": "c8a87463e13c4383a890f1731c2de5cb4e32324ff8bad28d4da7492f17fa6aed"
+}

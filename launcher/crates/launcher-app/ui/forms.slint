@@ -1,6 +1,6 @@
 import { TransferView } from "api.slint";
 import { Theme } from "theme.slint";
-import { ComboBox } from "std-widgets.slint";
+import { ComboBox, CheckBox } from "std-widgets.slint";
 import { Action, Field, Hint, Label, Notice, Rule, Scroller, SectionTitle, TransferStatus } from "controls.slint";
 
 export component Configuration inherits VerticalLayout {
@@ -23,6 +23,7 @@ export component Configuration inherits VerticalLayout {
     in-out property <string> client-memory;
     in-out property <string> server-memory-setting;
     in-out property <string> port;
+    in-out property <bool> relay-enabled;
     in-out property <string> feed-url;
     in-out property <string> game-branch;
     in property <[string]> branches;
@@ -100,6 +101,8 @@ export component Configuration inherits VerticalLayout {
                 Field { label: "Папка клиентского комплекта"; value <=> root.client-path; folder: true; enabled: !root.busy; error: root.error-field == "client" ? root.error : ""; browse => { root.browse("client"); } }
             }
             if !root.wizard && root.tab == "server": VerticalLayout {
+                CheckBox { text: "Поднимать сервер через ретранслятор"; checked <=> root.relay-enabled; enabled: !root.busy; }
+                Hint { text: "При следующем запуске появится приглашение для друзей. Проброс портов не нужен. Локальное подключение остаётся доступным."; wrap: word-wrap; }
                 spacing: 18px;
                 HorizontalLayout {
                     spacing: 14px;

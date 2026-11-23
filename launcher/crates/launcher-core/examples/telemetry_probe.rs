@@ -11,10 +11,13 @@ fn main() -> Result<()> {
     }
     let layout = Layout::new(&args[1]);
     layout.init()?;
-    TelemetryOutbox::new(&layout).enqueue("verification", json!({
-        "run":"qa-grafana-20261123", "role":"launcher",
-        "text":"BSCPCRAFT collector verification: synthetic diagnostic, no player data"
-    }))?;
+    TelemetryOutbox::new(&layout).enqueue(
+        "verification",
+        json!({
+            "run":"qa-grafana-20261123", "role":"launcher",
+            "text":"BSCPCRAFT collector verification: synthetic diagnostic, no player data"
+        }),
+    )?;
     let result = flush_telemetry(&layout, Duration::from_secs(12))?;
     println!("{}", serde_json::to_string_pretty(&result)?);
     if result.sent_events == 0 || result.remaining != 0 {

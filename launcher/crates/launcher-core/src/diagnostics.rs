@@ -25,6 +25,10 @@ pub fn redact(text: &str) -> String {
         }
     }
     let private_key = Regex::new(r"(?s)-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----.*?-----END (?:RSA |EC |OPENSSH )?PRIVATE KEY-----").unwrap();
+    s = Regex::new(r"bscp://[A-Za-z0-9_-]{16,}|bscp-start-[0-9a-f]{64}")
+        .unwrap()
+        .replace_all(&s, "[invitation redacted]")
+        .into_owned();
     private_key
         .replace_all(&s, "[private key redacted]")
         .into_owned()
@@ -381,6 +385,15 @@ fn prepare_screenshot(path: &Path) -> Result<Vec<u8>> {
 #[cfg(test)]
 mod panic_tests {
     use super::*;
+    #[test]
+    fn freeform_tunnel_credentials_are_removed_from_diagnostic_logs() {
+        let invite = format!("bscp://{}", "A".repeat(80));
+        let alias = format!("bscp-start-{}", "ab".repeat(32));
+        let log = redact(&format!("Connecting to {invite}; startup argument {alias}"));
+        assert!(!log.contains(&invite));
+        assert!(!log.contains(&alias));
+        assert!(log.contains("Connecting to"));
+    }
     #[test]
     fn panic_hook_preserves_redacted_diagnostics_before_process_exit() {
         if let Some(root) = std::env::var_os("BSCP_PANIC_TEST_ROOT") {

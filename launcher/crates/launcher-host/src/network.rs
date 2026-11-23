@@ -1,4 +1,4 @@
-use anyhow::{Result, bail};
+use anyhow::{Context, Result, bail};
 use bscp_launcher_core::LocalIdentity;
 use sha2::{Digest, Sha256};
 use std::{
@@ -8,7 +8,7 @@ use std::{
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::{TcpListener, TcpStream},
-    sync::{Notify, Semaphore},
+    sync::Semaphore,
 };
 pub fn endpoint(a: &str) -> Result<reqwest::Url> {
     let raw = if a.contains("://") {
@@ -43,6 +43,13 @@ pub fn endpoint(a: &str) -> Result<reqwest::Url> {
     }
     Ok(u)
 }
+pub fn normalize_address(a: &str) -> Result<String> {
+    if crate::relay::is_invite(a) {
+        crate::relay::normalize(a)
+    } else {
+        Ok(endpoint(a)?.to_string())
+    }
+}
 pub fn check_ports(base: u16) -> Result<()> {
     if !(1024..=65000).contains(&base) {
         bail!("PORT_INVALID")
@@ -63,11 +70,11 @@ pub fn local_addresses() -> Vec<String> {
 }
 pub struct SignedProxy {
     pub port: u16,
-    stop: Arc<Notify>,
+    stop: tokio_util::sync::CancellationToken,
 }
 impl Drop for SignedProxy {
     fn drop(&mut self) {
-        self.stop.notify_one();
+        self.stop.cancel();
     }
 }
 impl SignedProxy {
@@ -76,9 +83,48 @@ impl SignedProxy {
         id: LocalIdentity,
         fixed: Option<u16>,
     ) -> Result<Self> {
+        Self::start_mode(remote, id, fixed, None).await
+    }
+    pub async fn start_delayed(
+        remote: reqwest::Url,
+        id: LocalIdentity,
+        nickname: &str,
+        session_file: std::path::PathBuf,
+        alias_supported: bool,
+    ) -> Result<(Self, String)> {
+        let helper = Self::start(remote.clone(), id.clone(), None).await?;
+        let (tx, rx) = tokio::sync::watch::channel(None::<String>);
+        let mut random = [0; 32];
+        rand::RngCore::fill_bytes(&mut rand::rngs::OsRng, &mut random);
+        let alias = format!("bscp-start-{}", hex::encode(random));
+        let proxy = Self::start_mode(remote.clone(), id, None, Some((alias.clone(), rx))).await?;
+        let stop = proxy.stop.clone();
+        let nickname = nickname.to_owned();
+        let startup_alias = alias_supported.then(|| alias.clone());
+        tokio::spawn(async move {
+            tokio::select! {_=stop.cancelled()=>{},_=async{
+                let health=reqwest::Client::builder().timeout(Duration::from_secs(2)).build().unwrap();
+                for _ in 0..600 {
+                    if health.get(remote.join("health").unwrap()).send().await.is_ok_and(|r|r.status().is_success()) { break; }
+                    tokio::time::sleep(Duration::from_secs(1)).await;
+                }
+                match helper.session_with_alias(&nickname,startup_alias.as_deref()).await {
+                    Ok(session)=>{use base64::Engine;if bscp_launcher_core::write_json(&session_file,&base64::engine::general_purpose::STANDARD.encode(session.as_bytes())).is_ok(){let _=tx.send(Some(session));}}
+                    Err(_)=>{let _=bscp_launcher_core::write_json(&session_file,&String::new());}
+                }
+            }=>{}}
+        });
+        Ok((proxy, alias))
+    }
+    async fn start_mode(
+        remote: reqwest::Url,
+        id: LocalIdentity,
+        fixed: Option<u16>,
+        deferred: Option<(String, tokio::sync::watch::Receiver<Option<String>>)>,
+    ) -> Result<Self> {
         let listener = TcpListener::bind(("127.0.0.1", fixed.unwrap_or(0))).await?;
         let port = listener.local_addr()?.port();
-        let stop = Arc::new(Notify::new());
+        let stop = tokio_util::sync::CancellationToken::new();
         let signal = stop.clone();
         let id = Arc::new(id);
         let http = reqwest::Client::builder()
@@ -88,7 +134,7 @@ impl SignedProxy {
         tokio::spawn(async move {
             let cap = Arc::new(Semaphore::new(8));
             loop {
-                let accepted = tokio::select! {r=listener.accept()=>r,_=signal.notified()=>break};
+                let accepted = tokio::select! {r=listener.accept()=>r,_=signal.cancelled()=>break};
                 let Ok((mut stream, _)) = accepted else { break };
                 let Ok(permit) = cap.clone().try_acquire_owned() else {
                     let _ = stream
@@ -101,11 +147,12 @@ impl SignedProxy {
                 let http = http.clone();
                 let id = id.clone();
                 let remote = remote.clone();
+                let deferred = deferred.clone();
                 tokio::spawn(async move {
                     let _permit = permit;
                     let response = tokio::time::timeout(
-                        Duration::from_secs(35),
-                        forward(&mut stream, &http, &id, &remote),
+                        Duration::from_secs(if deferred.is_some() { 650 } else { 35 }),
+                        forward_mode(&mut stream, &http, &id, &remote, deferred),
                     )
                     .await;
                     let (code, ct, body) = match response {
@@ -132,6 +179,13 @@ impl SignedProxy {
         format!("http://127.0.0.1:{}/", self.port)
     }
     pub async fn session(&self, nickname: &str) -> Result<String> {
+        self.session_with_alias(nickname, None).await
+    }
+    async fn session_with_alias(&self, nickname: &str, alias: Option<&str>) -> Result<String> {
+        let mut fields = vec![("login", nickname)];
+        if let Some(alias) = alias {
+            fields.push(("nativeSessionAlias", alias));
+        }
         let http = reqwest::Client::builder()
             .redirect(reqwest::redirect::Policy::none())
             .timeout(Duration::from_secs(30))
@@ -139,7 +193,7 @@ impl SignedProxy {
         let u = self.url();
         let v: serde_json::Value = http
             .post(format!("{u}session/game"))
-            .form(&[("login", nickname)])
+            .form(&fields)
             .send()
             .await?
             .error_for_status()?
@@ -178,11 +232,12 @@ impl SignedProxy {
         Ok(session)
     }
 }
-async fn forward(
+async fn forward_mode(
     stream: &mut TcpStream,
     http: &reqwest::Client,
     id: &LocalIdentity,
     remote: &reqwest::Url,
+    deferred: Option<(String, tokio::sync::watch::Receiver<Option<String>>)>,
 ) -> Result<(u16, String, Vec<u8>)> {
     let mut header = Vec::new();
     while !header.ends_with(b"\r\n\r\n") {
@@ -229,8 +284,23 @@ async fn forward(
     // The connection target belongs to this proxy, never to a browser header or
     // game-supplied field. Keep the existing v1 signature and bind the route by
     // including it in the signed form body / raw query.
-    let route = route_parameter(remote)?;
     let mut path = path.to_owned();
+    if let Some((alias, mut ready)) = deferred {
+        loop {
+            if ready.borrow().is_some() {
+                break;
+            };
+            ready.changed().await.context("LOCAL_SERVER_NOT_READY")?;
+        }
+        let native = ready.borrow().clone().context("LOCAL_SERVER_NOT_READY")?;
+        path = path.replace(&alias, &native);
+        if body.windows(alias.len()).any(|s| s == alias.as_bytes()) {
+            body = String::from_utf8(body)?
+                .replace(&alias, &native)
+                .into_bytes();
+        }
+    }
+    let route = route_parameter(remote)?;
     if method == "GET" {
         path.push(if path.contains('?') { '&' } else { '?' });
         path.push_str(&route);
@@ -463,5 +533,87 @@ mod integration_tests {
         assert_eq!(r.status(), 502);
         drop(proxy);
         std::fs::remove_dir_all(root).unwrap();
+    }
+}
+
+#[cfg(test)]
+mod delayed_tests {
+    use super::*;
+    #[tokio::test]
+    async fn client_proxy_starts_before_backend_and_resolves_native_session() {
+        let temp = tempfile::tempdir().unwrap();
+        let layout = bscp_launcher_core::Layout::new(temp.path());
+        layout.init().unwrap();
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let remote = endpoint(&format!(
+            "127.0.0.1:{}",
+            listener.local_addr().unwrap().port()
+        ))
+        .unwrap();
+        let server = tokio::spawn(async move {
+            tokio::time::sleep(Duration::from_millis(350)).await;
+            for _ in 0..4 {
+                let (mut stream, _) = listener.accept().await.unwrap();
+                let mut header = Vec::new();
+                while !header.ends_with(b"\r\n\r\n") {
+                    header.push(stream.read_u8().await.unwrap());
+                }
+                let text = String::from_utf8(header).unwrap();
+                assert!(!text.contains("pending-"));
+                let length = text
+                    .lines()
+                    .find_map(|l| {
+                        l.to_ascii_lowercase()
+                            .strip_prefix("content-length:")
+                            .map(|v| v.trim().parse::<usize>().unwrap())
+                    })
+                    .unwrap_or(0);
+                let mut body = vec![0; length];
+                stream.read_exact(&mut body).await.unwrap();
+                let response = if text.starts_with("GET /health") {
+                    r#"{"ok":true}"#
+                } else if text.starts_with("POST /session/game") {
+                    r#"{"session":"native-session-fixture"}"#
+                } else {
+                    r#"{"characters":[{"username":"Player"}]}"#
+                };
+                let reply = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                    response.len(),
+                    response
+                );
+                stream.write_all(reply.as_bytes()).await.unwrap();
+            }
+        });
+        let file = layout.at("state/deferred.json");
+        let start = std::time::Instant::now();
+        let (proxy, alias) = SignedProxy::start_delayed(
+            remote,
+            LocalIdentity::load(&layout).unwrap(),
+            "Player",
+            file.clone(),
+            false,
+        )
+        .await
+        .unwrap();
+        assert!(start.elapsed() < Duration::from_millis(300));
+        assert!(!file.exists());
+        let response = reqwest::Client::new()
+            .get(format!("{}characters/list", proxy.url()))
+            .query(&[("session", alias)])
+            .send()
+            .await
+            .unwrap();
+        assert!(response.status().is_success());
+        assert!(start.elapsed() >= Duration::from_millis(350));
+        server.await.unwrap();
+        let encoded: String = serde_json::from_slice(&std::fs::read(file).unwrap()).unwrap();
+        use base64::Engine;
+        assert_eq!(
+            base64::engine::general_purpose::STANDARD
+                .decode(encoded)
+                .unwrap(),
+            b"native-session-fixture"
+        );
     }
 }

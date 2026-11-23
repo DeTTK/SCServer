@@ -28,6 +28,12 @@ public final class NativeRouteOriginTest {
         try(var accounts=new LocalAccounts(0,routes,root.resolve("accounts.json"))){
             RouteOriginTest.port=accounts.port();String session=call("POST","/session/game","login="+login).get("session").getAsString();
             call("POST","/characters/create","session="+encode(session)+"&character=RouteProbe");
+            String startupAlias="bscp-start-"+"ab".repeat(32);
+            if(!call("POST","/session/game","nativeSessionAlias="+startupAlias).get("session").getAsString().equals(session))throw new AssertionError("startup alias rotated the durable session");
+            var aliasToken=call("POST","/security/issue_auth_token","session="+encode(session)+"&username=RouteProbe").get("token").getAsString();
+            UUID aliasProtocol=UUID.randomUUID();var aliasGrant=accounts.gateway(aliasProtocol,login,"RouteProbe",startupAlias,aliasToken);
+            if(!accounts.claim(aliasProtocol,startupAlias).equals(aliasGrant))throw new AssertionError("startup alias did not authenticate gateway and UDP claim");
+            try{accounts.claim(UUID.randomUUID(),"bscp-start-"+"cd".repeat(32));throw new AssertionError("unknown startup alias accepted");}catch(IllegalArgumentException expected){}
             int checks=0;
             for(String authority:List.of("192.0.2.10:443","play.example.test:443","[2001:db8::7]:443")){
                 String host=ConnectionRoutes.requestHost(authority),route="__bscp_route="+encode(authority);

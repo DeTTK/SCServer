@@ -372,3 +372,21 @@ impl ClientProfile {
         Ok(profile)
     }
 }
+
+/// Capability marker in the authenticated server component, without loading game classes.
+pub fn native_parallel_start_supported(source: &std::path::Path) -> anyhow::Result<bool> {
+    use std::io::Read;
+    let mut archive = zip::ZipArchive::new(std::fs::File::open(crate::component_file(
+        source,
+        "server.jar",
+    )?)?)?;
+    let mut entry = archive.by_name("szserver/net/LocalAccounts.class")?;
+    if entry.size() > 1024 * 1024 {
+        return Ok(false);
+    }
+    let mut bytes = Vec::new();
+    entry.read_to_end(&mut bytes)?;
+    Ok(bytes
+        .windows(b"bscp-start-".len())
+        .any(|part| part == b"bscp-start-"))
+}

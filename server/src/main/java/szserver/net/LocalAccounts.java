@@ -17,6 +17,15 @@ public final class LocalAccounts implements AutoCloseable {
     private static final class Account {final UUID id;final String tokenHash;final Map<String,UUID> characters=new LinkedHashMap<>();Account(UUID id,String tokenHash){this.id=id;this.tokenHash=tokenHash;}}
     private static final class Profile {final UUID accountId;final String session;String legal=null;Profile(Account account,String session){accountId=account.id;this.session=session;}}
     private Account profileAccount(Profile profile){Account row=accounts.get(profile.accountId);if(row==null)throw new IllegalArgumentException("account_not_found");return row;}
+    private record StartupAlias(String login,String canonical,long expires){}
+    private final ConcurrentHashMap<String,StartupAlias> startupAliases=new ConcurrentHashMap<>();
+    private String canonicalSession(String session){if(session==null||!session.startsWith("bscp-start-"))return session;StartupAlias alias=startupAliases.get(session);if(alias==null||alias.expires<System.currentTimeMillis())throw new IllegalArgumentException("startup_session_expired");return alias.canonical;}
+    private void registerStartupAlias(String alias,String login,String canonical){
+        if(!alias.matches("bscp-start-[0-9a-f]{64}"))throw new IllegalArgumentException("startup_session_format");long now=System.currentTimeMillis();startupAliases.entrySet().removeIf(e->e.getValue().expires<now);
+        StartupAlias old=startupAliases.get(alias);if(old!=null&&!old.login.equals(login))throw new IllegalArgumentException("startup_session_owner");
+        if(old==null&&(startupAliases.size()>=512||startupAliases.values().stream().filter(a->a.login.equals(login)).count()>=8))throw new IllegalArgumentException("startup_session_limit");
+        startupAliases.put(alias,new StartupAlias(login,canonical,now+86_400_000L));
+    }
     private record Token(String login,String name,long expires,String worldHost){}
     private record Ticket(Grant grant,String session,long expires,String login,String tokenDigest){}
     private record Result(Object payload,CompletableFuture<Void> durable){}
@@ -267,7 +276,7 @@ public final class LocalAccounts implements AutoCloseable {
         if(storageFailed)throw new RouteError(503,"account_storage_failed");
         String suppliedLogin=AccountIdentity.strip(p.getOrDefault("login","LocalPlayer"));String login=suppliedLogin.isEmpty()?"LocalPlayer":suppliedLogin;if(login.getBytes(StandardCharsets.UTF_8).length>128||login.codePoints().anyMatch(value->value<32))throw new IllegalArgumentException("invalid_login");
         boolean created=!profiles.containsKey(login);Profile profile=profiles.computeIfAbsent(login,k->new Profile(account(AccountIdentity.nativeHash(k)),secret()));if(created){trackProfile(login,profile);changedProfile(login,profile);requestWrite=saveProfiles();}
-        if(path.equals("/session/game"))return Map.of("session",profile.session);
+        if(path.equals("/session/game")){String alias=p.get("nativeSessionAlias");if(alias!=null)registerStartupAlias(alias,login,profile.session);return Map.of("session",profile.session);}
         if(path.equals("/address_list"))return Map.of("mode","l4","addresses",routes.addresses(host));
         if(path.equals("/check_version")||path.equals("/health"))return Map.of("ok",true);
         if(path.equals("/class_preload/config"))return Map.of("classes",List.of());
@@ -284,7 +293,8 @@ public final class LocalAccounts implements AutoCloseable {
     private Map<String,Object> character(String name,UUID id){var c=new LinkedHashMap<String,Object>();c.put("username",name);c.put("id",id.toString());c.put("locationUnlocalized","location.dev");for(String k:List.of("gearScore","money","playedTime","seasonPassLevel"))c.put(k,0);c.put("isLegacy",false);c.put("lastLogin",System.currentTimeMillis());for(String k:List.of("armor","skin","weapon","weaponSecondary","melee","backpack","clan","clanIcon","playerCard","allianceId","transferEnd","deleteAt"))c.put(k,null);Map<String,Object> equipment=preview.apply(id);for(String key:List.of("armor","skin","weapon","weaponSecondary","melee","backpack"))if(equipment.containsKey(key))c.put(key,equipment.get(key));return c;}
     /** Gateway login runs on login workers. Its durable consumption never holds the account lock. */
     private record GatewaySave(Grant grant,CompletableFuture<Void> durable,boolean retry){}
-    public Grant gateway(UUID protocol,String login,String name,String session,String token){
+    public Grant gateway(UUID protocol,String login,String name,String session,String token){return gatewayCanonical(protocol,login,name,canonicalSession(session),token);}
+    private Grant gatewayCanonical(UUID protocol,String login,String name,String session,String token){
         String key=protocol+":"+session;GatewaySave prepared=stateRead(()->{
             if(storageFailed||closed)throw new IllegalArgumentException("account_storage_failed");
             Token t=tokens.get(token);Profile profile=profiles.get(login);long now=System.currentTimeMillis();tickets.values().removeIf(v->v.expires<=now);Ticket existing=tickets.get(key);
@@ -310,7 +320,8 @@ public final class LocalAccounts implements AutoCloseable {
     }
     private static String tokenDigest(String token){try{return HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(token.getBytes(StandardCharsets.UTF_8)));}catch(java.security.NoSuchAlgorithmException impossible){throw new IllegalStateException(impossible);}}
     /** Called on login workers: persist consumption before publishing the grant. */
-    public Grant claim(UUID protocol,String session){GatewaySave prepared=stateRead(()->{if(storageFailed||closed)throw new IllegalArgumentException("account_storage_failed");String key=protocol+":"+session;if(pendingTickets.containsKey(key))throw new IllegalArgumentException("gateway_ticket_pending");Ticket ticket=tickets.remove(key);if(ticket==null||ticket.expires<=System.currentTimeMillis())throw new IllegalArgumentException("world_auth_failed");return new GatewaySave(ticket.grant,saveProfiles(),false);});
+    public Grant claim(UUID protocol,String session){return claimCanonical(protocol,canonicalSession(session));}
+    private Grant claimCanonical(UUID protocol,String session){GatewaySave prepared=stateRead(()->{if(storageFailed||closed)throw new IllegalArgumentException("account_storage_failed");String key=protocol+":"+session;if(pendingTickets.containsKey(key))throw new IllegalArgumentException("gateway_ticket_pending");Ticket ticket=tickets.remove(key);if(ticket==null||ticket.expires<=System.currentTimeMillis())throw new IllegalArgumentException("world_auth_failed");return new GatewaySave(ticket.grant,saveProfiles(),false);});
         try{prepared.durable.get(10,TimeUnit.SECONDS);return stateRead(()->{if(!sessionOwner(session,prepared.grant))throw new IllegalArgumentException("world_character_deleted");return prepared.grant;});}
         catch(InterruptedException error){Thread.currentThread().interrupt();throw new IllegalArgumentException("world_save_interrupted",error);}catch(ExecutionException|TimeoutException error){throw new IllegalArgumentException("world_save_failed",error);}
     }

@@ -17,6 +17,8 @@ if ($LASTEXITCODE -ne 0) { throw 'Bridge test compilation failed' }
 if ($LASTEXITCODE -ne 0) { throw 'Bridge tests failed' }
 & java --add-exports java.base/jdk.internal.org.objectweb.asm=ALL-UNNAMED -cp "$classes;$serverClasspath" bscp.next.BridgeDiagnosticsTest $classes
 if ($LASTEXITCODE -ne 0) { throw 'Bridge diagnostics tests failed' }
+& java --add-exports java.base/jdk.internal.org.objectweb.asm=ALL-UNNAMED -cp "$classes;$serverClasspath" bscp.next.RelayHooksTest $classes
+if ($LASTEXITCODE -ne 0) { throw 'Relay client hook tests failed' }
 $classpath = "$classes;$serverClasspath"
 & java --add-exports java.base/jdk.internal.org.objectweb.asm=ALL-UNNAMED -cp $classpath bscp.next.RouteOriginTest
 if ($LASTEXITCODE -ne 0) { throw 'Signed connection origin tests failed' }

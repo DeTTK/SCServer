@@ -31,6 +31,9 @@ export component AppWindow inherits Window {
     in property <bool> client-running;
     in property <string> server-state;
     in property <string> server-address;
+    in property <string> relay-invite;
+    in property <string> relay-status;
+    in-out property <bool> relay-enabled;
     in property <string> server-uptime;
     in property <string> server-memory;
     in property <[string]> players;
@@ -177,7 +180,7 @@ export component AppWindow inherits Window {
                 act(op) => { root.dialog-id = root.selected-world-id; root.world-action(op, root.selected-world-id, ""); }
             }
             if !root.setup-visible && root.page == "server": ServerPage {
-                vertical-stretch: 1; running: root.server-running; busy: root.busy; state: root.server-state; address: root.server-address;
+                vertical-stretch: 1; running: root.server-running; busy: root.busy; state: root.server-state; address: root.server-address; relay-invite: root.relay-invite; relay-status: root.relay-status;
                 uptime: root.server-uptime; memory: root.server-memory; players: root.players; players-known: root.players-known;
                 act(op) => { if op == "stop" { root.dialog = "stop"; } else { root.server-action(op); } }
             }
@@ -195,7 +198,7 @@ export component AppWindow inherits Window {
                     vertical-stretch: 1; wizard: root.setup-visible; step: root.setup-step; tab <=> root.settings-tab;
                     game-path <=> root.game-path; data-path <=> root.data-path; nickname <=> root.nickname; bundle-path <=> root.bundle-path;
                     client-path <=> root.client-path; server-path <=> root.server-path; client-memory <=> root.client-memory;
-                    server-memory-setting <=> root.server-memory-setting; port <=> root.port;
+                    server-memory-setting <=> root.server-memory-setting; port <=> root.port; relay-enabled <=> root.relay-enabled;
                     feed-url <=> root.feed-url; game-branch <=> root.game-branch; branches: root.branches; first-world-name <=> root.first-world-name; desktop-shortcut <=> root.desktop-shortcut;
                     transfer-view: root.transfer-view;
                     busy: root.busy; error: root.error; error-field: root.error-field; progress: root.progress; progress-text: root.progress-text; status: root.status;

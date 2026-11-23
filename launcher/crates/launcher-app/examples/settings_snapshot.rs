@@ -29,6 +29,17 @@ fn main() -> anyhow::Result<()> {
             },
         ])));
     }
+    if view == "relay" {
+        ui.set_page("server".into());
+        ui.set_server_running(true);
+        ui.set_server_state("Мир запущен".into());
+        ui.set_server_address("192.168.1.20:29545".into());
+        ui.set_relay_status(
+            "Приглашение доступно. Прямое соединение или ретранслятор выбираются автоматически."
+                .into(),
+        );
+        ui.set_relay_invite("bscp://example-invitation-for-visual-verification".into());
+    }
     if view == "report" {
         ui.set_page("diagnostics".into());
     }

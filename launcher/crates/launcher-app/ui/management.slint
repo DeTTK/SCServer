@@ -66,6 +66,8 @@ export component ServerPage inherits HorizontalLayout {
     in property <bool> busy;
     in property <string> state;
     in property <string> address;
+    in property <string> relay-invite;
+    in property <string> relay-status;
     in property <string> uptime;
     in property <string> memory;
     in property <[string]> players;
@@ -81,6 +83,12 @@ export component ServerPage inherits HorizontalLayout {
                 spacing: 18px; alignment: start;
                 Reading { title: "Статус"; value: root.state; }
                 Reading { title: "Адрес в локальной сети"; value: root.address; }
+                if root.relay-status != "": Hint { text: root.relay-status; wrap: word-wrap; }
+                if root.relay-invite != "": VerticalLayout {
+                    spacing: 8px; Hint { text: "Приглашение для друзей"; }
+                    invite := TextInput { text: root.relay-invite; read-only: true; min-width: 0px; preferred-width: 100px; color: Theme.text; font-size: 12px; height: 36px; single-line: true; }
+                    Action { label: "Скопировать приглашение"; activated => { invite.select-all(); invite.copy(); } }
+                }
                 Rule {}
                 HorizontalLayout { spacing: 18px; Reading { title: "Время работы"; value: root.uptime; } Reading { title: "Память"; value: root.memory; } }
             }

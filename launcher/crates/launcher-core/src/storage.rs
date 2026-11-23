@@ -27,6 +27,8 @@ pub struct Settings {
     pub selected_world: String,
     #[serde(alias = "base_port", alias = "basePort")]
     pub base_port: u16,
+    pub relay_enabled: bool,
+    pub relay_url: String,
     #[serde(alias = "client_memory_mb", alias = "clientMemoryMb")]
     pub client_memory_mb: u32,
     #[serde(alias = "server_memory_mb", alias = "serverMemoryMb")]
@@ -68,6 +70,8 @@ impl Default for Settings {
             nickname: "Player".into(),
             selected_world: String::new(),
             base_port: 29545,
+            relay_enabled: false,
+            relay_url: String::new(),
             client_memory_mb: 4096,
             server_memory_mb: 2048,
             diagnostics: true,
@@ -570,6 +574,8 @@ impl HostResponse {
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default, rename_all = "PascalCase")]
 pub struct ProcessView {
+    pub relay_invite: String,
+    pub relay_status: String,
     #[serde(alias = "state")]
     pub state: String,
     #[serde(alias = "pid")]
