@@ -228,13 +228,22 @@ pub fn client(
             session.join("launcher-next-qa.marker"),
             "isolated launcher integration",
         )?;
+        let control_port = std::env::var("BSCP_ISOLATED_QA_CONTROL_PORT")
+            .ok()
+            .map(|v| v.parse::<u16>())
+            .transpose()
+            .map_err(|_| anyhow::anyhow!("QA_PORT: invalid isolated control port"))?
+            .unwrap_or(41780);
+        if !(1024..=65000).contains(&control_port) {
+            bail!("QA_PORT: invalid isolated control port")
+        }
         c.args([
             "-Dstandard.jvm.headless.control=true",
             "-Dstandard.jvm.headless.hideWindow=true",
-            "-Dstandard.jvm.headless.port=41780",
-            "-Dbscp.qa.guard.port=41781",
             "-Dbscp.qa.passiveObserver=true",
         ])
+        .arg(format!("-Dstandard.jvm.headless.port={control_port}"))
+        .arg(format!("-Dbscp.qa.guard.port={}", control_port + 1))
         .arg(format!("-javaagent:{}={}", path(guard), path(session)));
     }
     let natives = runtime.join("natives");

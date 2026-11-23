@@ -147,9 +147,18 @@ mod tests {
             .env("BSCP_TEST_LINK", shell_path(&link)).creation_flags(0x08000000).output().unwrap();
         assert!(output.status.success());
         let value: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
-        assert_eq!(Path::new(value["target"].as_str().unwrap()), shell_path(&executable));
-        assert_eq!(value["arguments"], format!("--root \"{}\"", shell_path(&root).display()));
+        assert_eq!(
+            Path::new(value["target"].as_str().unwrap()),
+            shell_path(&executable)
+        );
+        assert_eq!(
+            value["arguments"],
+            format!("--root \"{}\"", shell_path(&root).display())
+        );
         assert!(value["icon"].as_str().unwrap().contains("BSCPCRAFT.exe"));
-        assert_eq!(Path::new(value["working"].as_str().unwrap()), shell_path(&folder));
+        assert_eq!(
+            Path::new(value["working"].as_str().unwrap()),
+            shell_path(&folder)
+        );
     }
 }

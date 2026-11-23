@@ -22,7 +22,9 @@ fn fixture(root: &Path) -> Result<Layout> {
     );
     let layout = Layout::new(root);
     layout.init()?;
-    let mut settings=layout.load()?;settings.game_branch.clear();layout.save(&settings)?;
+    let mut settings = layout.load()?;
+    settings.game_branch.clear();
+    layout.save(&settings)?;
     for directory in [
         "game/assets",
         "game/modassets/assets/bundle",
