@@ -34,7 +34,15 @@ public final class Bridge {
     public static void tick(){long now=System.nanoTime(),old=lastWorldTick;lastWorldTick=now;worldTicks++;if(old!=0){long gap=now-old;maxWorldTickGap=Math.max(maxWorldTickGap,gap);if(gap>100_000_000L){slowWorldTicks++;WorldPause event=new WorldPause();event.milliseconds=gap/1e6;event.commit();}}}
     @Name("bscp.WorldPause") @Label("BSCP delayed world tick") static class WorldPause extends Event {@Label("Duration ms") double milliseconds;}
     static boolean delayed(long scheduler,long world,long frame,long priorFrames,long priorTicks){return scheduler>1_500_000_000L||world>1_000_000_000L||frame>2_000_000_000L||slowFrames>priorFrames||slowWorldTicks>priorTicks;}
-    public static void frame(){long now=System.nanoTime(),previous=lastFrameNanos;lastFrameNanos=now;frames++;if(previous!=0){long gap=now-previous;maxFrameNanos=Math.max(maxFrameNanos,gap);if(gap>100_000_000L){slowFrames++;FramePause event=new FramePause();event.milliseconds=gap/1e6;event.commit();}}}
+    static final RecentFrames recentFrames=new RecentFrames();static volatile double diagnosticCaptureMs;
+    static final class RecentFrames {
+        final long[] seconds=new long[10],counts=new long[10],maximum=new long[10];
+        final long[] bounds={8_330_000L,16_670_000L,33_340_000L,50_000_000L,100_000_000L,150_000_000L,200_000_000L,250_000_000L,333_340_000L,500_000_000L,750_000_000L,1_000_000_000L};
+        final long[][] histogram=new long[10][bounds.length+1];
+        synchronized void add(long now,long gap){long second=now/1_000_000_000L;int slot=(int)Math.floorMod(second,10);if(seconds[slot]!=second){seconds[slot]=second;counts[slot]=0;maximum[slot]=0;Arrays.fill(histogram[slot],0);}counts[slot]++;maximum[slot]=Math.max(maximum[slot],gap);int bin=0;while(bin<bounds.length&&gap>bounds[bin])bin++;histogram[slot][bin]++;}
+        synchronized String json(){long second=System.nanoTime()/1_000_000_000L,count=0,max=0;long[] bins=new long[bounds.length+1];for(int i=0;i<10;i++){if(seconds[i]<=second&&seconds[i]>second-10){count+=counts[i];max=Math.max(max,maximum[i]);for(int b=0;b<bins.length;b++)bins[b]+=histogram[i][b];}}long rank=(long)Math.ceil(count*.95),sum=0,upper=0;for(int b=0;b<bins.length;b++){sum+=bins[b];if(sum>=rank){upper=b<bounds.length?bounds[b]:max;break;}}return "\"recentFps\":"+(count/10.0)+",\"recentMaxFrameMs\":"+(max/1e6)+",\"frameP95UpperMs\":"+(count==0?0:upper/1e6)+",\"frameWindowSeconds\":10";}
+    }
+    public static void frame(){long now=System.nanoTime(),previous=lastFrameNanos;lastFrameNanos=now;frames++;long gap=previous==0?0:now-previous;recentFrames.add(now,gap);if(previous!=0){maxFrameNanos=Math.max(maxFrameNanos,gap);if(gap>100_000_000L){slowFrames++;FramePause event=new FramePause();event.milliseconds=gap/1e6;event.commit();}}}
     @Name("bscp.FramePause") @Label("BSCP long frame") static class FramePause extends Event {@Label("Duration ms") double milliseconds;}
     public static void premain(String argument, Instrumentation instrumentation) throws Exception {
         try {
@@ -82,7 +90,12 @@ public final class Bridge {
     }
     static void respond(HttpExchange e,int status,String value)throws IOException{byte[] b=value.getBytes(java.nio.charset.StandardCharsets.UTF_8);e.getResponseHeaders().set("Content-Type","application/json");e.sendResponseHeaders(status,b.length);try(var out=e.getResponseBody()){out.write(b);}}
     public static String quote(String value){StringBuilder b=new StringBuilder("\"");for(char c:value.toCharArray())switch(c){case '"'->b.append("\\\"");case '\\'->b.append("\\\\");case '\n'->b.append("\\n");case '\r'->b.append("\\r");case '\t'->b.append("\\t");default->{if(c<32)b.append(String.format("\\u%04x",(int)c));else b.append(c);}}return b.append('"').toString();}
-    static String metrics(){var runtime=Runtime.getRuntime();long gcMs=0,gcCount=0;for(var gc:ManagementFactory.getGarbageCollectorMXBeans()){gcMs+=Math.max(0,gc.getCollectionTime());gcCount+=Math.max(0,gc.getCollectionCount());}return "{\"pid\":"+ProcessHandle.current().pid()+",\"uptimeMs\":"+ManagementFactory.getRuntimeMXBean().getUptime()+",\"heapUsed\":"+(runtime.totalMemory()-runtime.freeMemory())+",\"heapMax\":"+runtime.maxMemory()+",\"threads\":"+ManagementFactory.getThreadMXBean().getThreadCount()+",\"gcMs\":"+gcMs+",\"gcCount\":"+gcCount+",\"frames\":"+frames+",\"slowFrames\":"+slowFrames+",\"maxFrameMs\":"+(maxFrameNanos/1e6)+",\"worldTicks\":"+worldTicks+",\"slowWorldTicks\":"+slowWorldTicks+",\"cpuTimeNanos\":"+ProcessHandle.current().info().totalCpuDuration().orElse(Duration.ZERO).toNanos()+",\"droppedDiagnostics\":"+dropped+",\"maxWorldTickGapMs\":"+(maxWorldTickGap/1e6)+",\"worldTickAgeMs\":"+(lastWorldTick==0?0:(System.nanoTime()-lastWorldTick)/1e6)+"}";}
+    static String metrics(){
+        var runtime=Runtime.getRuntime();long gcMs=0,gcCount=0;
+        String system="";if(ManagementFactory.getOperatingSystemMXBean() instanceof com.sun.management.OperatingSystemMXBean os)system=",\"systemAvailableBytes\":"+os.getFreeMemorySize()+",\"systemTotalBytes\":"+os.getTotalMemorySize();
+        for(var gc:ManagementFactory.getGarbageCollectorMXBeans()){gcMs+=Math.max(0,gc.getCollectionTime());gcCount+=Math.max(0,gc.getCollectionCount());}
+        return "{"+"\"pid\":"+ProcessHandle.current().pid()+",\"uptimeMs\":"+ManagementFactory.getRuntimeMXBean().getUptime()+",\"heapUsed\":"+(runtime.totalMemory()-runtime.freeMemory())+",\"heapMax\":"+runtime.maxMemory()+",\"nonHeapUsed\":"+ManagementFactory.getMemoryMXBean().getNonHeapMemoryUsage().getUsed()+",\"threads\":"+ManagementFactory.getThreadMXBean().getThreadCount()+",\"gcMs\":"+gcMs+",\"gcCount\":"+gcCount+",\"frames\":"+frames+",\"slowFrames\":"+slowFrames+",\"maxFrameMs\":"+(maxFrameNanos/1e6)+",\"worldTicks\":"+worldTicks+",\"slowWorldTicks\":"+slowWorldTicks+",\"cpuTimeNanos\":"+ProcessHandle.current().info().totalCpuDuration().orElse(Duration.ZERO).toNanos()+",\"droppedDiagnostics\":"+dropped+",\"maxWorldTickGapMs\":"+(maxWorldTickGap/1e6)+",\"worldTickAgeMs\":"+(lastWorldTick==0?0:(System.nanoTime()-lastWorldTick)/1e6)+",\"frameAgeMs\":"+(lastFrameNanos==0?0:(System.nanoTime()-lastFrameNanos)/1e6)+",\"diagnosticCaptureMs\":"+diagnosticCaptureMs+","+recentFrames.json()+system+"}";
+    }
     public static void event(String type,String message){synchronized(lock){try{
         message=message.replaceAll("(?i)(Bearer\\s+)[^\\s\"<>]+","$1[redacted]").replaceAll("(?i)((?:token|password|secret|nativeSession|privateKey|session)[\"']?\\s*[:=]\\s*[\"']?)[^\\s,\"'<>}]+","$1[redacted]");
         String line="{\"time\":"+quote(Instant.now().toString())+",\"nanoTime\":"+System.nanoTime()+",\"type\":"+quote(type)+",\"message\":"+quote(message.length()>32768?message.substring(0,32768):message)+"}";
@@ -91,8 +104,9 @@ public final class Bridge {
     }catch(Exception ignored){dropped++;}}}
     static String threads(){StringBuilder b=new StringBuilder();for(var t:ManagementFactory.getThreadMXBean().dumpAllThreads(true,true))b.append(t).append('\n');return b.toString();}
     static synchronized void incident(String reason)throws Exception {
+        long captureStarted=System.nanoTime();
         Path incidents=output.resolve("incidents");Files.createDirectories(incidents);var files=new ArrayList<Path>();try(var stream=Files.list(incidents)){stream.forEach(files::add);}files.sort(Comparator.comparing(Path::toString));while(files.size()>9){Files.deleteIfExists(files.remove(0));}
         String id=Long.toString(System.currentTimeMillis());synchronized(lock){Files.writeString(incidents.resolve(id+".jsonl"),String.join("\n",history)+"\n");}Files.writeString(incidents.resolve(id+".threads.log"),threads());
-        if(recording!=null)recording.dump(incidents.resolve(id+".jfr"));event("incident",reason);
+        if(recording!=null)recording.dump(incidents.resolve(id+".jfr"));diagnosticCaptureMs=(System.nanoTime()-captureStarted)/1e6;event("incident",reason+" diagnosticCaptureMs="+diagnosticCaptureMs);
     }
 }

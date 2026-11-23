@@ -20,6 +20,10 @@ public final class BridgeDiagnosticsTest {
         if(Bridge.delayed(0,0,0,0,1))throw new AssertionError("old pause repeatedly reported");
         var metrics=JsonParser.parseString(Bridge.metrics()).getAsJsonObject();
         if(metrics.get("worldTicks").getAsLong()!=1||!metrics.has("cpuTimeNanos")||!metrics.has("droppedDiagnostics"))throw new AssertionError("incomplete metrics");
+        if(metrics.get("systemTotalBytes").getAsLong()<=0||metrics.get("systemAvailableBytes").getAsLong()<0)throw new AssertionError("missing operating-system memory context");
+        var frames=new Bridge.RecentFrames();long now=System.nanoTime();frames.add(now-15_000_000_000L,900_000_000L);frames.add(now,16_000_000L);frames.add(now,20_000_000L);
+        var recent=JsonParser.parseString("{"+frames.json()+"}").getAsJsonObject();
+        if(recent.get("recentMaxFrameMs").getAsDouble()!=20||recent.get("frameP95UpperMs").getAsDouble()!=33.34||recent.get("recentFps").getAsDouble()!=.2)throw new AssertionError("expired frame pause contaminated recent metrics");
         Counted original=new Counted();var output=new Bridge.ConsoleLog(new PrintStream(original,false,StandardCharsets.UTF_8),"diagnostic-test");
         byte[] text=("Unicode: Привет\n"+"token"+"="+"private-value\n").getBytes(StandardCharsets.UTF_8);
         output.write(text,0,text.length);

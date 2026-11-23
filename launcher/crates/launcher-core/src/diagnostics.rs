@@ -35,10 +35,28 @@ pub fn redact(text: &str) -> String {
 }
 pub fn install_panic_logger(layout: &Layout) {
     let directory = layout.at("logs");
+    let pending = layout.at("state/telemetry/panic-pending");
     let previous = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |info| {
         let trace = std::backtrace::Backtrace::force_capture();
         let _ = RotatingLog::new(&directory, "panic").line(&format!("{info}\n{trace}"));
+        // The panic may already own the outbox lock. Persist separately, import on restart.
+        let useful_trace = trace
+            .to_string()
+            .lines()
+            .filter(|l| !l.contains("<unknown>"))
+            .take(80)
+            .collect::<Vec<_>>()
+            .join("\n");
+        let message = redact(&format!("{info}\n{useful_trace}"))
+            .chars()
+            .take(24000)
+            .collect::<String>();
+        let id = uuid::Uuid::new_v4().simple().to_string();
+        let _ = crate::write_json(
+            &pending.join(format!("{id}.json")),
+            &serde_json::json!({"message":message,"role":"launcher","run":format!("launcher/{id}"),"occurredAt":chrono::Utc::now().to_rfc3339(),"thread":std::thread::current().name().unwrap_or("unknown")}),
+        );
         previous(info);
     }));
 }

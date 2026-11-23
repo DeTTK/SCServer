@@ -1,0 +1,721 @@
+{
+  "id": null,
+  "uid": "bscp-native-runtime",
+  "title": "BSCPCRAFT · Native runtime diagnostics",
+  "tags": [
+    "BSCPCRAFT",
+    "native",
+    "diagnostics"
+  ],
+  "schemaVersion": 39,
+  "version": 1,
+  "timezone": "browser",
+  "refresh": "30s",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "description": "Нативная игра и сервер: без LCP/CLS/браузерных метрик. Метрики отправляются раз в 30 секунд, полные логи после выхода. Faro показывает время приёма; точное время замера — context_sample_time. Отложенные более минуты замеры исключены из live-графиков. Выберите run_group из сводки, чтобы связать клиент, сервер и крэш.",
+  "templating": {
+    "list": [
+      {
+        "name": "environment",
+        "label": "Окружение (regex)",
+        "type": "textbox",
+        "query": ".*",
+        "current": {
+          "text": ".*",
+          "value": ".*"
+        }
+      },
+      {
+        "name": "run",
+        "label": "run_group (regex)",
+        "type": "textbox",
+        "query": ".*",
+        "current": {
+          "text": ".*",
+          "value": ".*"
+        }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Клиент · FPS за последние 10 секунд",
+      "description": "Минимум замеров за минуту; включает меню и загрузку. Это измеренный renderer FPS, а не браузерная метрика.",
+      "datasource": {
+        "type": "loki",
+        "uid": "grafanacloud-logs"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "min_over_time({app_id=\"73\",kind=\"measurement\"} | logfmt | app_environment=~\"${environment:raw}\" | context_run_group=~\"${run:raw}\" | context_delivery_lag_ms < 60000 | type=\"bscp_client\" | unwrap value_recentFps | __error__=\"\" [1m]) by (context_run_group)",
+          "legendFormat": "FPS · {{context_run_group}}",
+          "queryType": "range",
+          "datasource": {
+            "type": "loki",
+            "uid": "grafanacloud-logs"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "fps",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Клиент · длительность кадра",
+      "description": "Окно 10 секунд. p95 — верхняя граница гистограммного интервала, максимум измерен точно.",
+      "datasource": {
+        "type": "loki",
+        "uid": "grafanacloud-logs"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max_over_time({app_id=\"73\",kind=\"measurement\"} | logfmt | app_environment=~\"${environment:raw}\" | context_run_group=~\"${run:raw}\" | context_delivery_lag_ms < 60000 | type=\"bscp_client\" | unwrap value_recentMaxFrameMs | __error__=\"\" [1m]) by (context_run_group)",
+          "legendFormat": "Максимум, мс · {{context_run_group}}",
+          "queryType": "range",
+          "datasource": {
+            "type": "loki",
+            "uid": "grafanacloud-logs"
+          }
+        },
+        {
+          "refId": "B",
+          "expr": "max_over_time({app_id=\"73\",kind=\"measurement\"} | logfmt | app_environment=~\"${environment:raw}\" | context_run_group=~\"${run:raw}\" | context_delivery_lag_ms < 60000 | type=\"bscp_client\" | unwrap value_frameP95UpperMs | __error__=\"\" [1m]) by (context_run_group)",
+          "legendFormat": "p95 ≤, мс · {{context_run_group}}",
+          "queryType": "range",
+          "datasource": {
+            "type": "loki",
+            "uid": "grafanacloud-logs"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "RAM процесса · физическая и private committed",
+      "description": "RSS/Private берутся у ОС с проверкой PID и времени создания принадлежащего лаунчеру процесса.",
+      "datasource": {
+        "type": "loki",
+        "uid": "grafanacloud-logs"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 7,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max_over_time({app_id=\"73\",kind=\"measurement\"} | logfmt | app_environment=~\"${environment:raw}\" | context_run_group=~\"${run:raw}\" | context_delivery_lag_ms < 60000 | type=\"bscp_client\" | unwrap value_rssBytes | __error__=\"\" [1m]) by (context_run_group)",
+          "legendFormat": "Клиент RSS · {{context_run_group}}",
+          "queryType": "range",
+          "datasource": {
+            "type": "loki",
+            "uid": "grafanacloud-logs"
+          }
+        },
+        {
+          "refId": "B",
+          "expr": "max_over_time({app_id=\"73\",kind=\"measurement\"} | logfmt | app_environment=~\"${environment:raw}\" | context_run_group=~\"${run:raw}\" | context_delivery_lag_ms < 60000 | type=\"bscp_server\" | unwrap value_rssBytes | __error__=\"\" [1m]) by (context_run_group)",
+          "legendFormat": "Сервер RSS · {{context_run_group}}",
+          "queryType": "range",
+          "datasource": {
+            "type": "loki",
+            "uid": "grafanacloud-logs"
+          }
+        },
+        {
+          "refId": "C",
+          "expr": "max_over_time({app_id=\"73\",kind=\"measurement\"} | logfmt | app_environment=~\"${environment:raw}\" | context_run_group=~\"${run:raw}\" | context_delivery_lag_ms < 60000 | type=\"bscp_client\" | unwrap value_privateBytes | __error__=\"\" [1m]) by (context_run_group)",
+          "legendFormat": "Клиент private · {{context_run_group}}",
+          "queryType": "range",
+          "datasource": {
+            "type": "loki",
+            "uid": "grafanacloud-logs"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Heap JVM · заполнение",
+      "description": "Heap и RAM процесса различаются. OutOfMemoryError возможен при свободной системной памяти, если достигнут Xmx.",
+      "datasource": {
+        "type": "loki",
+        "uid": "grafanacloud-logs"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 7,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max_over_time({app_id=\"73\",kind=\"measurement\"} | logfmt | app_environment=~\"${environment:raw}\" | context_run_group=~\"${run:raw}\" | context_delivery_lag_ms < 60000 | type=\"bscp_client\" | unwrap value_heapUsagePct | __error__=\"\" [1m]) by (context_run_group)",
+          "legendFormat": "Клиент · {{context_run_group}}",
+          "queryType": "range",
+          "datasource": {
+            "type": "loki",
+            "uid": "grafanacloud-logs"
+          }
+        },
+        {
+          "refId": "B",
+          "expr": "max_over_time({app_id=\"73\",kind=\"measurement\"} | logfmt | app_environment=~\"${environment:raw}\" | context_run_group=~\"${run:raw}\" | context_delivery_lag_ms < 60000 | type=\"bscp_server\" | unwrap value_heapUsagePct | __error__=\"\" [1m]) by (context_run_group)",
+          "legendFormat": "Сервер · {{context_run_group}}",
+          "queryType": "range",
+          "datasource": {
+            "type": "loki",
+            "uid": "grafanacloud-logs"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "GC · доля времени интервала",
+      "description": "Приращение GC time / фактическая длительность замера, а не накопительный счётчик.",
+      "datasource": {
+        "type": "loki",
+        "uid": "grafanacloud-logs"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 14,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max_over_time({app_id=\"73\",kind=\"measurement\"} | logfmt | app_environment=~\"${environment:raw}\" | context_run_group=~\"${run:raw}\" | context_delivery_lag_ms < 60000 | type=\"bscp_client\" | unwrap value_gcTimePct | __error__=\"\" [1m]) by (context_run_group)",
+          "legendFormat": "Клиент · {{context_run_group}}",
+          "queryType": "range",
+          "datasource": {
+            "type": "loki",
+            "uid": "grafanacloud-logs"
+          }
+        },
+        {
+          "refId": "B",
+          "expr": "max_over_time({app_id=\"73\",kind=\"measurement\"} | logfmt | app_environment=~\"${environment:raw}\" | context_run_group=~\"${run:raw}\" | context_delivery_lag_ms < 60000 | type=\"bscp_server\" | unwrap value_gcTimePct | __error__=\"\" [1m]) by (context_run_group)",
+          "legendFormat": "Сервер · {{context_run_group}}",
+          "queryType": "range",
+          "datasource": {
+            "type": "loki",
+            "uid": "grafanacloud-logs"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "CPU · 100% = один логический процессор",
+      "description": "Значения могут превышать 100%: процесс использует несколько логических CPU.",
+      "datasource": {
+        "type": "loki",
+        "uid": "grafanacloud-logs"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 14,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max_over_time({app_id=\"73\",kind=\"measurement\"} | logfmt | app_environment=~\"${environment:raw}\" | context_run_group=~\"${run:raw}\" | context_delivery_lag_ms < 60000 | type=\"bscp_client\" | unwrap value_cpuCorePct | __error__=\"\" [1m]) by (context_run_group)",
+          "legendFormat": "Клиент · {{context_run_group}}",
+          "queryType": "range",
+          "datasource": {
+            "type": "loki",
+            "uid": "grafanacloud-logs"
+          }
+        },
+        {
+          "refId": "B",
+          "expr": "max_over_time({app_id=\"73\",kind=\"measurement\"} | logfmt | app_environment=~\"${environment:raw}\" | context_run_group=~\"${run:raw}\" | context_delivery_lag_ms < 60000 | type=\"bscp_server\" | unwrap value_cpuCorePct | __error__=\"\" [1m]) by (context_run_group)",
+          "legendFormat": "Сервер · {{context_run_group}}",
+          "queryType": "range",
+          "datasource": {
+            "type": "loki",
+            "uid": "grafanacloud-logs"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Сервер · TPS сети и симуляции",
+      "description": "Номинальная частота 20 Гц. Пропуски симуляции и сетевого цикла видны отдельно; неизвестная скорость не подменяется числом.",
+      "datasource": {
+        "type": "loki",
+        "uid": "grafanacloud-logs"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 21,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "min_over_time({app_id=\"73\",kind=\"measurement\"} | logfmt | app_environment=~\"${environment:raw}\" | context_run_group=~\"${run:raw}\" | context_delivery_lag_ms < 60000 | type=\"bscp_window\" | unwrap value_nativeTps | __error__=\"\" [1m]) by (context_run_group)",
+          "legendFormat": "Native TPS · {{context_run_group}}",
+          "queryType": "range",
+          "datasource": {
+            "type": "loki",
+            "uid": "grafanacloud-logs"
+          }
+        },
+        {
+          "refId": "B",
+          "expr": "min_over_time({app_id=\"73\",kind=\"measurement\"} | logfmt | app_environment=~\"${environment:raw}\" | context_run_group=~\"${run:raw}\" | context_delivery_lag_ms < 60000 | type=\"bscp_server\" | unwrap value_worldTps | __error__=\"\" [1m]) by (context_run_group)",
+          "legendFormat": "World TPS · {{context_run_group}}",
+          "queryType": "range",
+          "datasource": {
+            "type": "loki",
+            "uid": "grafanacloud-logs"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Сервер · несохранённые чанки и пропуски",
+      "description": "Dirty chunks должны уходить после автосейва; skippedSlotsDelta показывает новые пропуски, а не максимум за всю сессию.",
+      "datasource": {
+        "type": "loki",
+        "uid": "grafanacloud-logs"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 21,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max_over_time({app_id=\"73\",kind=\"measurement\"} | logfmt | app_environment=~\"${environment:raw}\" | context_run_group=~\"${run:raw}\" | context_delivery_lag_ms < 60000 | type=\"bscp_chunks\" | unwrap value_dirtyChunks | __error__=\"\" [1m]) by (context_run_group)",
+          "legendFormat": "Dirty chunks · {{context_run_group}}",
+          "queryType": "range",
+          "datasource": {
+            "type": "loki",
+            "uid": "grafanacloud-logs"
+          }
+        },
+        {
+          "refId": "B",
+          "expr": "max_over_time({app_id=\"73\",kind=\"measurement\"} | logfmt | app_environment=~\"${environment:raw}\" | context_run_group=~\"${run:raw}\" | context_delivery_lag_ms < 60000 | type=\"bscp_window\" | unwrap value_skippedSlotsDelta | __error__=\"\" [1m]) by (context_run_group)",
+          "legendFormat": "Пропущено за замер · {{context_run_group}}",
+          "queryType": "range",
+          "datasource": {
+            "type": "loki",
+            "uid": "grafanacloud-logs"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "ОС · свободная физическая память",
+      "description": "",
+      "datasource": {
+        "type": "loki",
+        "uid": "grafanacloud-logs"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 28,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "min_over_time({app_id=\"73\",kind=\"measurement\"} | logfmt | app_environment=~\"${environment:raw}\" | context_run_group=~\"${run:raw}\" | context_delivery_lag_ms < 60000 | type=\"bscp_client\" | unwrap value_systemAvailableBytes | __error__=\"\" [1m]) by (context_run_group)",
+          "legendFormat": "Доступно ОС · {{context_run_group}}",
+          "queryType": "range",
+          "datasource": {
+            "type": "loki",
+            "uid": "grafanacloud-logs"
+          }
+        },
+        {
+          "refId": "B",
+          "expr": "max_over_time({app_id=\"73\",kind=\"measurement\"} | logfmt | app_environment=~\"${environment:raw}\" | context_run_group=~\"${run:raw}\" | context_delivery_lag_ms < 60000 | type=\"bscp_client\" | unwrap value_systemTotalBytes | __error__=\"\" [1m]) by (context_run_group)",
+          "legendFormat": "Всего ОС · {{context_run_group}}",
+          "queryType": "range",
+          "datasource": {
+            "type": "loki",
+            "uid": "grafanacloud-logs"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Сбор диагностики · собственная задержка",
+      "description": "Время последнего захвата JFR и потоков, чтобы заметить накладные расходы профилирования.",
+      "datasource": {
+        "type": "loki",
+        "uid": "grafanacloud-logs"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 28,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max_over_time({app_id=\"73\",kind=\"measurement\"} | logfmt | app_environment=~\"${environment:raw}\" | context_run_group=~\"${run:raw}\" | context_delivery_lag_ms < 60000 | type=\"bscp_client\" | unwrap value_diagnosticCaptureMs | __error__=\"\" [1m]) by (context_run_group)",
+          "legendFormat": "Клиент capture · {{context_run_group}}",
+          "queryType": "range",
+          "datasource": {
+            "type": "loki",
+            "uid": "grafanacloud-logs"
+          }
+        },
+        {
+          "refId": "B",
+          "expr": "max_over_time({app_id=\"73\",kind=\"measurement\"} | logfmt | app_environment=~\"${environment:raw}\" | context_run_group=~\"${run:raw}\" | context_delivery_lag_ms < 60000 | type=\"bscp_server\" | unwrap value_diagnosticCaptureMs | __error__=\"\" [1m]) by (context_run_group)",
+          "legendFormat": "Сервер capture · {{context_run_group}}",
+          "queryType": "range",
+          "datasource": {
+            "type": "loki",
+            "uid": "grafanacloud-logs"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 11,
+      "type": "logs",
+      "title": "Крэши и исключения · раскрывайте value и stacktrace",
+      "datasource": {
+        "type": "loki",
+        "uid": "grafanacloud-logs"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 35,
+        "w": 24,
+        "h": 11
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "{app_id=\"73\",kind=\"exception\"} | logfmt | app_environment=~\"${environment:raw}\" | context_run_group=~\"${run:raw}\"",
+          "queryType": "range",
+          "datasource": {
+            "type": "loki",
+            "uid": "grafanacloud-logs"
+          }
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending",
+        "enableLogDetails": true,
+        "dedupStrategy": "none"
+      }
+    },
+    {
+      "id": 12,
+      "type": "logs",
+      "title": "Сводка запуска и просадки · source_commit, роль и run_group",
+      "datasource": {
+        "type": "loki",
+        "uid": "grafanacloud-logs"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 46,
+        "w": 24,
+        "h": 11
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "{app_id=\"73\",kind=\"log\"} | logfmt | app_environment=~\"${environment:raw}\" | context_run_group=~\"${run:raw}\" | context_kind=~\"run-summary|performance-incident|process-exit\"",
+          "queryType": "range",
+          "datasource": {
+            "type": "loki",
+            "uid": "grafanacloud-logs"
+          }
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending",
+        "enableLogDetails": true,
+        "dedupStrategy": "none"
+      }
+    }
+  ]
+}

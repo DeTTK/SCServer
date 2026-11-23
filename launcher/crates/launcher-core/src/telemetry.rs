@@ -50,7 +50,24 @@ impl TelemetryOutbox {
         fs::create_dir_all(&self.directory)?;
         let mut files = self.entries()?;
         while files.len() >= 256 {
-            fs::remove_file(files.remove(0))?;
+            // A burst of verbose startup logs must not evict the crash that caused upload.
+            let mut victim = 0;
+            let mut lowest = u8::MAX;
+            for (index, file) in files.iter().enumerate() {
+                let retained: TelemetryEvent = serde_json::from_slice(&fs::read(file)?)?;
+                let rank = priority(&retained.kind);
+                if rank < lowest {
+                    victim = index;
+                    lowest = rank;
+                }
+                if lowest == 0 {
+                    break;
+                }
+            }
+            if priority(kind) < lowest {
+                return Ok(id);
+            }
+            fs::remove_file(files.remove(victim))?;
         }
         write_json(&self.directory.join(format!("{id}.json")), &event)?;
         Ok(id)
@@ -104,6 +121,46 @@ impl TelemetryOutbox {
         Ok(())
     }
 }
+fn priority(kind: &str) -> u8 {
+    match kind {
+        "process-exit" | "native-crash" | "launcher-panic" | "run-summary" => 3,
+        "performance-incident" | "run-ended" => 2,
+        "exception" => 1,
+        _ => 0,
+    }
+}
+pub fn collect_launcher_panics(layout: &Layout) -> Result<usize> {
+    let folder = layout.at("state/telemetry/panic-pending");
+    if !folder.exists() {
+        return Ok(0);
+    }
+    no_links(&folder)?;
+    let Ok(_lease) = Lease::acquire(&layout.at("state/telemetry/panic-import.lock")) else {
+        return Ok(0);
+    };
+    let queue = TelemetryOutbox::new(layout);
+    let mut count = 0;
+    for file in fs::read_dir(folder)? {
+        if count >= 32 {
+            break;
+        }
+        let path = file?.path();
+        no_links(&path)?;
+        if path.extension().and_then(|e| e.to_str()) != Some("json") {
+            continue;
+        }
+        if fs::metadata(&path)?.len() > 65536 {
+            continue;
+        }
+        let Ok(payload) = serde_json::from_slice::<Value>(&fs::read(&path)?) else {
+            continue;
+        };
+        queue.enqueue("launcher-panic", payload)?;
+        fs::rename(&path, path.with_extension("queued"))?;
+        count += 1;
+    }
+    Ok(count)
+}
 fn scrub(value: Value) -> Value {
     match value {
         Value::String(text) => Value::String(redact(&text)),
@@ -134,6 +191,44 @@ fn scrub(value: Value) -> Value {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn panic_written_without_queue_lock_is_imported_once_on_restart() {
+        let temp = tempfile::tempdir().unwrap();
+        let layout = Layout::new(temp.path());
+        layout.init().unwrap();
+        let file = layout.at("state/telemetry/panic-pending/test.json");
+        write_json(&file,&serde_json::json!({"message":"controlled Rust panic token=must-not-leak","role":"launcher"})).unwrap();
+        assert_eq!(collect_launcher_panics(&layout).unwrap(), 1);
+        assert_eq!(collect_launcher_panics(&layout).unwrap(), 0);
+        let events = TelemetryOutbox::new(&layout).pending().unwrap();
+        assert_eq!(events.len(), 1);
+        assert_eq!(events[0].kind, "launcher-panic");
+        assert!(!events[0].payload.to_string().contains("must-not-leak"));
+        assert!(file.with_extension("queued").exists());
+    }
+    #[test]
+    fn verbose_log_burst_cannot_evict_fatal_crash_or_run_summary() {
+        let temp = tempfile::tempdir().unwrap();
+        let queue = TelemetryOutbox::new(&Layout::new(temp.path()));
+        let crash = queue
+            .enqueue(
+                "process-exit",
+                serde_json::json!({"exit":{"success":false}}),
+            )
+            .unwrap();
+        let summary = queue
+            .enqueue("run-summary", serde_json::json!({"cause":"OOM"}))
+            .unwrap();
+        for n in 0..300 {
+            queue
+                .enqueue("session-log", serde_json::json!({"part":n}))
+                .unwrap();
+        }
+        let retained = queue.pending().unwrap();
+        assert_eq!(retained.len(), 256);
+        assert!(retained.iter().any(|e| e.id == crash));
+        assert!(retained.iter().any(|e| e.id == summary));
+    }
     #[test]
     fn queue_is_bounded_and_rejects_oversized_events() {
         let tmp = tempfile::tempdir().unwrap();

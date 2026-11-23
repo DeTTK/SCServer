@@ -1219,6 +1219,15 @@ fn execute(
         }
         Work::Init => {
             refresh(ui, layout, true)?;
+            let _ = collect_launcher_panics(layout);
+            if TelemetryOutbox::new(layout)
+                .pending()
+                .map(|p| !p.is_empty())
+                .unwrap_or(false)
+            {
+                progress("Отправляем сохранённую диагностику…".into());
+                let _ = flush_telemetry(layout, std::time::Duration::from_secs(4));
+            }
             match SelfUpdater::stage_latest(layout, cancel.clone(), Some(progress)) {
                 Ok(Some(version)) => {
                     let _ = ui.upgrade_in_event_loop(move |ui| {

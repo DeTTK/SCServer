@@ -206,8 +206,16 @@ impl Supervisor {
     fn worlds(&self) -> Result<WorldStore> {
         WorldStore::new(self.layout.data(&self.layout.load()?))
     }
+    async fn write_run_context(&self, folder: &Path, group: &str) {
+        let layout = self.layout.clone();
+        let folder = folder.to_owned();
+        let group = group.to_owned();
+        let _ =
+            tokio::task::spawn_blocking(move || write_telemetry_context(&layout, &folder, &group))
+                .await;
+    }
     fn game_agent(&self) -> Result<PathBuf> {
-        if self.agent.is_file() {
+        if self.qa.is_some() && self.agent.is_file() {
             return Ok(self.agent.clone());
         }
         let s = self.layout.load()?;
@@ -349,9 +357,34 @@ impl Supervisor {
             }
             bytes.extend_from_slice(&chunk);
         }
-        let metrics: Value = serde_json::from_slice(&bytes)?;
+        let mut metrics: Value = serde_json::from_slice(&bytes)?;
         if !alive(o) || metrics["pid"].as_u64() != Some(o.pid as u64) {
             bail!("METRICS_OWNER: response PID does not match owned process")
+        }
+        #[cfg(windows)]
+        unsafe {
+            use windows_sys::Win32::{
+                Foundation::CloseHandle,
+                System::{
+                    ProcessStatus::{GetProcessMemoryInfo, PROCESS_MEMORY_COUNTERS_EX},
+                    Threading::{OpenProcess, PROCESS_QUERY_INFORMATION, PROCESS_VM_READ},
+                },
+            };
+            let handle = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, 0, o.pid);
+            if !handle.is_null() {
+                let mut memory: PROCESS_MEMORY_COUNTERS_EX = std::mem::zeroed();
+                memory.cb = std::mem::size_of::<PROCESS_MEMORY_COUNTERS_EX>() as u32;
+                if GetProcessMemoryInfo(
+                    handle,
+                    (&mut memory as *mut PROCESS_MEMORY_COUNTERS_EX).cast(),
+                    memory.cb,
+                ) != 0
+                {
+                    metrics["rssBytes"] = json!(memory.WorkingSetSize);
+                    metrics["privateBytes"] = json!(memory.PrivateUsage);
+                }
+                CloseHandle(handle);
+            }
         }
         Ok(metrics)
     }
@@ -784,6 +817,8 @@ impl Supervisor {
         }
         network::check_ports(s.base_port as u16)?;
         self.agent_config(&session, "server", Some(&source), None, id)?;
+        self.write_run_context(&session, &relative(&self.layout.root, &session))
+            .await;
         let child = launch::server(
             &source,
             &map,
@@ -939,6 +974,15 @@ impl Supervisor {
             )?;
         }
         let profile = ClientProfile::prepare(&self.layout.client_data(&s), &source)?;
+        let group = self
+            .running
+            .lock()
+            .unwrap()
+            .server
+            .as_ref()
+            .map(|s| s.session.clone())
+            .unwrap_or_else(|| relative(&self.layout.root, &folder));
+        self.write_run_context(&folder, &group).await;
         let child = launch::client(
             &source,
             &game,
@@ -1028,6 +1072,11 @@ impl Supervisor {
         let outbox = TelemetryOutbox::new(&self.layout);
         let mut last_queued = std::time::Instant::now() - Duration::from_secs(30);
         let mut seen = std::collections::HashSet::<[u8; 32]>::new();
+        let mut intervals = PerformanceSampler::default();
+        let mut prior_health: Option<(u32, u64, u64)> = None;
+        let mut recent = std::collections::VecDeque::<Value>::new();
+        let mut active_group = String::new();
+        let mut last_incident = std::time::Instant::now() - Duration::from_secs(30);
         loop {
             tokio::time::sleep(Duration::from_secs(5)).await;
             let (server, client) = {
@@ -1052,11 +1101,94 @@ impl Supervisor {
                 self.optional_bridge_metrics(server.clone(), "server"),
                 self.optional_bridge_metrics(client.clone(), "client")
             );
-            let health = health.map(compact_health);
+            let mut health = health.map(compact_health);
+            let server_metrics = server_metrics.map(|m| intervals.sample("server", m));
+            let client_metrics = client_metrics.map(|m| intervals.sample("client", m));
+            if let (Some(h), Some(s)) = (health.as_mut(), server.as_ref()) {
+                let tick = h["native"]["tick"].as_u64().unwrap_or(0);
+                let skipped = h["world"]["skippedSlots"].as_u64().unwrap_or(0);
+                if let Some((pid, old_tick, old_skipped)) =
+                    prior_health.filter(|(pid, _, _)| *pid == s.pid)
+                {
+                    let _ = pid;
+                    let ms = server_metrics
+                        .as_ref()
+                        .and_then(|m| m["window"]["sampleMs"].as_f64())
+                        .filter(|ms| *ms > 0.0);
+                    h["window"] = json!({"nativeTicksDelta":tick.saturating_sub(old_tick),"nativeTps":ms.map(|ms|tick.saturating_sub(old_tick)as f64*1000.0/ms),"skippedSlotsDelta":skipped.saturating_sub(old_skipped)});
+                }
+                prior_health = Some((s.pid, tick, skipped));
+            }
+            let folder = server
+                .as_ref()
+                .or(client.as_ref())
+                .map(|o| self.layout.at(&o.session));
+            let context = folder
+                .as_ref()
+                .map(|p| telemetry_context(&self.layout, p))
+                .unwrap_or(Value::Null);
+            let group = context["runGroup"].as_str().unwrap_or("");
+            if group != active_group {
+                recent.clear();
+                active_group = group.into();
+                last_queued = std::time::Instant::now() - Duration::from_secs(30);
+            }
             let sample = json!({"type":"performance","run":server.as_ref().or(client.as_ref()).map(|o|o.session.as_str()),"serverPid":server.as_ref().map(|v|v.pid),"clientPid":client.as_ref().map(|v|v.pid),
-                "health":health,"server":server_metrics,"client":client_metrics,"errors":{"server":server_error,"client":client_error}});
+                "runGroup":context["runGroup"],"context":context,"time":chrono::Utc::now().to_rfc3339(),"health":health,"server":server_metrics,"client":client_metrics,"errors":{"server":server_error,"client":client_error}});
             let _ = logger.line(&sample.to_string());
-            if last_queued.elapsed() >= Duration::from_secs(30) {
+            recent.push_back(sample.clone());
+            while recent.len() > 12 {
+                recent.pop_front();
+            }
+            let lines = recent
+                .iter()
+                .map(Value::to_string)
+                .collect::<Vec<_>>()
+                .join("\n")
+                + "\n";
+            for owned in [server.as_ref(), client.as_ref()].into_iter().flatten() {
+                let _ = atomic_write(
+                    &self
+                        .layout
+                        .at(&owned.session)
+                        .join("performance-window.jsonl"),
+                    lines.as_bytes(),
+                );
+            }
+            let mut reasons = Vec::new();
+            if sample["client"]["window"]["slowFrames"]
+                .as_f64()
+                .unwrap_or(0.0)
+                >= 3.0
+            {
+                reasons.push("client-slow-frames");
+            }
+            if sample["health"]["window"]["skippedSlotsDelta"]
+                .as_u64()
+                .unwrap_or(0)
+                > 0
+            {
+                reasons.push("server-missed-ticks");
+            }
+            for role in ["client", "server"] {
+                if sample[role]["heapUsagePct"].as_f64().unwrap_or(0.0) > 95.0
+                    || sample[role]["window"]["gcTimePct"].as_f64().unwrap_or(0.0) > 20.0
+                {
+                    reasons.push(if role == "client" {
+                        "client-memory-pressure"
+                    } else {
+                        "server-memory-pressure"
+                    });
+                }
+            }
+            if !reasons.is_empty() && last_incident.elapsed() >= Duration::from_secs(30) {
+                let mut incident = sample.clone();
+                incident["reasons"] = json!(reasons);
+                let _ = outbox.enqueue("performance-incident", incident);
+                last_incident = std::time::Instant::now();
+            }
+            let upload_due = last_queued.elapsed() >= Duration::from_secs(30);
+            if upload_due {
                 let _ = outbox.enqueue("performance", sample);
                 last_queued = std::time::Instant::now();
             }
@@ -1064,6 +1196,15 @@ impl Supervisor {
                 if let Some(owned) = owned {
                     capture_agent_events(&self.layout, role, owned, &outbox, &mut seen);
                 }
+            }
+            // Cloud Faro indexes by receipt time. Small periodic batches preserve a useful
+            // live timeline; full session logs still ship only after the process exits.
+            if upload_due {
+                let layout = self.layout.clone();
+                let _ = tokio::task::spawn_blocking(move || {
+                    flush_telemetry(&layout, Duration::from_secs(2))
+                })
+                .await;
             }
         }
     }
@@ -1239,11 +1380,35 @@ fn capture_agent_events(
             seen.clear();
             seen.insert(hash);
         }
-        let _=outbox.enqueue("exception",json!({"role":role,"pid":owned.pid,"run":owned.session,"sourceEventHash":hex::encode(hash),"event":event,"logTail":context}));
+        let technical = telemetry_context(layout, &layout.at(&owned.session));
+        let _=outbox.enqueue("exception",json!({"role":role,"pid":owned.pid,"run":owned.session,"runGroup":technical["runGroup"],"context":technical,"sourceEventHash":hex::encode(hash),"event":event,"logTail":context}));
     }
 }
 
 fn compact_health(health: Value) -> Value {
+    fn bounded(value: &Value, depth: usize) -> Value {
+        if depth == 0 {
+            return Value::Null;
+        }
+        match value {
+            Value::Array(v) => json!(
+                v.iter()
+                    .rev()
+                    .take(8)
+                    .rev()
+                    .map(|v| bounded(v, depth - 1))
+                    .collect::<Vec<_>>()
+            ),
+            Value::Object(v) => Value::Object(
+                v.iter()
+                    .take(32)
+                    .map(|(k, v)| (k.clone(), bounded(v, depth - 1)))
+                    .collect(),
+            ),
+            Value::String(s) => json!(s.chars().take(1024).collect::<String>()),
+            _ => value.clone(),
+        }
+    }
     let mut world = serde_json::Map::new();
     for name in [
         "tick",
@@ -1259,16 +1424,112 @@ fn compact_health(health: Value) -> Value {
         "tickTiming",
     ] {
         if let Some(value) = health["world"].get(name) {
-            world.insert(name.into(), value.clone());
+            world.insert(name.into(), bounded(value, 5));
         }
     }
-    json!({"healthy":health["healthy"],"ready":health["ready"],"world":world,"checkpoint":health["checkpoint"]})
+    let pick = |value: &Value, fields: &[&str]| -> Value {
+        Value::Object(
+            fields
+                .iter()
+                .filter_map(|key| value.get(*key).map(|v| ((*key).into(), bounded(v, 5))))
+                .collect(),
+        )
+    };
+    let mut native = pick(
+        &health["game"],
+        &[
+            "tick",
+            "maxTickMs",
+            "tickTiming",
+            "datagrams",
+            "connectionMismatch",
+            "rejected",
+            "running",
+        ],
+    );
+    native["playerCount"] = json!(
+        health["game"]["players"]
+            .as_array()
+            .map(Vec::len)
+            .unwrap_or(0)
+    );
+    let chunks = pick(
+        &health["world"]["residentMap"]["chunks"],
+        &[
+            "residentChunks",
+            "residentBytes",
+            "byteLimit",
+            "dirtyChunks",
+            "loading",
+            "savePending",
+            "loads",
+            "saves",
+            "evictions",
+            "loadFailures",
+            "saveFailures",
+            "failure",
+        ],
+    );
+    let commands = pick(
+        &health["commands"],
+        &["committed", "queued", "rejected", "failure", "healthy"],
+    );
+    let actors = pick(
+        &health["world"]["actorSimulation"],
+        &[
+            "dynamicBodies",
+            "waitingSteps",
+            "sceneRequests",
+            "pathRequests",
+            "budgetDeferrals",
+            "sceneRequestsPerTick",
+            "collisionBudgetPerTick",
+        ],
+    );
+    json!({"healthy":health["healthy"],"ready":health["ready"],"world":world,"native":native,"actors":actors,"chunks":chunks,"commands":commands,"checkpoint":if health["automaticCheckpoint"].is_null(){&health["checkpoint"]}else{&health["automaticCheckpoint"]}})
 }
 
 #[cfg(test)]
 mod log_stream_tests {
     use super::*;
     use tokio::io::AsyncWriteExt;
+    #[tokio::test]
+    async fn run_context_is_prepared_safely_from_async_lifecycle() {
+        let temp = tempfile::tempdir().unwrap();
+        let layout = Layout::new(temp.path());
+        layout.init().unwrap();
+        let folder = layout.at("state/sessions/context-fixture");
+        std::fs::create_dir_all(&folder).unwrap();
+        let host = Supervisor::new(layout.clone(), None, None).unwrap();
+        host.write_run_context(&folder, "shared-run").await;
+        let context = telemetry_context(&layout, &folder);
+        assert_eq!(context["runGroup"], "shared-run");
+        assert!(context["mods"].is_array());
+    }
+    #[tokio::test]
+    async fn updated_game_bridge_wins_over_stale_launcher_sidecar() {
+        let temp = tempfile::tempdir().unwrap();
+        let layout = Layout::new(temp.path());
+        layout.init().unwrap();
+        let mut settings = layout.load().unwrap();
+        settings.game_branch.clear();
+        layout.save(&settings).unwrap();
+        let bundled = layout.at("foundation/Bootstrap/bscp-bridge.jar");
+        std::fs::create_dir_all(bundled.parent().unwrap()).unwrap();
+        std::fs::write(&bundled, b"new bridge").unwrap();
+        let legacy = layout.at("old-bridge.jar");
+        std::fs::write(&legacy, b"old bridge").unwrap();
+        write_json(
+            &layout.at("state/bootstrap.json"),
+            &json!({"path":"foundation"}),
+        )
+        .unwrap();
+        let mut host = Supervisor::new(layout, None, None).unwrap();
+        Arc::get_mut(&mut host).unwrap().agent = legacy.clone();
+        assert_eq!(host.game_agent().unwrap(), bundled);
+        Arc::get_mut(&mut host).unwrap().qa = Some("explicit-test-only".into());
+        assert_eq!(host.game_agent().unwrap(), legacy);
+    }
     #[tokio::test]
     async fn oversized_invalid_utf8_line_is_bounded_and_next_line_survives() {
         let (mut writer, reader) = tokio::io::duplex(4096);
@@ -1461,9 +1722,15 @@ fn pump(
         let _ = logger.line(&entry.to_string());
         if entry["success"] != true {
             let tail = diagnostic_tail(&stderr, 32768).unwrap_or_default();
+            let native_crash = std::fs::read_dir(&folder).ok().is_some_and(|files| {
+                files.filter_map(Result::ok).any(|f| {
+                    f.file_name().to_string_lossy().starts_with("hs_err_")
+                        && f.metadata().is_ok_and(|m| m.len() > 0)
+                })
+            });
             let _ = outbox.enqueue(
                 "process-exit",
-                json!({"run":relative(&layout.root,&folder),"role":role,"exit":entry,"stderr":String::from_utf8_lossy(&tail)}),
+                {let context=telemetry_context(&layout,&folder);json!({"run":relative(&layout.root,&folder),"runGroup":context["runGroup"],"context":context,"role":role,"exit":entry,"hasNativeCrash":native_crash,"stderr":String::from_utf8_lossy(&tail)})},
             );
         }
         let _ = queue_session_logs(&layout, &folder, &role, entry);
