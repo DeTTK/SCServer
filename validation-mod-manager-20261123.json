@@ -106,7 +106,14 @@
       }
     ]
   },
-  "nativeBytes": 20857856,
-  "nativeSha256": "d6290ce5851a6cd0b429b4f22e45815872956c05ce6f548f9ac8f32080133eed",
-  "scope": "Existing client API 1 loader; server plugin API is not implemented. Native optional-mod gameplay was not exercised."
+  "nativeBytes": 20858880,
+  "nativeSha256": "1a9047e33e602e4de0a71a44086c92dae173b9c1d3a0771f845352d1513c99d3",
+  "scope": "Existing client API 1 loader; server plugin API is not implemented. Native optional-mod gameplay was not exercised.",
+  "shortcutRegression": {
+    "passed": 2,
+    "verbatimDriveAndUncPaths": true,
+    "nativeUnicodeShortcutFromCanonicalizedPath": true
+  },
+  "sourceCommit": "906000d",
+  "installed": "launcher-next/rust/dist-launtest/BSCPCRAFT.exe"
 }
