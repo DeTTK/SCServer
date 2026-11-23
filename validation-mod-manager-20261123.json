@@ -1,0 +1,112 @@
+{
+  "result": "PASS",
+  "rustTests": 95,
+  "pythonPublisherTests": 13,
+  "nativeUiController": {
+    "gameFixtureOnly": true,
+    "modController": true,
+    "passed": true,
+    "realController": true,
+    "steps": 11
+  },
+  "nativeUiSizes": [
+    "1088x688",
+    "1280x688"
+  ],
+  "gitLifecycle": {
+    "result": "PASS",
+    "signedGitDownload": true,
+    "disabledStatePreservedByUpdate": true,
+    "manualChangesProtected": true,
+    "archivedJarCount": 2,
+    "commands": [
+      {
+        "action": "check",
+        "args": [],
+        "success": true,
+        "milliseconds": 1450.4
+      },
+      {
+        "action": "install",
+        "args": [
+          "repo:better-third-face"
+        ],
+        "success": true,
+        "milliseconds": 452.7
+      },
+      {
+        "action": "install",
+        "args": [
+          "repo:cinematic-camera"
+        ],
+        "success": true,
+        "milliseconds": 459.9
+      },
+      {
+        "action": "disable",
+        "args": [
+          "repo:better-third-face"
+        ],
+        "success": true,
+        "milliseconds": 55.9
+      },
+      {
+        "action": "update",
+        "args": [
+          "repo:better-third-face"
+        ],
+        "success": true,
+        "milliseconds": 88.9
+      },
+      {
+        "action": "list",
+        "args": [],
+        "success": true,
+        "milliseconds": 38.4
+      },
+      {
+        "action": "update",
+        "args": [
+          "repo:better-third-face"
+        ],
+        "success": false,
+        "milliseconds": 70.2
+      },
+      {
+        "action": "remove",
+        "args": [
+          "repo:better-third-face"
+        ],
+        "success": true,
+        "milliseconds": 48.6
+      },
+      {
+        "action": "install",
+        "args": [
+          "repo:better-third-face"
+        ],
+        "success": true,
+        "milliseconds": 71.3
+      },
+      {
+        "action": "enable",
+        "args": [
+          "repo:better-third-face"
+        ],
+        "success": true,
+        "milliseconds": 50.0
+      },
+      {
+        "action": "remove",
+        "args": [
+          "repo:cinematic-camera"
+        ],
+        "success": true,
+        "milliseconds": 47.9
+      }
+    ]
+  },
+  "nativeBytes": 20857856,
+  "nativeSha256": "d6290ce5851a6cd0b429b4f22e45815872956c05ce6f548f9ac8f32080133eed",
+  "scope": "Existing client API 1 loader; server plugin API is not implemented. Native optional-mod gameplay was not exercised."
+}
