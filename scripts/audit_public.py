@@ -36,7 +36,7 @@ for directory,dirs,names in os.walk(ROOT,followlinks=False):
             continue
         asset=assets.get(rel.as_posix())
         if asset is not None:
-            if path.suffix.lower()not in('.png','.ttf','.webp','.ico')or not rel.as_posix().startswith('launcher/')or size>4*1024*1024 or size!=asset['size']or hashlib.sha256(path.read_bytes()).hexdigest()!=asset['sha256']:findings.append({'path':rel.as_posix(),'kind':'invalid_design_asset'})
+            if path.suffix.lower()not in('.png','.ttf','.webp','.ico','.svg')or not rel.as_posix().startswith('launcher/')or size>4*1024*1024 or size!=asset['size']or hashlib.sha256(path.read_bytes()).hexdigest()!=asset['sha256']:findings.append({'path':rel.as_posix(),'kind':'invalid_design_asset'})
             continue
         if path.suffix.lower() in BINARY or size>2*1024*1024 or (path.suffix.lower() not in TEXT and name not in SPECIAL):findings.append({'path':rel.as_posix(),'kind':'binary_or_unsupported'});continue
         raw=path.read_bytes()

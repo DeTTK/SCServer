@@ -102,9 +102,8 @@ export component AppWindow inherits Window {
             VerticalLayout {
                 padding-left: 14px; padding-right: 14px; padding-top: 24px; padding-bottom: 16px; spacing: 8px;
                 VerticalLayout {
-                    height: 118px; spacing: 4px;
-                    Image { source: @image-url("assets/brand-wordmark.png"); image-fit: contain; height: 84px; }
-                    Label { text: ".PROD / BSCPCRAFT"; font-size: 10px; font-weight: 650; color: Theme.muted; horizontal-alignment: center; }
+                    height: 96px; spacing: 4px;
+                    Image { source: @image-url("assets/brand-wordmark.svg"); image-fit: contain; height: 84px; }
                 }
                 Rectangle { height: 4px; }
                 if !root.setup-visible: VerticalLayout {

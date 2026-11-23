@@ -20,15 +20,19 @@
     "sha256": "2588b70190c07b99381f8dd67b562078aeb20686cbe1d293b335bd7a9f48bf0f"
   },
   "launcher/crates/launcher-app/ui/assets/brand-logo.png": {
-    "size": 16008,
-    "sha256": "9fcb0d6ab4be504922c67233badc701e47b85d05bc4fe6d32d40b3e1b678133d"
+    "size": 13352,
+    "sha256": "58d2f31e29c543ac0cb9cd989d512a438f56f02b89e58b61b6a42fd99d4a28a0"
   },
   "launcher/crates/launcher-app/ui/assets/brand-wordmark.png": {
     "size": 33916,
     "sha256": "742c16be1969a64603d0e375d3b28475c73bd6581bd9ff8b06f33bd512a88421"
   },
   "launcher/crates/launcher-app/ui/assets/launcher.ico": {
-    "size": 31095,
-    "sha256": "3fbeafd691c977527b7b47c88cc95f7e61fe75340f25cc917e034bff5f7e4f44"
+    "size": 27090,
+    "sha256": "ef391583a5f63bdaa49a23040a43bc2d96b030f3562a7cb00d255946a7374f01"
+  },
+  "launcher/crates/launcher-app/ui/assets/brand-wordmark.svg": {
+    "size": 5953,
+    "sha256": "25976e28d6e71bd7de6401325ad2b8a049a20b659fb0c9c1a7cd273428d213ee"
   }
 }
