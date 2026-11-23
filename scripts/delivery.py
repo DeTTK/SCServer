@@ -47,6 +47,18 @@ def deterministic_jar(path,entries):
     with zipfile.ZipFile(path,'w',zipfile.ZIP_DEFLATED)as z:
         for name,raw in sorted(entries.items()):
             e=zipfile.ZipInfo(name,(2020,1,1,0,0,0));e.compress_type=zipfile.ZIP_DEFLATED;z.writestr(e,raw)
+
+def commit_index(destination,message,env):
+    # git commit refreshes a partial working tree and can lazy-fetch all absent
+    # foundation blobs. Commit the prepared index directly instead.
+    env=dict(env,GIT_NO_LAZY_FETCH='1')
+    tree=run('git','-C',destination,'write-tree','--missing-ok',env=env,capture_output=True,text=True).stdout.strip()
+    parent=subprocess.run(['git','-C',str(destination),'rev-parse','--verify','HEAD'],env=env,capture_output=True,text=True)
+    args=['git','-C',destination,'commit-tree',tree,'-m',message]
+    if parent.returncode==0:args+=['-p',parent.stdout.strip()]
+    commit=run(*args,env=env,capture_output=True,text=True).stdout.strip()
+    run('git','-C',destination,'update-ref','HEAD',commit,env=env,capture_output=True)
+    return commit
 def build_agent(tools,base,asm,tree,kotlin):
     spec=importlib.util.spec_from_file_location('compat',ROOT/'client/resource-compat/build.py');m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
     deps=tools.dependencies();classes=tools.compile_java('delivery-resource-agent',(ROOT/'client/resource-compat/src').rglob('*.java'),[asm,tree,kotlin,base,*deps])
@@ -143,7 +155,7 @@ def publish():
     for name,body in metadata.items():
         p=destination/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_text(body,'utf8')
     run('git','-C',destination,'add','--',*[r['path']for r in manifest['files']],'delivery.json','delivery.json.sig',*metadata,env=env)
-    run('git','-C',destination,'commit','-m','Build launtest from '+source[:12],env=env,capture_output=True)
+    commit_index(destination,'Build launtest from '+source[:12],env)
     latest=run('git','ls-remote','origin','refs/heads/'+channel,capture_output=True,text=True).stdout.split()[0]
     if latest!=source:print('Source advanced before activation; not publishing');return
     run('git','-C',destination,'push','origin','HEAD:refs/heads/'+branch,env=env)
