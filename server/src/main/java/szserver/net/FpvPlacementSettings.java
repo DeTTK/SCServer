@@ -10,6 +10,6 @@ public record FpvPlacementSettings(Path boxes,long baseBytes,long editedBytes,in
     public void requireToggleItem(boolean administrator,Integer held){if(!administrator&&(toggleItemId==0||held==null||held!=toggleItemId))throw new IllegalArgumentException("fpv_item_not_equipped");}
     // Global collision admission covers packed pages, BVH and shared authored descriptors.
     // Prepared native object graphs have a separate bounded local ActorScene budget.
-    public static FpvPlacementSettings defaults(Path itemRegistry){long base=Math.max(1024,Math.min(256L*1024*1024,Runtime.getRuntime().maxMemory()/2));return new FpvPlacementSettings(itemRegistry.toAbsolutePath().getParent().resolve("current-boxes"),base,Math.min(base,32L*1024*1024));}
+    public static FpvPlacementSettings defaults(Path itemRegistry){long base=Math.max(1024,Math.min(512L*1024*1024,Runtime.getRuntime().maxMemory()/2));return new FpvPlacementSettings(itemRegistry.toAbsolutePath().getParent().resolve("current-boxes"),base,Math.min(base,32L*1024*1024));}
     public static FpvPlacementSettings configured(Properties p,Path itemRegistry){var defaults=defaults(itemRegistry);return new FpvPlacementSettings(Path.of(p.getProperty("world.collisionBoxesRoot",defaults.boxes().toString())),Long.parseLong(p.getProperty("world.collisionIndexBytes",Long.toString(defaults.baseBytes()))),Long.parseLong(p.getProperty("world.editedCollisionBytes",Long.toString(defaults.editedBytes()))),Integer.parseInt(p.getProperty("game.fpv.toggleItemId","0")));}
 }

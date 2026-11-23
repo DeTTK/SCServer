@@ -1,5 +1,5 @@
 {
-  "id": "foundation-45aad8f49499434255054ef4",
+  "id": "foundation-fd77770a9d05d5709e41fc5d",
   "mode": "complete-build-branch-foundation",
   "description": "Complete Java, client, server and map are indexed in build-launtest. CI imports its fixed build inputs from the same repository commit.",
   "serverResources": {

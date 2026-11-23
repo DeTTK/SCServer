@@ -1,0 +1,21 @@
+{
+  "id": "merged-netdecode-20261121",
+  "date": "2026-11-21",
+  "stats": {
+    "tiles": 23335019,
+    "objectsWithBehaviour": 288347,
+    "chunks": 144669,
+    "staticObjects": 813459,
+    "interactiveObjects": 261627,
+    "technicalObjects": 131973,
+    "regions": 249,
+    "nbtObjectsConvertedToNative": 6977,
+    "nbtContainersConvertedToRaw": 320,
+    "objects": 1075086
+  },
+  "sourceArchiveSha256": "730208bee5e5bffd88c8d919f642a54571f9149fdf7321cfa49aa2c3fcda6148",
+  "registrySha256": "5ed8734fde9a73cfc0a5587597583988d4272bbb82e0de71a58896d699dd1c71",
+  "codecsSha256": "34e87dc25867496f7989baf5a8e9c451b8e4643726ec65f23f896c91122c4fd5",
+  "missingTerrainChunks": 507,
+  "existingWorldsRebased": false
+}

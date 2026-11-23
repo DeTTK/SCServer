@@ -98,9 +98,16 @@ def publish():
     manifest={'schemaVersion':1,'channel':channel,'sourceCommit':source,'sequence':int(os.environ['GITHUB_RUN_NUMBER']),
         'baseId':LOCK['id'],'files':file_inventory(OUT),'changelog':run('git','log','-1','--format=%s',capture_output=True,text=True).stdout.strip(),
         'mods':[{'id':'command-completion','name':'Подсказки команд','side':'client','required':True,'path':'mods/command-completion/command-completion.jar'}]}
-    foundation_lock=ROOT/'delivery/foundation.lock.json'
+    foundation_lock=ROOT/'delivery/foundation.lock.json';foundation_payload=None
     if foundation_lock.is_file():
-        foundation=json.loads(foundation_lock.read_text('utf8'))['foundation'];manifest['foundation']=foundation;manifest['baseId']=foundation['id']
+        lock=json.loads(foundation_lock.read_text('utf8'));foundation=lock['foundation'];manifest['foundation']=foundation;manifest['baseId']=foundation['id']
+        source_path=lock.get('descriptorPath',foundation['path']);safe_path(source_path)
+        commit=lock['buildCommit']
+        if not re.fullmatch('[0-9a-f]{40}',commit):raise ValueError('Invalid pinned foundation commit')
+        foundation_payload=pinned({'file':foundation['id']+'.json','url':f'https://raw.githubusercontent.com/DeTTK/SCServer/{commit}/{source_path}','sha256':foundation['sha256']}).read_bytes()
+        if len(foundation_payload)!=foundation['size']or json.loads(foundation_payload)['id']!=foundation['id']:raise ValueError('Foundation descriptor mismatch')
+    default_map=ROOT/'map/default.json'
+    if default_map.is_file():manifest['defaultMap']=json.loads(default_map.read_text('utf8'))
     raw=json.dumps(manifest,ensure_ascii=False,sort_keys=True,separators=(',',':')).encode()
     signature=sign(raw,os.environ['DELIVERY_PRIVATE_KEY'])
     destination=ROOT/'build/publish-worktree';destination.mkdir(exist_ok=False)
@@ -130,7 +137,9 @@ def publish():
     else:run('git','-C',destination,'symbolic-ref','HEAD','refs/heads/'+branch,env=env)
     shutil.copytree(OUT,destination,dirs_exist_ok=True)
     (destination/'delivery.json').write_bytes(raw);(destination/'delivery.json.sig').write_bytes(signature)
-    metadata={'bootstrap/base.json':json.dumps({'id':manifest['baseId'],'mode':'complete-indexed-foundation'if'foundation'in manifest else'installed-foundation'}),'map/base.json':json.dumps({'mode':'indexed-foundation'if'foundation'in manifest else'existing-world-base','replaced':False}),'launcher/README.md':'Launcher EXE updates belong to GitHub Releases.\n','README.md':'Complete generated game delivery. Develop in launtest; do not edit this branch.\n'}
+    metadata={'bootstrap/base.json':json.dumps({'id':manifest['baseId'],'mode':'complete-indexed-foundation'if'foundation'in manifest else'installed-foundation'}),'map/base.json':json.dumps({'mode':'indexed-foundation'if'foundation'in manifest else'existing-world-base','defaultMap':manifest.get('defaultMap'),'existingWorldsRebased':False}),'launcher/README.md':'Launcher EXE updates belong to GitHub Releases.\n','README.md':'Complete generated game delivery. Develop in launtest; do not edit this branch.\n'}
+    # Canonical descriptor and its signed manifest change in the same Git commit.
+    if foundation_payload is not None:metadata[manifest['foundation']['path']]=foundation_payload.decode('utf8')
     for name,body in metadata.items():
         p=destination/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_text(body,'utf8')
     run('git','-C',destination,'add','--',*[r['path']for r in manifest['files']],'delivery.json','delivery.json.sig',*metadata,env=env)

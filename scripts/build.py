@@ -110,6 +110,7 @@ def tests():
     results.append('native stack constructor defaults, game-object stacksize inheritance and bounded durable bulk-transfer FIFO')
     results.append('medicine exact-root admission, native quick selection inputs, nullable categories, cooldown, expiry and saved persistence flags')
     subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.world.RegionRecordBoundsTests'],check=True)
+    subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.world.MergedMapCompatibilityTests'],check=True)
     subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.LootboxTests'],check=True)
     subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.WorldItemTests'],check=True)
     subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.world.WorldItemPhysicsTests'],check=True)

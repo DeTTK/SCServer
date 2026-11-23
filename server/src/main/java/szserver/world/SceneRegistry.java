@@ -15,7 +15,7 @@ public final class SceneRegistry {
         public Manifest(String build,Map<Integer,Definition> ids,Map<String,Definition> names,String digest){this(build,ids,names,digest,new SceneTypeIds.Catalog(ids));}
     }
     private final Manifest source,target;private final Path provenance;private final SceneCompatibility compatibility;
-    private final Path targetPath,resources;
+    private final Path targetPath,resources,defaultCodecs;
     private final Map<String,Manifest> snapshots=new LinkedHashMap<>(8,.75f,true);
     private final AtomicLong translated=new AtomicLong(),unchanged=new AtomicLong(),dropped=new AtomicLong(),records=new AtomicLong();
     /** Native exports place the registry either in region/ or beside that directory. */
@@ -29,20 +29,22 @@ public final class SceneRegistry {
         this(map,targetRegistry,codecs,null);
     }
     public SceneRegistry(Path map,Path targetRegistry,Path codecs,Path configuredResources)throws Exception{
-        resources=configuredResources==null?null:configuredResources.toRealPath();
+        resources=configuredResources==null?null:configuredResources.toRealPath();defaultCodecs=codecs.toRealPath();
         Path sourcePath=sourceRegistry(map);
         if(Files.isDirectory(map.resolve("region")))map=map.resolve("region");
-        source=load(sourcePath);targetPath=targetRegistry.toRealPath();target=load(targetPath);provenance=map.resolve("object-registry-provenance");compatibility=new SceneCompatibility(codecs,target);
+        source=load(sourcePath);targetPath=targetRegistry.toRealPath();target=load(targetPath);provenance=map.resolve("object-registry-provenance");compatibility=new SceneCompatibility(codecPath(map,defaultCodecs),target);
     }
+    /** Keep each map's codec metadata pinned with its immutable map identity. */
+    private static Path codecPath(Path map,Path fallback){Path root=Files.isDirectory(map.resolve("region"))?map:map.toAbsolutePath().getParent();Path local=root.resolve("object-codecs.json");return Files.isRegularFile(local)?local:fallback;}
     public Manifest target(){return target;}
     public Path resources(){return resources;}
     Path targetPath(){return targetPath;}
     public String sourceDigest(){return source.digest();}
     public String checkpointIdentity(){return source.digest()+":"+target.digest()+":"+compatibility.metadataDigest();}
-    private SceneRegistry(SceneRegistry other){source=other.source;target=other.target;targetPath=other.targetPath;resources=other.resources;provenance=other.provenance;compatibility=other.compatibility;}
+    private SceneRegistry(SceneRegistry other){source=other.source;target=other.target;targetPath=other.targetPath;resources=other.resources;defaultCodecs=other.defaultCodecs;provenance=other.provenance;compatibility=other.compatibility;}
     /** Immutable definitions/codecs can be shared; each IO worker owns its provenance LRU and counters. */
     public SceneRegistry fork(){return new SceneRegistry(this);}
-    private SceneRegistry(SceneRegistry other,Path map)throws Exception{source=load(sourceRegistry(map));target=other.target;targetPath=other.targetPath;resources=other.resources;provenance=(Files.isDirectory(map.resolve("region"))?map.resolve("region"):map).resolve("object-registry-provenance");compatibility=other.compatibility;}
+    private SceneRegistry(SceneRegistry other,Path map)throws Exception{source=load(sourceRegistry(map));target=other.target;targetPath=other.targetPath;resources=other.resources;defaultCodecs=other.defaultCodecs;provenance=(Files.isDirectory(map.resolve("region"))?map.resolve("region"):map).resolve("object-registry-provenance");compatibility=new SceneCompatibility(codecPath(map,defaultCodecs),target);}
     /** A new immutable source map can reuse the initialized target codecs. */
     public SceneRegistry forMap(Path map)throws Exception{return new SceneRegistry(this,map);}
     public static Manifest load(Path path)throws Exception{

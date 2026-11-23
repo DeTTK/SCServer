@@ -36,7 +36,7 @@ final class NativeActorMapObject {
         return new ActorContacts.Obstacle(type("612654711").getField("public").getFloat(effect),new ActorContacts.Living(health,maximum));
     }
     Prepared prepare(SceneRegistry.Definition definition,SceneObject source)throws Exception{
-        SceneCollision.worker();if(!Set.of("zipline","zipline_vertical","seat","carousel").contains(definition.behaviour())||source.networkId()!=definition.id()||!source.asset().equals(definition.name()))throw new IllegalArgumentException("actor_map_object_kind");
+        SceneCollision.worker();var sourcePrefix=SceneObject.prefix(source.record());if((sourcePrefix.flags()&0x200)!=0){String actual=new DataInputStream(new ByteArrayInputStream(sourcePrefix.nativeName())).readUTF();if(!actual.equals(definition.behaviour()))return null;}if(!Set.of("zipline","zipline_vertical","seat","carousel").contains(definition.behaviour())||source.networkId()!=definition.id()||!source.asset().equals(definition.name()))throw new IllegalArgumentException("actor_map_object_kind");
         Object parsed=type("com.google.gson.JsonParser").getMethod("parseString",String.class).invoke(null,definition.definition().toString());
         Object properties=parsed.getClass().getMethod("getAsJsonObject").invoke(parsed);
         Object descriptor=type("1422486348").getConstructor(String.class,type("com.google.gson.JsonObject"),int.class,String.class,Integer.class,String.class).newInstance(definition.name(),properties,definition.id(),null,null,null);

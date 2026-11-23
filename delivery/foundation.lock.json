@@ -1,9 +1,10 @@
 {
-  "buildCommit": "f87ea9b45880291792a66852d6bdb8c2f8765e0c",
+  "buildCommit": "abf00aa51381ee1f8fc3240006868c8ec052b64c",
+  "descriptorPath": "bootstrap/foundations/foundation-fd77770a9d05d5709e41fc5d.json",
   "foundation": {
-    "id": "foundation-45aad8f49499434255054ef4",
+    "id": "foundation-fd77770a9d05d5709e41fc5d",
     "path": "bootstrap/foundation.json",
-    "sha256": "c978eb5d279bf494af7221df7493c7ba5de0b1fbfc09967836d66cf1ac7b05be",
-    "size": 47595
+    "sha256": "21413ab0229bcb9064721224d8ec1d0846e730a09f075e95a76f7fa20411b511",
+    "size": 47997
   }
 }

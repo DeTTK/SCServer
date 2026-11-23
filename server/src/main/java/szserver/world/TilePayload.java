@@ -7,7 +7,7 @@ import szserver.net.Wire;
 
 /** Bounded native ProBuilder/Carpenter tail. Parsed only by loader/projection/codec workers. */
 public final class TilePayload {
-    public static final int MAX_TILES=8192,MAX_RAW=2*1024*1024;
+    public static final int MAX_TILES=65536,MAX_RAW=2*1024*1024;
     public static final class Tile {
         private final int x,y,z,type,flags,shapeData,shapeExtension,centralCoverId;private final byte[] record,completeState;private final double[][] builderCells,profileCells;
         Tile(int x,int y,int z,int type,int flags,byte[] record){this(x,y,z,type,flags,record,null);}

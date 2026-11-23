@@ -12,7 +12,7 @@ import java.util.regex.*;
 
 /** Read-only global SZR scene index, independent of the terrain cache. Never scans on gameplay owners. */
 final class SceneCatalog implements AutoCloseable {
-    static final int MAX_REGIONS=65536,MAX_IDENTITIES=1_000_000;
+    static final int MAX_REGIONS=65536,MAX_IDENTITIES=2_000_000;
     static final long MAX_TEMPLATE_BYTES=64L*1024*1024;
     private record Index(Map<UUID,Terrain.SceneHome> homes,Map<String,ScenePayload.Entry> templates,Set<UUID> shared,long bytes,Map<Long,Map<UUID,NativePortal>> portals,long portalBytes,Map<UUID,Long> portalRanks,long sqlRows,Map<UUID,NativePortal> portalIds,Map<String,NativePortal> portalTemplates,Map<UUID,Terrain.SceneHome> nativeHomes,Map<UUID,SceneCullingVolume> cullingVolumes,Map<UUID,Set<Long>> cullingReferences,Set<Long> cullingUnreviewedReferences,long cullingReferenceBytes){}
     private static final Pattern REGION=Pattern.compile("r\\.(-?\\d+)\\.(-?\\d+)\\.szr");
