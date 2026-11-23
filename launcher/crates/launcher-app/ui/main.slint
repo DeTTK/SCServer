@@ -3,11 +3,12 @@ import "assets/RussoOne-Regular.ttf";
 import { Theme } from "theme.slint";
 import { Action, Hint, Icon, Label, Notice, Rule, TransferStatus } from "controls.slint";
 import { Home } from "home.slint";
+import { ModsPage } from "mods.slint";
 import { WorldsPage, ServerPage, ReportPage } from "management.slint";
 import { Configuration } from "forms.slint";
 import { LauncherDialog } from "dialogs.slint";
-import { WorldRow, ServerRow, ChangeRow, TransferView, AttachmentRow } from "api.slint";
-export { WorldRow, ServerRow, ChangeRow, TransferView, AttachmentRow } from "api.slint";
+import { WorldRow, ServerRow, ChangeRow, TransferView, AttachmentRow, ModRow } from "api.slint";
+export { WorldRow, ServerRow, ChangeRow, TransferView, AttachmentRow, ModRow } from "api.slint";
 export component AppWindow inherits Window {
     // Pages and user-visible information. Models contain real data supplied by Rust.
     in-out property <string> page: "home";
@@ -20,6 +21,12 @@ export component AppWindow inherits Window {
     in property <string> progress-text;
     in property <float> progress: -1;
     in property <bool> configured;
+    in property <[ModRow]> catalog-mods;
+    in property <[ModRow]> installed-mods;
+    in property <ModRow> selected-mod;
+    in-out property <string> mods-tab: "catalog";
+    callback select-mod(string);
+    callback mod-action(string, string);
     in property <[WorldRow]> worlds;
     in property <string> selected-world-id;
     in property <string> selected-world-title;
@@ -92,7 +99,7 @@ export component AppWindow inherits Window {
     private property <string> report-title;
     private property <string> report-description;
     private property <bool> report-performance;
-    private property <string> page-title: root.page == "worlds" ? "Мои миры" : root.page == "server" ? "Мой сервер" : root.page == "diagnostics" ? "Багрепорт" : root.page == "settings" ? "Настройки" : "Главная";
+    private property <string> page-title: root.page == "mods" ? "Моды" : root.page == "worlds" ? "Мои миры" : root.page == "server" ? "Мой сервер" : root.page == "diagnostics" ? "Багрепорт" : root.page == "settings" ? "Настройки" : "Главная";
     function ask-world(kind: string) {
         root.dialog-id = root.selected-world-id;
         root.dialog-value = kind == "rename" ? root.selected-world-title : kind == "clone" ? root.selected-world-title + " — копия" : "";
@@ -116,7 +123,7 @@ export component AppWindow inherits Window {
                 Rectangle { height: 4px; }
                 if !root.setup-visible: VerticalLayout {
                     spacing: 4px; vertical-stretch: 0;
-                    for p in [{id:"home", name:"Главная", icon:"\u{e80f}"},{id:"worlds", name:"Мои миры", icon:"\u{e81e}"},{id:"server", name:"Мой сервер", icon:"\u{e839}"}]: Action {
+                    for p in [{id:"home", name:"Главная", icon:"\u{e80f}"},{id:"worlds", name:"Мои миры", icon:"\u{e81e}"},{id:"server", name:"Мой сервер", icon:"\u{e839}"},{id:"mods", name:"Моды", icon:"\u{e74c}"}]: Action {
                         label: p.name; glyph: p.icon; kind: "plain"; align-left: true; height: 44px; selected: root.page == p.id;
                         activated => { root.navigate(p.id); }
                     }
@@ -179,6 +186,12 @@ export component AppWindow inherits Window {
                 select-world(id) => { root.select-world(id); } ask(kind) => { root.ask-world(kind); }
                 act(op) => { root.dialog-id = root.selected-world-id; root.world-action(op, root.selected-world-id, ""); }
             }
+            if !root.setup-visible && root.page == "mods": ModsPage {
+                vertical-stretch: 1; catalog: root.catalog-mods; installed: root.installed-mods; selection: root.selected-mod;
+                tab <=> root.mods-tab; busy: root.busy; client-running: root.client-running;
+                select-mod(id) => { root.select-mod(id); }
+                act(op, id) => { root.mod-action(op, id); }
+            }
             if !root.setup-visible && root.page == "server": ServerPage {
                 vertical-stretch: 1; running: root.server-running; busy: root.busy; state: root.server-state; address: root.server-address; relay-invite: root.relay-invite; relay-status: root.relay-status;
                 uptime: root.server-uptime; memory: root.server-memory; players: root.players; players-known: root.players-known;
@@ -211,7 +224,7 @@ export component AppWindow inherits Window {
                 failed: root.error != ""; message: root.error != "" ? root.error : root.progress-text != "" ? root.progress-text : "Выполняется операция…";
                 progress: root.busy && root.error == "" ? root.progress : -1;
             }
-            if !root.setup-visible && root.page != "settings" && root.page != "diagnostics": VerticalLayout {
+            if !root.setup-visible && root.page != "settings" && root.page != "diagnostics" && root.page != "mods": VerticalLayout {
                 spacing: 12px; vertical-stretch: 0;
                 Rule {}
                 if root.status != "": Hint { text: root.status; wrap: word-wrap; overflow: clip; }
@@ -222,7 +235,7 @@ export component AppWindow inherits Window {
                     Action { label: "Создать сервер"; glyph: "\u{e710}"; large: true; horizontal-stretch: 4; enabled: !root.busy && !root.server-running; activated => { root.launch(false); } }
                 }
             }
-            if !root.setup-visible && (root.page == "settings" || root.page == "diagnostics") && root.status != "": Hint { text: root.status; wrap: word-wrap; overflow: clip; }
+            if !root.setup-visible && (root.page == "settings" || root.page == "diagnostics" || root.page == "mods") && root.status != "": Hint { text: root.status; wrap: word-wrap; overflow: clip; }
         }
     }
     if root.dialog != "": Rectangle {

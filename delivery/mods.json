@@ -1,0 +1,26 @@
+[
+  {
+    "id": "command-completion",
+    "name": "Подсказки команд",
+    "description": "Подсказки и автодополнение игровых команд. Обязательная часть клиента.",
+    "side": "client",
+    "required": true,
+    "source": "client/command-completion"
+  },
+  {
+    "id": "better-third-face",
+    "name": "Камера от третьего лица",
+    "description": "Дополнительные настройки камеры от третьего лица. Настраивается внутри игры.",
+    "side": "client",
+    "required": false,
+    "source": "mods/better-third-face"
+  },
+  {
+    "id": "cinematic-camera",
+    "name": "Кинокамера",
+    "description": "Свободная постановочная камера, сохранение ракурсов и инструменты съёмки. По умолчанию камера не перехватывается; F7 — включение, F6 — редактор.",
+    "side": "client",
+    "required": false,
+    "source": "mods/cinematic-camera"
+  }
+]

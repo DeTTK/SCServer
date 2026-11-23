@@ -368,6 +368,7 @@ impl ClientProfile {
                 }
             }
         }
+        crate::mods::enforce_bundled_mods(&profile, current.keys().cloned())?;
         write_json(&manifest, &current)?;
         Ok(profile)
     }

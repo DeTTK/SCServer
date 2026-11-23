@@ -1,4 +1,4 @@
-//! Offscreen screenshot of the compiled server settings, without opening a user profile.
+//! Offscreen screenshot of a compiled launcher view, without opening a user profile.
 slint::include_modules!();
 use slint::ComponentHandle;
 fn main() -> anyhow::Result<()> {
@@ -28,6 +28,47 @@ fn main() -> anyhow::Result<()> {
                 online: false,
             },
         ])));
+    }
+    if view == "mods" || view == "mods-installed" || view == "mods-empty" {
+        ui.set_page("mods".into());
+        if view != "mods-empty" {
+            let bundled = ModRow {
+                id: "command-completion".into(),
+                title: "Подсказки команд".into(),
+                description: "Показывает варианты команд при вводе в игровом чате.".into(),
+                version: "1.0".into(),
+                side: "Клиент".into(),
+                source: "Канал сборки".into(),
+                installed: true,
+                enabled: true,
+                required: true,
+                ..Default::default()
+            };
+            let local = ModRow {
+                id: "visual-fixture".into(),
+                title: "Настройки интерфейса".into(),
+                description: "Пользовательские настройки игрового интерфейса.".into(),
+                version: "1.2".into(),
+                side: "Клиент".into(),
+                source: "interface-settings.jar".into(),
+                installed: true,
+                enabled: true,
+                ..Default::default()
+            };
+            ui.set_catalog_mods(slint::ModelRc::new(slint::VecModel::from(vec![
+                bundled.clone(),
+            ])));
+            ui.set_installed_mods(slint::ModelRc::new(slint::VecModel::from(vec![
+                bundled.clone(),
+                local.clone(),
+            ])));
+            if view == "mods-installed" {
+                ui.set_mods_tab("installed".into());
+                ui.set_selected_mod(local);
+            } else {
+                ui.set_selected_mod(bundled);
+            }
+        }
     }
     if view == "relay" {
         ui.set_page("server".into());

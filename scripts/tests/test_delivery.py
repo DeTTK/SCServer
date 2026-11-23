@@ -1,4 +1,5 @@
-import importlib.util,tempfile,unittest,subprocess,os
+import importlib.util,tempfile,unittest,subprocess,os,zipfile,json
+from unittest.mock import patch
 from pathlib import Path
 
 spec=importlib.util.spec_from_file_location('delivery',Path(__file__).resolve().parents[1]/'delivery.py');d=importlib.util.module_from_spec(spec);spec.loader.exec_module(d)
@@ -26,3 +27,15 @@ class DeliveryTests(unittest.TestCase):
     def test_jar_output_is_deterministic(self):
         with tempfile.TemporaryDirectory()as root:
             a=Path(root)/'a.jar';b=Path(root)/'b.jar';d.deterministic_jar(a,{'b':b'2','a':b'1'});d.deterministic_jar(b,{'a':b'1','b':b'2'});self.assertEqual(a.read_bytes(),b.read_bytes())
+
+    def test_optional_catalogue_files_are_signed_separately_from_game_files(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp);(root/'delivery').mkdir();src=root/'mods/example';src.mkdir(parents=True)
+            (src/'stalcraft-mod.properties').write_text('id=example\nversion=1.0\napi=1\nmain=test.Mod\n','utf8')
+            (root/'delivery/mods.json').write_text(json.dumps([{'id':'example','name':'Example','description':'Optional','side':'client','required':False,'source':'mods/example'}]),'utf8')
+            payload=root/'output/mods/example/example.jar';payload.parent.mkdir(parents=True)
+            with zipfile.ZipFile(payload,'w') as z:z.writestr('stalcraft-mod.properties',(src/'stalcraft-mod.properties').read_bytes())
+            with patch.object(d,'ROOT',root):catalogue=d.mod_catalogue(root/'output')
+            self.assertEqual(catalogue[0]['files'][0]['target'],'client/mods/example.jar')
+            self.assertEqual(catalogue[0]['files'][0]['sha256'],d.digest(payload))
+            self.assertFalse(catalogue[0]['required']);self.assertEqual(catalogue[0]['version'],'1.0')

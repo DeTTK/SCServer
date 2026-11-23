@@ -1,0 +1,118 @@
+import { ModRow } from "api.slint";
+import { Theme } from "theme.slint";
+import { Action, EmptyState, Hint, Label, Rule, RowButton, Scroller, SectionTitle } from "controls.slint";
+
+component Attribute inherits HorizontalLayout {
+    in property <string> caption;
+    in property <string> value;
+    spacing: 10px;
+    Hint { text: root.caption; width: 78px; vertical-alignment: top; }
+    Label { text: root.value; horizontal-stretch: 1; wrap: word-wrap; overflow: clip; }
+}
+
+export component ModsPage inherits VerticalLayout {
+    in property <[ModRow]> catalog;
+    in property <[ModRow]> installed;
+    in property <ModRow> selection;
+    in property <bool> client-running;
+    in property <bool> busy;
+    in-out property <string> tab;
+    callback select-mod(string);
+    callback act(string, string);
+    private property <[ModRow]> rows: tab == "installed" ? installed : catalog;
+    private property <string> remove-id;
+    function change-tab(next: string) {
+        root.tab = next;
+        root.remove-id = "";
+        root.select-mod(root.rows.length > 0 ? root.rows[0].id : "");
+    }
+    spacing: 16px;
+    HorizontalLayout {
+        height: Theme.field-height; spacing: 8px;
+        for item in [{ id: "catalog", title: "Каталог" }, { id: "installed", title: "Установленные" }]: Action {
+            label: item.title; kind: "plain"; selected: item.id == root.tab; enabled: !root.busy;
+            activated => { root.change-tab(item.id); }
+        }
+        Rectangle { horizontal-stretch: 1; }
+        Action { label: "Обновить список"; glyph: "\u{e72c}"; enabled: !root.busy; activated => { root.act("refresh", ""); } }
+        Action { label: "Добавить JAR…"; glyph: "\u{e710}"; enabled: !root.busy && !root.client-running; activated => { root.act("import", ""); } }
+        Action { label: "Папка модов"; glyph: "\u{e8b7}"; enabled: !root.busy; activated => { root.act("open-folder", ""); } }
+    }
+    Rule {}
+    HorizontalLayout {
+        spacing: 20px; vertical-stretch: 1;
+        VerticalLayout {
+            horizontal-stretch: 6; min-width: 290px; spacing: 10px;
+            HorizontalLayout {
+                height: 30px; spacing: 8px;
+                SectionTitle { text: root.tab == "installed" ? "Установленные моды" : "Каталог модов"; }
+                Hint { text: root.rows.length; }
+                Rectangle { horizontal-stretch: 1; }
+            }
+            Scroller {
+                vertical-stretch: 1;
+                VerticalLayout {
+                    alignment: start; spacing: 4px;
+                    if root.rows.length == 0: EmptyState {
+                        title: root.tab == "installed" ? "Пока нет установленных модов" : "В каталоге пока пусто";
+                        detail: root.tab == "installed" ? "Установите мод из каталога или выберите «Добавить JAR…»." : "Обновите список, чтобы проверить каталог выбранного канала.";
+                    }
+                    for row in root.rows: RowButton {
+                        title: row.title; detail: row.side + (row.version != "" ? "  ·  " + row.version : "");
+                        meta: row.update-available ? "Обновление" : row.required ? "Обязательный" : row.installed ? (row.enabled ? "Включён" : "Выключен") : "";
+                        selected: row.id == root.selection.id; enabled: !root.busy;
+                        activated => { root.remove-id = ""; root.select-mod(row.id); }
+                    }
+                }
+            }
+        }
+        Rectangle {
+            horizontal-stretch: 4; min-width: 305px; background: Theme.panel; border-radius: 7px;
+            VerticalLayout {
+                padding: 20px; spacing: 16px;
+                if root.selection.id == "": EmptyState { title: "Выберите мод"; detail: "Здесь появятся описание, версия и доступные действия."; }
+                if root.selection.id != "": Scroller {
+                    VerticalLayout {
+                        alignment: start; spacing: 14px;
+                        SectionTitle { text: root.selection.title; wrap: word-wrap; overflow: clip; }
+                        Label { text: root.selection.description == "" ? "Описание отсутствует." : root.selection.description; wrap: word-wrap; overflow: clip; }
+                        Rule {}
+                        Attribute { caption: "Версия"; value: root.selection.version == "" ? "Не указана" : root.selection.version; }
+                        Attribute { caption: "Сторона"; value: root.selection.side; }
+                        Attribute { caption: "Источник"; value: root.selection.source; }
+                        Attribute { caption: "Состояние"; value: !root.selection.installed ? "Не установлен" : root.selection.enabled ? "Включён" : "Выключен"; }
+                        if root.selection.required: Hint { text: "Обязательный мод входит в сборку. Отключение и удаление недоступны."; wrap: word-wrap; overflow: clip; }
+                        if root.selection.update-available: Hint { text: "Доступно обновление"; color: #e4ab77; }
+                        if root.client-running: Hint { text: "Закройте игру, чтобы изменить моды."; wrap: word-wrap; overflow: clip; }
+                        if !root.selection.read-only && (!root.selection.required || !root.selection.installed || root.selection.update-available): Rule {}
+                        if !root.selection.read-only: HorizontalLayout {
+                            spacing: 6px; alignment: start;
+                            if !root.selection.installed || root.selection.update-available: Action {
+                                label: root.selection.installed ? "Обновить" : "Установить"; kind: "primary"; enabled: !root.busy && !root.client-running;
+                                activated => { root.act(root.selection.installed ? "update" : "install", root.selection.id); }
+                            }
+                            if root.selection.installed && !root.selection.required: Action {
+                                label: root.selection.enabled ? "Отключить" : "Включить"; enabled: !root.busy && !root.client-running;
+                                activated => { root.remove-id = ""; root.act(root.selection.enabled ? "disable" : "enable", root.selection.id); }
+                            }
+                        }
+                        if root.selection.installed && !root.selection.required && root.remove-id != root.selection.id: HorizontalLayout {
+                            alignment: start;
+                            Action { label: "Удалить…"; kind: "plain"; enabled: !root.busy && !root.client-running; activated => { root.remove-id = root.selection.id; } }
+                        }
+                        if root.selection.installed && !root.selection.required && root.remove-id == root.selection.id: VerticalLayout {
+                            spacing: 8px;
+                            Hint { text: "Переместить JAR в архив и удалить мод из установленных?"; wrap: word-wrap; overflow: clip; }
+                            HorizontalLayout {
+                                spacing: 8px; alignment: start;
+                                Action { label: "Удалить"; kind: "danger"; enabled: !root.busy && !root.client-running; activated => { root.remove-id = ""; root.act("remove", root.selection.id); } }
+                                Action { label: "Отмена"; activated => { root.remove-id = ""; } }
+                            }
+                        }
+                    }
+                }
+                if root.selection.id == "": Rectangle { vertical-stretch: 1; }
+            }
+        }
+    }
+}

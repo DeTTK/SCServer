@@ -1,4 +1,4 @@
-use crate::{AppWindow, AttachmentRow, ChangeRow, ServerRow, WorldRow};
+use crate::{AppWindow, AttachmentRow, ChangeRow, ModRow, ServerRow, WorldRow};
 use anyhow::{Context, Result, bail};
 use bscp_launcher_core::*;
 use bscp_launcher_host::{HostClient, ensure_host};
@@ -89,6 +89,7 @@ impl Draft {
 
 enum Work {
     Init,
+    Mods(String, String, Option<PathBuf>),
     Launch(bool),
     Connect(String, String),
     Select(String),
@@ -236,6 +237,46 @@ fn refresh(ui: &slint::Weak<AppWindow>, layout: &Layout, drafts: bool) -> Result
                 body: available.changelog.into(),
             }]));
         }
+    });
+    let _ = refresh_mods(ui, layout);
+    Ok(())
+}
+fn mod_row(v: ModView) -> ModRow {
+    let read_only = v.source == "Конфликт ID" || v.version == "Некорректный JAR";
+    ModRow {
+        id: v.id.into(),
+        title: v.title.into(),
+        description: v.description.into(),
+        version: v.version.into(),
+        side: v.side.into(),
+        read_only,
+        source: v.source.into(),
+        required: v.required,
+        installed: v.installed,
+        enabled: v.enabled,
+        update_available: v.update_available,
+    }
+}
+fn select_mod(ui: &AppWindow, id: &str) {
+    let model = if ui.get_mods_tab() == "installed" {
+        ui.get_installed_mods()
+    } else {
+        ui.get_catalog_mods()
+    };
+    let selected = model
+        .iter()
+        .find(|r| r.id == id)
+        .or_else(|| model.row_data(0))
+        .unwrap_or_default();
+    ui.set_selected_mod(selected);
+}
+fn refresh_mods(ui: &slint::Weak<AppWindow>, layout: &Layout) -> Result<()> {
+    let snapshot = ModManager::new(layout).snapshot()?;
+    let _ = ui.upgrade_in_event_loop(move |ui| {
+        let id = ui.get_selected_mod().id.to_string();
+        ui.set_catalog_mods(rows(snapshot.catalog.into_iter().map(mod_row).collect()));
+        ui.set_installed_mods(rows(snapshot.installed.into_iter().map(mod_row).collect()));
+        select_mod(&ui, &id);
     });
     Ok(())
 }
@@ -511,9 +552,14 @@ pub fn bind(ui: &AppWindow, layout: Layout) -> Binding {
     let submit: Rc<dyn Fn(Work, bool)> = Rc::new(submit);
     {
         let w = ui.as_weak();
+        let send = submit.clone();
         ui.on_navigate(move |page| {
             if let Some(ui) = w.upgrade() {
+                let is_mods = page == "mods";
                 ui.set_page(page);
+                if is_mods && !ui.get_busy() {
+                    send(Work::Mods("scan".into(), String::new(), None), true);
+                }
                 ui.set_error("".into());
             }
         });
@@ -772,6 +818,30 @@ pub fn bind(ui: &AppWindow, layout: Layout) -> Binding {
                 }
             }
             slint::CloseRequestResponse::HideWindow
+        });
+    }
+    {
+        let w = ui.as_weak();
+        ui.on_select_mod(move |id| {
+            if let Some(ui) = w.upgrade() {
+                select_mod(&ui, &id);
+            }
+        });
+        let send = submit.clone();
+        ui.on_mod_action(move |action, id| {
+            let file = if action == "import" {
+                match rfd::FileDialog::new()
+                    .set_title("Добавить мод")
+                    .add_filter("Мод игры", &["jar"])
+                    .pick_file()
+                {
+                    Some(path) => Some(path),
+                    None => return,
+                }
+            } else {
+                None
+            };
+            send(Work::Mods(action.to_string(), id.to_string(), file), true);
         });
     }
     let worker_ui = ui.as_weak();
@@ -1063,6 +1133,44 @@ fn execute(
 ) -> Result<String> {
     let mut s = layout.load()?;
     match work {
+        Work::Mods(action, id, file) => {
+            let manager = ModManager::new(layout);
+            match action.as_str() {
+                "open-folder" => {
+                    let folder = manager.folder()?;
+                    no_links(&folder)?;
+                    std::fs::create_dir_all(&folder)?;
+                    open_path(&folder)?;
+                }
+                "scan" => {}
+                "refresh" => {
+                    if !s.game_branch.is_empty() {
+                        progress("Проверяем каталог модов…".into());
+                        if let Err(error) = RepositoryChannel::new(layout)?
+                            .with_cancel(cancel.clone())
+                            .check(&s.game_branch)
+                        {
+                            refresh_mods(ui, layout)?;
+                            return Ok(format!(
+                                "Показан сохранённый каталог. GitHub недоступен: {error}"
+                            ));
+                        }
+                    }
+                }
+                "import" => manager.import(&file.context("MOD_FILE: выберите JAR")?)?,
+                _ => manager.apply(&action, &id, cancel.clone(), Some(progress))?,
+            }
+            refresh_mods(ui, layout)?;
+            Ok(match action.as_str() {
+                "remove" => {
+                    "Мод перенесён в архив. Изменения применятся при следующем запуске игры."
+                }
+                "scan" | "refresh" => "Список модов обновлён",
+                "open-folder" => "Папка модов открыта",
+                _ => "Моды сохранены. Изменения применятся при следующем запуске игры.",
+            }
+            .into())
+        }
         Work::Init => {
             refresh(ui, layout, true)?;
             let _ = ui.upgrade_in_event_loop(|ui| {

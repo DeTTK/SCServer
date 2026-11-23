@@ -133,6 +133,7 @@ impl ChannelManifest {
             !self.files.is_empty() && self.files.len() <= 10000,
             "CHANNEL_LIMIT: неверное число файлов"
         );
+        crate::mods::validate_mod_catalog(self)?;
         let mut paths = HashSet::new();
         let mut targets = HashSet::new();
         let mut total = 0u64;

@@ -2,6 +2,7 @@
 pub mod channels;
 pub mod diagnostics;
 pub mod foundation;
+pub mod mods;
 pub mod profile;
 pub mod progress;
 pub mod setup;
@@ -15,6 +16,7 @@ pub use anyhow::Result;
 pub use channels::*;
 pub use diagnostics::*;
 pub use foundation::*;
+pub use mods::*;
 pub use profile::*;
 pub use progress::*;
 pub use setup::*;

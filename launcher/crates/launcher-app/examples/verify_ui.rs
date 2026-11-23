@@ -4,7 +4,7 @@ mod controller;
 slint::include_modules!();
 use anyhow::{Result, ensure};
 use bscp_launcher_core::*;
-use slint::{ComponentHandle, Timer};
+use slint::{ComponentHandle, Model, Timer};
 use std::{
     cell::Cell,
     path::Path,
@@ -58,6 +58,7 @@ fn fixture(root: &Path) -> Result<Layout> {
 
 fn main() -> Result<()> {
     let root = std::path::PathBuf::from(std::env::args().nth(1).expect("owned fixture root"));
+    let mod_jar = std::env::args().nth(2).map(std::path::PathBuf::from);
     let layout = fixture(&root)?;
     slint::BackendSelector::new()
         .backend_name("winit".into())
@@ -85,7 +86,11 @@ fn main() -> Result<()> {
             4=>{assert!(ui.get_configured());assert!(!ui.get_setup_visible());let s=test_layout.load().unwrap();assert!(s.setup_completed);assert_eq!(s.nickname,"ТестовыйИгрок");LocalIdentity::load(&test_layout).unwrap().validate().unwrap();assert_eq!(WorldStore::new(test_layout.data(&s)).unwrap().get(&s.selected_world).unwrap().name,"Проверочный мир");ui.invoke_world_action("rename".into(),s.selected_world.into(),"Новое имя".into());},
             5=>{let s=test_layout.load().unwrap();assert_eq!(WorldStore::new(test_layout.data(&s)).unwrap().get(&s.selected_world).unwrap().name,"Новое имя");ui.invoke_favorite_action("save".into(),"Друг".into(),"127.0.0.1:29545".into(),"ДругойНик".into());},
             6=>{let entries:Vec<ServerEntry>=read_json(&test_layout.at("config/servers.json")).unwrap();assert_eq!(entries.len(),1);assert_eq!(entries[0].nickname,"ДругойНик");ui.set_client_memory("8192".into());ui.invoke_save_settings();},
-            _=>{assert_eq!(test_layout.load().unwrap().client_memory_mb,8192);write_json(&test_layout.at("verification.json"),&serde_json::json!({"passed":true,"steps":7,"realController":true,"gameFixtureOnly":true})).unwrap();slint::quit_event_loop().unwrap();return;}
+            7 if mod_jar.is_some()=>{assert_eq!(test_layout.load().unwrap().client_memory_mb,8192);ModManager::new(&test_layout).import(mod_jar.as_ref().unwrap()).unwrap();ui.set_mods_tab("installed".into());ui.invoke_navigate("mods".into());},
+            8=>{assert_eq!(ui.get_installed_mods().row_count(),1);let row=ui.get_installed_mods().row_data(0).unwrap();assert!(row.enabled);ui.invoke_select_mod(row.id.clone());ui.invoke_mod_action("disable".into(),row.id);},
+            9=>{assert!(!ui.get_selected_mod().enabled);ui.invoke_mod_action("enable".into(),ui.get_selected_mod().id);},
+            10=>{assert!(ui.get_selected_mod().enabled);ui.invoke_mod_action("remove".into(),ui.get_selected_mod().id);},
+            _=>{if mod_jar.is_some(){assert_eq!(ui.get_installed_mods().row_count(),0);}assert_eq!(test_layout.load().unwrap().client_memory_mb,8192);write_json(&test_layout.at("verification.json"),&serde_json::json!({"passed":true,"steps":if mod_jar.is_some(){11}else{7},"modController":mod_jar.is_some(),"realController":true,"gameFixtureOnly":true})).unwrap();slint::quit_event_loop().unwrap();return;}
         }stage.set(stage.get()+1);
     });
     ui.run()?;

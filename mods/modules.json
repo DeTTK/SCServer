@@ -24,7 +24,7 @@
     "assetsIncluded": false
   },
   "better-third-face": {
-    "status": "source-only; not in independent CI",
+    "status": "source-built optional signed catalogue",
     "assetsIncluded": false
   },
   "arc-hud-prototype": {
@@ -32,11 +32,11 @@
     "assetsIncluded": false
   },
   "cinematic-camera": {
-    "status": "source-only; not in independent CI",
+    "status": "source-built optional signed catalogue",
     "assetsIncluded": false
   },
   "command-completion": {
-    "status": "source-only; not in independent CI",
+    "status": "source-built required client component",
     "assetsIncluded": false
   }
 }

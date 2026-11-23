@@ -9,3 +9,7 @@ export struct TransferView {
 }
 
 export struct AttachmentRow { id: string, name: string, detail: string }
+export struct ModRow {
+    id: string, title: string, description: string, version: string, side: string,
+    source: string, required: bool, installed: bool, enabled: bool, update-available: bool, read-only: bool,
+}

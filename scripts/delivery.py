@@ -39,10 +39,33 @@ def file_inventory(root):
         if rel.split('/')[0]not in ('server','client','mods'):raise ValueError('Unexpected component')
         if p.suffix.lower()not in ('.jar','.properties'):raise ValueError('Unexpected payload type')
         if p.stat().st_size>99*1024*1024:raise ValueError('Payload exceeds ordinary Git limit')
-        target='client/mods/command-completion.jar'if rel=='mods/command-completion/command-completion.jar'else rel
+        target=('client/mods/'+rel.split('/')[1]+'.jar') if rel.startswith('mods/') and len(rel.split('/'))==3 and rel.endswith('.jar') else rel
         rows.append({'path':rel,'target':target,'size':p.stat().st_size,'sha256':digest(p)})
     if not rows:raise ValueError('Empty delivery')
     return rows
+def mod_catalogue(root):
+    config=json.loads((ROOT/'delivery/mods.json').read_text('utf8'))
+    rows={r['path']:r for r in file_inventory(root)}
+    output=[];ids=set()
+    for item in config:
+        ident=item['id']
+        if not re.fullmatch('[a-z][a-z0-9_-]{0,63}',ident) or ident in ids or item['side']!='client':raise ValueError('Invalid catalogue mod')
+        ids.add(ident);safe_path(item['source'])
+        descriptor=ROOT/item['source']/'stalcraft-mod.properties'
+        props=dict(line.split('=',1) for line in descriptor.read_text('utf8').splitlines() if '='in line and not line.startswith('#'))
+        if props['id']!=ident or props['api']!='1':raise ValueError('Mod descriptor differs')
+        path=f'mods/{ident}/{ident}.jar'
+        row=rows[path]
+        with zipfile.ZipFile(root/path) as z:
+            data=z.read('stalcraft-mod.properties').decode('utf8')
+            if 'id='+ident not in data:raise ValueError('Built mod id differs')
+        result={k:item[k] for k in ('id','name','description','side','required')}
+        result.update(version=props['version'],path=path)
+        if not item['required']:result['files']=[row]
+        output.append(result)
+    return output
+
+
 def deterministic_jar(path,entries):
     with zipfile.ZipFile(path,'w',zipfile.ZIP_DEFLATED)as z:
         for name,raw in sorted(entries.items()):
@@ -72,6 +95,16 @@ def prepare():
         'mods/command-completion/command-completion.jar':player/'Client/mods/command-completion.jar'}
     OUT.mkdir(parents=True,exist_ok=False)
     for name,src in files.items():dst=OUT/name;dst.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(src,dst)
+    # Optional mods are compiled from ordinary Git sources and published separately.
+    api=ROOT/'build/mod-api.jar'
+    runtime=player/'Bootstrap/runtime'
+    classpath=[api,*tools.dependencies(),runtime/'game.jar',runtime/'libraries.jar',*sorted((runtime/'dependencies').glob('*.jar'))]
+    for item in json.loads((ROOT/'delivery/mods.json').read_text('utf8')):
+        if item['required']:continue
+        source=ROOT/item['source'];ident=item['id']
+        classes=tools.compile_java('catalogue-'+ident,(source/'src').rglob('*.java'),classpath)
+        jar=tools.jar('catalogue-'+ident,classes,[(source/'stalcraft-mod.properties','stalcraft-mod.properties')])
+        dst=OUT/f'mods/{ident}/{ident}.jar';dst.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(jar,dst)
     rows=file_inventory(OUT)
     (ROOT/'build/delivery-verification.json').write_text(json.dumps({'files':rows,'bytes':sum(r['size']for r in rows),'foundation':foundation},indent=2),'utf8')
     print('Prepared source-built game and complete Git foundation',foundation['id'])
@@ -93,7 +126,9 @@ def publish():
     if latest!=source:print('Superseded source build; not publishing');return
     manifest={'schemaVersion':2,'minimumLauncherVersion':'0.4.1','channel':channel,'sourceCommit':source,'sequence':int(os.environ['GITHUB_RUN_NUMBER']),
         'baseId':LOCK['id'],'files':file_inventory(OUT),'changelog':run('git','log','-1','--format=%s',capture_output=True,text=True).stdout.strip(),
-        'mods':[{'id':'command-completion','name':'Подсказки команд','side':'client','required':True,'path':'mods/command-completion/command-completion.jar'}]}
+        'mods':mod_catalogue(OUT)}
+    optional={f['path'] for mod in manifest['mods'] if not mod['required'] for f in mod['files']}
+    manifest['files']=[f for f in manifest['files'] if f['path']not in optional]
     export=json.loads((ROOT/'build/foundation-delivery/foundation-export.json').read_text('utf8'))
     foundation=export['foundation'];manifest['foundation']=foundation;manifest['baseId']=foundation['id']
     foundation_output=ROOT/'build/foundation-delivery'
@@ -122,8 +157,8 @@ def publish():
         run('git','-C',destination,'read-tree','FETCH_HEAD',env=env)
         previous_raw=subprocess.run(['git','-C',str(destination),'show','FETCH_HEAD:delivery.json'],env=env,capture_output=True)
         if previous_raw.returncode==0:
-            previous=json.loads(previous_raw.stdout);current={r['path']for r in manifest['files']}
-            for row in previous['files']:
+            previous=json.loads(previous_raw.stdout);current={r['path']for r in file_inventory(OUT)}
+            for row in [*previous['files'],*[f for m in previous.get('mods',[]) for f in m.get('files',[])]]:
                 safe_path(row['path'])
                 if row['path']not in current:run('git','-C',destination,'rm','--cached','--ignore-unmatch','--',row['path'],env=env,capture_output=True)
     else:run('git','-C',destination,'symbolic-ref','HEAD','refs/heads/'+branch,env=env)
@@ -138,7 +173,7 @@ def publish():
     if foundation_payload is not None:metadata[manifest['foundation']['path']]=foundation_payload.decode('utf8')
     for name,body in metadata.items():
         p=destination/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_text(body,'utf8')
-    run('git','-C',destination,'add','--',*[r['path']for r in manifest['files']],'delivery.json','delivery.json.sig',*metadata,*foundation_paths,env=env)
+    run('git','-C',destination,'add','--',*[r['path']for r in file_inventory(OUT)],'delivery.json','delivery.json.sig',*metadata,*foundation_paths,env=env)
     commit_index(destination,'Build launtest from '+source[:12],env)
     latest=run('git','ls-remote','origin','refs/heads/'+channel,capture_output=True,text=True).stdout.split()[0]
     if latest!=source:print('Source advanced before activation; not publishing');return
