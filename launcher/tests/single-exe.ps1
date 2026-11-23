@@ -35,14 +35,21 @@ function Capture-Ui([string]$name) {
 try {
     if(Test-Path -LiteralPath (Join-Path $package 'bscp-host.exe')){throw 'Unexpected separate host'}
     Capture-Ui 'first.ppm'
+    if(@(Get-OwnedHost).Count -ne 0){throw 'Idle UI spawned a supervisor'}
+    $info=[Diagnostics.ProcessStartInfo]::new($binary)
+    $info.UseShellExecute=$false;$info.CreateNoWindow=$true
+    foreach($arg in @('--root',$root,'--host')) {$info.ArgumentList.Add($arg)}
+    $background=[Diagnostics.Process]::Start($info)
+    for($i=0;$i -lt 40;$i++) {try {$status=Invoke-Rpc 'status';break} catch {Start-Sleep -Milliseconds 100}}
     $expected=(Get-FileHash -LiteralPath $binary -Algorithm SHA256).Hash.ToLowerInvariant()
-    if((Invoke-Rpc 'status').HostBuild -ne $expected){throw 'Supervisor is not this executable'}
+    if($status.HostBuild -ne $expected){throw 'Supervisor is not this executable'}
     $first=@(Get-OwnedHost)
-    if($first.Count -ne 1){throw 'Expected one background process after UI exit'}
+    if($first.Count -ne 1){throw 'Expected one explicit background process'}
+    if(-not $background.WaitForExit(15000) -or $background.ExitCode -ne 0){throw 'Idle supervisor did not exit'}
     Capture-Ui 'second.ppm'
     $second=@(Get-OwnedHost)
-    if($second.Count -ne 1 -or $second[0].ProcessId -ne $first[0].ProcessId){throw 'Repeated UI spawned a duplicate host'}
-    Write-Output 'Single EXE self-spawn, UI rendering, persistent background and reuse: PASS'
+    if($second.Count -ne 0){throw 'Repeated idle UI spawned a supervisor'}
+    Write-Output 'Single EXE, idle UI without supervisor, explicit host mode and automatic idle exit: PASS'
 } finally {
-    try {Invoke-Rpc 'shutdown' | Out-Null} catch {Write-Warning $_}
+    if(@(Get-OwnedHost).Count -gt 0){try {Invoke-Rpc 'shutdown' | Out-Null} catch {Write-Warning $_}}
 }

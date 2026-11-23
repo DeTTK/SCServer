@@ -472,6 +472,22 @@ impl RepositoryChannel {
         delete_owned(&roots, &stage)?;
         result
     }
+    /// Startup checks must not spawn a supervisor for an already verified revision.
+    pub fn is_current(&self, available: &ChannelAvailable) -> Result<bool> {
+        let settings = self.layout.load()?;
+        if settings.game_branch != available.manifest.channel || !hex_valid(&available.revision, 64)
+        {
+            return Ok(false);
+        }
+        let installed: ChannelInstalled =
+            read_json(&state_dir(&self.layout, &settings.game_branch)?.join("installed.json"))?;
+        if installed.revision != available.revision {
+            return Ok(false);
+        }
+        let folder = child(&revisions(&self.layout, &settings), &available.revision)?;
+        no_links(&folder)?;
+        Ok(verify_revision(&folder, &available.manifest).is_ok())
+    }
     pub fn cached(&self, branch: &str) -> Result<Option<ChannelAvailable>> {
         let state = state_dir(&self.layout, branch)?;
         if !state.join("available.json").exists() {

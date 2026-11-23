@@ -47,6 +47,7 @@ pub struct Supervisor {
     qa: Option<PathBuf>,
     http: reqwest::Client,
     agent: PathBuf,
+    retiring: std::sync::atomic::AtomicBool,
 }
 fn read_json<T: serde::de::DeserializeOwned>(p: &Path) -> Result<T> {
     Ok(serde_json::from_slice(&std::fs::read(p)?)?)
@@ -112,6 +113,7 @@ impl Supervisor {
                 .redirect(reqwest::redirect::Policy::none())
                 .build()?,
             agent,
+            retiring: std::sync::atomic::AtomicBool::new(false),
         }))
     }
     fn state(&self, state: &str, detail: &str) {
@@ -163,6 +165,9 @@ impl Supervisor {
                 .as_ref()
                 .is_some_and(alive)
         );
+        if self.retiring.load(std::sync::atomic::Ordering::Acquire) {
+            v["State"] = json!("Exiting");
+        }
         v
     }
     fn worlds(&self) -> Result<WorldStore> {
@@ -452,6 +457,9 @@ impl Supervisor {
             _ => {}
         }
         let _lock = self.lifecycle.lock().await;
+        if self.retiring.load(std::sync::atomic::Ordering::Acquire) {
+            bail!("HOST_EXITING: supervisor is stopping; retry the operation");
+        }
         self.guard_busy()?;
         match cmd {
             "start" => {
@@ -848,6 +856,7 @@ impl Supervisor {
         bail!("STOP_PENDING: server is saving; no force kill performed")
     }
     pub async fn monitor(self: Arc<Self>) {
+        let mut idle_since = Some(std::time::Instant::now());
         loop {
             tokio::time::sleep(Duration::from_secs(2)).await;
             let Ok(_lock) = self.lifecycle.try_lock() else {
@@ -910,6 +919,22 @@ impl Supervisor {
                     }
                 }
             }
+            let idle = {
+                let r = self.running.lock().unwrap();
+                r.server.is_none() && r.client.is_none() && r.blocked.is_none()
+            };
+            if idle {
+                let since = idle_since.get_or_insert_with(std::time::Instant::now);
+                if since.elapsed() >= Duration::from_secs(5) {
+                    self.retiring
+                        .store(true, std::sync::atomic::Ordering::Release);
+                    tokio::time::sleep(Duration::from_millis(250)).await;
+                    self.exit.notify_one();
+                    return;
+                }
+            } else {
+                idle_since = None;
+            }
         }
     }
     fn clear_pending(&self) -> Result<()> {
@@ -969,6 +994,36 @@ fn pump(child: &mut tokio::process::Child, folder: &Path, name: &str) {
 #[cfg(all(test, windows))]
 mod metrics_tests {
     use super::*;
+    #[cfg(windows)]
+    #[tokio::test]
+    async fn monitor_survives_owned_client_and_exits_after_it_stops() {
+        let root = tempfile::tempdir().unwrap();
+        let layout = Layout::new(root.path());
+        layout.init().unwrap();
+        let host = Supervisor::new(layout, None, None).unwrap();
+        host.running.lock().unwrap().client = Some(Owned {
+            pid: std::process::id(),
+            started: process_time(std::process::id()).unwrap(),
+            ..Default::default()
+        });
+        let monitor = tokio::spawn(host.clone().monitor());
+        assert!(
+            tokio::time::timeout(Duration::from_secs(7), host.exit.notified())
+                .await
+                .is_err()
+        );
+        host.running.lock().unwrap().client = None;
+        tokio::time::timeout(Duration::from_secs(10), host.exit.notified())
+            .await
+            .unwrap();
+        monitor.await.unwrap();
+        assert_eq!(host.status()["State"], "Exiting");
+        let error = host
+            .execute(json!({"Command":"stop","Arguments":{}}))
+            .await
+            .unwrap_err();
+        assert!(error.to_string().contains("HOST_EXITING"));
+    }
     use tokio::{
         io::{AsyncReadExt, AsyncWriteExt},
         net::TcpListener,

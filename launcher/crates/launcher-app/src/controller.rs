@@ -890,7 +890,14 @@ fn call(
     command: &str,
     args: BTreeMap<String, String>,
 ) -> Result<serde_json::Value> {
-    ensure_host(layout)?.call(command, &args)
+    let result = ensure_host(layout)?.call(command, &args);
+    if result
+        .as_ref()
+        .is_err_and(|e| e.to_string().contains("HOST_EXITING:"))
+    {
+        return ensure_host(layout)?.call(command, &args);
+    }
+    result
 }
 fn kv(values: &[(&str, &str)]) -> BTreeMap<String, String> {
     values
@@ -971,7 +978,6 @@ fn execute(
                 ui.set_setup_visible(!ui.get_configured());
                 ui.set_setup_step(0);
             });
-            let _ = ensure_host(layout)?;
             if !s.game_branch.is_empty() {
                 let service = RepositoryChannel::new(layout)?.with_cancel(cancel.clone());
                 let mut branches = service
@@ -986,8 +992,9 @@ fn execute(
                 progress(format!("Проверяем готовую сборку {}…", s.game_branch).into());
                 match service.check(&s.game_branch) {
                     Ok(available) => {
-                        let view = HostClient::new(layout).status()?;
+                        let view = HostClient::new(layout).status().unwrap_or_default();
                         if s.setup_completed
+                            && !service.is_current(&available)?
                             && !view.client_running
                             && !matches!(
                                 view.state.as_str(),

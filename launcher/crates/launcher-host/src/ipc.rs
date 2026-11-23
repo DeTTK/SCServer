@@ -57,6 +57,15 @@ impl HostClient {
 pub fn ensure_host(layout: &Layout) -> Result<HostClient> {
     let c = HostClient::new(layout);
     let exe = std::env::current_exe()?;
+    // An idle instance may already have committed to exit. Wait for its lock/pipe
+    // to disappear instead of handing the caller a retiring supervisor.
+    for _ in 0..30 {
+        if c.status().is_ok_and(|s| s.state == "Exiting") {
+            std::thread::sleep(Duration::from_millis(100));
+        } else {
+            break;
+        }
+    }
     if let Ok(status) = c.status() {
         let expected = bscp_launcher_core::sha(&exe)?;
         let raw = c.call("status", &BTreeMap::new())?;

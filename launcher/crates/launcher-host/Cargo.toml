@@ -5,6 +5,8 @@ version.workspace = true
 edition = "2024"
 [lib]
 name = "bscp_launcher_host"
+[dev-dependencies]
+tempfile = "3"
 [dependencies]
 bscp-launcher-core = { path = "../launcher-core" }
 anyhow = "1"
