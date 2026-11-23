@@ -30,6 +30,8 @@ def run(runtime,server,map_root,java,game,packed):
         if any(mark in p.name for mark in ('.before-','.reshade-','.maven-')):continue
         file('runtime/natives/'+p.name,p,'vendor-native')
     for p in sorted((runtime/'natives/fmod/x64').glob('*.dll')):file('runtime/natives/fmod/x64/'+p.name,p,'vendor-native')
+    for dest,origin in {'eos/x64/EOSSDK-Win64-Shipping.dll':'EOSSDK-Win64-Shipping.dll','eos/x64/ald.dll':'ald.dll','stove/StoveC.dll':'StoveC.dll'}.items():
+        objects['runtime/natives/'+dest]=dict(objects['runtime/natives/'+origin])
     for p in sorted(java.rglob('*')):
         if p.is_file():file('java17/'+p.relative_to(java).as_posix(),p,'vendor-java-runtime')
     for name in ('configs.xeon','boxes.xeon'):file('assets/'+name,game/'modassets/assets/bundle'/name,'original-game-resource-archive')

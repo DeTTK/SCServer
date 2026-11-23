@@ -8824,6 +8824,28 @@
       "parts": [
         "bootstrap/inputs/runtime/natives/fmod/x64/fmodstudio.dll"
       ]
+    },
+    "runtime/natives/eos/x64/EOSSDK-Win64-Shipping.dll": {
+      "size": 19254736,
+      "sha256": "4ee17bb5cb3ebb580bba995cb384d30fe24ad6a1a50074e340045dcdb3280ced",
+      "parts": [
+        "bootstrap/inputs/runtime/natives/EOSSDK-Win64-Shipping.dll.part-0000",
+        "bootstrap/inputs/runtime/natives/EOSSDK-Win64-Shipping.dll.part-0001"
+      ]
+    },
+    "runtime/natives/eos/x64/ald.dll": {
+      "size": 133120,
+      "sha256": "41af8ac41c7b7d2e00f9ea8081cc3cde213a4a424a14f66beb61d2179df80752",
+      "parts": [
+        "bootstrap/inputs/runtime/natives/ald.dll"
+      ]
+    },
+    "runtime/natives/stove/StoveC.dll": {
+      "size": 69632,
+      "sha256": "e74089b9987868cddbc5521e11e20a562045428522a283870665b82ca4e003f8",
+      "parts": [
+        "bootstrap/inputs/runtime/natives/StoveC.dll"
+      ]
     }
   }
 }

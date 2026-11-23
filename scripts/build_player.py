@@ -67,7 +67,7 @@ def build(output):
     for dep in tools.dependencies():copy(dep,player/'Server/lib'/dep.name)
     copy(ROOT/'build/command-completion.jar',player/'Client/mods/command-completion.jar')
     libraries=[runtime/'game.jar',runtime/'libraries.jar',*sorted((runtime/'dependencies').glob('*.jar'))]
-    boot=tools.compile_java('player-bootstrap',[*(ROOT/'client/bootstrap').glob('*.java'),*(ROOT/'client/mod-runtime/src').rglob('*.java')],libraries)
+    boot=tools.compile_java('player-bootstrap',[*(ROOT/'client/bootstrap').glob('*.java'),*(ROOT/'client/bootstrap-compat').rglob('*.java'),*(ROOT/'client/mod-runtime/src').rglob('*.java')],libraries)
     jar(runtime/'bootstrap.jar',entries(boot))
     imgui={}
     for dependency in (runtime/'dependencies').glob('imgui-java-*-1.82.2.jar'):
