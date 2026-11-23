@@ -31,7 +31,7 @@ public final class CharacterEffects {
             if(selected==null||medicine.rules().quickRank()>selected.medicine().rules().quickRank()||medicine.rules().quickRank()==selected.medicine().rules().quickRank()&&entry.getKey().compareTo(selected.address())>0)selected=new Selection(entry.getKey(),medicine);
         }return selected;
     }
-    private static boolean sameGroup(Medicine a,Medicine b){return a.group()!=null&&a.group().equals(b.group())&&a.rules().active()==b.rules().active();}
+    private static boolean sameGroup(Medicine a,Medicine b){if(a.rules().active()!=b.rules().active())return false;return a.group()!=null?a.group().equals(b.group()):b.group()==null&&a.id()==b.id();}
     public Change transition(int activeId,Medicine replacement,Map<Integer,Medicine> catalog,long now){
         Map<Integer,Effect> after=new TreeMap<>(effects);List<Effect> removed=new ArrayList<>();for(Effect effect:effects.values())if(effect.id()==activeId||effect.until()<=now||replacement!=null&&sameGroup(replacement,effect.definition(catalog))){removed.add(effect);after.remove(effect.id());}
         if(replacement!=null&&replacement.duration()>0&&(after.size()>=32||nextId==Integer.MAX_VALUE))throw new IllegalStateException("effect_limit");Effect added=replacement!=null&&replacement.duration()>0?new Effect(nextId,replacement.id(),now+Math.round(replacement.duration()*1000),replacement):null;if(added!=null)after.put(added.id(),added);
