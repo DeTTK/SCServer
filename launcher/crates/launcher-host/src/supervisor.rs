@@ -565,6 +565,7 @@ impl Supervisor {
             ("diagnostics".into(), s.diagnostics.to_string()),
         ]);
         if let Some(src) = source {
+            p.insert("serverRoot".into(), launch::path(&component_base(src)?));
             p.insert(
                 "serverJar".into(),
                 launch::path(&component_file(src, "server.jar")?),

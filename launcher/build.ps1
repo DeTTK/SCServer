@@ -4,7 +4,7 @@ param(
     [switch]$IncludeJava,
     [string]$OutputPath = "$PSScriptRoot\dist",
     [string]$JavaRoot = "$PSScriptRoot\..\artifacts\release\modules\java17",
-    [string]$BridgeJar = "$PSScriptRoot\..\artifacts\release\modules\bscp-bridge.jar"
+    [string]$BridgeJar = ''
 )
 $ErrorActionPreference = 'Stop'
 if (-not $SkipBuild) {
@@ -19,7 +19,7 @@ New-Item -ItemType Directory -Path "$output\modules", "$output\licenses" -Force 
 foreach ($exe in @('BSCPCRAFT.exe', 'bscp-host.exe')) {
     Copy-Item -LiteralPath "$PSScriptRoot\target\release\$exe" -Destination "$output\$exe" -Force
 }
-if (-not (Test-Path -LiteralPath $BridgeJar -PathType Leaf)) {
+if ([string]::IsNullOrWhiteSpace($BridgeJar)) {
     $BridgeJar = "$PSScriptRoot\artifacts\game-modules\bscp-bridge.jar"
     New-Item -ItemType Directory -Path "$PSScriptRoot\artifacts\game-modules" -Force | Out-Null
     $bridgeClasses = "$PSScriptRoot\artifacts\bridge-classes"
@@ -29,6 +29,7 @@ if (-not (Test-Path -LiteralPath $BridgeJar -PathType Leaf)) {
     & jar cfm $BridgeJar "$PSScriptRoot\modules\bridge\manifest.mf" -C $bridgeClasses .
     if ($LASTEXITCODE -ne 0) { throw 'Bridge archive failed.' }
 }
+if (-not (Test-Path -LiteralPath $BridgeJar -PathType Leaf)) { throw 'Missing explicit bridge archive.' }
 Copy-Item -LiteralPath $BridgeJar -Destination "$output\modules\bscp-bridge.jar" -Force
 if ($IncludeJava -and -not $NoJava) {
     if (-not (Test-Path -LiteralPath "$JavaRoot\bin\java.exe")) { throw "Missing Java game component: $JavaRoot" }

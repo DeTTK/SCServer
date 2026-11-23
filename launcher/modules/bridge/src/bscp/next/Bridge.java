@@ -17,7 +17,7 @@ public final class Bridge {
     static Properties config = new Properties(); static Path output; static String token, kind; static final Object lock=new Object();
     static final ArrayDeque<String> history=new ArrayDeque<>(); static long dropped; static Recording recording; static ScheduledExecutorService monitor;
     static FileChannel leaseChannel; static FileLock lease; static HttpServer http;
-    public static Path bundleRoot(Path original){return kind.equals("server")?Path.of(config.getProperty("serverJar")).toAbsolutePath().getParent():original;}
+    public static Path bundleRoot(Path original){if(!kind.equals("server"))return original;String root=config.getProperty("serverRoot","");return root.isBlank()?Path.of(config.getProperty("serverJar")).toAbsolutePath().getParent():Path.of(root).toAbsolutePath();}
     public static Path bundlePath(Path path){return path.isAbsolute()?path:bundleRoot(path).resolve(path).normalize();}
     public static String[] clientArguments(String[] original){String session=config.getProperty("nativeSession","");if(session.isBlank())throw new IllegalStateException("native session missing");String[] args=original.clone();for(int i=0;i+1<args.length;i++)if(args[i].equals("--session")){args[i+1]=session;return args;}throw new IllegalStateException("native session argument missing");}
     static boolean connectedOnce;
