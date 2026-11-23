@@ -1,0 +1,122 @@
+{
+  "result": "PASS",
+  "serverSha256": "dc5d7b4dad83106884b1dac354945b3b9824625ae1cd9b05c8fa90a57b160391",
+  "nativeQuickSlots": {
+    "result": "PASS",
+    "nativeMedicines": 211,
+    "checksPerMedicine": 7,
+    "duplicateMoveToggleAndRoundtrip": true,
+    "missingAndOutsideBagRejected": true
+  },
+  "durablePreferencesAssertions": 11,
+  "sourceSuite": "PASS",
+  "desktopSafetyAssertions": 54,
+  "pythonLayoutTests": 5,
+  "coldRestart": {
+    "result": "PASS",
+    "allInventoryStatePreserved": true,
+    "nativeBindingsRecovered": 4
+  },
+  "liveQuickMenu": {
+    "stockGui": "1092286217",
+    "heldCAndNumberSelection": true,
+    "differentSlots": true,
+    "movedItemSelected": true,
+    "exactlyOneDebit": true,
+    "bindingViaOriginalUiMethods": true,
+    "physicalHoverAssignmentNotTested": true
+  },
+  "issueCases": {
+    "upgrade15NativeRoundtrips": 8,
+    "upgrade15InventoryEquip": 7,
+    "upgrade15FirstPersonVisualsNotEstablished": true,
+    "soupUse": true,
+    "breakfast70Stacks": [
+      64,
+      6
+    ],
+    "railsThenOptics": 2,
+    "elbrusFirstPerson": true,
+    "elbrusScanningNotTested": true,
+    "allCosmeticCombinationsNotTested": true,
+    "overheatingBleedingMeleeFullParityNotEstablished": true
+  },
+  "cosmeticsRegression": {
+    "result": "PASS",
+    "matchedPreviousVerifiedRelease": true,
+    "cases": [
+      "SKIN PASS [20866, 13200]",
+      "SKIN FAIL [9417, 13200] java.io.IOException: skin_incompatible",
+      "SKIN PASS [20000, 13200]",
+      "SKIN FAIL [25000, 18050] java.io.IOException: skin_incompatible",
+      "PAINT PASS [20296, 17579, 0]",
+      "PAINT PASS [25161, 17100, 0]",
+      "PAINT PASS [25354, 19629, 1]",
+      "PAINT PASS [12061, 18836, 0]",
+      "PAINT PASS [25138, 19594, 1]",
+      "PAINT PASS [25077, 19063, 1]",
+      "Checks 8"
+    ],
+    "positiveRoundTrips": 8,
+    "identicalNativeCompatibilityDenials": 2
+  },
+  "installer": {
+    "result": "PASS",
+    "cases": [
+      {
+        "manual": false,
+        "serverAndClientUpdated": true,
+        "launcherUpdated": true,
+        "newUiAgentInstalled": true,
+        "commandCompletionInstalled": true,
+        "existingModSettingsPreserved": true,
+        "previousUiAgentRetained": true,
+        "scaleManifestAdded": true,
+        "worldAndCharactersPreserved": true,
+        "serverRollbackPreserved": true,
+        "repeatNoOp": true,
+        "fullBundleRedownloaded": false
+      },
+      {
+        "manual": true,
+        "serverAndClientUpdated": true,
+        "launcherUpdated": true,
+        "newUiAgentInstalled": true,
+        "commandCompletionInstalled": true,
+        "existingModSettingsPreserved": true,
+        "previousUiAgentRetained": true,
+        "scaleManifestAdded": true,
+        "worldAndCharactersPreserved": true,
+        "serverRollbackPreserved": true,
+        "repeatNoOp": true,
+        "fullBundleRedownloaded": false
+      }
+    ],
+    "setupSha256": "75e63b3d1080fb762f2469cc4fcc3c15f648ccd60d696cfbf1df24adcee450f9"
+  },
+  "guard": {
+    "isolatedTest": true,
+    "physicalCallbacksRegistered": false,
+    "nativeRawInputBlocked": true,
+    "nativeRawListenerBlocked": true,
+    "fmodSilentSystems": 1,
+    "isolationBlockedCalls": 9,
+    "glfwTransformed": true,
+    "frontendHook": true,
+    "quickSetupContinued": false,
+    "frontendError": "",
+    "blockedDesktopOperations": 8,
+    "windowCreates": 3,
+    "windowVisibilityPolicy": "hidden",
+    "virtualFocusReads": true,
+    "nativeAttackAttempts": 0,
+    "nativeAttackResult": "",
+    "virtualKeyboardStateReads": true,
+    "virtualInputModeReads": true,
+    "cursorCaptureWritesAllowed": false,
+    "cursorPositionWritesAllowed": false
+  },
+  "allOwnedProcessesStopped": true,
+  "linuxGameplayTested": false,
+  "originalClientClassesModified": false
+}

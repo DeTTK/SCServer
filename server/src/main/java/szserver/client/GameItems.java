@@ -60,6 +60,16 @@ public final class GameItems implements AutoCloseable {
         public Medicine activeUse(){var stage=rules.stages();return new Medicine(id,group,priority,false,fastPriority,stage.activeMillis()/1000d,cooldown,0,stage.stats(),new MedicineRules(rules.useMillis(),0,false,0,0,0,0,0,false,rules.quickRank(),stage,true));}
         public String cooldownKey(){return group==null?"item/"+id:group;}
     }
+    public record QuickBinding(int item,String label,UUID identity){}
+    public record QuickSlots(byte[] state,byte[] frame,Map<Integer,QuickBinding> bindings){
+        public QuickSlots{state=state.clone();frame=frame.clone();bindings=Map.copyOf(bindings);}
+        @Override public byte[] state(){return state.clone();}@Override public byte[] frame(){return frame.clone();}
+    }
+    public ClientStateAdapter.QuickBindRequest quickBindRequest(byte[] raw)throws Exception{return adapter.quickBindRequest(raw);}
+    public int quickUseRequest(byte[] raw)throws Exception{return adapter.quickUseRequest(raw);}
+    public QuickSlots quickSlots(byte[] raw)throws Exception{return adapter.quickSlots(raw);}
+    public QuickSlots quickBind(byte[] raw,int slot,szserver.inventory.ItemStack source,String label)throws Exception{byte[] wire=source==null?null:szserver.net.InventoryPackets.stack(source);return adapter.quickBind(raw,slot,wire==null?null:Arrays.copyOfRange(wire,1,wire.length),label);}
+    public szserver.inventory.Inventory.Address quickSelect(byte[] raw,int slot,Map<szserver.inventory.Inventory.Address,szserver.inventory.ItemStack> candidates)throws Exception{return adapter.quickSelect(raw,slot,candidates);}
     public record MedicineEffect(int id,long until,Medicine medicine){}
     private final Map<Integer,Medicine> medicines=new HashMap<>();private Set<Integer> firearmFactories=Set.of();
     public boolean firearm(int id){return firearmFactories.contains(id);}

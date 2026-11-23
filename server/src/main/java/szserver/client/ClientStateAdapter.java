@@ -437,7 +437,7 @@ public final class ClientStateAdapter implements AutoCloseable {
     }
     public record Attachment(byte[] state,byte[] previous,boolean builtin) {}
     public String artifactResearchTag()throws Exception{return (String)Class.forName("1609149377",true,loader).getField("synchronized").get(null);}
-    private NativeCosmetics cosmetics;private NativeItemSlots itemSlots;private NativeItemSlotPackets itemSlotPackets;
+    private NativeQuickSlots quickSlots;private NativeCosmetics cosmetics;private NativeItemSlots itemSlots;private NativeItemSlotPackets itemSlotPackets;
     private NativeMedicines nativeMedicines;private NativeMedicineEffects medicineEffects;private NativeMedicinePackets medicinePackets;
     public Map<Integer,GameItems.Medicine> warmMedicines()throws Exception{nativeMedicines=new NativeMedicines(cosmetics,this::bank);medicineEffects=new NativeMedicineEffects(cosmetics,this::bank);medicinePackets=new NativeMedicinePackets(cosmetics);return nativeMedicines.profiles();}
     public boolean medicineAllowed(int id,String mode,String location)throws Exception{return nativeMedicines.allowed(id,mode,location);}
@@ -452,7 +452,13 @@ public final class ClientStateAdapter implements AutoCloseable {
         return new FactoryMetadataExport(Map.copyOf(rows),Map.copyOf(errors));
     }
     public Set<Integer> firearmFactories()throws Exception{Set<Integer> ids=new HashSet<>();Class<?> gun=Class.forName("1745367406",true,loader);for(var entry:moduleFactoryClasses.entrySet())if(gun.isAssignableFrom(Class.forName(entry.getValue(),true,loader)))ids.add(entry.getKey());return Set.copyOf(ids);}
-    public void warmCosmetics(Map<Integer,String> classes,Map<Integer,String> definitions)throws Exception{cosmetics=new NativeCosmetics(loader,definitions,classes);itemNbt=null;itemSlots=new NativeItemSlots(cosmetics,this::bank);itemSlotPackets=new NativeItemSlotPackets(cosmetics);}
+    public void warmCosmetics(Map<Integer,String> classes,Map<Integer,String> definitions)throws Exception{cosmetics=new NativeCosmetics(loader,definitions,classes);itemNbt=null;itemSlots=new NativeItemSlots(cosmetics,this::bank);itemSlotPackets=new NativeItemSlotPackets(cosmetics);quickSlots=new NativeQuickSlots(cosmetics);itemNbt();}
+    public record QuickBindRequest(int owner,int index,szserver.inventory.Inventory.Address source,String label){}
+    public QuickBindRequest quickBindRequest(byte[] raw)throws Exception{return quickSlots.bindRequest(raw);}
+    public int quickUseRequest(byte[] raw)throws Exception{return quickSlots.useRequest(raw);}
+    public GameItems.QuickSlots quickSlots(byte[] raw)throws Exception{return quickSlots.read(raw);}
+    public GameItems.QuickSlots quickBind(byte[] raw,int slot,byte[] source,String label)throws Exception{return quickSlots.bind(raw,slot,source,label);}
+    public szserver.inventory.Inventory.Address quickSelect(byte[] raw,int slot,Map<szserver.inventory.Inventory.Address,szserver.inventory.ItemStack> candidates)throws Exception{return quickSlots.select(raw,slot,candidates);}
     public record ItemSlotRequest(int owner,int sequence,szserver.inventory.Inventory.Address target,szserver.inventory.Inventory.Address source,int slot){}
     public ItemSlotRequest itemSlotRequest(boolean bolt,byte[] raw)throws Exception{return itemSlotPackets.read(bolt,raw);}
     public record CosmeticSkin(byte[] state,int previous,boolean unchanged){}
