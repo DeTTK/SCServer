@@ -38,8 +38,10 @@ public final class Inventory {
     }
     public Plan replace(Map<Address,ItemStack> changes,int moved){TreeMap<Address,ItemStack> copy=new TreeMap<>(items);for(var e:changes.entrySet()){check(e.getKey());if(e.getValue()==null)copy.remove(e.getKey());else copy.put(e.getKey(),e.getValue());}return new Plan(new Inventory(catalog,copy,revision+1),Collections.unmodifiableMap(new LinkedHashMap<>(changes)),moved);}
     private Map<Address,ItemStack> change(Address a,ItemStack x,Address b,ItemStack y){Map<Address,ItemStack> out=new LinkedHashMap<>();out.put(a,x);if(b!=null)out.put(b,y);return out;}
+    /** Removes an actual inventory root; covered cells never select another item. A full removal drops the root. */
+    public Plan remove(Address address,Integer requested){check(address);ItemStack source=at(address);if(source==null)throw new IllegalArgumentException("inventory_slot_empty");int amount=requested==null?source.count():requested;if(amount<1||amount>source.count())throw new IllegalArgumentException("invalid_inventory_remove_count");Map<Address,ItemStack> changes=new LinkedHashMap<>();changes.put(address,amount==source.count()?null:source.count(source.count()-amount));return replace(changes,amount);}
     /** Removes an actual general inventory root; covered cells never select another item. */
-    public Plan remove(int slot,Integer requested){Address address=new Address(1,0,slot);ItemStack source=at(address);if(source==null)throw new IllegalArgumentException("inventory_slot_empty");int amount=requested==null?source.count():requested;if(amount<1||amount>source.count())throw new IllegalArgumentException("invalid_inventory_remove_count");Map<Address,ItemStack> changes=new LinkedHashMap<>();changes.put(address,source.count(source.count()-amount));return replace(changes,amount);}
+    public Plan remove(int slot,Integer requested){return remove(new Address(1,0,slot),requested);}
     public Plan move(Address source,Address destination,int requested,boolean split){
         check(source);check(destination);ItemStack from=at(source),to=at(destination);if(from==null)throw new IllegalArgumentException("inventory_source_empty");if(source.equals(destination))return replace(Map.of(),0);
         int count=requested==0?from.count():requested;if(count<1||count>from.count())throw new IllegalArgumentException("move_count");

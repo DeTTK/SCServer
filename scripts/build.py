@@ -103,6 +103,8 @@ def tests():
     subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.EquipmentPlacementTests'],check=True)
     with tempfile.TemporaryDirectory(prefix='inventory-sort-',dir=B/'scratch' if (B/'scratch').exists() else B) as directory:
         subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.inventory.InventorySortTests',directory],check=True)
+    subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.inventory.InventoryDeleteTests'],check=True)
+    results.append('native context-menu delete packet 523 removes exact bag, equipment and storage roots')
     results.append('inventory sort merges identical stacks, packs by family, covers bag/storage and packet 1506 layout')
     for name in ['szserver.inventory.NativeStackRulesTests','szserver.inventory.NativeItemMetadataTests','szserver.net.NativeCreativeSlotTests','szserver.net.InventoryTransferQueueTests','szserver.net.MedicineUseTests','szserver.inventory.QuickSlotsSavedTests']:
         with tempfile.TemporaryDirectory(prefix='inventory-contract-',dir=B) as directory:
