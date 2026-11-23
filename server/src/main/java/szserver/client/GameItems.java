@@ -261,6 +261,7 @@ public final class GameItems implements AutoCloseable {
         byte[] state=create(id,new JsonObject());var original=new szserver.inventory.ItemStack(id,count,metadata,state);if(tags.isEmpty())return geometry(original);
         byte[] wire=szserver.net.InventoryPackets.stack(original);return validateStack(adapter.applyTags(Arrays.copyOfRange(wire,1,wire.length),NativeTypedNbt.encode(tags)));
     }
+    public szserver.inventory.ItemStack readEditedStack(byte[] raw)throws Exception{return validateStack(adapter.readEditedStack(raw));}
     public szserver.inventory.ItemStack readConfig(byte[] raw)throws Exception{return validateStack(adapter.readConfig(raw));}
     /** Granting a saved configuration creates fresh outer and attached identities. Editing does not. */
     public szserver.inventory.ItemStack copyForGrant(szserver.inventory.ItemStack template)throws Exception{
@@ -297,23 +298,7 @@ public final class GameItems implements AutoCloseable {
         // Never give multiple items the factory fixture's UUID.
         if(definitions!=null&&Set.of("1535556086","259689215").contains(kind)&&definitions.has(Integer.toString(id))&&definitions.getAsJsonObject(Integer.toString(id)).keySet().stream().anyMatch(key->key.startsWith("inbuilt_")))state=adapter.initialModules(id,kind,state);
         state=adapter.freshTreeIdentity(kind,state);
-        if(tags.size()>32)throw new IllegalArgumentException("state_tag_limit");
-        for(var e:tags.entrySet()){
-            if(e.getKey().length()>64||!e.getValue().isJsonObject())throw new IllegalArgumentException("invalid_state_tag");
-            JsonObject tag=e.getValue().getAsJsonObject();String type=Json.text(tag,"type",16);Object value;
-            switch(type){
-                case "byte" -> value=(byte)Json.integer(tag,"value",Byte.MIN_VALUE,Byte.MAX_VALUE);
-                case "short" -> value=(short)Json.integer(tag,"value",Short.MIN_VALUE,Short.MAX_VALUE);
-                case "integer" -> value=Json.integer(tag,"value",Integer.MIN_VALUE,Integer.MAX_VALUE);
-                case "long" -> {JsonElement v=tag.get("value");if(v==null||!v.isJsonPrimitive()||!v.getAsJsonPrimitive().isNumber())throw new IllegalArgumentException("long_required");value=new java.math.BigDecimal(v.getAsString()).longValueExact();}
-                case "float" -> value=(float)Json.number(tag,"value",-Float.MAX_VALUE,Float.MAX_VALUE);
-                case "double" -> value=Json.number(tag,"value",-Double.MAX_VALUE,Double.MAX_VALUE);
-                case "string" -> value=Json.text(tag,"value",1024);
-                case "boolean" -> {JsonElement v=tag.get("value");if(v==null||!v.isJsonPrimitive()||!v.getAsJsonPrimitive().isBoolean())throw new IllegalArgumentException("boolean_required");value=v.getAsBoolean();}
-                default -> throw new IllegalArgumentException("unsupported_state_tag_type");
-            }
-            state=adapter.setScalar(kind,state,e.getKey(),type,value);
-        }
+        if(!tags.isEmpty())return createStack(id,1,0,tags).state();
         if(!Arrays.equals(state,adapter.roundTrip(kind,state)))throw new IllegalStateException("native_codec_roundtrip_failed");
         return state;
     }

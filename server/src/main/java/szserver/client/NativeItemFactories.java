@@ -40,7 +40,7 @@ class NativeItemFactories {
     Object factory(int id)throws Exception{
         Object cached=factories.get(id);if(cached!=null)return cached;String name=classes.get(id);if(name==null||!descriptors.containsKey(id))throw new IOException("cosmetic_factory_missing:"+id);
         if(Set.of("native-game-owner","world-tick").contains(Thread.currentThread().getName()))throw new IOException("cosmetic_factory_on_owner");
-        Class<?> type=type(name);Object descriptor=prepared(id,type),prior=registry[id];registry[id]=null;
+        Class<?> type=type(name);Object existing=registry[id];if(existing!=null&&existing.getClass()==type){factories.put(id,existing);return existing;}Object descriptor=prepared(id,type),prior=registry[id];registry[id]=null;
         try{Object value=type.getConstructor(resource).newInstance(descriptor);if(skin.isInstance(value))skin.getMethod("implements",resource).invoke(value,descriptors.get(id));factories.put(id,value);return value;}finally{registry[id]=prior;}
     }
     <T> T bound(java.util.concurrent.Callable<T> action)throws Exception{return bound(factories.keySet(),action);}

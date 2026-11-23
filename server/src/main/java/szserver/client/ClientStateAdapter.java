@@ -31,6 +31,11 @@ public final class ClientStateAdapter implements AutoCloseable {
                          Method exportNbt, Method importNbt) {}
     private static final class NativeLoader extends URLClassLoader {
         NativeLoader(URL[] urls){super(urls,ClassLoader.getPlatformClassLoader());}
+        // JNI compression belongs to the host: two isolated copies cannot own the same native library.
+        @Override protected Class<?> loadClass(String name,boolean resolve)throws ClassNotFoundException{
+            if(name.startsWith("com.github.luben.zstd."))return Class.forName(name,false,ClientStateAdapter.class.getClassLoader());
+            return super.loadClass(name,resolve);
+        }
         Class<?> define(String name,byte[] bytes){return defineClass(name,bytes,0,bytes.length);}
         void resources(Path directory)throws IOException{addURL(directory.toRealPath().toUri().toURL());}
     }
@@ -276,52 +281,13 @@ public final class ClientStateAdapter implements AutoCloseable {
         for(int slot=0;slot<2;slot++){Object attached=attachments.get(cosmeticKey(kind,slot));out.writeShort(attached==null?0:(Integer)id.invoke(attached));}
         if(kind.equals("1865555906"))out.writeByte(state.getClass().getField("final").getByte(state));return bytes.toByteArray();
     }
-    public Stack applyTags(byte[] raw,byte[] tags)throws Exception{
-        NativeNbtLimits.validate(tags);Class<?> nbtBase=Class.forName("724465038",true,loader);Object changes=nbtBase.getMethod("native",DataInput.class).invoke(null,new DataInputStream(new ByteArrayInputStream(tags)));
-        Class<?> stackType=Class.forName("211097523",true,loader);Object stack=stackType.getConstructor(DataInput.class).newInstance(new BoundedNativeInput(raw));Object root=compound.getConstructor().newInstance();stackType.getMethod("char",compound).invoke(stack,root);
-        Map<String,Object> fields=(Map<String,Object>)compound.getField("transient").get(root);Object tag=fields.get("tag");if(tag==null){tag=compound.getConstructor().newInstance();compound.getMethod("finally",String.class,compound).invoke(root,"tag",tag);}
-        ((Map<String,Object>)compound.getField("transient").get(tag)).putAll((Map<String,Object>)compound.getField("transient").get(changes));
-        Object edited=stackType.getConstructor(compound).newInstance(root);restoreArtifactBonuses(edited,root,0);
-        // Fresh native NBT imports can write attachment maps in a different order
-        // from the stream reader. Accept only a stable encoding with identical
-        // complete NBT; never relax the strict decoder for incoming stacks.
-        Object before=compound.getConstructor().newInstance();stackType.getMethod("char",compound).invoke(edited,before);
-        byte[] encoded=szserver.net.Wire.bytes(out->stackType.getMethod("switch",DataOutput.class).invoke(edited,out));
-        if(encoded.length<10||encoded.length>8192)throw new IOException("native_stack_size");
-        BoundedNativeInput input=new BoundedNativeInput(encoded);Object decoded=stackType.getConstructor(DataInput.class).newInstance(input);
-        if(input.available()!=0)throw new IOException("native_stack_trailing");
-        Object after=compound.getConstructor().newInstance();stackType.getMethod("char",compound).invoke(decoded,after);
-        if(!before.equals(after))throw new IOException("native_tagged_stack_semantics_changed");
-        return readStack(szserver.net.Wire.bytes(out->stackType.getMethod("switch",DataOutput.class).invoke(decoded,out)));
-    }
-    public byte[] stackConfig(byte[] raw)throws Exception {
-        Object stack=Class.forName("211097523",true,loader).getConstructor(DataInput.class).newInstance(new BoundedNativeInput(raw));
-        Object nbt=compound.getConstructor().newInstance();stack.getClass().getMethod("char",compound).invoke(stack,nbt);
-        ByteArrayOutputStream output=new ByteArrayOutputStream();try(var gzip=new java.util.zip.GZIPOutputStream(output)){Class.forName("724465038",true,loader).getMethod("abstract",Class.forName("724465038",true,loader),DataOutput.class).invoke(null,nbt,new DataOutputStream(gzip));}return output.toByteArray();
-    }
-    public Stack readConfig(byte[] raw)throws Exception {
-        if(raw.length<1||raw.length>65536)throw new IOException("item_config_size");
-        // Compression belongs to the host; native NBT owns the decoded representation.
-        byte[] decoded;
-        if(raw.length>2&&(raw[0]&255)==31&&(raw[1]&255)==139){try(var gzip=new java.util.zip.GZIPInputStream(new ByteArrayInputStream(raw))){decoded=gzip.readNBytes(65537);if(decoded.length>65536)throw new IOException("item_config_expansion_limit");}}
-        else if(raw.length>=4&&(raw[0]&255)==40&&(raw[1]&255)==181&&(raw[2]&255)==47&&(raw[3]&255)==253){long size=com.github.luben.zstd.Zstd.decompressedSize(raw);if(size<1||size>65536)throw new IOException("item_config_expansion_limit");decoded=com.github.luben.zstd.Zstd.decompress(raw,(int)size);}
-        else if(raw[0]==10)decoded=raw.clone();
-        else throw new IOException("item_config_compression");
-        szserver.client.NativeNbtLimits.validate(decoded);
-        var input=new DataInputStream(new ByteArrayInputStream(decoded));Object nbt=Class.forName("724465038",true,loader).getMethod("native",DataInput.class).invoke(null,input);if(!compound.isInstance(nbt)||input.available()!=0)throw new IOException("item_config_root");
-        Object stack=Class.forName("211097523",true,loader).getConstructor(compound).newInstance(nbt);
-        restoreArtifactBonuses(stack,nbt,0);
-        ByteArrayOutputStream output=new ByteArrayOutputStream();stack.getClass().getMethod("switch",DataOutput.class).invoke(stack,new DataOutputStream(output));
-        return readStack(output.toByteArray());
-    }
-    /** Native artifact NBT import checks a rendering factory; retain its validated enum set headlessly. */
-    private void restoreArtifactBonuses(Object stack,Object root,int depth)throws Exception{
-        if(depth>8)throw new IOException("nested_item_depth");Object state=null;Class<?> base=Class.forName("154675812",true,loader);for(Method method:stack.getClass().getMethods())if(method.getName().equals("finally")&&method.getParameterCount()==0&&method.getReturnType()==base){state=method.invoke(stack);break;}if(state==null)return;
-        Object tag=((Map<?,?>)compound.getField("transient").get(root)).get("tag");if(tag==null)return;Map<?,?> fields=(Map<?,?>)compound.getField("transient").get(tag);
-        if(state.getClass().getName().equals("1609149377")){Object bonus=fields.get("bonus_properties");if(bonus!=null){List<?> values=(List<?>)bonus.getClass().getField("for").get(bonus);if(values.size()>32)throw new IOException("artifact_bonus_count");Set<Object> selected=new HashSet<>();Class<?> type=Class.forName("1924679062",true,loader);for(Object value:values){String name=(String)value.getClass().getMethod("char").invoke(value);selected.add(type.getMethod("valueOf",String.class).invoke(null,name));}state.getClass().getField("interface").set(state,selected);}}
-        Object attachments=fields.get("attach");if(attachments==null||!compound.isInstance(attachments))return;Map<?,?> nested=(Map<?,?>)compound.getField("transient").get(attachments);Class<?> stackType=Class.forName("211097523",true,loader);
-        for(Field field:state.getClass().getFields())if(Map.class.isAssignableFrom(field.getType())){Object map=field.get(state);if(map==null)continue;for(var entry:((Map<?,?>)map).entrySet()){if(entry.getKey()==null||entry.getValue()==null||!stackType.isInstance(entry.getValue()))continue;for(Method method:state.getClass().getMethods())if(method.getName().equals("catch")&&method.getReturnType()==String.class&&method.getParameterCount()==1&&method.getParameterTypes()[0].isInstance(entry.getKey())){Object child=nested.get(method.invoke(state,entry.getKey()));if(child!=null&&compound.isInstance(child))restoreArtifactBonuses(entry.getValue(),child,depth+1);break;}}}
-    }
+    private NativeItemNbt itemNbt;
+    private NativeItemNbt itemNbt()throws Exception{if(itemNbt==null)itemNbt=new NativeItemNbt(loader,cosmetics);return itemNbt;}
+    public Stack applyTags(byte[] raw,byte[] tags)throws Exception{return readStack(itemNbt().apply(raw,tags));}
+    public byte[] stackConfig(byte[] raw)throws Exception{return itemNbt().config(raw);}
+    public Stack readConfig(byte[] raw)throws Exception{return readStack(itemNbt().configImport(raw));}
+    /** Editor streams may have a different attachment order; semantic stability is mandatory. */
+    public Stack readEditedStack(byte[] raw)throws Exception{return readStack(itemNbt().stream(raw));}
     /** Decode a complete native stack on the native worker, preserving its property bank. */
     public int stackPrefixLength(byte[] raw)throws Exception{
         if(raw.length<10||raw.length>8192)throw new IOException("native_stack_size");BoundedNativeInput input=new BoundedNativeInput(raw);Object stack=Class.forName("211097523",true,loader).getConstructor(DataInput.class).newInstance(input);int length=raw.length-input.available();byte[] canonical=szserver.net.Wire.bytes(out->stack.getClass().getMethod("switch",DataOutput.class).invoke(stack,out));if(!Arrays.equals(canonical,Arrays.copyOf(raw,length)))throw new IOException("native_stack_roundtrip");return length;
@@ -486,7 +452,7 @@ public final class ClientStateAdapter implements AutoCloseable {
         return new FactoryMetadataExport(Map.copyOf(rows),Map.copyOf(errors));
     }
     public Set<Integer> firearmFactories()throws Exception{Set<Integer> ids=new HashSet<>();Class<?> gun=Class.forName("1745367406",true,loader);for(var entry:moduleFactoryClasses.entrySet())if(gun.isAssignableFrom(Class.forName(entry.getValue(),true,loader)))ids.add(entry.getKey());return Set.copyOf(ids);}
-    public void warmCosmetics(Map<Integer,String> classes,Map<Integer,String> definitions)throws Exception{cosmetics=new NativeCosmetics(loader,definitions,classes);itemSlots=new NativeItemSlots(cosmetics,this::bank);itemSlotPackets=new NativeItemSlotPackets(cosmetics);}
+    public void warmCosmetics(Map<Integer,String> classes,Map<Integer,String> definitions)throws Exception{cosmetics=new NativeCosmetics(loader,definitions,classes);itemNbt=null;itemSlots=new NativeItemSlots(cosmetics,this::bank);itemSlotPackets=new NativeItemSlotPackets(cosmetics);}
     public record ItemSlotRequest(int owner,int sequence,szserver.inventory.Inventory.Address target,szserver.inventory.Inventory.Address source,int slot){}
     public ItemSlotRequest itemSlotRequest(boolean bolt,byte[] raw)throws Exception{return itemSlotPackets.read(bolt,raw);}
     public record CosmeticSkin(byte[] state,int previous,boolean unchanged){}
@@ -694,31 +660,6 @@ public final class ClientStateAdapter implements AutoCloseable {
     }
     public byte[] withIdentity(String kind,byte[] input,UUID identity)throws Exception{
         Codec codec=codec(kind);Object state=decode(codec,input);Class.forName("154675812",true,loader).getDeclaredField("package").set(state,identity);return encode(codec,state);
-    }
-
-    public byte[] setScalar(String stateClass, byte[] input, String name, String type, Object value) throws Exception {
-        Codec codec = codec(stateClass);
-        Object state = decode(codec, input);
-        Object nbt = compound.getConstructor().newInstance();
-        codec.exportNbt().invoke(state, nbt);
-        Set<?> keys = (Set<?>) compound.getMethod("switch").invoke(nbt);
-        if (!keys.contains(name) && !(stateClass.equals("1535556086") && name.equals("failed_upgrades")))
-            throw new IllegalArgumentException("unsupported_state_tag:"+name);
-        String method; Class<?> argument;
-        switch(type) {
-            case "byte" -> { method="interface";argument=byte.class; }
-            case "short" -> { method="implements";argument=short.class; }
-            case "integer" -> { method="while";argument=int.class; }
-            case "long" -> { method="switch";argument=long.class; }
-            case "float" -> { method="if";argument=float.class; }
-            case "double" -> { method="strictfp";argument=double.class; }
-            case "boolean" -> { method="strictfp";argument=boolean.class; }
-            case "string" -> { method="double";argument=String.class; }
-            default -> throw new IllegalArgumentException("unsupported_state_tag_type:"+type);
-        }
-        compound.getMethod(method,String.class,argument).invoke(nbt,name,value);
-        codec.importNbt().invoke(state, nbt);
-        return encode(codec,state);
     }
 
     public byte[] nbtRoundTrip(String stateClass, byte[] input) throws Exception {

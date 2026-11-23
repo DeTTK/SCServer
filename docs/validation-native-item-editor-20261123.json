@@ -1,0 +1,152 @@
+{
+  "result": "PASS",
+  "serverSha256": "0bf72ebe837a4e0a60e44708af1f24d6c8f9c2744e18eb9ee9cfc05e9fed8886",
+  "baseline": {
+    "weaponConfigurations": 604,
+    "rejectedByPreviousConfigImport": 39,
+    "comparison": "full native NBT, independent of attachment byte order"
+  },
+  "nativeAudit": {
+    "weaponConfigurationsRoundTrip": 604,
+    "weaponConfigurationsUpgrade15": 604,
+    "equipmentStatesRoundTrip": 977,
+    "catalogueDefinitions": 8788,
+    "catalogueAvailableTemplates": 8787,
+    "exactNativeNbtCases": 10971,
+    "nativeNormalizationCases": 1,
+    "normalization": "Native NPC path item adds an empty PATH compound; reproduced with the actual client constructor",
+    "unavailableBeforeAndAfter": [
+      {
+        "id": 16969,
+        "reason": "private catalogue has an empty invalid state fixture; codec remains explicitly unavailable"
+      }
+    ]
+  },
+  "realClient": {
+    "result": "PASS",
+    "cases": 6,
+    "fullNativeNbtMatched": true,
+    "onlyUpgradeChanged": true
+  },
+  "coldRestart": {
+    "result": "PASS",
+    "allInventoryStatePreserved": true,
+    "allSixWeaponsRecovered": true
+  },
+  "typedTags": {
+    "result": "PASS",
+    "cases": 5,
+    "nativeUpgradeAndFailedUpgradeTags": true
+  },
+  "cosmeticsRegression": {
+    "result": "PASS",
+    "matchedPreviousVerifiedRelease": true,
+    "cases": [
+      "SKIN PASS [20866, 13200]",
+      "SKIN FAIL [9417, 13200] java.io.IOException: skin_incompatible",
+      "SKIN PASS [20000, 13200]",
+      "SKIN FAIL [25000, 18050] java.io.IOException: skin_incompatible",
+      "PAINT PASS [20296, 17579, 0]",
+      "PAINT PASS [25161, 17100, 0]",
+      "PAINT PASS [25354, 19629, 1]",
+      "PAINT PASS [12061, 18836, 0]",
+      "PAINT PASS [25138, 19594, 1]",
+      "PAINT PASS [25077, 19063, 1]",
+      "Checks 8"
+    ],
+    "positiveRoundTrips": 8,
+    "identicalNativeCompatibilityDenials": 2
+  },
+  "sourceTests": {
+    "result": "PASS",
+    "checks": [
+      "inventory sort merges identical stacks, packs by family, covers bag/storage and packet 1506 layout",
+      "native stack constructor defaults, game-object stacksize inheritance and bounded durable bulk-transfer FIFO",
+      "medicine exact-root admission, native quick selection inputs, nullable categories, cooldown, expiry and saved persistence flags",
+      "native return descriptor, bridge, parameters and static exclusion: 5 PASS",
+      "region slot/overflow/truncation/CRC/healthy-neighbour bounds",
+      "native unlimited protection remains finite; unrelated invalid stats rejected",
+      "authored admin Gauss accepted; nonfinite weapon parameters rejected",
+      "global inventory receipts defer missing map positions, restore after placement and remain idempotent across checkpoint/restart",
+      "character scale native dimensions, bounded commands, optional-save recovery, native ready bounds and ceiling admission",
+      "native grid migration preserves complete items; full bag overflow and interrupted-marker retry",
+      {
+        "journalAssertions": 12047,
+        "records": 12032
+      },
+      "gateway same/fresh-token retry, invalid identity/session, single-use world claim",
+      "72 full HTTP/gateway/world cycles, Unicode identities, concurrent protocols and cold one-shot recovery",
+      "aimed portal UUID/lifecycle, native object states and locks, state-specific door collision, clone donor ID lifetime, editor read/write ordering"
+    ],
+    "gameFilesUsed": false,
+    "networkSessionTested": false
+  },
+  "installer": {
+    "result": "PASS",
+    "cases": [
+      {
+        "manual": false,
+        "serverAndClientUpdated": true,
+        "launcherUpdated": true,
+        "newUiAgentInstalled": true,
+        "commandCompletionInstalled": true,
+        "existingModSettingsPreserved": true,
+        "previousUiAgentRetained": true,
+        "scaleManifestAdded": true,
+        "worldAndCharactersPreserved": true,
+        "serverRollbackPreserved": true,
+        "repeatNoOp": true,
+        "fullBundleRedownloaded": false
+      },
+      {
+        "manual": true,
+        "serverAndClientUpdated": true,
+        "launcherUpdated": true,
+        "newUiAgentInstalled": true,
+        "commandCompletionInstalled": true,
+        "existingModSettingsPreserved": true,
+        "previousUiAgentRetained": true,
+        "scaleManifestAdded": true,
+        "worldAndCharactersPreserved": true,
+        "serverRollbackPreserved": true,
+        "repeatNoOp": true,
+        "fullBundleRedownloaded": false
+      }
+    ],
+    "setupSha256": "1fa89fc79760848fec93dbe829a7fe7e88d9eb24739290a0ba592a183ccf1858"
+  },
+  "isolation": {
+    "result": "PASS",
+    "productionChanged": false,
+    "guard": {
+      "qaName": "rendered-client-qa-native-systems-48bd66be54",
+      "isolatedTest": true,
+      "physicalCallbacksRegistered": false,
+      "nativeRawInputBlocked": true,
+      "nativeRawListenerBlocked": true,
+      "fmodSilentSystems": 1,
+      "isolationBlockedCalls": 9,
+      "glfwTransformed": true,
+      "frontendHook": true,
+      "quickSetupContinued": false,
+      "frontendError": "",
+      "blockedDesktopOperations": 8,
+      "windowCreates": 3,
+      "windowVisibilityPolicy": "hidden",
+      "virtualFocusReads": true,
+      "nativeAttackAttempts": 0,
+      "nativeAttackResult": "",
+      "virtualKeyboardStateReads": true,
+      "virtualInputModeReads": true,
+      "cursorCaptureWritesAllowed": false,
+      "cursorPositionWritesAllowed": false
+    },
+    "worldJoined": true,
+    "allOwnedProcessesStopped": true
+  },
+  "limits": [
+    "Windows real-client test; Linux gameplay not exercised",
+    "UI save handlers and their actual network requests were invoked on the client game thread; physical mouse clicks were not used",
+    "Unknown tags may be ignored by the original factory; no new server preservation schema invented"
+  ]
+}
