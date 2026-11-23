@@ -107,7 +107,7 @@ public final class GameItems implements AutoCloseable {
         }
         // Real gun factories read animation metadata and collision boxes while
         // preparing pure inventory rules. These roots are shipped with the server.
-        for(String directory:List.of("resources/configs","resources/boxes")){Path extra=fixtures.getParent().resolve(directory);if(Files.isDirectory(extra))adapter.resources(extra);}
+        for(String directory:List.of("resources/configs","resources/boxes")){Path extra=fixtures.getParent().resolve(directory);if(szserver.util.GameResources.exists(extra))adapter.resources(extra);}
         adapter.warmItemNames(names);adapter.warmArmor(armors);
         adapter.warmArmorUpgrades(definitionsPath.getParent().resolve("native-resources"),armors);
         adapter.warmArtifacts(RuntimeFiles.readString(artifactSettings),artifacts,definitionsPath.getParent().resolve("native-resources"));containerExempt=adapter.containerExemptStats();definitions=catalog;

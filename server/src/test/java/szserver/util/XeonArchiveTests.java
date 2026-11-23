@@ -23,6 +23,13 @@ public final class XeonArchiveTests {
             try(URLClassLoader loader=new URLClassLoader(new URL[]{GameResources.url(logical)},ClassLoader.getPlatformClassLoader())){
                 try(var in=loader.getResourceAsStream("assets/test.json")){if(in==null||!Arrays.equals(in.readAllBytes(),body))throw new AssertionError("native classloader resource");}
             }
+            if(!GameResources.exists(logical)||!GameResources.exists(logical.resolve("assets")))throw new AssertionError("virtual roots must be discoverable without extraction");
+            Path secondArchive=tmp.resolve("boxes.xeon"),secondRoot=tmp.resolve("also-not-extracted");Files.write(secondArchive,archive("assets/другое имя.json",body));GameResources.mount(secondRoot,secondArchive,null);
+            URL firstUrl=GameResources.url(logical),secondUrl=GameResources.url(secondRoot);if(firstUrl.equals(secondUrl))throw new AssertionError("different virtual roots alias in URLClassLoader");
+            try(URLClassLoader loader=new URLClassLoader(new URL[]{firstUrl,secondUrl},ClassLoader.getPlatformClassLoader())){
+                for(String name:List.of("assets/test.json","assets/другое имя.json"))try(var in=loader.getResourceAsStream(name)){if(in==null||!Arrays.equals(in.readAllBytes(),body))throw new AssertionError("multiple virtual resource roots: "+name);}
+            }
+            if(Files.exists(secondRoot))throw new AssertionError("second root extracted");
             Files.createDirectories(overrides.resolve("assets"));Files.writeString(overrides.resolve("assets/test.json"),"override");if(!GameResources.readString(logical.resolve("assets/test.json")).equals("override"))throw new AssertionError("override priority");
             if(GameResources.walk(logical).count()!=1)throw new AssertionError("virtual listing");
             for(String bad:List.of("../escape","assets/../escape","/absolute","X:/escape","assets\\escape"))try{XeonArchive.safe(bad);throw new AssertionError("unsafe path");}catch(IOException expected){}

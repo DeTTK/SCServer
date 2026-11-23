@@ -36,9 +36,10 @@ public final class GameResources {
     }
     public static URL url(Path root)throws IOException {
         if(!mounted(root))return root.toRealPath().toUri().toURL();Path logical=real(root);
-        return new URL(null,"xeon://resources/",new URLStreamHandler(){protected URLConnection openConnection(URL url){return new URLConnection(url){
+        String prefix="/"+Base64.getUrlEncoder().withoutPadding().encodeToString(logical.toString().getBytes(StandardCharsets.UTF_8))+"/";
+        return new URL(null,"xeon://resources"+prefix,new URLStreamHandler(){protected URLConnection openConnection(URL url){return new URLConnection(url){
             public void connect(){}
-            private Path entry()throws IOException {String name=url.getPath();while(name.startsWith("/"))name=name.substring(1);return logical.resolve(XeonArchive.safe(name));}
+            private Path entry()throws IOException {String name;try{name=url.toURI().getPath();}catch(URISyntaxException e){throw new IOException("resource_url",e);}if(!name.startsWith(prefix))throw new IOException("resource_url_root");return logical.resolve(XeonArchive.safe(name.substring(prefix.length())));}
             public InputStream getInputStream()throws IOException{return stream(entry());}
             public long getContentLengthLong(){try{return size(entry());}catch(IOException e){return -1;}}
         };}});
