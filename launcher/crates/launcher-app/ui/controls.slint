@@ -38,8 +38,8 @@ export component Action inherits Rectangle {
     min-width: 28px;
     height: root.large ? 48px : Theme.field-height;
     border-radius: Theme.radius;
-    border-width: keys.has-focus ? 2px : 1px;
-    border-color: keys.has-focus ? Theme.focus : root.kind == "secondary" && root.enabled ? Theme.outline : transparent;
+    border-width: 1px;
+    border-color: root.kind == "secondary" && root.enabled ? Theme.outline : transparent;
     background: !root.enabled ? (root.kind == "plain" ? transparent : Theme.raised)
         : root.accent ? (tap.pressed ? Theme.amber-pressed : tap.has-hover ? Theme.amber-hover : Theme.amber)
         : tap.pressed ? Theme.pressed : tap.has-hover ? Theme.hover
@@ -156,8 +156,7 @@ export component RowButton inherits Rectangle {
     height: 62px;
     border-radius: Theme.radius;
     background: tap.pressed ? Theme.pressed : tap.has-hover ? Theme.hover : root.selected ? Theme.selected : transparent;
-    border-color: keys.has-focus ? Theme.focus : transparent;
-    border-width: 2px;
+    border-width: 0px;
     accessible-role: button;
     accessible-label: root.title + ". " + root.detail + " " + root.meta;
     accessible-enabled: root.enabled;
