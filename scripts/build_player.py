@@ -101,6 +101,8 @@ def build(output):
     jar(player/'Client/compat/weapon-events.jar',values)
     bridge=compile_internal('player-bridge',(ROOT/'launcher/modules/bridge/src').rglob('*.java'),output);values=entries(bridge)
     values['META-INF/MANIFEST.MF']=(ROOT/'launcher/modules/bridge/manifest.mf').read_bytes();jar(player/'Bootstrap/bscp-bridge.jar',values)
+    verify=tools.compile_java('player-bridge-verify',[ROOT/'launcher/modules/bridge/tests/ServerShapeTest.java'],[bridge])
+    subprocess.run([tools.tool('java'),EXPORT,'-cp',os.pathsep.join(map(str,[verify,bridge])),'bscp.next.ServerShapeTest',str(player/'Server/server.jar')],check=True)
     files=[p for p in player.rglob('*') if p.is_file()]
     if any(p.suffix in ('.class','.ref','.aabb') and 'overrides' not in p.parts for p in files):raise ValueError('Loose research/extracted runtime in payload')
     report={'runtimeLayout':manifest['runtimeLayout'],'minimumLauncherVersion':'0.4.1','files':len(files),'bytes':sum(p.stat().st_size for p in files),'gitInputFiles':len(manifest['files']),'outsideWorkspaceInputs':False,'prebuiltLocalGameBundles':False}
