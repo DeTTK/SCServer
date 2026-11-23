@@ -914,6 +914,7 @@ mod tests {
     #[test]
     fn interrupted_body_resumes_with_range_and_reports_disk_and_wait_separately() {
         use std::{net::TcpListener, sync::Mutex};
+        let (waiting_tx, waiting_rx) = std::sync::mpsc::channel();
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let address = listener.local_addr().unwrap();
         let worker = std::thread::spawn(move || {
@@ -938,7 +939,9 @@ mod tests {
                         .unwrap();
                 } else {
                     assert!(text.contains("range: bytes=3-"));
-                    std::thread::sleep(Duration::from_millis(2250));
+                    waiting_rx
+                        .recv_timeout(Duration::from_secs(10))
+                        .expect("waiting heartbeat");
                     socket.write_all(b"HTTP/1.1 206 Partial Content\r\nContent-Length: 3\r\nContent-Range: bytes 3-5/6\r\nConnection: close\r\n\r\ndef").unwrap();
                 }
             }
@@ -962,7 +965,12 @@ mod tests {
                 &p,
                 &path,
                 None,
-                Some(&|event| events.lock().unwrap().push(event)),
+                Some(&|event| {
+                    events.lock().unwrap().push(event);
+                    if matches!(event, DownloadEvent::NetworkWait { .. }) {
+                        let _ = waiting_tx.send(());
+                    }
+                }),
             )
             .unwrap();
         assert_eq!(fs::read(path).unwrap(), b"abcdef");

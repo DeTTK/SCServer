@@ -1,9 +1,6 @@
 name: Publish native launcher
 on:
-  workflow_run:
-    workflows: ['Source checks']
-    types: [completed]
-    branches: [launtest]
+  workflow_call:
   workflow_dispatch:
 permissions:
   contents: read
@@ -12,7 +9,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   release:
-    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_repository.full_name == github.repository)
+    if: github.ref == 'refs/heads/launtest'
     runs-on: windows-2022
     timeout-minutes: 50
     permissions:
@@ -20,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
+          ref: ${{ github.sha }}
           persist-credentials: false
       - name: Resolve version and existing release
         id: version

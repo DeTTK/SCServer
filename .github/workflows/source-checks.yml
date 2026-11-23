@@ -53,3 +53,9 @@ jobs:
           distribution: temurin
           java-version: '17'
       - run: ./launcher/modules/bridge/test.ps1
+  publish-launcher:
+    needs: [independent, native-launcher]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/launtest'
+    permissions:
+      contents: write
+    uses: ./.github/workflows/publish-launcher.yml
