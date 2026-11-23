@@ -21,6 +21,7 @@ public final class Bridge {
     public static Path bundlePath(Path path){return path.isAbsolute()?path:bundleRoot(path).resolve(path).normalize();}
     public static String[] clientArguments(String[] original){String session=config.getProperty("nativeSession","");if(session.isBlank())throw new IllegalStateException("native session missing");String[] args=original.clone();for(int i=0;i+1<args.length;i++)if(args[i].equals("--session")){args[i+1]=session;return args;}throw new IllegalStateException("native session argument missing");}
     static boolean connectedOnce;
+    public static String passiveControlState(Object game,long frame){return "{\"observerDisabled\":true}";}
     static java.lang.reflect.Method exact(Object owner,String name,Class<?> result,Class<?>... parameters)throws Exception{return Arrays.stream(owner.getClass().getMethods()).filter(m->m.getName().equals(name)&&m.getReturnType().equals(result)&&Arrays.equals(m.getParameterTypes(),parameters)).findFirst().orElseThrow();}
     public static void frontend(Object game){
         if(connectedOnce||!Boolean.parseBoolean(config.getProperty("autoJoin","false")))return;

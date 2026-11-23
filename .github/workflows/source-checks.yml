@@ -46,3 +46,8 @@ jobs:
             launcher/target
           key: native-launcher-${{ runner.os }}-${{ hashFiles('launcher/Cargo.lock') }}
       - run: cargo +stable test --manifest-path launcher/Cargo.toml --workspace --locked -j 4
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - run: ./launcher/modules/bridge/test.ps1

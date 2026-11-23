@@ -211,6 +211,7 @@ pub fn client(
             "-Dstandard.jvm.headless.hideWindow=true",
             "-Dstandard.jvm.headless.port=41780",
             "-Dbscp.qa.guard.port=41781",
+            "-Dbscp.qa.passiveObserver=true",
         ])
         .arg(format!("-javaagent:{}={}", path(guard), path(session)));
     }
