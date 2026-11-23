@@ -175,6 +175,14 @@ impl Layout {
     }
     pub fn base_bundle(&self, s: &Settings, component: &str) -> Result<PathBuf> {
         if component == "bootstrap" {
+            if !s.game_branch.is_empty() {
+                if let Some(server) = crate::channels::installed_component(self, s, "server")? {
+                    let base = crate::channels::component_base(&server)?;
+                    let root = base.parent().context("FOUNDATION_PATH")?.join("Bootstrap");
+                    no_links(&root)?;
+                    return Ok(root);
+                }
+            }
             let stored: std::collections::BTreeMap<String, String> =
                 read_json(&self.at("state/bootstrap.json"))?;
             let root = self

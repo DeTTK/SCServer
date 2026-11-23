@@ -58,6 +58,11 @@ struct BaseFile {
     sha256: String,
     pieces: Vec<Piece>,
 }
+#[derive(Default, Serialize, Deserialize)]
+struct PreparedFoundation {
+    stage: String,
+    sha256: String,
+}
 fn hash_valid(hash: &str) -> bool {
     hash.len() == 64 && hash.bytes().all(|b| b.is_ascii_hexdigit())
 }
@@ -169,9 +174,13 @@ impl RepositoryChannel {
         );
         ensure!(
             fs2::available_space(&bundles)?
-                > descriptor
-                    .expanded_bytes
-                    .saturating_add(descriptor.objects.iter().map(|o| o.size).sum::<u64>()),
+                > descriptor.expanded_bytes.saturating_add(
+                    descriptor
+                        .objects
+                        .iter()
+                        .try_fold(0u64, |sum, o| sum.checked_add(o.size))
+                        .context("FOUNDATION_LIMIT")?
+                ),
             "DISK_SPACE: недостаточно места для полной установки"
         );
         let old: BTreeMap<String, String> = read_json(&self.layout.at("state/bootstrap.json"))?;
@@ -192,12 +201,32 @@ impl RepositoryChannel {
                 "FOUNDATION_OBJECT"
             );
         }
-        let stage = child(
-            &bundles,
-            &format!(".incoming-{}", uuid::Uuid::new_v4().simple()),
-        )?;
-        fs::create_dir(&stage)?;
+        let journal = self.layout.at("state/foundation-prepared.json");
+        let prepared: PreparedFoundation = read_json(&journal)?;
+        let recovery = prepared.sha256 == pin.sha256
+            && prepared
+                .stage
+                .strip_prefix(".incoming-")
+                .is_some_and(|id| uuid::Uuid::parse_str(id).is_ok())
+            && child(&bundles, &prepared.stage)?.is_dir();
+        let stage = if recovery {
+            child(&bundles, &prepared.stage)?
+        } else {
+            let p = child(
+                &bundles,
+                &format!(".incoming-{}", uuid::Uuid::new_v4().simple()),
+            )?;
+            fs::create_dir(&p)?;
+            p
+        };
         owner_only(&stage, true)?;
+        write_json(
+            &journal,
+            &PreparedFoundation {
+                stage: stage.file_name().unwrap().to_string_lossy().into_owned(),
+                sha256: pin.sha256.clone(),
+            },
+        )?;
         let result = (|| {
             let downloader = UpdateService::new(&self.layout)?.with_cancel(self.cancel.clone());
             let mut count = 0usize;
@@ -289,7 +318,7 @@ impl RepositoryChannel {
                             }
                         }
                     }
-                    self.write_fresh_files(&files, &stage, &object_root, &objects)?;
+                    self.write_fresh_files(&files, &stage, &object_root, &objects, recovery)?;
                     count += files.len();
                     expanded += added;
                     continue;
@@ -310,6 +339,22 @@ impl RepositoryChannel {
                         "FOUNDATION_PIECE_SIZE"
                     );
                     let dest = target(&stage, &file.path)?;
+                    if recovery && dest.exists() {
+                        no_links(&dest)?;
+                        if fs::metadata(&dest)?.len() == file.size && sha(&dest)? == file.sha256 {
+                            count += 1;
+                            expanded = expanded
+                                .checked_add(file.size)
+                                .context("FOUNDATION_LIMIT")?;
+                            ensure!(
+                                count <= descriptor.file_count
+                                    && expanded <= descriptor.expanded_bytes,
+                                "FOUNDATION_LIMIT"
+                            );
+                            continue;
+                        }
+                        fs::remove_file(&dest)?;
+                    }
                     ensure!(!dest.exists(), "FOUNDATION_DUPLICATE");
                     let parent = dest.parent().unwrap();
                     if directories.insert(parent.to_owned()) {
@@ -425,7 +470,11 @@ impl RepositoryChannel {
             )?;
             Ok(destination)
         })();
-        delete_owned(&bundles, &stage)?;
+        // Keep a verified, owned staging area on interrupted downloads. A retry
+        // checks existing file hashes and resumes instead of writing everything again.
+        if result.is_ok() && journal.is_file() {
+            fs::remove_file(journal)?;
+        }
         result
     }
     fn write_fresh_files(
@@ -434,6 +483,7 @@ impl RepositoryChannel {
         stage: &Path,
         cache: &Path,
         objects: &HashMap<String, ObjectPin>,
+        resume: bool,
     ) -> Result<()> {
         let workers = 8usize.min(files.len().max(1));
         let batch = files.len().div_ceil(workers).max(1);
@@ -445,6 +495,19 @@ impl RepositoryChannel {
                     for file in group {
                         self.cancelled()?;
                         let dest = target(stage, &file.path)?;
+                        if resume && dest.exists() {
+                            let metadata = fs::symlink_metadata(&dest)?;
+                            ensure!(
+                                metadata.file_type().is_file()
+                                    && !metadata.file_type().is_symlink(),
+                                "FOUNDATION_LINK"
+                            );
+                            if metadata.len() == file.size && sha(&dest)? == file.sha256 {
+                                continue;
+                            }
+                            no_links(&dest)?;
+                            fs::remove_file(&dest)?;
+                        }
                         let mut output = OpenOptions::new()
                             .create_new(true)
                             .write(true)
@@ -539,14 +602,14 @@ mod tests {
             .collect::<Vec<_>>();
         let service = RepositoryChannel::new(&Layout::new(t.path())).unwrap();
         service
-            .write_fresh_files(&files, &stage, &cache, &objects)
+            .write_fresh_files(&files, &stage, &cache, &objects, false)
             .unwrap();
         for f in &files {
             assert_eq!(fs::read(target(&stage, &f.path).unwrap()).unwrap(), bytes);
         }
         assert!(
             service
-                .write_fresh_files(&files, &stage, &cache, &objects)
+                .write_fresh_files(&files, &stage, &cache, &objects, false)
                 .is_err()
         );
     }

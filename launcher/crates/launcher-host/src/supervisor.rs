@@ -150,6 +150,9 @@ impl Supervisor {
         WorldStore::new(self.layout.data(&self.layout.load()?))
     }
     fn game_agent(&self) -> Result<PathBuf> {
+        if self.agent.is_file() {
+            return Ok(self.agent.clone());
+        }
         let s = self.layout.load()?;
         if let Ok(root) = self.layout.bundle(&s, "bootstrap") {
             let candidate = component_file(&root, "bscp-bridge.jar")?;

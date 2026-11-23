@@ -576,12 +576,25 @@ pub fn installed_component(
 mod tests {
     use super::*;
     #[test]
-    fn authentic_manifest_fixture_rejects_tamper_and_wrong_branch(){
+    fn authentic_manifest_fixture_rejects_tamper_and_wrong_branch() {
         use base64::Engine;
-        let fixture:serde_json::Value=serde_json::from_str(include_str!("../tests/fixtures/channel-v1.json")).unwrap();
-        let mut raw=base64::engine::general_purpose::STANDARD.decode(fixture["rawBase64"].as_str().unwrap()).unwrap();let mut sig=base64::engine::general_purpose::STANDARD.decode(fixture["signatureBase64"].as_str().unwrap()).unwrap();
-        let t=tempfile::tempdir().unwrap();let service=RepositoryChannel::new(&Layout::new(t.path())).unwrap();assert!(service.authenticate(&raw,&sig,"launtest").is_ok());assert!(service.authenticate(&raw,&sig,"main").is_err());
-        raw[3]^=1;assert!(service.authenticate(&raw,&sig,"launtest").is_err());raw[3]^=1;sig[0]^=1;assert!(service.authenticate(&raw,&sig,"launtest").is_err());
+        let fixture: serde_json::Value =
+            serde_json::from_str(include_str!("../tests/fixtures/channel-v1.json")).unwrap();
+        let mut raw = base64::engine::general_purpose::STANDARD
+            .decode(fixture["rawBase64"].as_str().unwrap())
+            .unwrap();
+        let mut sig = base64::engine::general_purpose::STANDARD
+            .decode(fixture["signatureBase64"].as_str().unwrap())
+            .unwrap();
+        let t = tempfile::tempdir().unwrap();
+        let service = RepositoryChannel::new(&Layout::new(t.path())).unwrap();
+        assert!(service.authenticate(&raw, &sig, "launtest").is_ok());
+        assert!(service.authenticate(&raw, &sig, "main").is_err());
+        raw[3] ^= 1;
+        assert!(service.authenticate(&raw, &sig, "launtest").is_err());
+        raw[3] ^= 1;
+        sig[0] ^= 1;
+        assert!(service.authenticate(&raw, &sig, "launtest").is_err());
     }
     #[test]
     fn branch_names_reject_build_refs_and_traversal() {
