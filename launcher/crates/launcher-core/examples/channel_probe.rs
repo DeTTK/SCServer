@@ -1,6 +1,10 @@
 //! Explicit diagnostic CLI for the experimental repository channel.
 use anyhow::{Result, bail};
 use bscp_launcher_core::*;
+use std::sync::{
+    Arc,
+    atomic::{AtomicBool, Ordering},
+};
 fn main() -> Result<()> {
     let args: Vec<_> = std::env::args().collect();
     if args.len() < 4 {
@@ -10,11 +14,31 @@ fn main() -> Result<()> {
     }
     let layout = Layout::new(&args[1]);
     layout.init()?;
-    let service = RepositoryChannel::new(&layout)?;
-    let progress = |message: String| eprintln!("{message}");
+    let cancel = Arc::new(AtomicBool::new(false));
+    let service = RepositoryChannel::new(&layout)?.with_cancel(cancel.clone());
+    let budget = if args[3] == "install-cancel" {
+        args.get(4)
+            .and_then(|v| v.parse::<u64>().ok())
+            .unwrap_or(64)
+            * 1024
+            * 1024
+    } else {
+        u64::MAX
+    };
+    let progress = move |message: ProgressUpdate| match message {
+        ProgressUpdate::Message(text) => eprintln!("{text}"),
+        ProgressUpdate::Transfer(snapshot) => {
+            eprintln!("{}", serde_json::to_string(&snapshot).unwrap());
+            if snapshot.downloaded_bytes >= budget {
+                cancel.store(true, Ordering::Relaxed);
+            }
+        }
+    };
     let value = match args[3].as_str() {
         "check" => serde_json::to_value(service.check(&args[2])?)?,
-        "install" => serde_json::to_value(service.install(&args[2], Some(&progress))?)?,
+        "install" | "install-cancel" => {
+            serde_json::to_value(service.install(&args[2], Some(&progress))?)?
+        }
         "rollback" => serde_json::to_value(service.rollback(&args[2])?)?,
         "setup" => {
             let mut s = layout.load()?;

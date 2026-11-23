@@ -287,6 +287,7 @@ impl RepositoryChannel {
         fs::create_dir_all(&state)?;
         let _lease = Lease::acquire(&state.join("install.lock"))?;
         let available = self.check(branch)?;
+        let tracker = TransferTracker::new(progress);
         let old: ChannelInstalled = read_json(&state.join("installed.json"))?;
         let roots = revisions(&self.layout, &settings);
         no_links(&roots)?;
@@ -312,7 +313,7 @@ impl RepositoryChannel {
             return Ok(value);
         }
         let complete_base = if available.manifest.foundation.is_some() {
-            Some(self.prepare_foundation(&available, &self.layout.data(&settings), progress)?)
+            Some(self.prepare_foundation(&available, &self.layout.data(&settings), &tracker)?)
         } else {
             None
         };
@@ -347,46 +348,90 @@ impl RepositoryChannel {
         )?;
         fs::create_dir(&stage)?;
         let result = (|| {
-            let mut downloaded = 0;
             let mut reused = 0;
             let downloader = UpdateService::new(&self.layout)?.with_cancel(self.cancel.clone());
+            tracker.stage(
+                "checking",
+                "Проверяем обновления",
+                available.manifest.files.len(),
+            );
+            let mut plans = Vec::new();
             for f in &available.manifest.files {
                 self.cancelled()?;
-                crate::progress(progress, format!("{}: {}", branch, f.path));
+                let (component, relative) = f.target.split_once('/').context("CHANNEL_TARGET")?;
+                let base = if component == "server" {
+                    &server
+                } else {
+                    &client
+                };
+                let previous = component_file(base, relative)?;
+                no_links(&previous)?;
+                let reuse = if previous.is_file()
+                    && fs::metadata(&previous)?.len() == f.size
+                    && sha(&previous)? == f.sha256
+                {
+                    Some(previous)
+                } else {
+                    None
+                };
                 let cache = self
                     .layout
                     .data(&settings)
                     .join("cache/channel-files")
                     .join(&f.sha256);
                 no_links(&cache)?;
-                let cached = cache.is_file()
-                    && fs::metadata(&cache)?.len() == f.size
-                    && sha(&cache)? == f.sha256;
-                downloader.download(
-                    &Package {
-                        id: f.path.clone(),
-                        url: raw_url(&available.build_commit, &f.path)?,
-                        sha256: f.sha256.clone(),
-                        size: f.size,
-                        ..Default::default()
-                    },
-                    &cache,
-                    progress,
-                )?;
-                if cached {
-                    reused += f.size
-                } else {
-                    downloaded += f.size
+                let package = Package {
+                    id: f.path.clone(),
+                    url: raw_url(&available.build_commit, &f.path)?,
+                    sha256: f.sha256.clone(),
+                    size: f.size,
+                    ..Default::default()
+                };
+                let id = format!("channel/{}", f.sha256);
+                if reuse.is_none() {
+                    tracker.item(
+                        &id,
+                        f.size,
+                        UpdateService::available_download(&package, &cache)?,
+                    );
                 }
+                plans.push((f, cache, package, id, reuse));
+                tracker.file_done();
+            }
+            tracker.planned();
+            if tracker.snapshot().remaining_bytes > 0 {
+                tracker.stage("download", "Скачиваем обновления", 0);
+            }
+            for (_, cache, package, id, reuse) in &plans {
+                if reuse.is_none() {
+                    let observe = |event| tracker.observe(id, event);
+                    downloader.download_observed(package, cache, None, Some(&observe))?;
+                }
+            }
+            tracker.stage("install", "Применяем обновления", plans.len());
+            for (f, cache, _, _, previous) in plans {
+                self.cancelled()?;
                 let (component, relative) = f.target.split_once('/').context("CHANNEL_TARGET")?;
-                let folder = stage.join(if component == "server" {
-                    "Server"
-                } else {
-                    "Client"
-                });
-                let target = child(&folder, relative)?;
+                let target = child(
+                    &stage.join(if component == "server" {
+                        "Server"
+                    } else {
+                        "Client"
+                    }),
+                    relative,
+                )?;
                 fs::create_dir_all(target.parent().unwrap())?;
-                fs::copy(&cache, &target)?;
+                let source = if let Some(previous) = &previous {
+                    reused += f.size;
+                    previous
+                } else {
+                    &cache
+                };
+                if fs::hard_link(source, &target).is_err() {
+                    fs::copy(source, &target)?;
+                }
+                ensure!(sha(&target)? == f.sha256, "CHANNEL_FILE_HASH");
+                tracker.file_done();
             }
             for (name, base) in [("Client", &client), ("Server", &server)] {
                 let folder = stage.join(name);
@@ -416,11 +461,12 @@ impl RepositoryChannel {
                 build_commit: available.build_commit,
                 source_commit: available.manifest.source_commit,
                 sequence: available.manifest.sequence,
-                downloaded_bytes: downloaded,
+                downloaded_bytes: tracker.snapshot().downloaded_bytes,
                 reused_bytes: reused,
                 files: available.manifest.files.len(),
             };
             write_json(&state.join("installed.json"), &value)?;
+            tracker.complete();
             Ok(value)
         })();
         delete_owned(&roots, &stage)?;
@@ -658,10 +704,19 @@ mod tests {
         fs::create_dir_all(&overlay).unwrap();
         fs::write(runtime.join("game.jar"), b"game").unwrap();
         fs::write(runtime.join("bootstrap.jar"), b"bootstrap").unwrap();
-        write_json(&overlay.join(".component-base.json"), &relative_base(&overlay, &base).to_string_lossy().into_owned()).unwrap();
+        write_json(
+            &overlay.join(".component-base.json"),
+            &relative_base(&overlay, &base)
+                .to_string_lossy()
+                .into_owned(),
+        )
+        .unwrap();
         assert_eq!(runtime_root(&overlay).unwrap(), runtime);
         assert_eq!(runtime_part(&runtime, "classes"), runtime.join("game.jar"));
-        assert_eq!(runtime_part(&runtime, "bootstrap"), runtime.join("bootstrap.jar"));
+        assert_eq!(
+            runtime_part(&runtime, "bootstrap"),
+            runtime.join("bootstrap.jar")
+        );
     }
     #[test]
     fn overlay_uses_changed_file_and_preserves_foundation() {

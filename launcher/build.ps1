@@ -68,7 +68,7 @@ $files += @(Get-ChildItem -LiteralPath "$output\modules", "$output\licenses" -Re
 $native = ($files | Where-Object { $_.Name -in @('BSCPCRAFT.exe') } | Measure-Object Length -Sum).Sum
 $java = ($files | Where-Object { $_.FullName.StartsWith("$output\modules\java17\", [StringComparison]::OrdinalIgnoreCase) } | Measure-Object Length -Sum).Sum
 [ordered]@{
-    version = '0.4.2'; nativeBytes = $native; javaBytes = $java
+    version = '0.4.3'; nativeBytes = $native; javaBytes = $java
     totalBytes = ($files | Measure-Object Length -Sum).Sum
     dotnetRequired = $false; webviewRequired = $false
     files = @($files | ForEach-Object { [ordered]@{ path=$_.FullName.Substring($output.Length+1); bytes=$_.Length; sha256=(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant() } })

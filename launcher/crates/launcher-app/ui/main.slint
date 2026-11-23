@@ -1,13 +1,13 @@
 import { Palette } from "std-widgets.slint";
 import "assets/RussoOne-Regular.ttf";
 import { Theme } from "theme.slint";
-import { Action, Hint, Icon, Label, Notice, Rule } from "controls.slint";
+import { Action, Hint, Icon, Label, Notice, Rule, TransferStatus } from "controls.slint";
 import { Home } from "home.slint";
 import { WorldsPage, ServerPage, ReportPage } from "management.slint";
 import { Configuration } from "forms.slint";
 import { LauncherDialog } from "dialogs.slint";
-import { WorldRow, ServerRow, ChangeRow } from "api.slint";
-export { WorldRow, ServerRow, ChangeRow } from "api.slint";
+import { WorldRow, ServerRow, ChangeRow, TransferView } from "api.slint";
+export { WorldRow, ServerRow, ChangeRow, TransferView } from "api.slint";
 export component AppWindow inherits Window {
     // Pages and user-visible information. Models contain real data supplied by Rust.
     in-out property <string> page: "home";
@@ -16,6 +16,7 @@ export component AppWindow inherits Window {
     in property <string> error;
     in property <string> error-field;
     in property <bool> busy;
+    in property <TransferView> transfer-view;
     in property <string> progress-text;
     in property <float> progress: -1;
     in property <bool> configured;
@@ -189,12 +190,14 @@ export component AppWindow inherits Window {
                     client-path <=> root.client-path; server-path <=> root.server-path; client-memory <=> root.client-memory;
                     server-memory-setting <=> root.server-memory-setting; advertised-host <=> root.advertised-host; port <=> root.port;
                     feed-url <=> root.feed-url; game-branch <=> root.game-branch; branches: root.branches; first-world-name <=> root.first-world-name;
+                    transfer-view: root.transfer-view;
                     busy: root.busy; error: root.error; error-field: root.error-field; progress: root.progress; progress-text: root.progress-text; status: root.status;
                     browse(field) => { root.browse(field); } install(source) => { root.install-components(source); }
                     step-action(op) => { root.setup-action(op); } update(op) => { root.update-action(op); } save => { root.save-settings(); }
                 }
             }
-            if !root.setup-visible && root.page != "settings" && (root.error != "" || root.busy || root.progress-text != ""): Notice {
+            if !root.setup-visible && root.page != "settings" && root.transfer-view.visible: TransferStatus { view: root.transfer-view; }
+            if !root.setup-visible && root.page != "settings" && (!root.transfer-view.visible || root.error != "") && (root.error != "" || root.busy || root.progress-text != ""): Notice {
                 failed: root.error != ""; message: root.error != "" ? root.error : root.progress-text != "" ? root.progress-text : "Выполняется операция…";
                 progress: root.busy && root.error == "" ? root.progress : -1;
             }

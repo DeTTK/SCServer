@@ -237,6 +237,117 @@ fn refresh(ui: &slint::Weak<AppWindow>, layout: &Layout, drafts: bool) -> Result
     });
     Ok(())
 }
+fn display_bytes(bytes: u64) -> String {
+    let (divisor, unit) = if bytes >= 1024 * 1024 * 1024 {
+        (1024.0 * 1024.0 * 1024.0, "ГБ")
+    } else if bytes >= 1024 * 1024 {
+        (1024.0 * 1024.0, "МБ")
+    } else if bytes >= 1024 {
+        (1024.0, "КБ")
+    } else {
+        return format!("{bytes} Б");
+    };
+    format!("{:.1} {unit}", bytes as f64 / divisor).replace('.', ",")
+}
+fn transfer_view(s: &TransferSnapshot) -> crate::TransferView {
+    let fraction = s.fraction();
+    let speed =
+        if s.phase == "download" && s.bytes_per_second >= 1.0 && s.bytes_per_second.is_finite() {
+            format!("{}/с", display_bytes(s.bytes_per_second as u64))
+        } else {
+            "—".into()
+        };
+    let eta = if s.phase == "download" && s.remaining_bytes > 0 {
+        match s.eta_seconds {
+            Some(seconds) if seconds >= 3600 => {
+                format!("≈ {} ч {} мин", seconds / 3600, seconds % 3600 / 60)
+            }
+            Some(seconds) if seconds >= 60 => format!("≈ {} мин {} с", seconds / 60, seconds % 60),
+            Some(seconds) => format!("≈ {seconds} с"),
+            None => "Расчёт…".into(),
+        }
+    } else {
+        "—".into()
+    };
+    let mut detail = Vec::new();
+    if s.reused_bytes > 0 {
+        detail.push(format!(
+            "Найдено файлов на диске: {}",
+            display_bytes(s.reused_bytes)
+        ));
+    }
+    if s.cached_bytes > 0 {
+        detail.push(format!(
+            "В кэше загрузки: {}",
+            display_bytes(s.cached_bytes)
+        ));
+    }
+    if s.files_total > 0 {
+        detail.push(format!("Файлы: {} / {}", s.files_done, s.files_total));
+    }
+    if detail.is_empty() {
+        detail.push(
+            if s.phase == "complete" {
+                "Все файлы готовы"
+            } else {
+                "Проверяем целостность файлов"
+            }
+            .into(),
+        );
+    }
+    crate::TransferView {
+        visible: true,
+        operation: s.operation.clone().into(),
+        sequence: s.sequence.min(i32::MAX as u64) as i32,
+        title: s.title.clone().into(),
+        percent: if fraction >= 0.0 {
+            format!("{:.0}%", fraction * 100.0)
+        } else {
+            String::new()
+        }
+        .into(),
+        fraction,
+        downloaded: if s.total_known {
+            format!(
+                "{} из {}",
+                display_bytes(s.downloaded_bytes),
+                display_bytes(s.total_bytes)
+            )
+        } else {
+            "—".into()
+        }
+        .into(),
+        remaining: if s.total_known {
+            display_bytes(s.remaining_bytes)
+        } else {
+            "—".into()
+        }
+        .into(),
+        speed: speed.into(),
+        eta: eta.into(),
+        detail: detail.join(" · ").into(),
+    }
+}
+fn apply_progress(ui: &AppWindow, update: ProgressUpdate) {
+    match update {
+        ProgressUpdate::Message(text) => {
+            ui.set_progress_text(text.into());
+            ui.set_progress(-1.0);
+            ui.set_transfer_view(Default::default());
+        }
+        ProgressUpdate::Transfer(snapshot) => {
+            let current = ui.get_transfer_view();
+            if current.operation.as_str() == snapshot.operation
+                && current.sequence as u64 >= snapshot.sequence
+            {
+                return;
+            }
+            ui.set_progress(snapshot.fraction());
+            ui.set_progress_text(snapshot.title.clone().into());
+            ui.set_transfer_view(transfer_view(&snapshot));
+        }
+    }
+}
 fn operation_done(ui: &slint::Weak<AppWindow>, result: Result<String>) {
     let _ = ui.upgrade_in_event_loop(move |ui| {
         ui.set_busy(false);
@@ -251,6 +362,13 @@ fn operation_done(ui: &slint::Weak<AppWindow>, result: Result<String>) {
                 }
             }
             Err(e) => {
+                let mut transfer = ui.get_transfer_view();
+                if transfer.visible {
+                    transfer.title = "Загрузка остановлена".into();
+                    transfer.speed = "—".into();
+                    transfer.eta = "—".into();
+                    ui.set_transfer_view(transfer);
+                }
                 let (field, message) = friendly_error(&e);
                 ui.set_error_field(field.into());
                 ui.set_error(message.into());
@@ -451,6 +569,11 @@ pub fn bind(ui: &AppWindow, layout: Layout) -> Binding {
                 if a == "cancel" {
                     flag.store(true, Ordering::Relaxed);
                     ui.set_progress_text("Отменяем операцию…".into());
+                    let mut view = ui.get_transfer_view();
+                    view.title = "Отменяем операцию…".into();
+                    view.speed = "—".into();
+                    view.eta = "—".into();
+                    ui.set_transfer_view(view);
                     return;
                 }
                 if a == "close" {
@@ -606,9 +729,16 @@ pub fn bind(ui: &AppWindow, layout: Layout) -> Binding {
     std::thread::spawn(move || {
         while let Ok(work) = rx.recv() {
             let progress_ui = worker_ui.clone();
-            let progress = move |text: String| {
-                let _ =
-                    progress_ui.upgrade_in_event_loop(move |ui| ui.set_progress_text(text.into()));
+            let progress_cancel = worker_cancel.clone();
+            let _ = worker_ui.upgrade_in_event_loop(|ui| {
+                ui.set_transfer_view(Default::default());
+                ui.set_progress(-1.0);
+            });
+            let progress = move |update: ProgressUpdate| {
+                if progress_cancel.load(Ordering::Relaxed) {
+                    return;
+                }
+                let _ = progress_ui.upgrade_in_event_loop(move |ui| apply_progress(&ui, update));
             };
             let result = execute(work, &worker_layout, &worker_ui, &worker_cancel, &progress);
             let log = RotatingLog::new(worker_layout.at("logs"), "launcher");
@@ -708,7 +838,11 @@ pub fn bind(ui: &AppWindow, layout: Layout) -> Binding {
                 ui.set_client_running(view.client_running);
                 ui.set_server_state(view.detail.clone().into());
                 if view.state == "Updating" && ui.get_busy() {
-                    ui.set_progress_text(view.detail.clone().into());
+                    if let Some(snapshot) = view.transfer.clone() {
+                        apply_progress(&ui, ProgressUpdate::Transfer(snapshot));
+                    } else {
+                        ui.set_progress_text(view.detail.clone().into());
+                    }
                     ui.set_status("Обновляем игровые файлы…".into());
                 }
 
@@ -849,7 +983,7 @@ fn execute(
                 let _ = ui.upgrade_in_event_loop(move |ui| {
                     ui.set_branches(rows(branches.into_iter().map(SharedString::from).collect()))
                 });
-                progress(format!("Проверяем готовую сборку {}…", s.game_branch));
+                progress(format!("Проверяем готовую сборку {}…", s.game_branch).into());
                 match service.check(&s.game_branch) {
                     Ok(available) => {
                         let view = HostClient::new(layout).status()?;
@@ -968,11 +1102,13 @@ fn execute(
                 return Ok(String::new());
             }
             if draft.bundle.trim().is_empty() {
-                bail!("BUNDLE_PATH: Выберите комплект Client / Server / Map.")
+                bail!("BUNDLE_PATH: Сначала установите игру на шаге «Компоненты».")
             }
             let bundle = Setup::discover(layout.resolve(draft.bundle.trim()));
             if bundle.client.is_empty() || bundle.server.is_empty() || bundle.map.is_empty() {
-                bail!("BUNDLE_PATH: Выберите папку с Client, Server и Map.")
+                bail!(
+                    "BUNDLE_PATH: Установка не завершена. Вернитесь к шагу «Компоненты» и установите игру."
+                )
             }
             Setup::check_components(Path::new(&bundle.client), Path::new(&bundle.server))?;
             if step == 1 && action != "finish" {
@@ -1468,5 +1604,35 @@ mod probe_tests {
         );
         assert_eq!(probe_status(None), (false, "Проверка недоступна".into()));
         assert!(!probe_status(Some(&serde_json::json!({"milliseconds":1}))).0);
+    }
+}
+
+#[cfg(test)]
+mod transfer_tests {
+    use super::*;
+    #[test]
+    fn transfer_card_formats_global_numbers_and_eta() {
+        let s = TransferSnapshot {
+            phase: "download".into(),
+            total_known: true,
+            downloaded_bytes: 1024 * 1024,
+            total_bytes: 2560 * 1024,
+            remaining_bytes: 1536 * 1024,
+            bytes_per_second: 1536.0 * 1024.0,
+            eta_seconds: Some(61),
+            ..Default::default()
+        };
+        let view = transfer_view(&s);
+        assert_eq!(view.percent, "40%");
+        assert_eq!(view.downloaded, "1,0 МБ из 2,5 МБ");
+        assert_eq!(view.speed, "1,5 МБ/с");
+        assert_eq!(view.eta, "≈ 1 мин 1 с");
+    }
+    #[test]
+    fn unknown_plan_has_no_fake_remaining_or_eta() {
+        let view = transfer_view(&TransferSnapshot::default());
+        assert_eq!(view.remaining, "—");
+        assert_eq!(view.eta, "—");
+        assert_eq!(view.fraction, -1.0);
     }
 }

@@ -253,6 +253,35 @@ impl UpdateService {
         destination: &Path,
         callback: Option<&Progress>,
     ) -> Result<()> {
+        self.download_observed(p, destination, callback, None)
+    }
+
+    pub fn available_download(p: &Package, destination: &Path) -> Result<u64> {
+        no_links(destination)?;
+        if destination.is_file()
+            && fs::metadata(destination)?.len() == p.size
+            && sha(destination)? == p.sha256
+        {
+            return Ok(p.size);
+        }
+        let part = PathBuf::from(format!("{}.part", destination.display()));
+        no_links(&part)?;
+        if part.is_file() {
+            let size = fs::metadata(&part)?.len();
+            if size < p.size || size == p.size && sha(&part)? == p.sha256 {
+                return Ok(size);
+            }
+        }
+        Ok(0)
+    }
+
+    pub fn download_observed(
+        &self,
+        p: &Package,
+        destination: &Path,
+        callback: Option<&Progress>,
+        observer: Option<&crate::DownloadObserver<'_>>,
+    ) -> Result<()> {
         self.cancelled()?;
         Self::url(&p.url)?;
         if !valid_hash(&p.sha256) || p.size == 0 {
@@ -264,6 +293,9 @@ impl UpdateService {
             && fs::metadata(destination)?.len() == p.size
             && sha(destination)? == p.sha256
         {
+            if let Some(f) = observer {
+                f(crate::DownloadEvent::Available(p.size));
+            }
             return Ok(());
         };
         let part = PathBuf::from(format!("{}.part", destination.display()));
@@ -279,6 +311,9 @@ impl UpdateService {
                     fs::remove_file(destination)?;
                 }
                 fs::rename(part, destination)?;
+                if let Some(f) = observer {
+                    f(crate::DownloadEvent::Available(p.size));
+                }
                 return Ok(());
             }
             fs::remove_file(&part)?;
@@ -300,6 +335,9 @@ impl UpdateService {
         } else {
             bail!("DOWNLOAD_STATUS: unexpected HTTP response")
         };
+        if let Some(f) = observer {
+            f(crate::DownloadEvent::Available(offset));
+        }
         let mut out = OpenOptions::new()
             .write(true)
             .create(true)
@@ -316,11 +354,17 @@ impl UpdateService {
                 break;
             };
             count = count.checked_add(n as u64).context("DOWNLOAD_SIZE")?;
+            if let Some(f) = observer {
+                f(crate::DownloadEvent::Received {
+                    bytes: n as u64,
+                    available: count,
+                });
+            }
             if count > p.size {
                 bail!("DOWNLOAD_SIZE: exceeds authenticated size")
             };
             out.write_all(&b[..n])?;
-            if last.elapsed() > Duration::from_millis(500) {
+            if observer.is_none() && last.elapsed() > Duration::from_millis(500) {
                 progress(callback, format!("{}: {}%", p.id, count * 100 / p.size));
                 last = std::time::Instant::now();
             }
@@ -496,9 +540,7 @@ impl UpdateService {
             Self::verify_package(&root, p)?;
             let index = Self::contents(&root, p)?;
             if !index.contains_key("BSCPCRAFT.exe") {
-                bail!(
-                    "LAUNCHER_CONTENTS: в релизе отсутствует BSCPCRAFT.exe"
-                )
+                bail!("LAUNCHER_CONTENTS: в релизе отсутствует BSCPCRAFT.exe")
             };
             return Ok(Some(root.join("BSCPCRAFT.exe")));
         }
@@ -673,6 +715,25 @@ impl BundleInstaller {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn download_plan_validates_cache_and_accounts_for_resume_prefix() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("payload");
+        let p = Package {
+            size: 4,
+            sha256: hex::encode(Sha256::digest(b"abcd")),
+            ..Default::default()
+        };
+        assert_eq!(UpdateService::available_download(&p, &path).unwrap(), 0);
+        fs::write(path.with_extension("part"), b"ab").unwrap();
+        assert_eq!(UpdateService::available_download(&p, &path).unwrap(), 2);
+        fs::write(path.with_extension("part"), b"xxxx").unwrap();
+        assert_eq!(UpdateService::available_download(&p, &path).unwrap(), 0);
+        fs::write(&path, b"abcd").unwrap();
+        assert_eq!(UpdateService::available_download(&p, &path).unwrap(), 4);
+        fs::write(&path, b"xxxx").unwrap();
+        assert_eq!(UpdateService::available_download(&p, &path).unwrap(), 0);
+    }
     #[test]
     fn blocking_transport_streams_body_without_tokio_reactor() {
         use std::io::{Read, Write};

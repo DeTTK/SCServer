@@ -117,13 +117,16 @@ impl RepositoryChannel {
         callback: Option<&Progress>,
     ) -> Result<PathBuf> {
         let available = self.check(branch)?;
-        self.prepare_foundation(&available, data, callback)
+        let tracker = TransferTracker::new(callback);
+        let root = self.prepare_foundation(&available, data, &tracker)?;
+        tracker.complete();
+        Ok(root)
     }
     pub(crate) fn prepare_foundation(
         &self,
         available: &ChannelAvailable,
         data: &Path,
-        callback: Option<&Progress>,
+        tracker: &TransferTracker<'_>,
     ) -> Result<PathBuf> {
         let pin = available
             .manifest
@@ -149,7 +152,7 @@ impl RepositoryChannel {
             !destination.exists(),
             "FOUNDATION_INCOMPLETE: папка основы существует без завершённой установки; исходные данные сохранены"
         );
-        progress(callback, "Получаем полный индекс игровой основы…");
+        tracker.stage("checking", "Получаем список игровых файлов", 0);
         let raw = self.pinned_bytes(
             &available.build_commit,
             &pin.path,
@@ -229,11 +232,18 @@ impl RepositoryChannel {
         )?;
         let result = (|| {
             let downloader = UpdateService::new(&self.layout)?.with_cancel(self.cancel.clone());
+            tracker.stage(
+                "checking",
+                "Проверяем имеющиеся файлы",
+                descriptor.file_count,
+            );
+            let mut ready = Vec::new();
+            let mut reuse = Vec::new();
+            let mut pending = Vec::new();
+            let mut needed = std::collections::BTreeSet::new();
+            let mut names = std::collections::HashSet::new();
             let mut count = 0usize;
             let mut expanded = 0u64;
-            let mut checked = std::collections::HashSet::new();
-            let mut handles: HashMap<String, File> = HashMap::new();
-            let mut directories = std::collections::HashSet::new();
             for index in descriptor.indices {
                 self.cancelled()?;
                 ensure!(
@@ -245,13 +255,6 @@ impl RepositoryChannel {
                         .starts_with(&format!("{}/index-", index.component))
                         && index.decoded_size <= 8 * 1024 * 1024,
                     "FOUNDATION_INDEX"
-                );
-                progress(
-                    callback,
-                    format!(
-                        "Установка {}: {} / {} файлов",
-                        index.component, count, descriptor.file_count
-                    ),
                 );
                 let compressed = self.pinned_bytes(
                     &available.build_commit,
@@ -266,69 +269,13 @@ impl RepositoryChannel {
                     files.len() == index.files && files.len() <= 2000,
                     "FOUNDATION_INDEX"
                 );
-                if candidate.is_none() {
-                    let added = files
-                        .iter()
-                        .try_fold(0u64, |sum, f| sum.checked_add(f.size))
-                        .context("FOUNDATION_LIMIT")?;
-                    ensure!(
-                        count + files.len() <= descriptor.file_count
-                            && expanded
-                                .checked_add(added)
-                                .is_some_and(|n| n <= descriptor.expanded_bytes),
-                        "FOUNDATION_LIMIT"
-                    );
-                    for f in &files {
-                        ensure!(
-                            f.path.starts_with(&format!("{}/", index.component))
-                                && hash_valid(&f.sha256)
-                                && f.size <= 4 * 1024 * 1024 * 1024
-                                && f.pieces
-                                    .iter()
-                                    .try_fold(0u64, |sum, p| sum.checked_add(p.decoded_size))
-                                    == Some(f.size),
-                            "FOUNDATION_FILE"
-                        );
-                        let dest = target(&stage, &f.path)?;
-                        let parent = dest.parent().unwrap();
-                        if directories.insert(parent.to_owned()) {
-                            no_links(parent)?;
-                            fs::create_dir_all(parent)?;
-                        }
-                        for piece in &f.pieces {
-                            let object = objects
-                                .get(&piece.object)
-                                .context("FOUNDATION_OBJECT_MISSING")?;
-                            if checked.insert(object.sha256.clone()) {
-                                let path = child(&object_root, &object.sha256)?;
-                                downloader.download(
-                                    &Package {
-                                        id: "Игровая основа".into(),
-                                        url: crate::channels::raw_url(
-                                            &available.build_commit,
-                                            &format!("bootstrap/objects/{}.pack", object.sha256),
-                                        )?,
-                                        sha256: object.sha256.clone(),
-                                        size: object.size,
-                                        ..Default::default()
-                                    },
-                                    &path,
-                                    callback,
-                                )?;
-                            }
-                        }
-                    }
-                    self.write_fresh_files(&files, &stage, &object_root, &objects, recovery)?;
-                    count += files.len();
-                    expanded += added;
-                    continue;
-                }
                 for file in files {
                     self.cancelled()?;
                     ensure!(
                         file.path.starts_with(&format!("{}/", index.component))
                             && hash_valid(&file.sha256)
-                            && file.size <= 4 * 1024 * 1024 * 1024,
+                            && file.size <= 4 * 1024 * 1024 * 1024
+                            && names.insert(file.path.to_lowercase()),
                         "FOUNDATION_FILE"
                     );
                     ensure!(
@@ -338,108 +285,22 @@ impl RepositoryChannel {
                             == Some(file.size),
                         "FOUNDATION_PIECE_SIZE"
                     );
-                    let dest = target(&stage, &file.path)?;
-                    if recovery && dest.exists() {
-                        no_links(&dest)?;
-                        if fs::metadata(&dest)?.len() == file.size && sha(&dest)? == file.sha256 {
-                            count += 1;
-                            expanded = expanded
-                                .checked_add(file.size)
-                                .context("FOUNDATION_LIMIT")?;
-                            ensure!(
-                                count <= descriptor.file_count
-                                    && expanded <= descriptor.expanded_bytes,
-                                "FOUNDATION_LIMIT"
-                            );
-                            continue;
-                        }
-                        fs::remove_file(&dest)?;
-                    }
-                    ensure!(!dest.exists(), "FOUNDATION_DUPLICATE");
-                    let parent = dest.parent().unwrap();
-                    if directories.insert(parent.to_owned()) {
-                        no_links(parent)?;
-                        fs::create_dir_all(parent)?;
-                    }
-                    let reused = if let Some(base) = &candidate {
-                        let previous = target(base, &file.path)?;
-                        if previous.is_file()
-                            && fs::metadata(&previous)?.len() == file.size
-                            && sha(&previous)? == file.sha256
-                        {
-                            no_links(&previous)?;
-                            if fs::hard_link(&previous, &dest).is_err() {
-                                fs::copy(previous, &dest)?;
-                            }
-                            true
-                        } else {
-                            false
-                        }
-                    } else {
-                        false
-                    };
-                    if !reused {
-                        let mut out = OpenOptions::new()
-                            .create_new(true)
-                            .write(true)
-                            .open(&dest)?;
-                        let mut actual = Sha256::new();
-                        for piece in file.pieces {
-                            let object = objects
-                                .get(&piece.object)
-                                .context("FOUNDATION_OBJECT_MISSING")?;
-                            ensure!(
-                                piece.length <= 4 * 1024 * 1024
-                                    && piece.decoded_size <= 4 * 1024 * 1024
-                                    && piece
-                                        .offset
-                                        .checked_add(piece.length)
-                                        .is_some_and(|end| end <= object.size),
-                                "FOUNDATION_OFFSET"
-                            );
-                            let path = child(&object_root, &object.sha256)?;
-                            if checked.insert(object.sha256.clone()) {
-                                downloader.download(
-                                    &Package {
-                                        id: "Игровая основа".into(),
-                                        url: crate::channels::raw_url(
-                                            &available.build_commit,
-                                            &format!("bootstrap/objects/{}.pack", object.sha256),
-                                        )?,
-                                        sha256: object.sha256.clone(),
-                                        size: object.size,
-                                        ..Default::default()
-                                    },
-                                    &path,
-                                    callback,
-                                )?;
-                                handles.insert(object.sha256.clone(), File::open(&path)?);
-                            }
-                            let source = handles
-                                .get_mut(&object.sha256)
-                                .context("FOUNDATION_OBJECT_HANDLE")?;
-                            source.seek(SeekFrom::Start(piece.offset))?;
-                            let mut bytes = vec![0; piece.length as usize];
-                            source.read_exact(&mut bytes)?;
-                            let decoded = match piece.codec.as_str() {
-                                "raw" => {
-                                    ensure!(piece.length == piece.decoded_size, "FOUNDATION_CODEC");
-                                    bytes
-                                }
-                                "zlib" => inflate(&bytes, piece.decoded_size)?,
-                                _ => bail!("FOUNDATION_CODEC"),
-                            };
-                            actual.update(&decoded);
-                            out.write_all(&decoded)?;
-                        }
+                    for piece in &file.pieces {
+                        let object = objects
+                            .get(&piece.object)
+                            .context("FOUNDATION_OBJECT_MISSING")?;
                         ensure!(
-                            hex::encode(actual.finalize()) == file.sha256,
-                            "FOUNDATION_FILE_HASH: {}",
-                            file.path
+                            piece.length <= 4 * 1024 * 1024
+                                && piece.decoded_size <= 4 * 1024 * 1024
+                                && piece
+                                    .offset
+                                    .checked_add(piece.length)
+                                    .is_some_and(|end| end <= object.size)
+                                && matches!(piece.codec.as_str(), "raw" | "zlib"),
+                            "FOUNDATION_OFFSET"
                         );
-                        out.flush()?;
                     }
-                    count += 1;
+                    count = count.checked_add(1).context("FOUNDATION_LIMIT")?;
                     expanded = expanded
                         .checked_add(file.size)
                         .context("FOUNDATION_LIMIT")?;
@@ -447,12 +308,112 @@ impl RepositoryChannel {
                         count <= descriptor.file_count && expanded <= descriptor.expanded_bytes,
                         "FOUNDATION_LIMIT"
                     );
+                    let dest = target(&stage, &file.path)?;
+                    no_links(&dest)?;
+                    if recovery
+                        && dest.is_file()
+                        && fs::metadata(&dest)?.len() == file.size
+                        && sha(&dest)? == file.sha256
+                    {
+                        tracker.reused(file.size);
+                        ready.push(file);
+                        tracker.file_done();
+                        continue;
+                    }
+                    if dest.exists() {
+                        ensure!(dest.is_file(), "FOUNDATION_LINK");
+                        fs::remove_file(&dest)?;
+                    }
+                    if let Some(base) = &candidate {
+                        let previous = target(base, &file.path)?;
+                        no_links(&previous)?;
+                        if previous.is_file()
+                            && fs::metadata(&previous)?.len() == file.size
+                            && sha(&previous)? == file.sha256
+                        {
+                            tracker.reused(file.size);
+                            reuse.push((file, previous));
+                            tracker.file_done();
+                            continue;
+                        }
+                    }
+                    for piece in &file.pieces {
+                        needed.insert(piece.object.clone());
+                    }
+                    pending.push(file);
+                    tracker.file_done();
                 }
             }
             ensure!(
                 count == descriptor.file_count && expanded == descriptor.expanded_bytes,
                 "FOUNDATION_INCOMPLETE"
             );
+            tracker.stage("checking", "Проверяем кэш загрузки", 0);
+            let mut downloads = Vec::new();
+            for hash in needed {
+                self.cancelled()?;
+                let object = &objects[&hash];
+                let path = child(&object_root, &hash)?;
+                let package = Package {
+                    id: "Игровые файлы".into(),
+                    url: crate::channels::raw_url(
+                        &available.build_commit,
+                        &format!("bootstrap/objects/{hash}.pack"),
+                    )?,
+                    sha256: hash.clone(),
+                    size: object.size,
+                    ..Default::default()
+                };
+                let available = UpdateService::available_download(&package, &path)?;
+                let id = format!("foundation/{hash}");
+                tracker.item(&id, package.size, available);
+                downloads.push((id, package, path));
+            }
+            tracker.planned();
+            if tracker.snapshot().remaining_bytes > 0 {
+                tracker.stage("download", "Скачиваем игровые файлы", 0);
+            }
+            for (id, package, path) in &downloads {
+                let observe = |event| tracker.observe(id, event);
+                downloader.download_observed(package, path, None, Some(&observe))?;
+            }
+            tracker.stage(
+                "install",
+                "Устанавливаем игровые файлы",
+                descriptor.file_count,
+            );
+            for file in &ready {
+                self.cancelled()?;
+                ensure!(
+                    sha(&target(&stage, &file.path)?)? == file.sha256,
+                    "FOUNDATION_REUSE_CHANGED"
+                );
+                tracker.file_done();
+            }
+            for (file, previous) in &reuse {
+                self.cancelled()?;
+                let dest = target(&stage, &file.path)?;
+                fs::create_dir_all(dest.parent().unwrap())?;
+                if fs::hard_link(previous, &dest).is_err() {
+                    fs::copy(previous, &dest)?;
+                }
+                ensure!(sha(&dest)? == file.sha256, "FOUNDATION_REUSE_CHANGED");
+                tracker.file_done();
+            }
+            for file in &pending {
+                let parent = target(&stage, &file.path)?.parent().unwrap().to_owned();
+                no_links(&parent)?;
+                fs::create_dir_all(parent)?;
+            }
+            self.write_fresh_files_progress(
+                &pending,
+                &stage,
+                &object_root,
+                &objects,
+                false,
+                Some(tracker),
+            )?;
+            tracker.stage("verify", "Проверяем установку", 0);
             Setup::check_components(&stage.join("Client"), &stage.join("Server"))?;
             ensure!(
                 stage.join("Map/registry.json").is_file()
@@ -477,6 +438,7 @@ impl RepositoryChannel {
         }
         result
     }
+    #[cfg(test)]
     fn write_fresh_files(
         &self,
         files: &[BaseFile],
@@ -484,6 +446,17 @@ impl RepositoryChannel {
         cache: &Path,
         objects: &HashMap<String, ObjectPin>,
         resume: bool,
+    ) -> Result<()> {
+        self.write_fresh_files_progress(files, stage, cache, objects, resume, None)
+    }
+    fn write_fresh_files_progress(
+        &self,
+        files: &[BaseFile],
+        stage: &Path,
+        cache: &Path,
+        objects: &HashMap<String, ObjectPin>,
+        resume: bool,
+        tracker: Option<&TransferTracker<'_>>,
     ) -> Result<()> {
         let workers = 8usize.min(files.len().max(1));
         let batch = files.len().div_ceil(workers).max(1);
@@ -553,6 +526,11 @@ impl RepositoryChannel {
                             "FOUNDATION_FILE_HASH: {}",
                             file.path
                         );
+                        output.flush()?;
+                        drop(output);
+                        if let Some(tracker) = tracker {
+                            tracker.file_done();
+                        }
                     }
                     Ok(())
                 }));

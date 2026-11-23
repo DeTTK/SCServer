@@ -1,6 +1,7 @@
+import { TransferView } from "api.slint";
 import { Theme } from "theme.slint";
 import { ComboBox } from "std-widgets.slint";
-import { Action, Field, Hint, Label, Notice, Rule, Scroller, SectionTitle } from "controls.slint";
+import { Action, Field, Hint, Label, Notice, Rule, Scroller, SectionTitle, TransferStatus } from "controls.slint";
 
 export component Configuration inherits VerticalLayout {
     in property <bool> wizard;
@@ -8,6 +9,7 @@ export component Configuration inherits VerticalLayout {
     in property <bool> busy;
     in property <string> error;
     in property <string> error-field;
+    in property <TransferView> transfer-view;
     in property <string> progress-text;
     in property <string> status;
     in property <float> progress: -1;
@@ -28,10 +30,11 @@ export component Configuration inherits VerticalLayout {
     in-out property <string> first-world-name;
     private property <bool> inline-error:
         ((root.wizard ? root.step == 0 : root.tab == "basic") && (root.error-field == "game" || root.error-field == "data" || root.error-field == "nick"))
-        || (root.wizard && ((root.step == 1 && root.error-field == "bundle") || (root.step == 2 && root.error-field == "world")))
+        || (root.wizard && (root.step == 2 && root.error-field == "world"))
         || (!root.wizard && ((root.tab == "client" && (root.error-field == "client" || root.error-field == "cmem"))
             || (root.tab == "server" && (root.error-field == "server" || root.error-field == "smem" || root.error-field == "port" || root.error-field == "host"))
             || (root.tab == "updates" && root.error-field == "feed")));
+    changed game-branch => { if root.wizard && root.step == 1 { root.bundle-path = ""; } }
     callback browse(string);
     callback install(string);
     callback step-action(string);
@@ -65,19 +68,18 @@ export component Configuration inherits VerticalLayout {
                 spacing: 18px;
                 Label { text: "Ветка игры"; }
                 ComboBox { model: root.branches; current-value <=> root.game-branch; enabled: !root.busy; height: 38px; }
-                Hint { text: "Лаунчер установит полную игровую основу из build-ветки: Java, клиент, сервер и базовую карту. Уже имеющиеся совпадающие данные используются повторно."; wrap: word-wrap; overflow: clip; }
+                Hint { text: "Лаунчер установит клиент, сервер, Java и базовую карту. Уже имеющиеся файлы используются повторно."; wrap: word-wrap; overflow: clip; }
                 HorizontalLayout {
                     spacing: 8px; alignment: start;
-                    Action { label: "Установить игру"; glyph: "\u{e896}"; enabled: !root.busy; activated => { root.install("download"); } }
+                    Action { label: root.bundle-path == "" ? "Установить игру" : "Проверить файлы"; glyph: "\u{e896}"; enabled: !root.busy; activated => { root.install("download"); } }
                 }
-                Rule {}
-                Field { label: "Папка распакованного комплекта"; value <=> root.bundle-path; folder: true; enabled: !root.busy; hint: "Выберите каталог с папками Client, Server и Map."; error: root.error-field == "bundle" ? root.error : ""; browse => { root.browse("bundle"); } }
+
             }
             if root.wizard && root.step == 2: VerticalLayout {
                 spacing: 16px;
                 Field { label: "Название первого мира"; value <=> root.first-world-name; enabled: !root.busy; error: root.error-field == "world" ? root.error : ""; }
                 Rule {}
-                for row in [{name:"Игра", val:root.game-path},{name:"Данные и миры", val:root.data-path},{name:"Комплект", val:root.bundle-path},{name:"Игрок", val:root.nickname}]: VerticalLayout {
+                for row in [{name:"Игра", val:root.game-path},{name:"Данные и миры", val:root.data-path},{name:"Ветка игры", val:root.game-branch},{name:"Игрок", val:root.nickname}]: VerticalLayout {
                     spacing: 2px; Hint { text: row.name; } Label { text: row.val; wrap: word-wrap; overflow: clip; }
                 }
             }
@@ -111,7 +113,8 @@ export component Configuration inherits VerticalLayout {
     }
     if root.wizard && !root.busy && root.error == "" && root.status != "": Hint { text: root.status; wrap: word-wrap; overflow: clip; }
     if root.error != "" && !root.inline-error: Notice { message: root.error; failed: true; }
-    if root.busy || root.progress-text != "": Notice {
+    if root.transfer-view.visible: TransferStatus { view: root.transfer-view; }
+    if !root.transfer-view.visible && (root.busy || root.progress-text != ""): Notice {
         message: root.progress-text == "" ? "Выполняется операция…" : root.progress-text; progress: root.progress;
     }
     Rule {}
@@ -121,7 +124,7 @@ export component Configuration inherits VerticalLayout {
         if root.wizard && root.busy: Action { label: "Отменить операцию"; activated => { root.step-action("cancel"); } }
         Action {
             label: root.wizard ? (root.step == 2 ? "Подготовить игру" : "Продолжить") : "Сохранить";
-            enabled: !root.busy; kind: "primary";
+            enabled: !root.busy && (!root.wizard || root.step != 1 || root.bundle-path != ""); kind: "primary";
             activated => { if root.wizard { root.step-action(root.step == 2 ? "finish" : "next"); } else { root.save(); } }
         }
     }

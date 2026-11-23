@@ -572,6 +572,8 @@ pub struct ProcessView {
     pub client_running: bool,
     #[serde(alias = "host_build", alias = "hostBuild")]
     pub host_build: String,
+    #[serde(alias = "transfer")]
+    pub transfer: Option<crate::TransferSnapshot>,
 }
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default, rename_all = "PascalCase")]

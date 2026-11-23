@@ -117,6 +117,7 @@ impl Supervisor {
     fn state(&self, state: &str, detail: &str) {
         let r = self.running.lock().unwrap();
         let mut v = self.view.lock().unwrap();
+        v["Transfer"] = Value::Null;
         v["State"] = json!(state);
         v["Detail"] = json!(detail);
         v["ClientRunning"] = json!(r.client.as_ref().is_some_and(alive));
@@ -133,6 +134,24 @@ impl Supervisor {
             v["Pid"] = Value::Null;
         }
         let _ = write_json(&self.layout.root.join("state/rust-runtime.json"), &*v);
+    }
+    fn transfer_progress(&self, update: bscp_launcher_core::ProgressUpdate) {
+        match update {
+            bscp_launcher_core::ProgressUpdate::Message(text) => self.state("Updating", &text),
+            bscp_launcher_core::ProgressUpdate::Transfer(snapshot) => {
+                let mut view = self.view.lock().unwrap();
+                if view["Transfer"]["operation"].as_str() == Some(&snapshot.operation)
+                    && view["Transfer"]["sequence"]
+                        .as_u64()
+                        .is_some_and(|old| old >= snapshot.sequence)
+                {
+                    return;
+                }
+                view["State"] = json!("Updating");
+                view["Detail"] = json!(snapshot.title);
+                view["Transfer"] = json!(snapshot);
+            }
+        }
     }
     fn status(&self) -> Value {
         let mut v = self.view.lock().unwrap().clone();
@@ -496,7 +515,7 @@ impl Supervisor {
                 let result = tokio::task::spawn_blocking(move || -> Result<Value> {
                     let s = host.layout.load()?;
                     let progress_host = host.clone();
-                    let progress = move |text: String| progress_host.state("Updating", &text);
+                    let progress = move |update| progress_host.transfer_progress(update);
                     if s.game_branch.is_empty() {
                         Ok(serde_json::to_value(
                             UpdateService::new(&host.layout)?
