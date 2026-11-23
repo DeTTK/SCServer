@@ -495,9 +495,9 @@ impl UpdateService {
             let root = child(&folder, "launcher")?;
             Self::verify_package(&root, p)?;
             let index = Self::contents(&root, p)?;
-            if !index.contains_key("BSCPCRAFT.exe") || !index.contains_key("bscp-host.exe") {
+            if !index.contains_key("BSCPCRAFT.exe") {
                 bail!(
-                    "LAUNCHER_CONTENTS: в релизе отсутствуют нативные BSCPCRAFT.exe и bscp-host.exe"
+                    "LAUNCHER_CONTENTS: в релизе отсутствует BSCPCRAFT.exe"
                 )
             };
             return Ok(Some(root.join("BSCPCRAFT.exe")));
@@ -742,16 +742,10 @@ mod tests {
         let mut manifest = release("old", 4);
         let mut launcher = manifest.components[0].clone();
         launcher.id = "launcher".into();
-        launcher.files = BTreeMap::from([
-            (
-                "BSCPCRAFT.exe".into(),
-                hex::encode(Sha256::digest(b"native-ui")),
-            ),
-            (
-                "bscp-host.exe".into(),
-                hex::encode(Sha256::digest(b"native-host")),
-            ),
-        ]);
+        launcher.files = BTreeMap::from([(
+            "BSCPCRAFT.exe".into(),
+            hex::encode(Sha256::digest(b"native-ui")),
+        )]);
         manifest.components.push(launcher);
         let raw = serde_json::to_vec(&manifest).unwrap();
         let signature = SigningKey::<Sha256>::new(key).sign(&raw).to_vec();
@@ -764,7 +758,6 @@ mod tests {
         fs::write(folder.join("client/file"), b"x").unwrap();
         fs::create_dir(folder.join("launcher")).unwrap();
         fs::write(folder.join("launcher/BSCPCRAFT.exe"), b"native-ui").unwrap();
-        fs::write(folder.join("launcher/bscp-host.exe"), b"native-host").unwrap();
         fs::write(folder.join("release.manifest"), raw).unwrap();
         fs::write(folder.join("release.manifest.sig"), signature).unwrap();
         write_json(

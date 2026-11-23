@@ -1,12 +1,10 @@
 [package]
+autobins = false
 name = "bscp-launcher-host"
 version.workspace = true
 edition = "2024"
 [lib]
 name = "bscp_launcher_host"
-[[bin]]
-name = "bscp-host"
-path = "src/main.rs"
 [dependencies]
 bscp-launcher-core = { path = "../launcher-core" }
 anyhow = "1"

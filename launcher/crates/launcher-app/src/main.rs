@@ -79,6 +79,14 @@ fn start() -> anyhow::Result<()> {
 }
 
 fn main() {
+    let args: Vec<String> = std::env::args().collect();
+    if bscp_launcher_host::runtime::is_service_mode(&args) {
+        if let Err(error) = bscp_launcher_host::runtime::run(args) {
+            eprintln!("{}", bscp_launcher_core::redact(&format!("{error:#}")));
+            std::process::exit(1);
+        }
+        return;
+    }
     if let Err(error) = start() {
         let message = bscp_launcher_core::redact(&format!("{error:#}"));
         rfd::MessageDialog::new()

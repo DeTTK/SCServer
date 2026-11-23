@@ -16,7 +16,8 @@ if (-not $SkipBuild) {
 }
 $output = [IO.Path]::GetFullPath($OutputPath)
 New-Item -ItemType Directory -Path "$output\modules", "$output\licenses" -Force | Out-Null
-foreach ($exe in @('BSCPCRAFT.exe', 'bscp-host.exe')) {
+if (Test-Path -LiteralPath "$output\bscp-host.exe") { throw 'Use a fresh output directory for the single-EXE launcher.' }
+foreach ($exe in @('BSCPCRAFT.exe')) {
     Copy-Item -LiteralPath "$PSScriptRoot\target\release\$exe" -Destination "$output\$exe" -Force
 }
 if ([string]::IsNullOrWhiteSpace($BridgeJar)) {
@@ -62,12 +63,12 @@ try {
     [IO.File]::WriteAllText("$output\licenses\THIRD-PARTY-NOTICES.txt", $notices.ToString())
 } finally { Pop-Location }
 # Preserve portable config, worlds and existing user files. No cleanup or registry writes.
-$files = @(Get-Item -LiteralPath "$output\BSCPCRAFT.exe", "$output\bscp-host.exe", "$output\README.md")
+$files = @(Get-Item -LiteralPath "$output\BSCPCRAFT.exe", "$output\README.md")
 $files += @(Get-ChildItem -LiteralPath "$output\modules", "$output\licenses" -Recurse -File)
-$native = ($files | Where-Object { $_.Name -in @('BSCPCRAFT.exe','bscp-host.exe') } | Measure-Object Length -Sum).Sum
+$native = ($files | Where-Object { $_.Name -in @('BSCPCRAFT.exe') } | Measure-Object Length -Sum).Sum
 $java = ($files | Where-Object { $_.FullName.StartsWith("$output\modules\java17\", [StringComparison]::OrdinalIgnoreCase) } | Measure-Object Length -Sum).Sum
 [ordered]@{
-    version = '0.4.1'; nativeBytes = $native; javaBytes = $java
+    version = '0.4.2'; nativeBytes = $native; javaBytes = $java
     totalBytes = ($files | Measure-Object Length -Sum).Sum
     dotnetRequired = $false; webviewRequired = $false
     files = @($files | ForEach-Object { [ordered]@{ path=$_.FullName.Substring($output.Length+1); bytes=$_.Length; sha256=(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant() } })

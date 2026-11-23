@@ -1,10 +1,20 @@
 use anyhow::Result;
 use bscp_launcher_core::Layout;
-use bscp_launcher_host::{ipc, supervisor::Supervisor};
+use crate::{ipc, supervisor::Supervisor};
 use fs2::FileExt;
-#[tokio::main(worker_threads = 2)]
-async fn main() -> Result<()> {
-    let args = std::env::args().collect::<Vec<_>>();
+/// Service/RPC entry point shared by the single launcher executable.
+/// This is dispatched before Slint, window creation and the UI lease.
+pub fn run(args: Vec<String>) -> Result<()> {
+    tokio::runtime::Builder::new_multi_thread()
+        .worker_threads(2).enable_all().build()?.block_on(run_async(args))
+}
+
+pub fn is_service_mode(args: &[String]) -> bool {
+    args.iter().skip(1).any(|arg| matches!(arg.as_str(), "--host" | "--rpc"))
+}
+
+async fn run_async(args: Vec<String>) -> Result<()> {
+    anyhow::ensure!(!(args.iter().any(|v|v=="--host") && args.iter().any(|v|v=="--rpc")), "Use --host or --rpc, not both");
     let opt = |key: &str| {
         args.iter()
             .position(|s| s == key)
@@ -59,4 +69,22 @@ async fn main() -> Result<()> {
     #[cfg(windows)]
     ipc::serve(host).await?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    fn args(parts: &[&str]) -> Vec<String> {parts.iter().map(|v|v.to_string()).collect()}
+    #[test]
+    fn service_dispatch_precedes_ui_only_for_explicit_modes() {
+        assert!(!is_service_mode(&args(&["BSCPCRAFT.exe","--root","portable data"])));
+        assert!(is_service_mode(&args(&["BSCPCRAFT.exe","--host","--root","portable data"])));
+        assert!(is_service_mode(&args(&["BSCPCRAFT.exe","--rpc","status"])));
+        assert!(!is_service_mode(&args(&["BSCPCRAFT.exe","--arg","value=--host"])));
+    }
+    #[test]
+    fn conflicting_background_modes_are_rejected_before_opening_storage() {
+        let error=run(args(&["BSCPCRAFT.exe","--host","--rpc","status"])).unwrap_err();
+        assert!(error.to_string().contains("not both"));
+    }
 }

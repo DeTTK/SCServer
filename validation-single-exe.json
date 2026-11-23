@@ -1,0 +1,21 @@
+{
+  "result": "PASS",
+  "version": "0.4.2",
+  "nativeFiles": [
+    "BSCPCRAFT.exe"
+  ],
+  "bytes": 17155072,
+  "sha256": "05252f1e151c588aae8c91d29382060a7ad53db2de48f262713da57fe8245dd7",
+  "missingSeparateHost": true,
+  "uiSelfSpawnsSupervisor": true,
+  "backgroundSurvivesUiExit": true,
+  "repeatUiReusesSameSupervisor": true,
+  "duplicateSupervisorExits": true,
+  "supervisorRestartsAfterExit": true,
+  "rpcStatusAndShutdown": true,
+  "legacySupervisorMigratesWhileStopped": true,
+  "backgroundHasNoVisibleWindow": true,
+  "uiFramesRendered": 4,
+  "unitTests": 50,
+  "ciSmoke": "Windows single-executable UI/self-spawn test"
+}

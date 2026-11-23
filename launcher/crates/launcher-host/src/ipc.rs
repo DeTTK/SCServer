@@ -56,7 +56,7 @@ impl HostClient {
 }
 pub fn ensure_host(layout: &Layout) -> Result<HostClient> {
     let c = HostClient::new(layout);
-    let exe = std::env::current_exe()?.with_file_name("bscp-host.exe");
+    let exe = std::env::current_exe()?;
     if let Ok(status) = c.status() {
         let expected = bscp_launcher_core::sha(&exe)?;
         let raw = c.call("status", &BTreeMap::new())?;
@@ -66,7 +66,7 @@ pub fn ensure_host(layout: &Layout) -> Result<HostClient> {
         if status.client_running
             || matches!(
                 status.state.as_str(),
-                "Ready" | "Starting" | "Stopping" | "Preparing"
+                "Ready" | "Starting" | "Stopping" | "Preparing" | "Updating"
             )
         {
             bail!("HOST_VERSION: остановите игру и сервер перед сменой версии Supervisor")
@@ -80,7 +80,7 @@ pub fn ensure_host(layout: &Layout) -> Result<HostClient> {
         }
     }
     let mut cmd = std::process::Command::new(&exe);
-    cmd.arg("--root").arg(&layout.root);
+    cmd.arg("--host").arg("--root").arg(&layout.root);
     #[cfg(windows)]
     {
         use std::os::windows::process::CommandExt;

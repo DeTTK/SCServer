@@ -46,6 +46,8 @@ jobs:
             launcher/target
           key: native-launcher-${{ runner.os }}-${{ hashFiles('launcher/Cargo.lock') }}
       - run: cargo +stable test --manifest-path launcher/Cargo.toml --workspace --locked -j 4
+      - run: cargo +stable build --manifest-path launcher/Cargo.toml --bin BSCPCRAFT --locked -j 4
+      - run: ./launcher/tests/single-exe.ps1 -Executable ./launcher/target/debug/BSCPCRAFT.exe
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
