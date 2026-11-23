@@ -1,15 +1,15 @@
 {
-  "id": "bootstrap-ad0119c8978df19a",
-  "mode": "existing-verified-foundation",
-  "description": "Launtest updates an installed verified Client/Server/Map foundation. CI never rebuilds or republishes original game classes, Java or the map.",
+  "id": "foundation-45aad8f49499434255054ef4",
+  "mode": "complete-build-branch-foundation",
+  "description": "Complete Java, client, server and map are indexed in build-launtest. CI imports its fixed build inputs from the same repository commit.",
   "serverResources": {
     "file": "server-resources.jar",
-    "url": "https://github.com/DeTTK/SCServer/releases/download/native-rules-2026.11.23/server-native-rules-20261123.jar",
+    "url": "https://raw.githubusercontent.com/DeTTK/SCServer/f87ea9b45880291792a66852d6bdb8c2f8765e0c/bootstrap/ci/server-resources.jar",
     "sha256": "67cadfc4e7f33def0c4e760857d686de393514b2c7f429551739c639dca754f5"
   },
   "clientAgent": {
     "file": "base-resource-agent.jar",
-    "url": "https://github.com/DeTTK/SCServer/releases/download/native-f5-2026.11.23/game-resource-compat-f5-20261123.jar",
+    "url": "https://raw.githubusercontent.com/DeTTK/SCServer/f87ea9b45880291792a66852d6bdb8c2f8765e0c/bootstrap/ci/base-resource-agent.jar",
     "sha256": "665593b602e0610d8de23e1b446030243f417c175e01891dc35875fcd347912a"
   },
   "asm": {

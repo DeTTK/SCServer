@@ -1,0 +1,9 @@
+{
+  "buildCommit": "f87ea9b45880291792a66852d6bdb8c2f8765e0c",
+  "foundation": {
+    "id": "foundation-45aad8f49499434255054ef4",
+    "path": "bootstrap/foundation.json",
+    "sha256": "c978eb5d279bf494af7221df7493c7ba5de0b1fbfc09967836d66cf1ac7b05be",
+    "size": 47595
+  }
+}

@@ -98,6 +98,9 @@ def publish():
     manifest={'schemaVersion':1,'channel':channel,'sourceCommit':source,'sequence':int(os.environ['GITHUB_RUN_NUMBER']),
         'baseId':LOCK['id'],'files':file_inventory(OUT),'changelog':run('git','log','-1','--format=%s',capture_output=True,text=True).stdout.strip(),
         'mods':[{'id':'command-completion','name':'Подсказки команд','side':'client','required':True,'path':'mods/command-completion/command-completion.jar'}]}
+    foundation_lock=ROOT/'delivery/foundation.lock.json'
+    if foundation_lock.is_file():
+        foundation=json.loads(foundation_lock.read_text('utf8'))['foundation'];manifest['foundation']=foundation;manifest['baseId']=foundation['id']
     raw=json.dumps(manifest,ensure_ascii=False,sort_keys=True,separators=(',',':')).encode()
     signature=sign(raw,os.environ['DELIVERY_PRIVATE_KEY'])
     destination=ROOT/'build/publish-worktree';destination.mkdir(exist_ok=False)
@@ -111,19 +114,26 @@ def publish():
     env=dict(os.environ)
     if header:env.update(GIT_CONFIG_COUNT='1',GIT_CONFIG_KEY_0='http.https://github.com/.extraheader',GIT_CONFIG_VALUE_0=header)
     branch='build-'+channel
-    fetched=subprocess.run(['git','-C',str(destination),'fetch','--depth=1','origin',branch],env=env,capture_output=True)
-    if fetched.returncode==0:run('git','-C',destination,'checkout','-B',branch,'FETCH_HEAD',env=env,capture_output=True)
-    else:run('git','-C',destination,'checkout','--orphan',branch,env=env,capture_output=True)
-    if (destination/'delivery.json').exists():
-        previous=json.loads((destination/'delivery.json').read_text('utf8'))
-        for row in previous['files']:
-            p=destination/safe_path(row['path'])
-            if p.is_file():p.unlink()
+    run('git','-C',destination,'config','remote.origin.promisor','true')
+    run('git','-C',destination,'config','remote.origin.partialclonefilter','blob:none')
+    fetched=subprocess.run(['git','-C',str(destination),'fetch','--filter=blob:none','--depth=1','origin',branch],env=env,capture_output=True)
+    if fetched.returncode==0:
+        run('git','-C',destination,'update-ref','refs/heads/'+branch,'FETCH_HEAD',env=env)
+        run('git','-C',destination,'symbolic-ref','HEAD','refs/heads/'+branch,env=env)
+        run('git','-C',destination,'read-tree','FETCH_HEAD',env=env)
+        previous_raw=subprocess.run(['git','-C',str(destination),'show','FETCH_HEAD:delivery.json'],env=env,capture_output=True)
+        if previous_raw.returncode==0:
+            previous=json.loads(previous_raw.stdout);current={r['path']for r in manifest['files']}
+            for row in previous['files']:
+                safe_path(row['path'])
+                if row['path']not in current:run('git','-C',destination,'rm','--cached','--ignore-unmatch','--',row['path'],env=env,capture_output=True)
+    else:run('git','-C',destination,'symbolic-ref','HEAD','refs/heads/'+branch,env=env)
     shutil.copytree(OUT,destination,dirs_exist_ok=True)
     (destination/'delivery.json').write_bytes(raw);(destination/'delivery.json.sig').write_bytes(signature)
-    for name,body in {'bootstrap/base.json':json.dumps({'id':LOCK['id'],'mode':'installed-foundation'}),'map/base.json':json.dumps({'mode':'existing-world-base','replaced':False}),'launcher/README.md':'Launcher EXE updates belong to GitHub Releases.\n','README.md':'Generated launtest game files. Develop in launtest; do not edit this branch.\n'}.items():
+    metadata={'bootstrap/base.json':json.dumps({'id':manifest['baseId'],'mode':'complete-indexed-foundation'if'foundation'in manifest else'installed-foundation'}),'map/base.json':json.dumps({'mode':'indexed-foundation'if'foundation'in manifest else'existing-world-base','replaced':False}),'launcher/README.md':'Launcher EXE updates belong to GitHub Releases.\n','README.md':'Complete generated game delivery. Develop in launtest; do not edit this branch.\n'}
+    for name,body in metadata.items():
         p=destination/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_text(body,'utf8')
-    run('git','-C',destination,'add','--all',env=env)
+    run('git','-C',destination,'add','--',*[r['path']for r in manifest['files']],'delivery.json','delivery.json.sig',*metadata,env=env)
     run('git','-C',destination,'commit','-m','Build launtest from '+source[:12],env=env,capture_output=True)
     latest=run('git','ls-remote','origin','refs/heads/'+channel,capture_output=True,text=True).stdout.split()[0]
     if latest!=source:print('Source advanced before activation; not publishing');return
