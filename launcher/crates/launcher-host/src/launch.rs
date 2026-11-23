@@ -355,7 +355,7 @@ mod tests {
     use super::*;
     #[test]
     fn properties_escape_utf16_and_windows_paths() {
-        assert_eq!(prop("X:\\Тест=a"), "D\\:/\\u0422\\u0435\\u0441\\u0442\\=a");
+        assert_eq!(prop("X:\\Тест=a"), "X\\:/\\u0422\\u0435\\u0441\\u0442\\=a");
     }
     #[test]
     fn config_forces_managed_data_and_restricted_http() {
