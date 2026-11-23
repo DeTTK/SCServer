@@ -23,7 +23,7 @@ foreach ($exe in @('BSCPCRAFT.exe')) {
 if ([string]::IsNullOrWhiteSpace($BridgeJar)) {
     $BridgeJar = "$PSScriptRoot\artifacts\game-modules\bscp-bridge.jar"
     New-Item -ItemType Directory -Path "$PSScriptRoot\artifacts\game-modules" -Force | Out-Null
-    $bridgeClasses = "$PSScriptRoot\artifacts\bridge-classes"
+    $bridgeClasses = Join-Path "$PSScriptRoot\artifacts\bridge-classes" ([Guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Path $bridgeClasses -Force | Out-Null
     & javac -source 17 -target 17 --add-exports java.base/jdk.internal.org.objectweb.asm=ALL-UNNAMED -encoding UTF-8 -d $bridgeClasses (Get-ChildItem -LiteralPath "$PSScriptRoot\modules\bridge\src\bscp\next" -Filter *.java).FullName
     if ($LASTEXITCODE -ne 0) { throw 'Bridge compilation failed.' }
@@ -68,7 +68,7 @@ $files += @(Get-ChildItem -LiteralPath "$output\modules", "$output\licenses" -Re
 $native = ($files | Where-Object { $_.Name -in @('BSCPCRAFT.exe') } | Measure-Object Length -Sum).Sum
 $java = ($files | Where-Object { $_.FullName.StartsWith("$output\modules\java17\", [StringComparison]::OrdinalIgnoreCase) } | Measure-Object Length -Sum).Sum
 [ordered]@{
-    version = '0.5.0'; nativeBytes = $native; javaBytes = $java
+    version = ($metadata.packages | Where-Object name -eq 'bscp-launcher-app' | Select-Object -First 1).version; nativeBytes = $native; javaBytes = $java
     totalBytes = ($files | Measure-Object Length -Sum).Sum
     dotnetRequired = $false; webviewRequired = $false
     files = @($files | ForEach-Object { [ordered]@{ path=$_.FullName.Substring($output.Length+1); bytes=$_.Length; sha256=(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant() } })

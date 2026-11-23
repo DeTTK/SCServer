@@ -49,6 +49,9 @@ Counters are differenced only between samples of the same role and PID. Recent
 frame latency uses a ten-second window; its p95 is a histogram upper bound, not an
 exact percentile. `diagnosticCaptureMs` reports the duration of the last JFR/thread
 capture so profiling overhead can be distinguished from the original stall.
+Automatic heavy JFR/thread captures are limited to one per five minutes; lightweight
+measurements and incident summaries continue at their normal cadence. This avoids
+repeated capture pauses feeding back into another heavy capture every thirty seconds.
 
 The on-disk outbox is bounded to 256 events (64 KiB each). Crash/exit/summary
 records take priority over verbose logs when it fills. Only acknowledged events

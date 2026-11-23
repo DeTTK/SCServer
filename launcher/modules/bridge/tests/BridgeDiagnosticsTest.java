@@ -18,6 +18,8 @@ public final class BridgeDiagnosticsTest {
         if(Bridge.worldTicks!=1||Bridge.slowWorldTicks!=1)throw new AssertionError("short server pause was lost");
         if(!Bridge.delayed(0,0,0,0,0))throw new AssertionError("short pause did not request diagnostics");
         if(Bridge.delayed(0,0,0,0,1))throw new AssertionError("old pause repeatedly reported");
+        if(Bridge.incidentDue(32_000_000_000L,1_000_000_000L))throw new AssertionError("expensive profiling recursively retriggered");
+        if(!Bridge.incidentDue(301_000_000_000L,1_000_000_000L)||!Bridge.incidentDue(1,0))throw new AssertionError("fresh incident was suppressed");
         var metrics=JsonParser.parseString(Bridge.metrics()).getAsJsonObject();
         if(metrics.get("worldTicks").getAsLong()!=1||!metrics.has("cpuTimeNanos")||!metrics.has("droppedDiagnostics"))throw new AssertionError("incomplete metrics");
         if(metrics.get("systemTotalBytes").getAsLong()<=0||metrics.get("systemAvailableBytes").getAsLong()<0)throw new AssertionError("missing operating-system memory context");

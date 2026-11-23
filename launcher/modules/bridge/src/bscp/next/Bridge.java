@@ -34,6 +34,8 @@ public final class Bridge {
     public static void tick(){long now=System.nanoTime(),old=lastWorldTick;lastWorldTick=now;worldTicks++;if(old!=0){long gap=now-old;maxWorldTickGap=Math.max(maxWorldTickGap,gap);if(gap>100_000_000L){slowWorldTicks++;WorldPause event=new WorldPause();event.milliseconds=gap/1e6;event.commit();}}}
     @Name("bscp.WorldPause") @Label("BSCP delayed world tick") static class WorldPause extends Event {@Label("Duration ms") double milliseconds;}
     static boolean delayed(long scheduler,long world,long frame,long priorFrames,long priorTicks){return scheduler>1_500_000_000L||world>1_000_000_000L||frame>2_000_000_000L||slowFrames>priorFrames||slowWorldTicks>priorTicks;}
+    // Heavy JFR/thread snapshots must not turn their own pause into a 30-second loop.
+    static boolean incidentDue(long now,long previous){return previous==0||now-previous>=300_000_000_000L;}
     static final RecentFrames recentFrames=new RecentFrames();static volatile double diagnosticCaptureMs;
     static final class RecentFrames {
         final long[] seconds=new long[10],counts=new long[10],maximum=new long[10];
@@ -75,7 +77,7 @@ public final class Bridge {
                 recording=new Recording(Configuration.getConfiguration("default"));recording.setName("BSCP rolling diagnostics");recording.setMaxAge(Duration.ofMinutes(3));recording.setMaxSize(12L*1024*1024);recording.setToDisk(true);recording.start();
                 monitor=Executors.newSingleThreadScheduledExecutor(r->{Thread t=new Thread(r,"bscp-diagnostic-watchdog");t.setDaemon(true);return t;});
                 final long[] previousTick={System.nanoTime()}, lastIncident={0}, previousSlow={slowFrames,slowWorldTicks};
-                monitor.scheduleAtFixedRate(()->{try{long now=System.nanoTime(),gap=now-previousTick[0];previousTick[0]=now;event("metrics",metrics());long worldGap=lastWorldTick==0?0:now-lastWorldTick;long frameGap=lastFrameNanos==0?0:now-lastFrameNanos;boolean delayed=delayed(gap,worldGap,frameGap,previousSlow[0],previousSlow[1]);previousSlow[0]=slowFrames;previousSlow[1]=slowWorldTicks;if(delayed&&now-lastIncident[0]>30_000_000_000L){lastIncident[0]=now;incident("pause schedulerMs="+(gap/1_000_000)+" worldMs="+(worldGap/1_000_000)+" frameMs="+(frameGap/1_000_000));}}catch(Exception e){event("watchdog-error",e.toString());}},1,1,TimeUnit.SECONDS);
+                monitor.scheduleAtFixedRate(()->{try{long now=System.nanoTime(),gap=now-previousTick[0];previousTick[0]=now;event("metrics",metrics());long worldGap=lastWorldTick==0?0:now-lastWorldTick;long frameGap=lastFrameNanos==0?0:now-lastFrameNanos;boolean delayed=delayed(gap,worldGap,frameGap,previousSlow[0],previousSlow[1]);previousSlow[0]=slowFrames;previousSlow[1]=slowWorldTicks;if(delayed&&incidentDue(now,lastIncident[0])){lastIncident[0]=now;incident("pause schedulerMs="+(gap/1_000_000)+" worldMs="+(worldGap/1_000_000)+" frameMs="+(frameGap/1_000_000));}}catch(Exception e){event("watchdog-error",e.toString());}},1,1,TimeUnit.SECONDS);
             }
             Runtime.getRuntime().addShutdownHook(new Thread(()->{try{event("exit","normal-or-jvm-shutdown");if(recording!=null)recording.close();if(http!=null)http.stop(0);if(monitor!=null)monitor.shutdownNow();if(lease!=null)lease.release();if(leaseChannel!=null)leaseChannel.close();}catch(Exception ignored){}},"bscp-bridge-shutdown"));
             event("bridge-ready",kind);
