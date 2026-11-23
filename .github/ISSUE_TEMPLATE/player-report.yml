@@ -1,0 +1,18 @@
+name: Багрепорт BSCPCRAFT
+description: Проблема при запуске лаунчера, клиента или сервера
+title: "[Игрок] "
+labels: [player-report]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Что произошло и как повторить?
+      description: Укажите действия, ожидаемый результат и фактический результат.
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Логи и скриншоты
+      description: Перетащите ZIP, подготовленный на вкладке «Багрепорт» лаунчера, в это поле.
+      value: "<!-- bscp-player-report:v1 -->"

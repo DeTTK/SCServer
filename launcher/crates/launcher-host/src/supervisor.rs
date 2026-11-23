@@ -6,6 +6,7 @@ use anyhow::{Context, Result, bail};
 use bscp_launcher_core::*;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
+use sha2::Digest;
 use std::{
     io::Write,
     path::{Path, PathBuf},
@@ -48,6 +49,7 @@ pub struct Supervisor {
     http: reqwest::Client,
     agent: PathBuf,
     retiring: std::sync::atomic::AtomicBool,
+    deliveries: Arc<std::sync::atomic::AtomicUsize>,
 }
 fn read_json<T: serde::de::DeserializeOwned>(p: &Path) -> Result<T> {
     Ok(serde_json::from_slice(&std::fs::read(p)?)?)
@@ -114,6 +116,7 @@ impl Supervisor {
                 .build()?,
             agent,
             retiring: std::sync::atomic::AtomicBool::new(false),
+            deliveries: Arc::new(std::sync::atomic::AtomicUsize::new(0)),
         }))
     }
     fn state(&self, state: &str, detail: &str) {
@@ -234,7 +237,7 @@ impl Supervisor {
                 .join("data/admin-token.txt"),
         )?;
         let url = format!("http://127.0.0.1:{}/{route}", o.admin_port);
-        let r = if post {
+        let mut r = if post {
             self.http
                 .post(url)
                 .body("{}")
@@ -244,14 +247,19 @@ impl Supervisor {
         }
         .bearer_auth(token.trim())
         .send()
-        .await?
-        .error_for_status()?;
+        .await?;
+        if !(route == "health" && r.status() == reqwest::StatusCode::SERVICE_UNAVAILABLE) {
+            r = r.error_for_status()?;
+        }
         if r.content_length().unwrap_or(0) > 1024 * 1024 {
             bail!("ADMIN_LIMIT")
         }
-        let b = r.bytes().await?;
-        if b.len() > 1024 * 1024 {
-            bail!("ADMIN_LIMIT")
+        let mut b = Vec::new();
+        while let Some(chunk) = r.chunk().await? {
+            if b.len() + chunk.len() > 1024 * 1024 {
+                bail!("ADMIN_LIMIT");
+            }
+            b.extend_from_slice(&chunk);
         }
         Ok(serde_json::from_slice(&b)?)
     }
@@ -703,7 +711,7 @@ impl Supervisor {
         }
         network::check_ports(s.base_port as u16)?;
         self.agent_config(&session, "server", Some(&source), None, id)?;
-        let mut child = launch::server(
+        let child = launch::server(
             &source,
             &map,
             &data,
@@ -714,7 +722,13 @@ impl Supervisor {
         )?
         .spawn()?;
         let pid = child.id().unwrap();
-        pump(&mut child, &session, "server");
+        pump(
+            child,
+            &session,
+            "server",
+            &self.layout,
+            self.deliveries.clone(),
+        );
         let o = Owned {
             pid,
             started: process_time(pid).ok_or_else(|| anyhow::anyhow!("PROCESS_TIME"))?,
@@ -796,7 +810,7 @@ impl Supervisor {
             .join(format!("client-{}", uuid::Uuid::new_v4().simple()));
         self.agent_config(&folder, "client", None, Some(&native), "")?;
         let profile = ClientProfile::prepare(&self.layout.client_data(&s), &source)?;
-        let mut child = launch::client(
+        let child = launch::client(
             &source,
             &game,
             &folder,
@@ -811,7 +825,13 @@ impl Supervisor {
         )?
         .spawn()?;
         let pid = child.id().unwrap();
-        pump(&mut child, &folder, "client");
+        pump(
+            child,
+            &folder,
+            "client",
+            &self.layout,
+            self.deliveries.clone(),
+        );
         let o = Owned {
             pid,
             started: process_time(pid).ok_or_else(|| anyhow::anyhow!("PROCESS_TIME"))?,
@@ -866,6 +886,50 @@ impl Supervisor {
         }
         bail!("STOP_PENDING: server is saving; no force kill performed")
     }
+    pub async fn record_diagnostics(self: Arc<Self>) {
+        let logger = RotatingLog::new(self.layout.at("logs"), "performance");
+        let outbox = TelemetryOutbox::new(&self.layout);
+        let mut last_queued = std::time::Instant::now() - Duration::from_secs(30);
+        let mut seen = std::collections::HashSet::<[u8; 32]>::new();
+        loop {
+            tokio::time::sleep(Duration::from_secs(5)).await;
+            let (server, client) = {
+                let state = self.running.lock().unwrap();
+                (state.server.clone(), state.client.clone())
+            };
+            if server.is_none() && client.is_none() {
+                continue;
+            }
+            let health = async {
+                if let Some(owned) = server.as_ref() {
+                    tokio::time::timeout(Duration::from_secs(2), self.admin(owned, "health", false))
+                        .await
+                        .ok()
+                        .and_then(Result::ok)
+                } else {
+                    None
+                }
+            };
+            let (health, (server_metrics, server_error), (client_metrics, client_error)) = tokio::join!(
+                health,
+                self.optional_bridge_metrics(server.clone(), "server"),
+                self.optional_bridge_metrics(client.clone(), "client")
+            );
+            let health = health.map(compact_health);
+            let sample = json!({"type":"performance","run":server.as_ref().or(client.as_ref()).map(|o|o.session.as_str()),"serverPid":server.as_ref().map(|v|v.pid),"clientPid":client.as_ref().map(|v|v.pid),
+                "health":health,"server":server_metrics,"client":client_metrics,"errors":{"server":server_error,"client":client_error}});
+            let _ = logger.line(&sample.to_string());
+            if last_queued.elapsed() >= Duration::from_secs(30) {
+                let _ = outbox.enqueue("performance", sample);
+                last_queued = std::time::Instant::now();
+            }
+            for (role, owned) in [("server", server.as_ref()), ("client", client.as_ref())] {
+                if let Some(owned) = owned {
+                    capture_agent_events(&self.layout, role, owned, &outbox, &mut seen);
+                }
+            }
+        }
+    }
     pub async fn monitor(self: Arc<Self>) {
         let mut idle_since = Some(std::time::Instant::now());
         loop {
@@ -876,6 +940,12 @@ impl Supervisor {
             let (exited, server) = {
                 let mut r = self.running.lock().unwrap();
                 if r.client.as_ref().is_some_and(|o| !alive(o)) {
+                    if let Some(o) = &r.client {
+                        let _ = RotatingLog::new(self.layout.at("logs"), "lifecycle").line(
+                            &json!({"type":"client-exit","pid":o.pid,"session":o.session})
+                                .to_string(),
+                        );
+                    }
                     r.client = None;
                     r.client_lease = None;
                     r.proxy = None;
@@ -886,6 +956,9 @@ impl Supervisor {
                 }
                 let exited = r.server.as_ref().is_some_and(|o| !alive(o));
                 if exited {
+                    if let Some(o) = &r.server {
+                        let _=RotatingLog::new(self.layout.at("logs"),"lifecycle").line(&json!({"type":"unexpected-server-exit","pid":o.pid,"session":o.session}).to_string());
+                    }
                     r.server = None;
                     r.world_lease = None;
                 }
@@ -932,7 +1005,10 @@ impl Supervisor {
             }
             let idle = {
                 let r = self.running.lock().unwrap();
-                r.server.is_none() && r.client.is_none() && r.blocked.is_none()
+                r.server.is_none()
+                    && r.client.is_none()
+                    && r.blocked.is_none()
+                    && self.deliveries.load(std::sync::atomic::Ordering::Acquire) == 0
             };
             if idle {
                 let since = idle_since.get_or_insert_with(std::time::Instant::now);
@@ -960,19 +1036,219 @@ impl Supervisor {
         Ok(())
     }
 }
-fn pump(child: &mut tokio::process::Child, folder: &Path, name: &str) {
-    fn reader<R: tokio::io::AsyncRead + Unpin + Send + 'static>(input: R, path: PathBuf) {
+fn capture_agent_events(
+    layout: &Layout,
+    role: &str,
+    owned: &Owned,
+    outbox: &TelemetryOutbox,
+    seen: &mut std::collections::HashSet<[u8; 32]>,
+) {
+    let path = layout.at(&owned.session).join("bridge.jsonl");
+    let Ok(bytes) = diagnostic_tail(&path, 128 * 1024) else {
+        return;
+    };
+    let text = String::from_utf8_lossy(&bytes);
+    let context = text
+        .chars()
+        .rev()
+        .take(16000)
+        .collect::<String>()
+        .chars()
+        .rev()
+        .collect::<String>();
+    for line in text.lines() {
+        let Ok(event) = serde_json::from_str::<Value>(line) else {
+            continue;
+        };
+        let kind = event["type"].as_str().unwrap_or("");
+        let message = event["message"].as_str().unwrap_or("").to_ascii_lowercase();
+        let relevant = matches!(
+            kind,
+            "exception"
+                | "incident"
+                | "watchdog-error"
+                | "diagnostic-error"
+                | "auto-connect-failed"
+        ) || kind == "stderr"
+            && ["exception", "error", "failed"]
+                .iter()
+                .any(|s| message.contains(s));
+        if !relevant {
+            continue;
+        }
+        let hash: [u8; 32] = sha2::Sha256::digest(line.as_bytes()).into();
+        if !seen.insert(hash) {
+            continue;
+        }
+        if seen.len() > 4096 {
+            seen.clear();
+            seen.insert(hash);
+        }
+        let _=outbox.enqueue("exception",json!({"role":role,"pid":owned.pid,"run":owned.session,"sourceEventHash":hex::encode(hash),"event":event,"logTail":context}));
+    }
+}
+
+fn compact_health(health: Value) -> Value {
+    let mut world = serde_json::Map::new();
+    for name in [
+        "tick",
+        "hz",
+        "maxTickMs",
+        "skippedSlots",
+        "failures",
+        "queued",
+        "running",
+        "ownerTasks",
+        "maxOwnerWorkMs",
+        "maxOwnerTasksPerTick",
+        "tickTiming",
+    ] {
+        if let Some(value) = health["world"].get(name) {
+            world.insert(name.into(), value.clone());
+        }
+    }
+    json!({"healthy":health["healthy"],"ready":health["ready"],"world":world,"checkpoint":health["checkpoint"]})
+}
+
+#[cfg(test)]
+mod log_stream_tests {
+    use super::*;
+    use tokio::io::AsyncWriteExt;
+    #[tokio::test]
+    async fn oversized_invalid_utf8_line_is_bounded_and_next_line_survives() {
+        let (mut writer, reader) = tokio::io::duplex(4096);
+        let producer = tokio::spawn(async move {
+            for _ in 0..512 {
+                writer.write_all(&[255; 4096]).await.unwrap();
+            }
+            writer.write_all(b"\nSECOND\n").await.unwrap();
+        });
+        let mut reader = BufReader::new(reader);
+        let first = bounded_line(&mut reader).await.unwrap().unwrap();
+        assert!(first.len() < 33000);
+        assert!(String::from_utf8_lossy(&first).contains("line truncated"));
+        assert_eq!(
+            bounded_line(&mut reader).await.unwrap().unwrap(),
+            b"SECOND\n"
+        );
+        assert!(bounded_line(&mut reader).await.unwrap().is_none());
+        producer.await.unwrap();
+    }
+    #[cfg(windows)]
+    #[tokio::test]
+    async fn process_exit_waiter_keeps_exit_code_and_stderr() {
+        let temp = tempfile::tempdir().unwrap();
+        let layout = Layout::new(temp.path());
+        layout.init().unwrap();
+        write_json(&layout.at("config/telemetry.json"), &TelemetryConfig::default()).unwrap();
+        let folder = layout.at("state/sessions/pipe-test");
+        std::fs::create_dir_all(&folder).unwrap();
+        let mut command = tokio::process::Command::new("powershell.exe");
+        command
+            .args([
+                "-NoProfile",
+                "-NonInteractive",
+                "-Command",
+                "[Console]::Error.WriteLine('TEST-CRASH');exit 7",
+            ])
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .creation_flags(0x08000000);
+        let deliveries = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        pump(
+            command.spawn().unwrap(),
+            &folder,
+            "client",
+            &layout,
+            deliveries.clone(),
+        );
+        let queue = TelemetryOutbox::new(&layout);
+        let events = tokio::time::timeout(Duration::from_secs(10), async {
+            loop {
+                let events = queue.pending().unwrap();
+                if !events.is_empty() && deliveries.load(std::sync::atomic::Ordering::Acquire) == 0
+                {
+                    break events;
+                }
+                tokio::time::sleep(Duration::from_millis(100)).await;
+            }
+        })
+        .await
+        .unwrap();
+        let exit = events
+            .iter()
+            .find(|event| event.kind == "process-exit")
+            .unwrap();
+        assert_eq!(exit.payload["exit"]["exitCode"], 7);
+        assert!(
+            exit.payload["stderr"]
+                .as_str()
+                .unwrap()
+                .contains("TEST-CRASH")
+        );
+    }
+    #[test]
+    fn unhealthy_world_metrics_survive_compaction_without_large_payloads() {
+        let sample = compact_health(
+            json!({"healthy":false,"world":{"tick":42,"skippedSlots":8,"failures":1,"actorSimulation":{"huge":"ignored"}},"checkpoint":{"failures":1}}),
+        );
+        assert_eq!(sample["world"]["failures"], 1);
+        assert_eq!(sample["world"]["skippedSlots"], 8);
+        assert!(sample["world"]["actorSimulation"].is_null());
+    }
+}
+
+async fn bounded_line<R: tokio::io::AsyncBufRead + Unpin>(
+    reader: &mut R,
+) -> std::io::Result<Option<Vec<u8>>> {
+    let mut line = Vec::new();
+    let mut truncated = false;
+    let mut consumed_any = false;
+    loop {
+        let available = reader.fill_buf().await?;
+        if available.is_empty() {
+            if !consumed_any {
+                return Ok(None);
+            }
+            break;
+        }
+        consumed_any = true;
+        let end = available.iter().position(|b| *b == b'\n');
+        let count = end.map(|v| v + 1).unwrap_or(available.len());
+        let keep = count.min((32768usize).saturating_sub(line.len()));
+        line.extend_from_slice(&available[..keep]);
+        truncated |= keep < count;
+        reader.consume(count);
+        if end.is_some() {
+            break;
+        }
+    }
+    if truncated {
+        line.extend_from_slice(b" [line truncated]\n");
+    }
+    Ok(Some(line))
+}
+fn pump(
+    mut child: tokio::process::Child,
+    folder: &Path,
+    name: &str,
+    layout: &Layout,
+    deliveries: Arc<std::sync::atomic::AtomicUsize>,
+) {
+    fn reader<R: tokio::io::AsyncRead + Unpin + Send + 'static>(
+        input: R,
+        path: PathBuf,
+    ) -> tokio::task::JoinHandle<()> {
         tokio::spawn(async move {
             let mut lines = BufReader::new(input);
             let redact=regex::Regex::new(r#"(?i)((?:Bearer\s+)|(?:(?:token|password|secret|nativeSession|privateKey|session)["']?\s*[:=]\s*["']?))[^\s,"'<>}]+"#).unwrap();
             loop {
                 // Native DLLs can write bytes in the local code page despite file.encoding=UTF-8.
                 // Keep draining the pipe instead of dropping it on one invalid UTF-8 sequence.
-                let mut bytes = Vec::new();
-                match lines.read_until(b'\n', &mut bytes).await {
-                    Ok(0) | Err(_) => break,
-                    Ok(_) => {}
-                }
+                let bytes = match bounded_line(&mut lines).await {
+                    Ok(Some(bytes)) => bytes,
+                    _ => break,
+                };
                 let line = String::from_utf8_lossy(&bytes);
                 let text = redact.replace_all(line.trim_end(), "${1}[redacted]");
                 if std::fs::metadata(&path).is_ok_and(|m| m.len() > 4 * 1024 * 1024) {
@@ -992,13 +1268,62 @@ fn pump(child: &mut tokio::process::Child, folder: &Path, name: &str) {
                     let _ = writeln!(f, "{}", text.chars().take(32768).collect::<String>());
                 }
             }
-        });
+        })
     }
+    let mut readers = Vec::new();
     if let Some(out) = child.stdout.take() {
-        reader(out, folder.join(format!("{name}-stdout.log")))
+        readers.push(reader(out, folder.join(format!("{name}-stdout.log"))));
     }
     if let Some(err) = child.stderr.take() {
-        reader(err, folder.join(format!("{name}-stderr.log")))
+        readers.push(reader(err, folder.join(format!("{name}-stderr.log"))));
+    }
+    let logger = RotatingLog::new(folder, &format!("{name}-exit"));
+    let outbox = TelemetryOutbox::new(layout);
+    let stderr = folder.join(format!("{name}-stderr.log"));
+    let layout = layout.clone();
+    let folder = folder.to_path_buf();
+    let role = name.to_owned();
+    deliveries.fetch_add(1, std::sync::atomic::Ordering::AcqRel);
+    tokio::spawn(async move {
+        let _activity = DeliveryActivity(deliveries);
+        let result = child.wait().await;
+        let entry = match result {
+            Ok(status) => {
+                json!({"type":"process-exit","success":status.success(),"exitCode":status.code()})
+            }
+            Err(error) => json!({"type":"wait-error","error":error.to_string()}),
+        };
+        let _ = tokio::time::timeout(Duration::from_secs(2), async {
+            for task in readers {
+                let _ = task.await;
+            }
+        })
+        .await;
+        let _ = logger.line(&entry.to_string());
+        if entry["success"] != true {
+            let tail = diagnostic_tail(&stderr, 32768).unwrap_or_default();
+            let _ = outbox.enqueue(
+                "process-exit",
+                json!({"run":relative(&layout.root,&folder),"role":role,"exit":entry,"stderr":String::from_utf8_lossy(&tail)}),
+            );
+        }
+        let _ = queue_session_logs(&layout, &folder, &role, entry);
+        let upload_layout = layout.clone();
+        let result = tokio::task::spawn_blocking(move || {
+            flush_telemetry(&upload_layout, Duration::from_secs(12))
+        })
+        .await;
+        let message = match result {
+            Ok(Ok(summary)) => serde_json::to_string(&summary).unwrap_or_default(),
+            _ => "Telemetry delivery deferred; local queue retained".into(),
+        };
+        let _ = RotatingLog::new(layout.at("logs"), "delivery").line(&message);
+    });
+}
+struct DeliveryActivity(Arc<std::sync::atomic::AtomicUsize>);
+impl Drop for DeliveryActivity {
+    fn drop(&mut self) {
+        self.0.fetch_sub(1, std::sync::atomic::Ordering::AcqRel);
     }
 }
 #[cfg(all(test, windows))]
@@ -1100,6 +1425,106 @@ mod metrics_tests {
             }
         });
         (Supervisor::new(layout, None, None).unwrap(), owned, task)
+    }
+    #[tokio::test]
+    async fn background_sampler_records_without_ui_or_lifecycle_lock() {
+        let pid = std::process::id();
+        let (host, owned, http) = fixture(
+            serde_json::to_vec(&json!({"pid":pid,"heapUsed":123456,"heapMax":654321})).unwrap(),
+            false,
+        )
+        .await;
+        host.running.lock().unwrap().server = Some(owned);
+        let held = host.lifecycle.lock().await;
+        let sampler = tokio::spawn(host.clone().record_diagnostics());
+        tokio::time::timeout(Duration::from_secs(9), async {
+            loop {
+                if host.layout.at("logs/performance.jsonl").is_file() {
+                    break;
+                }
+                tokio::time::sleep(Duration::from_millis(100)).await;
+            }
+        })
+        .await
+        .unwrap();
+        let pending = TelemetryOutbox::new(&host.layout).pending().unwrap();
+        assert_eq!(pending.len(), 1);
+        assert_eq!(pending[0].payload["server"]["heapUsed"], 123456);
+        sampler.abort();
+        let _ = sampler.await;
+        http.await.unwrap();
+        drop(held);
+        let root = host.layout.root.clone();
+        drop(host);
+        std::fs::remove_dir_all(root).unwrap();
+    }
+    #[tokio::test]
+    async fn session_logs_are_uploaded_after_process_exit_and_idle_activity_is_released() {
+        let temp = tempfile::tempdir().unwrap();
+        let layout = Layout::new(temp.path());
+        layout.init().unwrap();
+        let folder = layout.at("state/sessions/upload-test");
+        std::fs::create_dir_all(&folder).unwrap();
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let config = TelemetryConfig {
+            enabled: true,
+            faro_url: format!("http://127.0.0.1:{port}/collect/test"),
+            ..Default::default()
+        };
+        write_json(&layout.at("config/telemetry.json"), &config).unwrap();
+        let accepted = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let signal = accepted.clone();
+        let receiver = tokio::spawn(async move {
+            let (mut stream, _) = listener.accept().await.unwrap();
+            signal.store(true, std::sync::atomic::Ordering::Release);
+            let mut header = Vec::new();
+            while !header.ends_with(b"\r\n\r\n") {
+                header.push(stream.read_u8().await.unwrap());
+                assert!(header.len() < 8192);
+            }
+            let header = String::from_utf8(header).unwrap();
+            let len = header
+                .lines()
+                .find_map(|line| {
+                    line.to_ascii_lowercase()
+                        .strip_prefix("content-length:")
+                        .map(|v| v.trim().parse::<usize>().unwrap())
+                })
+                .unwrap();
+            let mut body = vec![0; len];
+            stream.read_exact(&mut body).await.unwrap();
+            stream
+                .write_all(
+                    b"HTTP/1.1 204 No Content\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
+                )
+                .await
+                .unwrap();
+            serde_json::from_slice::<Value>(&body).unwrap()
+        });
+        let mut command = tokio::process::Command::new("powershell.exe");
+        command.args(["-NoProfile","-NonInteractive","-Command","[Console]::Out.WriteLine('SESSION-END-PROBE');Start-Sleep -Milliseconds 1500;exit 0"])
+            .stdout(std::process::Stdio::piped()).stderr(std::process::Stdio::piped()).creation_flags(0x08000000);
+        let activity = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        pump(
+            command.spawn().unwrap(),
+            &folder,
+            "client",
+            &layout,
+            activity.clone(),
+        );
+        tokio::time::sleep(Duration::from_millis(400)).await;
+        assert!(!accepted.load(std::sync::atomic::Ordering::Acquire));
+        tokio::time::timeout(Duration::from_secs(15), async {
+            while activity.load(std::sync::atomic::Ordering::Acquire) != 0 {
+                tokio::time::sleep(Duration::from_millis(100)).await;
+            }
+        })
+        .await
+        .unwrap();
+        let body = receiver.await.unwrap();
+        assert!(body.to_string().contains("SESSION-END-PROBE"));
+        assert!(TelemetryOutbox::new(&layout).pending().unwrap().is_empty());
     }
     #[tokio::test]
     async fn authenticated_bridge_metrics_verify_pid_and_values() {

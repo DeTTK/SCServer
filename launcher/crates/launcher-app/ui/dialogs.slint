@@ -14,12 +14,13 @@ export component LauncherDialog inherits FocusScope {
     in property <bool> busy;
     in property <[WorldRow]> backups;
     callback submit;
+    callback project-link(string);
     callback backup;
     private property <string> backup-title;
     private property <string> verb: root.kind == "create" ? "Создать мир" : root.kind == "rename" ? "Сохранить название"
         : root.kind == "clone" ? "Создать копию" : root.kind == "delete" ? "Удалить мир"
         : root.kind == "restore" ? "Восстановить" : root.kind == "stop" ? "Остановить сервер" : "Сохранить сервер";
-    private property <string> heading: root.kind == "about" ? "О лаунчере" : root.kind == "favorite" ? "Избранный сервер" : root.kind == "backups" ? "Резервные копии"
+    private property <string> heading: root.kind == "about" ? "О проекте" : root.kind == "favorite" ? "Избранный сервер" : root.kind == "backups" ? "Резервные копии"
         : root.kind == "delete" ? "Удалить мир?" : root.kind == "restore" ? "Восстановить мир?" : root.kind == "stop" ? "Остановить сервер?"
         : root.kind == "rename" ? "Переименовать мир" : root.kind == "clone" ? "Копия мира" : "Новый мир";
     init => { root.focus(); }
@@ -36,7 +37,11 @@ export component LauncherDialog inherits FocusScope {
             Rule {}
             if root.kind == "about": VerticalLayout {
                 spacing: 12px; Label { text: "BSCPCRAFT"; font-family: Theme.display-font; font-size: 24px; }
-                Hint { text: "Лаунчер " + root.version; }
+                Hint { text: "Локальная игра · версия лаунчера " + root.version; }
+                for link in [{id:"telegram",title:"Telegram-канал",address:"t.me/bscp_podval"},{id:"feedback",title:"Форум обратной связи",address:"t.me/stalzone_local"},{id:"github",title:"GitHub",address:"github.com/DeTTK/SCServer"}]: Action {
+                    label: link.title + " · " + link.address; glyph: "\u{e71b}"; align-left: true; kind: "plain";
+                    activated => { root.project-link(link.id); }
+                }
                 HorizontalLayout { alignment: start; height: 128px; AboutSlint { width: 224px; } }
             }
             if root.kind == "create" || root.kind == "rename" || root.kind == "clone": Field { label: "Название мира"; value <=> root.value; enabled: !root.busy; }

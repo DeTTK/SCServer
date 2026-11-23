@@ -15,6 +15,8 @@ $sources = @(Get-ChildItem -LiteralPath "$PSScriptRoot/src/bscp/next", "$PSScrip
 if ($LASTEXITCODE -ne 0) { throw 'Bridge test compilation failed' }
 & java --add-exports java.base/jdk.internal.org.objectweb.asm=ALL-UNNAMED -cp $classes bscp.next.BridgeHooksTest $classes
 if ($LASTEXITCODE -ne 0) { throw 'Bridge tests failed' }
+& java --add-exports java.base/jdk.internal.org.objectweb.asm=ALL-UNNAMED -cp "$classes;$serverClasspath" bscp.next.BridgeDiagnosticsTest $classes
+if ($LASTEXITCODE -ne 0) { throw 'Bridge diagnostics tests failed' }
 $classpath = "$classes;$serverClasspath"
 & java --add-exports java.base/jdk.internal.org.objectweb.asm=ALL-UNNAMED -cp $classpath bscp.next.RouteOriginTest
 if ($LASTEXITCODE -ne 0) { throw 'Signed connection origin tests failed' }

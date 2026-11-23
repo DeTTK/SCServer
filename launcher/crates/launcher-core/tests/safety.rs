@@ -291,7 +291,10 @@ fn diagnostics_redacts_and_excludes_jfr_without_opt_in() {
     l.init().unwrap();
     fs::write(
         l.at("logs/out.log"),
-        format!("Bearer abcdef {}=supersecret {}='hidden'", "token", "password"),
+        format!(
+            "Bearer abcdef {}=supersecret {}='hidden'",
+            "token", "password"
+        ),
     )
     .unwrap();
     fs::write(l.at("logs/flight.jfr"), b"performance").unwrap();

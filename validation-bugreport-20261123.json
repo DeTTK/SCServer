@@ -1,0 +1,55 @@
+{
+  "status": "PASS",
+  "rustTests": 82,
+  "bridgeTests": "PASS: logging, pauses, CPU, routes",
+  "singleExeIdleLifecycle": "PASS",
+  "grafana": {
+    "applicationId": 73,
+    "query": "{service_name=\"BSCPCRAFT\"}",
+    "syntheticEventsAcknowledged": 1,
+    "visibleInLoki": true,
+    "stack": "vividshark1612"
+  },
+  "networkPolicy": "Upload after owned JVM exits; retain queue on error",
+  "binary": {
+    "version": "0.5.0",
+    "nativeBytes": 16708608.0,
+    "javaBytes": null,
+    "totalBytes": 19750628.0,
+    "dotnetRequired": false,
+    "webviewRequired": false,
+    "files": [
+      {
+        "path": "BSCPCRAFT.exe",
+        "bytes": 16708608,
+        "sha256": "cf47e38d2895cde8ca40bef24abc7482a12193ae9c80698d6b11c89bda34f5e2"
+      },
+      {
+        "path": "README.md",
+        "bytes": 14660,
+        "sha256": "8512cc5afc0ea2901322c8e9b74d8a3d37a1d988fa5b6d2c0d87cb87759473fe"
+      },
+      {
+        "path": "modules\\bscp-bridge.jar",
+        "bytes": 30259,
+        "sha256": "5d2093389031ddf5fa01e91a787451dc1e648123e40af30d3ee41d05b3b1025c"
+      },
+      {
+        "path": "licenses\\RussoOne-OFL.txt",
+        "bytes": 4390,
+        "sha256": "3ac1301549523d9861fedca12871f24e575fbd26d520632fc00ba849b471d275"
+      },
+      {
+        "path": "licenses\\Slint-Royalty-Free-2.0.md",
+        "bytes": 3620,
+        "sha256": "5167f5056e850419106ab6265efbdca7cba4d99c849d1445ca0bbf6a1e2315fe"
+      },
+      {
+        "path": "licenses\\THIRD-PARTY-NOTICES.txt",
+        "bytes": 2989091,
+        "sha256": "7bbdac5d9b8c2e00888ce6ccfa8e81746f1c05d8affa5b0bdeb6aebe1aef8bc6"
+      }
+    ]
+  },
+  "manualIssueLimit": "Prefilled browser form; player attaches ZIP and submits"
+}

@@ -78,7 +78,7 @@ public final class WorldLoop implements AutoCloseable {
     private <T> void execute(Task<T> task){try{T value=task.action().apply(world);snapshot=world.snapshot();task.future().complete(value);}catch(Throwable e){task.future().completeExceptionally(e);}}
     private void run(){
         try{if(ownerServiceFactory!=null)ownerService=Objects.requireNonNull(ownerServiceFactory.apply(world));serviceReady.complete(null);runTicks();}
-        catch(Throwable failure){failures++;running=false;serviceReady.completeExceptionally(failure);shutdownFailure=failure;System.err.println("World owner service failed: "+failure);}
+        catch(Throwable failure){failures++;running=false;serviceReady.completeExceptionally(failure);shutdownFailure=failure;System.err.println("World owner service failed: "+failure);failure.printStackTrace(System.err);}
         finally{
             Task<?> task;while((task=queue.poll())!=null)task.future.completeExceptionally(new IllegalStateException("world_stopped"));
             if(ownerService!=null)try{
@@ -93,7 +93,7 @@ public final class WorldLoop implements AutoCloseable {
             long begin=System.nanoTime();
             if(begin>=deadline){
                 long gap=previousStep==0?0:begin-previousStep,late=begin-deadline;previousStep=begin;maxGapNanos=Math.max(maxGapNanos,gap);maxLateNanos=Math.max(maxLateNanos,late);
-                try{Players current=players;Map<UUID,World.Vec> positions=begin-current.received()<2_000_000_000L?current.positions():Map.of();if(ownerService!=null){ownerService.tick(positions,begin);serviceMetrics=ownerService.metrics();serviceHealthy=ownerService.healthy();}world.players(positions);MinePlayers contacts=minePlayers;world.minePlayers(begin-contacts.received()<2_000_000_000L?contacts.values():Map.of());if(simulation)world.step();snapshot=world.snapshot();actorMetrics=world.actorMetrics();}catch(Throwable e){failures++;running=false;shutdownFailure=e;System.err.println("World simulation failed: "+e);}
+                try{Players current=players;Map<UUID,World.Vec> positions=begin-current.received()<2_000_000_000L?current.positions():Map.of();if(ownerService!=null){ownerService.tick(positions,begin);serviceMetrics=ownerService.metrics();serviceHealthy=ownerService.healthy();}world.players(positions);MinePlayers contacts=minePlayers;world.minePlayers(begin-contacts.received()<2_000_000_000L?contacts.values():Map.of());if(simulation)world.step();snapshot=world.snapshot();actorMetrics=world.actorMetrics();}catch(Throwable e){failures++;running=false;shutdownFailure=e;System.err.println("World simulation failed: "+e);e.printStackTrace(System.err);}
                 long end=System.nanoTime(),physics=end-begin,owned=workNanos;int jobs=workCount;maxPhysicsNanos=Math.max(maxPhysicsNanos,physics);maxTickNanos=Math.max(maxTickNanos,workNanos+physics);maxOwnerWorkNanos=Math.max(maxOwnerWorkNanos,workNanos);maxOwnerTasksPerTick=Math.max(maxOwnerTasksPerTick,workCount);workNanos=0;workCount=0;deadline+=interval;
                 if(end>deadline){long missed=(end-deadline)/interval+1;skipped+=missed;deadline+=missed*interval;if(missedSteps.size()==8)missedSteps.removeFirst();missedSteps.addLast(Map.of("tick",snapshot.tick(),"skipped",missed,"gapMs",gap/1e6,"lateMs",late/1e6,"physicsMs",physics/1e6,"ownerMs",owned/1e6,"ownerTasks",jobs,"previousParkMs",previousPark/1e6,"queued",queue.size()));missedView=List.copyOf(missedSteps);}
                 continue;

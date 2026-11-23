@@ -19,9 +19,21 @@ fn main() -> anyhow::Result<()> {
         ui.set_page("home".into());
         ui.set_nickname("Player".into());
         ui.set_selected_world_title("Основной мир".into());
-        ui.set_favorites(slint::ModelRc::new(slint::VecModel::from(vec![ServerRow {
-            id: "visual-fixture".into(), title: "Сервер друзей".into(), address: "127.0.0.1".into(), status: "Не проверен".into(), online: false,
-        }])));
+        ui.set_favorites(slint::ModelRc::new(slint::VecModel::from(vec![
+            ServerRow {
+                id: "visual-fixture".into(),
+                title: "Сервер друзей".into(),
+                address: "127.0.0.1".into(),
+                status: "Не проверен".into(),
+                online: false,
+            },
+        ])));
+    }
+    if view == "report" {
+        ui.set_page("diagnostics".into());
+    }
+    if view == "about" {
+        ui.set_dialog("about".into());
     }
     if view.starts_with("setup") {
         ui.set_setup_visible(true);
@@ -33,7 +45,8 @@ fn main() -> anyhow::Result<()> {
         ui.set_game_branch("launtest".into());
     }
     if let Some(width) = std::env::args().nth(3) {
-        ui.window().set_size(slint::PhysicalSize::new(width.parse()?, 688));
+        ui.window()
+            .set_size(slint::PhysicalSize::new(width.parse()?, 688));
     }
     ui.window()
         .set_position(slint::PhysicalPosition::new(-30000, -30000));

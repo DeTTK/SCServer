@@ -1,4 +1,4 @@
-use crate::{AppWindow, ChangeRow, ServerRow, WorldRow};
+use crate::{AppWindow, AttachmentRow, ChangeRow, ServerRow, WorldRow};
 use anyhow::{Context, Result, bail};
 use bscp_launcher_core::*;
 use bscp_launcher_host::{HostClient, ensure_host};
@@ -8,7 +8,7 @@ use std::{
     path::{Path, PathBuf},
     rc::Rc,
     sync::{
-        Arc,
+        Arc, Mutex,
         atomic::{AtomicBool, Ordering},
         mpsc,
     },
@@ -96,7 +96,7 @@ enum Work {
     Favorite(String, String, String, String),
     Server(String),
     Update(String, String),
-    Report(String, bool),
+    Report(String, BugReportDraft),
 }
 
 pub struct Binding {
@@ -468,6 +468,7 @@ fn friendly_error(error: &anyhow::Error) -> (String, String) {
 }
 
 pub fn bind(ui: &AppWindow, layout: Layout) -> Binding {
+    let report_files = Arc::new(Mutex::new(Vec::<PathBuf>::new()));
     let (tx, rx) = mpsc::channel();
     let alive = Arc::new(AtomicBool::new(true));
     let cancel = Arc::new(AtomicBool::new(false));
@@ -699,10 +700,59 @@ pub fn bind(ui: &AppWindow, layout: Layout) -> Binding {
     }
     {
         let send = submit.clone();
-        ui.on_report(move |description, perf| {
-            send(Work::Report(description.to_string(), perf), true)
+        let files = report_files.clone();
+        ui.on_report(move |action, title, description, perf| {
+            let draft = BugReportDraft {
+                title: title.to_string(),
+                description: description.to_string(),
+                include_performance: perf,
+                screenshots: files.lock().unwrap_or_else(|e| e.into_inner()).clone(),
+            };
+            send(Work::Report(action.to_string(), draft), true)
         });
     }
+    {
+        let weak = ui.as_weak();
+        let files = report_files.clone();
+        ui.on_add_screenshots(move || {
+            let Some(selected) = rfd::FileDialog::new()
+                .set_title("Выберите скриншоты")
+                .add_filter("Скриншоты", &["png", "jpg", "jpeg", "webp"])
+                .pick_files()
+            else {
+                return;
+            };
+            let mut paths = files.lock().unwrap_or_else(|e| e.into_inner());
+            for path in selected {
+                if paths.len() < 6 && !paths.contains(&path) {
+                    paths.push(path);
+                }
+            }
+            if let Some(ui) = weak.upgrade() {
+                set_report_files(&ui, &paths);
+            }
+        });
+    }
+    {
+        let weak = ui.as_weak();
+        let files = report_files.clone();
+        ui.on_remove_screenshot(move |id| {
+            let mut paths = files.lock().unwrap_or_else(|e| e.into_inner());
+            paths.retain(|p| p.to_string_lossy() != id.as_str());
+            if let Some(ui) = weak.upgrade() {
+                set_report_files(&ui, &paths);
+            }
+        });
+    }
+    ui.on_project_link(move |id| {
+        let url = match id.as_str() {
+            "telegram" => "https://t.me/bscp_podval",
+            "feedback" => "https://t.me/stalzone_local",
+            "github" => "https://github.com/DeTTK/SCServer",
+            _ => return,
+        };
+        let _ = open_web(url);
+    });
     {
         let w = ui.as_weak();
         let cancel = cancel.clone();
@@ -901,6 +951,47 @@ fn kv(values: &[(&str, &str)]) -> BTreeMap<String, String> {
 }
 fn close_dialog(ui: &slint::Weak<AppWindow>) {
     let _ = ui.upgrade_in_event_loop(|ui| ui.set_dialog("".into()));
+}
+fn set_report_files(ui: &AppWindow, paths: &[PathBuf]) {
+    ui.set_report_attachments(rows(
+        paths
+            .iter()
+            .map(|path| AttachmentRow {
+                id: path.to_string_lossy().into_owned().into(),
+                name: path
+                    .file_name()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .into_owned()
+                    .into(),
+                detail: std::fs::metadata(path)
+                    .map(|m| format!("{:.1} МБ", m.len() as f64 / 1048576.0))
+                    .unwrap_or_else(|_| "Недоступен".into())
+                    .into(),
+            })
+            .collect(),
+    ));
+}
+fn open_web(url: &str) -> Result<()> {
+    if ![
+        "https://t.me/bscp_podval",
+        "https://t.me/stalzone_local",
+        "https://github.com/DeTTK/SCServer",
+    ]
+    .iter()
+    .any(|prefix| url == *prefix || url.starts_with(&format!("{prefix}/")))
+    {
+        bail!("PROJECT_LINK: unsupported address");
+    }
+    let mut command = std::process::Command::new("explorer.exe");
+    command.arg(url);
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        command.creation_flags(0x08000000);
+    }
+    command.spawn()?;
+    Ok(())
 }
 fn open_path(path: &Path) -> Result<()> {
     no_links(path)?;
@@ -1361,14 +1452,27 @@ fn execute(
                 Ok("Версия подготовлена. Перезапустите лаунчер.".into())
             }
         }
-        Work::Report(description, perf) => {
-            progress("Собираем журналы и записи диагностики…".into());
-            let archive = Reports::create(layout, &description, perf)?;
+        Work::Report(action, draft) => {
+            if action == "github"
+                && (draft.title.trim().is_empty() || draft.description.trim().is_empty())
+            {
+                bail!("REPORT_DESCRIPTION: Заполните название и описание проблемы.");
+            }
+            progress("Собираем логи и скриншоты…".into());
+            let archive = Reports::prepare(layout, &draft, Some(progress))?;
             open_path(archive.parent().unwrap())?;
-            Ok(format!(
-                "Отчёт сохранён: {}",
-                archive.file_name().unwrap().to_string_lossy()
-            ))
+            if action == "github" {
+                open_web(&Reports::issue_url(&draft, &archive)?)?;
+                Ok(format!(
+                    "GitHub открыт. Прикрепите {} и подтвердите отправку.",
+                    archive.file_name().unwrap().to_string_lossy()
+                ))
+            } else {
+                Ok(format!(
+                    "Отчёт сохранён: {}",
+                    archive.file_name().unwrap().to_string_lossy()
+                ))
+            }
         }
     }
 }

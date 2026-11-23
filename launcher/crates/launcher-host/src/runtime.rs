@@ -74,6 +74,7 @@ async fn run_async(args: Vec<String>) -> Result<()> {
     let host = Supervisor::new(layout, opt("--java-root"), opt("--isolated-qa-guard"))?;
     host.recover().await?;
     tokio::spawn(host.clone().monitor());
+    tokio::spawn(host.clone().record_diagnostics());
     #[cfg(windows)]
     ipc::serve(host).await?;
     Ok(())

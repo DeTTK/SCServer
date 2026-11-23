@@ -1,4 +1,4 @@
-import { WorldRow } from "api.slint";
+import { AttachmentRow, WorldRow } from "api.slint";
 import { Theme } from "theme.slint";
 import { Action, EmptyState, Entry, Hint, Icon, Label, Rule, RowButton, Scroller, SectionTitle } from "controls.slint";
 
@@ -117,31 +117,52 @@ export component ServerPage inherits HorizontalLayout {
 
 export component ReportPage inherits VerticalLayout {
     in property <bool> busy;
+    in-out property <string> title;
     in-out property <string> description;
     in-out property <bool> performance;
-    callback submit;
-    spacing: 16px;
-    SectionTitle { text: "Диагностический архив"; height: 30px; }
-    Hint { text: "Опишите сбой и создайте локальный ZIP с журналами. Вы сами выбираете, кому передать файл."; wrap: word-wrap; overflow: clip; }
-    Rule {}
-    Label { text: "Что произошло?"; font-weight: 600; height: 20px; }
-    Entry { label: "Описание проблемы"; multiline: true; placeholder: "Опишите действия перед сбоем и результат"; value <=> root.description; enabled: !root.busy; }
-    HorizontalLayout {
-        alignment: start;
-        Action {
-            kind: "plain"; align-left: true;
-            accessible-role: checkbox; checkable: true; checked: root.performance;
-            label: "Включить профиль производительности JFR"; glyph: root.performance ? "\u{e73d}" : "\u{e739}";
-            enabled: !root.busy; activated => { root.performance = !root.performance; }
+    in property <[AttachmentRow]> attachments;
+    callback submit(string);
+    callback add-screenshots;
+    callback remove-screenshot(string);
+    spacing: 12px;
+    SectionTitle { text: "Сообщить о проблеме"; height: 30px; }
+    Hint { text: "Логи клиента, сервера и лаунчера добавятся автоматически. Напишите, что пошло не так."; wrap: word-wrap; overflow: clip; }
+    Scroller {
+        vertical-stretch: 1;
+        VerticalLayout {
+            spacing: 10px; alignment: start;
+            Label { text: "Кратко о проблеме"; font-weight: 600; height: 20px; }
+            Entry { label: "Кратко о проблеме"; placeholder: "Например: игра закрывается при входе в мир"; value <=> root.title; enabled: !root.busy; }
+            Label { text: "Что произошло и как повторить?"; font-weight: 600; height: 20px; }
+            Entry { label: "Описание проблемы"; multiline: true; placeholder: "Что вы делали? Что ожидали увидеть и что получилось?"; value <=> root.description; enabled: !root.busy; }
+            HorizontalLayout {
+                alignment: start;
+                Action { label: "Добавить скриншоты"; glyph: "\u{e710}"; enabled: !root.busy && root.attachments.length < 6; activated => { root.add-screenshots(); } }
+                Hint { text: root.attachments.length + "/6"; }
+            }
+            for attachment in root.attachments: HorizontalLayout {
+                spacing: 8px;
+                Label { text: attachment.name; horizontal-stretch: 1; }
+                Hint { text: attachment.detail; }
+                Action { glyph: "\u{e74d}"; width: 32px; kind: "plain"; accessible-label: "Убрать скриншот " + attachment.name; enabled: !root.busy; activated => { root.remove-screenshot(attachment.id); } }
+            }
+            Hint { text: "PNG, JPEG или WebP · до 8 МБ на файл. Скриншоты будут включены в архив."; wrap: word-wrap; overflow: clip; }
+            HorizontalLayout {
+                alignment: start;
+                Action {
+                    kind: "plain"; align-left: true; accessible-role: checkbox;
+                    checkable: true; checked: root.performance;
+                    label: "Приложить запись производительности JFR"; glyph: root.performance ? "\u{e73d}" : "\u{e739}";
+                    enabled: !root.busy; activated => { root.performance = !root.performance; }
+                }
+            }
         }
     }
-    Hint { text: "Профиль помогает разобраться с зависаниями и падением частоты кадров."; wrap: word-wrap; overflow: clip; }
-    Rectangle { vertical-stretch: 1; }
+    Hint { text: "GitHub откроется с описанием. Прикрепите подготовленный ZIP к форме и подтвердите публикацию. Метка отчёта: player-report."; wrap: word-wrap; overflow: clip; }
     Rule {}
     HorizontalLayout {
-        alignment: end;
-        Action { label: "Создать архив…"; glyph: "\u{e896}"; kind: "primary"; enabled: !root.busy; activated => { root.submit(); } }
+        alignment: end; spacing: 8px;
+        Action { label: "Сохранить архив"; enabled: !root.busy; activated => { root.submit("save"); } }
+        Action { label: "Подготовить issue в GitHub"; kind: "primary"; enabled: !root.busy && root.title != "" && root.description != ""; activated => { root.submit("github"); } }
     }
 }
-
-

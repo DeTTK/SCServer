@@ -80,8 +80,25 @@ fn start() -> anyhow::Result<()> {
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
+    let diagnostic_root = args
+        .iter()
+        .position(|arg| arg == "--root")
+        .and_then(|i| args.get(i + 1))
+        .map(std::path::PathBuf::from)
+        .or_else(|| {
+            std::env::current_exe()
+                .ok()
+                .and_then(|p| p.parent().map(std::path::Path::to_path_buf))
+        });
+    if let Some(root) = diagnostic_root.as_ref() {
+        bscp_launcher_core::install_panic_logger(&bscp_launcher_core::Layout::new(root));
+    }
     if bscp_launcher_host::runtime::is_service_mode(&args) {
         if let Err(error) = bscp_launcher_host::runtime::run(args) {
+            if let Some(root) = diagnostic_root.as_ref() {
+                let _ = bscp_launcher_core::RotatingLog::new(root.join("logs"), "startup-errors")
+                    .line(&format!("{error:#}"));
+            }
             eprintln!("{}", bscp_launcher_core::redact(&format!("{error:#}")));
             std::process::exit(1);
         }
@@ -89,6 +106,13 @@ fn main() {
     }
     if let Err(error) = start() {
         let message = bscp_launcher_core::redact(&format!("{error:#}"));
+        if let Some(root) = diagnostic_root.as_ref() {
+            let _ = bscp_launcher_core::RotatingLog::new(root.join("logs"), "startup-errors")
+                .line(&message);
+            let _ =
+                bscp_launcher_core::TelemetryOutbox::new(&bscp_launcher_core::Layout::new(root))
+                    .enqueue("launcher-error", serde_json::json!({"message":message}));
+        }
         rfd::MessageDialog::new()
             .set_title("BSCPCRAFT")
             .set_description(&message)

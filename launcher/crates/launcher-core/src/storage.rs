@@ -47,10 +47,14 @@ mod route_settings_tests {
     use super::*;
     #[test]
     fn obsolete_public_host_setting_is_ignored_and_not_saved() {
-        let settings:Settings=serde_json::from_value(serde_json::json!({"AdvertisedHost":"obsolete.invalid","nickname":"Player"})).unwrap();
+        let settings: Settings = serde_json::from_value(
+            serde_json::json!({"AdvertisedHost":"obsolete.invalid","nickname":"Player"}),
+        )
+        .unwrap();
         settings.validate().unwrap();
-        let saved=serde_json::to_value(settings).unwrap();
-        assert!(saved.get("AdvertisedHost").is_none());assert!(saved.get("advertised_host").is_none());
+        let saved = serde_json::to_value(settings).unwrap();
+        assert!(saved.get("AdvertisedHost").is_none());
+        assert!(saved.get("advertised_host").is_none());
     }
 }
 impl Default for Settings {

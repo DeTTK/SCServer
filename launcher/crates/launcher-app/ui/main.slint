@@ -6,8 +6,8 @@ import { Home } from "home.slint";
 import { WorldsPage, ServerPage, ReportPage } from "management.slint";
 import { Configuration } from "forms.slint";
 import { LauncherDialog } from "dialogs.slint";
-import { WorldRow, ServerRow, ChangeRow, TransferView } from "api.slint";
-export { WorldRow, ServerRow, ChangeRow, TransferView } from "api.slint";
+import { WorldRow, ServerRow, ChangeRow, TransferView, AttachmentRow } from "api.slint";
+export { WorldRow, ServerRow, ChangeRow, TransferView, AttachmentRow } from "api.slint";
 export component AppWindow inherits Window {
     // Pages and user-visible information. Models contain real data supplied by Rust.
     in-out property <string> page: "home";
@@ -73,18 +73,23 @@ export component AppWindow inherits Window {
     callback save-settings();
     callback install-components(string);
     callback update-action(string);
-    callback report(string, bool);
+    callback report(string, string, string, bool);
+    callback project-link(string);
+    callback add-screenshots();
+    callback remove-screenshot(string);
+    in property <[AttachmentRow]> report-attachments;
 
-    title: "BSCPCRAFT · Билдерс СК";
+    title: "BSCPCRAFT";
     icon: @image-url("assets/brand-logo.png");
     init => { Palette.color-scheme = dark; }
     preferred-width: 1280px; preferred-height: 808px;
     min-width: 1088px; min-height: 688px;
     default-font-family: Theme.body-font; default-font-size: 14px;
     background: Theme.canvas;
+    private property <string> report-title;
     private property <string> report-description;
     private property <bool> report-performance;
-    private property <string> page-title: root.page == "worlds" ? "Мои миры" : root.page == "server" ? "Мой сервер" : root.page == "diagnostics" ? "Диагностика" : root.page == "settings" ? "Настройки" : "Главная";
+    private property <string> page-title: root.page == "worlds" ? "Мои миры" : root.page == "server" ? "Мой сервер" : root.page == "diagnostics" ? "Багрепорт" : root.page == "settings" ? "Настройки" : "Главная";
     function ask-world(kind: string) {
         root.dialog-id = root.selected-world-id;
         root.dialog-value = kind == "rename" ? root.selected-world-title : kind == "clone" ? root.selected-world-title + " — копия" : "";
@@ -133,12 +138,12 @@ export component AppWindow inherits Window {
                 if !root.setup-visible: VerticalLayout {
                     spacing: 4px; vertical-stretch: 0;
                     Rule {}
-                    for p in [{id:"diagnostics",name:"Диагностика",icon:"\u{e9d9}"},{id:"settings",name:"Настройки",icon:"\u{e713}"}]: Action {
+                    for p in [{id:"diagnostics",name:"Багрепорт",icon:"\u{e9d9}"},{id:"settings",name:"Настройки",icon:"\u{e713}"}]: Action {
                         label: p.name; glyph: p.icon; kind: "plain"; align-left: true; height: 42px; selected: root.page == p.id;
                         activated => { root.navigate(p.id); }
                     }
                     Rule {}
-                    Action { label: "О лаунчере"; glyph: "\u{e946}"; kind: "plain"; align-left: true; activated => { root.dialog = "about"; } }
+                    Action { label: "О проекте"; glyph: "\u{e946}"; kind: "plain"; align-left: true; activated => { root.dialog = "about"; } }
                     if root.version != "": Hint { text: "Версия " + root.version; height: 18px; }
                 }
             }
@@ -177,8 +182,11 @@ export component AppWindow inherits Window {
                 act(op) => { if op == "stop" { root.dialog = "stop"; } else { root.server-action(op); } }
             }
             if !root.setup-visible && root.page == "diagnostics": ReportPage {
-                vertical-stretch: 1; busy: root.busy; description <=> root.report-description; performance <=> root.report-performance;
-                submit => { root.report(root.report-description, root.report-performance); }
+                vertical-stretch: 1; busy: root.busy; title <=> root.report-title; description <=> root.report-description; performance <=> root.report-performance;
+                attachments: root.report-attachments;
+                add-screenshots => { root.add-screenshots(); }
+                remove-screenshot(id) => { root.remove-screenshot(id); }
+                submit(action) => { root.report(action, root.report-title, root.report-description, root.report-performance); }
             }
             if root.setup-visible || root.page == "settings": Rectangle {
                 vertical-stretch: 1;
@@ -219,6 +227,7 @@ export component AppWindow inherits Window {
         LauncherDialog {
             kind <=> root.dialog; value <=> root.dialog-value; favorite-name <=> root.favorite-name; favorite-nick <=> root.favorite-nick;
             world-title: root.selected-world-title; version: root.version; error: root.error; busy: root.busy; backups: root.backups;
+            project-link(id) => { root.project-link(id); }
             backup => { root.world-action("backup", root.dialog-id, ""); }
             submit => {
                 if root.dialog == "favorite" { root.favorite-action("save", root.favorite-name, root.dialog-value, root.favorite-nick); }
