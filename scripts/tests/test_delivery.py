@@ -9,7 +9,7 @@ class DeliveryTests(unittest.TestCase):
             def git(*args):return subprocess.run(['git','-C',str(root),*args],check=True,capture_output=True,text=True).stdout.strip()
             git('init');git('config','user.name','Test');git('config','user.email','test@example.invalid')
             old=root/'unchanged.pack';old.write_bytes(b'old immutable runtime');git('add','--',old.name);git('commit','-m','base');parent=git('rev-parse','HEAD');blob=git('rev-parse','HEAD:unchanged.pack')
-            old.unlink();(root/'.git/objects'/blob[:2]/blob[2:]).unlink()
+            old.unlink();blob_file=root/'.git/objects'/blob[:2]/blob[2:];blob_file.chmod(0o600);blob_file.unlink()
             (root/'new.json').write_text('{}');git('add','--','new.json')
             commit=d.commit_index(root,'publish indexed map',os.environ)
             self.assertEqual(git('rev-parse','HEAD'),commit);self.assertEqual(git('rev-parse','HEAD^'),parent)
