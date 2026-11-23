@@ -12,9 +12,6 @@ import java.util.concurrent.*;
 /** Signed native backend requests with replay protection and key-based account namespaces. */
 public final class AccountGuard {
     static final ConcurrentHashMap<String,Long> nonces=new ConcurrentHashMap<>();
-    static final Set<UUID> owners=ConcurrentHashMap.newKeySet();
-    public static boolean entitled(UUID character){return character!=null&&owners.contains(character);}
-    public static void grant(Object grant,String login){try{String owner=Bridge.config.getProperty("ownerKey","");if(owner.isEmpty())return;String expected="bscp-"+HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(Base64.getDecoder().decode(owner)));if(expected.equals(login)){UUID id=(UUID)grant.getClass().getMethod("characterId").invoke(grant);owners.add(id);}}catch(Exception error){Bridge.event("owner-grant-error",error.toString());}}
     public static void handle(Object backend,HttpExchange exchange){try{
         String path=exchange.getRequestURI().getPath();
         if(exchange.getRequestMethod().equals("GET")&&(path.equals("/health")||path.equals("/check_version"))){original(backend,exchange);return;}

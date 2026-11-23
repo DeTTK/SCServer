@@ -28,7 +28,7 @@ $agent = Join-Path $classes 'route-test-agent.jar'
 & jar cfm $agent $manifest -C $classes bscp/next/RouteTestAgent.class -C $classes 'bscp/next/RouteTestAgent$1.class'
 if ($LASTEXITCODE -ne 0) { throw 'Test transformer archive failed' }
 $fixture = Join-Path $classes ('route-origin-'+[Guid]::NewGuid().ToString('N'))
-& java --add-exports java.base/jdk.internal.org.objectweb.asm=ALL-UNNAMED "-javaagent:$agent" -cp $classpath bscp.next.NativeRouteOriginTest "$fixture-managed"
+& java --add-exports java.base/jdk.internal.org.objectweb.asm=ALL-UNNAMED "-javaagent:$agent" -cp $classpath bscp.next.NativeRouteOriginTest "$fixture-managed" managed
 if ($LASTEXITCODE -ne 0) { throw 'Managed backend connection origin tests failed' }
 & java -cp $classpath bscp.next.NativeRouteOriginTest "$fixture-standalone"
 if ($LASTEXITCODE -ne 0) { throw 'Standalone backend connection origin tests failed' }

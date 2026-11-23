@@ -21,22 +21,30 @@ final class ServerPatches implements ClassFileTransformer {
                     matches[0]++;var wrapper=super.visitMethod(access,method,desc,signature,exceptions);wrapper.visitCode();wrapper.visitVarInsn(Opcodes.ALOAD,0);wrapper.visitVarInsn(Opcodes.ALOAD,1);wrapper.visitMethodInsn(Opcodes.INVOKESTATIC,"bscp/next/AccountGuard","handle","(Ljava/lang/Object;Lcom/sun/net/httpserver/HttpExchange;)V",false);wrapper.visitInsn(Opcodes.RETURN);wrapper.visitMaxs(2,2);wrapper.visitEnd();
                     return super.visitMethod(access,"bscpOriginalHandle",desc,signature,exceptions);
                 }
-                if(name.endsWith("/PlayerRules")&&method.equals("editor")&&desc.equals("(Ljava/util/UUID;Ljava/util/Set;)Z")){
-                    matches[0]++;var m=super.visitMethod(access,method,desc,signature,exceptions);m.visitCode();m.visitVarInsn(Opcodes.ALOAD,0);m.visitVarInsn(Opcodes.ALOAD,1);m.visitMethodInsn(Opcodes.INVOKEVIRTUAL,name,"entitled","(Ljava/util/UUID;)Z",false);m.visitInsn(Opcodes.IRETURN);m.visitMaxs(2,3);m.visitEnd();return null;
-                }
-                if(name.endsWith("/PlayerRules")&&method.equals("entitled")&&desc.equals("(Ljava/util/UUID;)Z")){
-                    matches[0]++;var m=super.visitMethod(access,method,desc,signature,exceptions);m.visitCode();m.visitVarInsn(Opcodes.ALOAD,1);m.visitMethodInsn(Opcodes.INVOKESTATIC,"bscp/next/AccountGuard","entitled","(Ljava/util/UUID;)Z",false);m.visitInsn(Opcodes.IRETURN);m.visitMaxs(1,2);m.visitEnd();return null;
+                if (name.equals("szserver/net/PlayerRules") && method.equals("entitled")
+                        && desc.equals("(Ljava/util/UUID;)Z")) {
+                    matches[0]++;
+                    var permission = super.visitMethod(access, method, desc, signature, exceptions);
+                    permission.visitCode();
+                    // The server calls this with a character from its authenticated game session.
+                    // Launcher lifecycle and admin HTTP have their own access controls.
+                    permission.visitVarInsn(Opcodes.ALOAD, 1);
+                    permission.visitMethodInsn(Opcodes.INVOKESTATIC, "java/util/Objects", "nonNull",
+                            "(Ljava/lang/Object;)Z", false);
+                    permission.visitInsn(Opcodes.IRETURN);
+                    permission.visitMaxs(1, 2);
+                    permission.visitEnd();
+                    return null;
                 }
                 var original=super.visitMethod(access,method,desc,signature,exceptions);
                 if(((name.equals("szserver/client/NativeSceneIncident")||name.equals("szserver/client/NativeSceneEncaged"))&&method.equals("<init>"))||(name.equals("szserver/client/NativeSceneDefaults")&&method.equals("resourceRoot"))||(name.equals("szserver/client/ClientSceneCodec")&&method.equals("prepareRepairs")))return new MethodVisitor(Opcodes.ASM8,original){@Override public void visitMethodInsn(int opcode,String owner,String m,String d,boolean itf){super.visitMethodInsn(opcode,owner,m,d,itf);if(owner.equals("java/nio/file/Path")&&m.equals("of")||owner.equals("szserver/client/RuntimeFiles")&&m.equals("reference")&&d.equals("(Ljava/nio/file/Path;Ljava/lang/String;)Ljava/nio/file/Path;")){matches[0]++;super.visitMethodInsn(Opcodes.INVOKESTATIC,"bscp/next/Bridge","bundlePath","(Ljava/nio/file/Path;)Ljava/nio/file/Path;",false);}}};
-                if(name.endsWith("/LocalAccounts")&&method.equals("gateway")&&desc.equals("(Ljava/util/UUID;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lszserver/net/LocalAccounts$Grant;")){matches[0]++;return new MethodVisitor(Opcodes.ASM8,original){@Override public void visitInsn(int opcode){if(opcode==Opcodes.ARETURN){super.visitInsn(Opcodes.DUP);super.visitVarInsn(Opcodes.ALOAD,2);super.visitMethodInsn(Opcodes.INVOKESTATIC,"bscp/next/AccountGuard","grant","(Ljava/lang/Object;Ljava/lang/String;)V",false);}super.visitInsn(opcode);}};}
                 if(name.equals("szserver/ServerMain")&&method.equals("main"))return new MethodVisitor(Opcodes.ASM8,original){int parents;@Override public void visitMethodInsn(int opcode,String owner,String m,String d,boolean itf){super.visitMethodInsn(opcode,owner,m,d,itf);if(owner.equals("java/nio/file/Path")&&m.equals("getParent")&&d.equals("()Ljava/nio/file/Path;")){parents++;if(parents==2){matches[0]++;super.visitMethodInsn(Opcodes.INVOKESTATIC,"bscp/next/Bridge","bundleRoot","(Ljava/nio/file/Path;)Ljava/nio/file/Path;",false);}}}@Override public void visitEnd(){if(parents!=2)throw new IllegalStateException("portable ServerMain root shape mismatch: "+parents);super.visitEnd();}};
                 if(name.endsWith("/WorldLoop")&&method.equals("runTicks")&&desc.equals("()V"))return new MethodVisitor(Opcodes.ASM8,original){@Override public void visitFieldInsn(int opcode,String owner,String field,String d){super.visitFieldInsn(opcode,owner,field,d);if(opcode==Opcodes.PUTFIELD&&owner.equals(name)&&field.equals("snapshot")){matches[0]++;super.visitMethodInsn(Opcodes.INVOKESTATIC,"bscp/next/Bridge","tick","()V",false);}}};
 
                 return original;
             }
         },0);
-        int expected=name.endsWith("/LocalAccounts")||name.endsWith("/PlayerRules")?2:1;
+        int expected=1;
         if(matches[0]!=expected)throw new IllegalStateException("patch shape mismatch "+name+": "+matches[0]);
         if(live){complete.add(name);Bridge.event("server-patch",name);if(complete.containsAll(targets))Files.writeString(Bridge.output.resolve("server-patches.ok"),String.join("\n",complete));}return writer.toByteArray();
     }

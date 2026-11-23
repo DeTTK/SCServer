@@ -24,6 +24,7 @@ public final class NativeRouteOriginTest {
         var generator=KeyPairGenerator.getInstance("EC");generator.initialize(new ECGenParameterSpec("secp256r1"));RouteOriginTest.keys=generator.generateKeyPair();
         String login="bscp-"+HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(RouteOriginTest.keys.getPublic().getEncoded()));
         accountLogin=login;
+        boolean managed = args.length > 1 && args[1].equals("managed");
         var routes=new ConnectionRoutes("127.0.0.1",List.of("127.0.0.1"),30101,30102);
         try(var accounts=new LocalAccounts(0,routes,root.resolve("accounts.json"))){
             RouteOriginTest.port=accounts.port();String session=call("POST","/session/game","login="+login).get("session").getAsString();
@@ -42,6 +43,32 @@ public final class NativeRouteOriginTest {
                 var issued=call("POST","/security/issue_auth_token","session="+encode(session)+"&username=RouteProbe&"+route);
                 var grant=accounts.gateway(UUID.randomUUID(),login,"RouteProbe",session,issued.get("token").getAsString());
                 if(!grant.worldHost().equals(host))throw new AssertionError("world UDP redirect origin mismatch");checks++;
+            }
+            if (managed) {
+                RouteOriginTest.keys = generator.generateKeyPair();
+                accountLogin = "bscp-" + HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                        .digest(RouteOriginTest.keys.getPublic().getEncoded()));
+                String guestSession = call("POST", "/session/game", "").get("session").getAsString();
+                call("POST", "/characters/create", "session=" + encode(guestSession) + "&character=GuestProbe");
+                String guestToken = call("POST", "/security/issue_auth_token",
+                        "session=" + encode(guestSession) + "&username=GuestProbe").get("token").getAsString();
+                UUID protocol = UUID.randomUUID();
+                var guest = accounts.gateway(protocol, accountLogin, "GuestProbe", guestSession, guestToken);
+                if (!accounts.claim(protocol, guestSession).equals(guest)) throw new AssertionError("guest world claim missing");
+
+                var rules = new PlayerRules(false, Set.of(), true, PlayerRules.Mode.STALKER);
+                if (guest.characterId().equals(aliasGrant.characterId()) || rules.entitled(null)
+                        || rules.initial(guest.characterId()) != PlayerRules.Mode.STALKER
+                        || rules.requested(guest.characterId(), PlayerRules.Mode.ADMIN) != PlayerRules.Mode.ADMIN
+                        || !rules.editor(guest.characterId(), Set.of())) {
+                    throw new AssertionError("guest gameplay permissions");
+                }
+                String body = "";
+                var stop = RouteOriginTest.signed("POST", "/server/stop", body);
+                if (RouteOriginTest.send(stop, body).statusCode() != 404) {
+                    throw new AssertionError("server lifecycle route exposed on game backend");
+                }
+                System.out.println("PASS independent guest can enter creative mode and edit the world; game backend cannot stop the server");
             }
             System.out.println("PASS "+checks+" native backend address-list and gateway/UDP grant checks; no public host configured");
         }
