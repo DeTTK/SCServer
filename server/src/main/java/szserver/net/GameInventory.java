@@ -14,7 +14,7 @@ import java.util.function.*;
 public final class GameInventory implements AutoCloseable {
     private static final class Character {
         final InventoryJournal.Lease lease;Inventory inventory;boolean busy,failed,deathClear,clearingEffects;Map<Integer,byte[]> appearances=Map.of();Map<Integer,UUID> identities=Map.of();Map<String,Float> stats=Map.of(),artifactStats=Map.of();
-        GrenadeApplications applications;GrenadePulseEffects pulseEffects;
+        GrenadeApplications applications;GrenadePulseEffects pulseEffects;GameItems.QuickSlots quickSlots;
         Character(Inventory inventory,InventoryJournal.Lease lease){this.inventory=inventory;this.lease=lease;}
     }
     private final ItemCatalog catalog;
@@ -198,16 +198,17 @@ public final class GameInventory implements AutoCloseable {
     }
     public void weapon(UUID id,int container,int requestedAmmo,Consumer<Weapon> ready,Consumer<String> failure){
         Character c=character(id);if(c.busy||c.failed||c.deathClear){failure.accept("inventory_busy");return;}ItemStack stack=c.inventory.at(new Inventory.Address(0,container,0));
-        Inventory snapshot=c.inventory;c.busy=true;
+        Inventory snapshot=c.inventory;JsonObject savedQuick=journal.gameplay(id);c.busy=true;
         try{factories.execute(()->{try{
+            GameItems.QuickSlots preparedQuick=c.quickSlots==null?readQuickSlots(savedQuick):c.quickSlots;
             Map<Inventory.Address,ItemStack> builtins=new LinkedHashMap<>();for(var entry:snapshot.items().entrySet())if(entry.getKey().aggregate()==0){ItemStack upgraded=items.initializeBuiltins(entry.getValue());if(upgraded!=entry.getValue())builtins.put(entry.getKey(),upgraded);}
             Inventory.Plan upgrade=builtins.isEmpty()?null:snapshot.replace(builtins,0);Inventory working=upgrade==null?snapshot:upgrade.after();ItemStack selected=working.at(new Inventory.Address(0,container,0));
             Map<Integer,byte[]> appearances=new HashMap<>();Map<Integer,UUID> identities=new HashMap<>();for(var entry:working.items().entrySet())if(entry.getKey().aggregate()==0){ItemStack equipped=entry.getValue();appearances.put(entry.getKey().container(),items.appearance(equipped,defaultAppearances.get(equipped.id())));identities.put(entry.getKey().container(),items.identity(equipped));}
             Map<Integer,byte[]> prepared=Map.copyOf(appearances);Map<Integer,UUID> preparedIdentities=Map.copyOf(identities);var summary=items.equipmentSummary(working.items().entrySet().stream().filter(entry->entry.getKey().aggregate()==0).map(Map.Entry::getValue).toList());Map<String,Float> stats=summary.total();
-            WeaponProfile profile=items.weaponProfile(selected);if(profile==null){completion(()->publishBuiltinWeapon(id,c,upgrade,()->{c.appearances=prepared;c.identities=preparedIdentities;c.stats=stats;c.artifactStats=summary.artifacts();c.busy=false;ready.accept(null);},failure));return;}
+            WeaponProfile profile=items.weaponProfile(selected);if(profile==null){completion(()->publishBuiltinWeapon(id,c,upgrade,()->{c.quickSlots=preparedQuick;c.appearances=prepared;c.identities=preparedIdentities;c.stats=stats;c.artifactStats=summary.artifacts();c.busy=false;ready.accept(null);},failure));return;}
             var info=items.inspectMagazine(selected);WeaponProfile configured=profile;int capacity=configured.capacity();int ammo=requestedAmmo!=0&&info.rounds()==0?requestedAmmo:info.ammo()==0?(requestedAmmo==0?profile.ammunition().get(0):requestedAmmo):info.ammo();if(!profile.ammunition().contains(ammo)||requestedAmmo!=0&&ammo!=requestedAmmo)throw new IllegalArgumentException("weapon_ammunition_type");
             if(info.rounds()<0||info.rounds()>capacity)throw new IllegalArgumentException("magazine_rounds");byte[][] magazines=new byte[capacity+1][];for(int n=0;n<=capacity;n++)magazines[n]=items.magazine(selected,ammo,n);
-            GameItems.Launcher launcher=items.inspectLauncher(selected);byte[][] launcherMagazines=launcher==null?null:new byte[capacity+1][];if(launcher!=null)for(int n=0;n<=capacity;n++)launcherMagazines[n]=items.launcherMagazine(selected.state(magazines[n]),0,false);Weapon weapon=new Weapon(stack.id(),ammo,capacity,info.rounds(),info.identity(),magazines,configured,launcher,launcherMagazines,items.jamming(selected));completion(()->publishBuiltinWeapon(id,c,upgrade,()->{c.appearances=prepared;c.identities=preparedIdentities;c.stats=stats;c.artifactStats=summary.artifacts();c.busy=false;ready.accept(weapon);},failure));
+            GameItems.Launcher launcher=items.inspectLauncher(selected);byte[][] launcherMagazines=launcher==null?null:new byte[capacity+1][];if(launcher!=null)for(int n=0;n<=capacity;n++)launcherMagazines[n]=items.launcherMagazine(selected.state(magazines[n]),0,false);Weapon weapon=new Weapon(stack.id(),ammo,capacity,info.rounds(),info.identity(),magazines,configured,launcher,launcherMagazines,items.jamming(selected));completion(()->publishBuiltinWeapon(id,c,upgrade,()->{c.quickSlots=preparedQuick;c.appearances=prepared;c.identities=preparedIdentities;c.stats=stats;c.artifactStats=summary.artifacts();c.busy=false;ready.accept(weapon);},failure));
         }catch(Exception | LinkageError e){e.printStackTrace();completion(()->{c.busy=false;failure.accept(Objects.toString(e.getMessage(),"native_weapon_failed"));});}});}catch(RejectedExecutionException e){c.busy=false;failure.accept("inventory_factory_queue_full");}
     }
     private void publishBuiltinWeapon(UUID id,Character c,Inventory.Plan upgrade,Runnable ready,Consumer<String> failure){
@@ -465,6 +466,20 @@ public final class GameInventory implements AutoCloseable {
             Map<Inventory.Address,ItemStack> change=new LinkedHashMap<>();change.put(new Inventory.Address(0,container,0),item);
             Inventory.Plan plan=before.replace(change,0);completion(()->persist(id,c,plan,success,failure));
         }catch(Exception|LinkageError e){completion(()->{c.busy=false;denied++;failure.accept(Objects.toString(e.getMessage(),"apply_failed"));});}});}catch(RejectedExecutionException e){c.busy=false;failure.accept("inventory_factory_queue_full");}
+    }
+    private GameItems.QuickSlots readQuickSlots(JsonObject saved)throws Exception{
+        try{return items.quickSlots(QuickSlotsSaved.read(saved));}catch(Exception|LinkageError invalid){System.err.println("[Quick slots] Ignored invalid optional settings: "+invalid.getClass().getSimpleName());return items.quickSlots(new byte[0]);}
+    }
+    public byte[] quickSlotsFrame(UUID id){var value=character(id).quickSlots;if(value==null)throw new IllegalStateException("quick_slots_not_prepared");return value.frame();}
+    public szserver.client.ClientStateAdapter.QuickBindRequest quickBindRequest(byte[] raw)throws Exception{return items.quickBindRequest(raw);}
+    public int quickUseRequest(byte[] raw)throws Exception{return items.quickUseRequest(raw);}
+    public void bindQuickSlot(UUID id,szserver.client.ClientStateAdapter.QuickBindRequest request,Consumer<Inventory.Plan> success,Consumer<String> failure){
+        Character c=character(id);if(c.busy||c.failed||c.deathClear){failure.accept("inventory_busy");return;}Inventory before=c.inventory;ItemStack source=request.source()==null?null:before.at(request.source());if(request.source()!=null&&(request.source().aggregate()>1||source==null)){failure.accept("quick_binding_source");return;}GameItems.QuickSlots existing=c.quickSlots;JsonObject saved=journal.gameplay(id);c.busy=true;
+        try{factories.execute(()->{try{var old=existing==null?readQuickSlots(saved):existing;var next=items.quickBind(old.state(),request.index(),source,request.label());Inventory.Plan plan=before.replace(Map.of(),0);completion(()->{if(c.deathClear||!admissionAllowed(id)){c.busy=false;failure.accept("quick_binding_owner_changed");return;}persist(id,c,plan,QuickSlotsSaved.progress(next.state()),p->{c.quickSlots=next;success.accept(p);},failure);});}catch(Exception|LinkageError error){completion(()->{c.busy=false;failure.accept(Objects.toString(error.getMessage(),"quick_binding_failed"));});}});}catch(RejectedExecutionException error){c.busy=false;failure.accept("inventory_factory_queue_full");}
+    }
+    public void selectQuickSlot(UUID id,int slot,Consumer<Inventory.Address> success,Consumer<String> failure){
+        Character c=character(id);if(c.busy||c.failed||c.deathClear){failure.accept("inventory_busy");return;}Inventory before=c.inventory;GameItems.QuickSlots existing=c.quickSlots;JsonObject saved=journal.gameplay(id);c.busy=true;
+        try{factories.execute(()->{try{var settings=existing==null?readQuickSlots(saved):existing;Inventory.Address selected=items.quickSelect(settings.state(),slot,before.items());completion(()->{c.busy=false;if(c.deathClear||!admissionAllowed(id)||c.inventory!=before){failure.accept("quick_use_owner_changed");return;}success.accept(selected);});}catch(Exception|LinkageError error){completion(()->{c.busy=false;failure.accept(Objects.toString(error.getMessage(),"quick_use_failed"));});}});}catch(RejectedExecutionException error){c.busy=false;failure.accept("inventory_factory_queue_full");}
     }
     public void edit(UUID id,Inventory.Address address,byte[] raw,Consumer<Inventory.Plan> success,Consumer<String> failure){
         edit(id,address,raw,false,success,failure);

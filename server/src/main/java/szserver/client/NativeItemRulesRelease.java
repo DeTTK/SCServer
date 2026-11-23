@@ -8,6 +8,12 @@ import java.util.*;
 /** Reviewed ABI for the original item predicates, metadata and banks. */
 final class NativeItemRulesRelease {
     private static final Map<String,String> HASHES=Map.ofEntries(
+        Map.entry("1309545617","3c48d1f6bc9c880310a634e3c45eb1f81a2a7cce710828f43edbe54a7f2e16d5"),
+        Map.entry("1491633278","13e409301a7cc623162018341619544f785f1fc084281a451a7aa473ba9ffc69"),
+        Map.entry("423821855","dc0d9103b92cc1e8dc3a47008117db212df8632bce3982ae3fba75b89e1836e5"),
+        Map.entry("669790692","0f028ab7c7416262b28b61d0e09e341c72d9fb7721a20476ee553e49ff7c2e70"),
+        Map.entry("965067844","1b35e2abdc0994ea1e313bb2b32dd01b2c31507365f815e7e201503643d34959"),
+        Map.entry("1756593341","7186180dad99f41de9e202c4a216b3a813ccd0b19101a5d81a0ebf80c2f41268"),
         Map.entry("220710426","f5a8141502cbded6ad7f9878d6fea7a8aff5a61db50722b369f77748a7b64794"),
         Map.entry("1464336358","915e6d650c7ca6e81cc50710b1c97e9aa6a594697f6e63690cc528393d0d3e4f"),
         Map.entry("98008865","f2c4f061d0260031d194cb1aecd60b8193da39afc5c560ffabde1cbd78da27d7"),

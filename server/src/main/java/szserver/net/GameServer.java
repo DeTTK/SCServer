@@ -61,6 +61,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         final GameItems.Medicine medicine;final Inventory.Address address;final ItemStack original;final long started,death;final int hand;final boolean initiallyFull;boolean charged;int effect;
         MedicineUse(Session s,GameItems.Medicine medicine,Inventory.Address address,ItemStack original,long now){this.medicine=medicine;this.address=address;this.original=original;started=now;death=s.deathGeneration;hand=s.handContainer;initiallyFull=s.hp>=s.maxHp-.001f;}
     }
+    private record QuickIntent(szserver.client.ClientStateAdapter.QuickBindRequest binding,Integer use,ItemStack source){}
     static final class Session {
         float characterScale=1,configuredScale=1;boolean scaleCapable,scaleSaving,scaleRestore;long scaleHelloAt;ScaleChange scaleChange;
         final PlayerAnimation animation=new PlayerAnimation();final PlayerReplication replication=new PlayerReplication();final PlayerReplication botReplication=new PlayerReplication();final PlayerReplication cloneReplication=new PlayerReplication();final PlayerMotion motion=new PlayerMotion();String forcedAnimation;long lastCompletion;final Map<Integer,String> poses=new HashMap<>();
@@ -73,6 +74,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         TerrainProjection.Prepared completeTiles;int completeTileAt;
         final ChunkFaults faults=new ChunkFaults();final ChunkDeliveryBook deliveries=new ChunkDeliveryBook();final Map<Long,UUID> cachedRequests=new HashMap<>();long manifestRetryAt;
         final ChunkWindow window;CompletableFuture<List<ChunkManifests.Row>> manifest;List<Long> manifestKeys=List.of();long windowEpoch,manifestEpoch;
+        final ArrayDeque<QuickIntent> quickIntents=new ArrayDeque<>();boolean quickPending;
         final WorldEditChat editor=new WorldEditChat();
         PlayerRules.Mode gameplayMode=PlayerRules.Mode.STALKER;String faction="stalker";
         final GrenadeUse grenadeUse=new GrenadeUse();int grenadePrediction=-1;
@@ -352,7 +354,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
             catch(Exception e){rejected++;if(rejected<=5)System.err.println("native packet rejected: "+e);}
             maxSocketWaitNanos=Math.max(maxSocketWaitNanos,socketWait);maxReceiveNanos=Math.max(maxReceiveNanos,receiveWork);
             drainApplications(deadline);
-            long completionBegin=System.nanoTime();inventories.drain();grenadeBridge.drain();advanceGrenades();advanceMines();advanceGrenadeAreas();advanceVitals();advancePlayerStates();drainAdminTasks();characterDeletions.advance();advanceFpvPlacements();drainCombat();long now=System.nanoTime(),completionWork=now-completionBegin;maxCompletionNanos=Math.max(maxCompletionNanos,completionWork);
+            long completionBegin=System.nanoTime();inventories.drain();grenadeBridge.drain();advanceGrenades();advanceMines();advanceGrenadeAreas();advanceVitals();advancePlayerStates();advanceQuickSlots();drainAdminTasks();characterDeletions.advance();advanceFpvPlacements();drainCombat();long now=System.nanoTime(),completionWork=now-completionBegin;maxCompletionNanos=Math.max(maxCompletionNanos,completionWork);
             if(now>=deadline){
                 long late=now-deadline,gap=lastTickBegin==0?0:now-lastTickBegin;lastTickBegin=now;maxTickLateNanos=Math.max(maxTickLateNanos,late);maxTickGapNanos=Math.max(maxTickGapNanos,gap);
                 long begin=now;try{step(now);}catch(Exception e){System.err.println("native tick failed: "+e);e.printStackTrace();running=false;}long work=System.nanoTime()-begin;maxTickNanos=Math.max(maxTickNanos,work);
@@ -437,9 +439,11 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         if(id==1022){meleeSwing(s,body);return;}
         if(id==1435){meleeHit(s,body);return;}
         if(id==WorldItemPackets.DROP_ID){dropItem(s,WorldItemPackets.drop(body));return;}
+        if(id==1842){var request=inventories.quickBindRequest(body);if(request.owner()!=0||request.source()!=null&&(request.source().aggregate()>1||!StorageLayout.validAddress(request.source())))throw new IOException("quick_binding_owner_or_address");queueQuick(s,new QuickIntent(request,null,request.source()==null?null:inventory(s).at(request.source())));return;}
+        if(id==1628){queueQuick(s,new QuickIntent(null,inventories.quickUseRequest(body),null));return;}
         if(id==693){var use=inventories.medicineRequest(body,s.inventoryScreen.page());int owner=use.owner(),sequence=use.sequence();Inventory.Address address=use.address();Runnable ack=()->enqueue(s,0,InventoryPackets.ack(owner,sequence));
             if(address!=null&&!validInventoryTransfer(s,new InventoryTransfer(id,new InventoryPackets.Request(owner,sequence,address,List.of(),0,false,-1),s.inventoryScreen.page()))||address==null&&owner!=0){inventorySnapshot(s,owner);ack.run();return;}
-            ItemStack selected=address==null?null:inventory(s).at(address);if(selected!=null&&inventories.lootboxes().isBox(selected.id())){lootboxPreview(s,selected.id());ack.run();}else medicine(s,address,ack);return;}
+            useInventoryItem(s,address,ack);return;}
 
         if(id==1741){var in=Wire.input(body);Inventory.Address address=new Inventory.Address(in.readUnsignedByte(),in.readUnsignedByte(),in.readUnsignedShort());int owner=in.readShort(),sequence=in.readShort();if(owner!=0||address.aggregate()!=1||in.available()!=0)throw new IOException("lootbox_open_all_request");ItemStack selected=inventory(s).at(address);if(selected==null||!inventories.lootboxes().isBox(selected.id())){enqueue(s,0,InventoryPackets.ack(owner,sequence));return;}int count=Math.min(500,LootboxOpening.count(inventory(s),selected.id()));if(s.hp<=0||s.respawning){enqueue(s,0,InventoryPackets.ack(owner,sequence));return;}inventories.openLootboxes(character(s),selected.id(),count,result->{inventoryChanged(s,result.plan(),()->enqueue(s,0,InventoryPackets.ack(owner,sequence)));enqueue(s,0,GamePackets.chat("Открыто ящиков: "+count+". Добыча добавлена в рюкзак."));},error->{inventorySnapshot(s,0);enqueue(s,0,InventoryPackets.ack(owner,sequence));enqueue(s,0,GamePackets.chat(lootboxError(error)));});return;}
         if(id==695){if(body.length!=16)throw new IOException("lootbox_finish_request");return;}
@@ -1039,7 +1043,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         enqueue(s,0,Wire.concat(GamePackets.context(protocol),GamePackets.snapshot(),szserver.client.ChunkDistancePackets.frame(s.window.radius()),scaledReady(s),GamePackets.vitals(tick,0,s.hp,s.maxHp,s.animation.aiming())));
         enqueue(s,0,GamePackets.attributes(tick,0,equipment(s)));inventorySnapshot(s,0);syncHand(s);syncAmmo(s);
         var initialEnvironment=environment.state();enqueue(s,0,EnvironmentPackets.clock(environment.clockAnchor(),System.currentTimeMillis()));
-        sendEffects(s,List.of(),s.effects.active(System.currentTimeMillis()));sendPulseEffects(s,List.of(),s.pulses.effects(System.currentTimeMillis()));sendSickness(s,true);
+        enqueue(s,0,inventories.quickSlotsFrame(character(s)));sendEffects(s,List.of(),s.effects.active(System.currentTimeMillis()));sendPulseEffects(s,List.of(),s.pulses.effects(System.currentTimeMillis()));sendSickness(s,true);
         sendPermissions(s,true);enqueue(s,0,GamePackets.attributes(++tick,0,Factions.attributes(s.faction)));enqueue(s,0,allianceState.frame());s.ready=true;sendPulseEffects(s,List.of(),s.pulses.effects(System.currentTimeMillis()));resetPoses(s);for(Session viewer:sessions.values())if(viewer!=s&&viewer.ready&&viewer.scaleCapable)sendScale(viewer,s);for(Session other:sessions.values())if(other!=s&&other.ready){enqueue(other,0,Wire.concat(GamePackets.spawn(s.entity,s.grant.name(),s.pos,s.yaw,s.pitch),GamePackets.attributes(tick,s.entity,equipment(s)),GamePackets.attributes(tick,s.entity,hand(s)),GamePackets.attributes(tick,s.entity,Factions.attributes(s.faction)),GamePackets.vitals(tick,s.entity,s.hp,s.maxHp,s.animation.aiming())));enqueue(s,0,Wire.concat(GamePackets.spawn(other.entity,other.grant.name(),other.pos,other.yaw,other.pitch),GamePackets.attributes(tick,other.entity,equipment(other)),GamePackets.attributes(tick,other.entity,hand(other)),GamePackets.attributes(tick,other.entity,Factions.attributes(other.faction)),GamePackets.vitals(tick,other.entity,visibleHealth(other),other.maxHp,other.animation.aiming())));}
             chunkWindow(s);System.out.println("Native joined: "+s.grant.name()+" entity="+s.entity);
     }
@@ -1209,6 +1213,21 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
     }
     private float visibleHealth(Session s){var state=locations.durableState(character(s));return state==null?s.hp:state.health();}
     private void vitals(Session s){if(s.ready&&s.pos!=null){s.vitalsQueued=true;savePlayerState(s);}}
+    private void queueQuick(Session s,QuickIntent intent){
+        if(!s.ready||s.hp<=0||s.respawning||s.quickIntents.size()>=32){if(s.ready)enqueue(s,0,inventories.quickSlotsFrame(character(s)));return;}s.quickIntents.addLast(intent);
+    }
+    private void advanceQuickSlots(){
+        for(Session s:new ArrayList<>(sessions.values())){if(!s.ready||s.quickPending||s.quickIntents.isEmpty()||inventories.busy(character(s)))continue;QuickIntent intent=s.quickIntents.removeFirst();if(s.hp<=0||s.respawning){s.quickIntents.clear();continue;}UUID player=character(s);s.quickPending=true;
+            java.util.function.Consumer<String> failed=error->{s.quickPending=false;if(sessions.get(s.address)==s&&s.ready){enqueue(s,0,inventories.quickSlotsFrame(player));enqueue(s,0,GamePackets.chat(error));}};
+            if(intent.binding()!=null){var request=intent.binding();ItemStack current=request.source()==null?null:inventory(s).at(request.source()),expected=intent.source();if(request.source()!=null&&(current==null||expected==null||current.id()!=expected.id()||current.metadata()!=expected.metadata()||!Arrays.equals(current.state(),expected.state())||!Arrays.equals(current.properties(),expected.properties()))){failed.accept("quick_binding_source_changed");continue;}
+                inventories.bindQuickSlot(player,request,plan->{s.quickPending=false;if(sessions.get(s.address)==s&&s.ready)enqueue(s,0,inventories.quickSlotsFrame(player));},failed);
+            }else inventories.selectQuickSlot(player,intent.use(),address->{s.quickPending=false;if(sessions.get(s.address)!=s||!s.ready)return;if(address==null){failed.accept("quick_slot_item_missing");return;}useInventoryItem(s,address,()->{});},failed);
+        }
+    }
+    /** Both the stock use button and the C wheel enter this existing authoritative item-use path. */
+    private void useInventoryItem(Session s,Inventory.Address address,Runnable finished){
+        ItemStack selected=address==null?null:inventory(s).at(address);if(selected!=null&&inventories.lootboxes().isBox(selected.id())){lootboxPreview(s,selected.id());finished.run();}else medicine(s,address,finished);
+    }
     private void medicine(Session s,Inventory.Address address){medicine(s,address,()->{});}
     private void medicine(Session s,Inventory.Address address,Runnable finished){
         UUID id=character(s);
@@ -1595,7 +1614,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
             releaseAnomalies(s);s.pos=vector(op.target);s.life++;s.speed=0;s.posture.reset();s.mode=0;s.ground=true;s.animation.reset();s.teleportGuard.install(op.target,now);
             s.chunks.clear();s.chunkRevisions.clear();s.cachedRequests.clear();s.deliveries.clear();s.faults.clear();s.manifestRetryAt=0;s.deltas=null;s.completeTiles=null;s.completeTileAt=0;s.pendingChunks.clear();s.chunkX=Integer.MIN_VALUE;s.window.reset();s.windowEpoch++;
             long key=chunkKey((int)Math.floor(op.target.x()/16),(int)Math.floor(op.target.z()/16));s.chunks.add(key);s.chunkRevisions.put(key,op.center.revision());s.bots.clear();s.botHealth.clear();s.botMaximum.clear();s.botAppearances.clear();s.botReplication.reset();
-            s.velocity=new double[3];s.motion.reset();enqueue(s,0,Wire.concat(scaledReady(s),GamePackets.velocityReset()));loadout(s);sendPermissions(s,true);enqueue(s,0,GamePackets.attributes(++tick,0,Factions.attributes(s.faction)));sendEffects(s,List.of(),s.effects.active(System.currentTimeMillis()));sendPulseEffects(s,List.of(),s.pulses.effects(System.currentTimeMillis()));sendSickness(s,true);
+            s.velocity=new double[3];s.motion.reset();enqueue(s,0,Wire.concat(scaledReady(s),GamePackets.velocityReset()));loadout(s);sendPermissions(s,true);enqueue(s,0,GamePackets.attributes(++tick,0,Factions.attributes(s.faction)));enqueue(s,0,inventories.quickSlotsFrame(character(s)));sendEffects(s,List.of(),s.effects.active(System.currentTimeMillis()));sendPulseEffects(s,List.of(),s.pulses.effects(System.currentTimeMillis()));sendSickness(s,true);
             for(Session other:sessions.values())if(other!=s&&other.ready){enqueue(other,0,GamePackets.teleportMovement(tick,s.entity,s.pos,s.yaw,s.pitch));enqueue(s,0,Wire.concat(Wire.frame(2028,Wire.bytes(out->out.writeInt(other.entity))),GamePackets.spawn(other.entity,other.grant.name(),other.pos,other.yaw,other.pitch),GamePackets.attributes(tick,other.entity,equipment(other)),GamePackets.attributes(tick,other.entity,hand(other)),GamePackets.attributes(tick,other.entity,Factions.attributes(other.faction)),GamePackets.vitals(tick,other.entity,visibleHealth(other),other.maxHp,other.animation.aiming())));}
             resetPoses(s);s.teleport=null;teleports++;chunkWindow(s);enqueue(s,0,GamePackets.chat(op.reply));if(op.respawnRequested&&s.hp<=0)beginRespawn(s);
         }catch(Exception error){s.teleport=null;teleportErrors++;enqueue(s,0,GamePackets.chat(Objects.toString(error.getMessage(),"teleport_failed")));if(op.respawnRequested&&s.hp<=0)beginRespawn(s);}
