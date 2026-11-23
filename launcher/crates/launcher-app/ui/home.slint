@@ -24,9 +24,9 @@ export component Home inherits HorizontalLayout {
         min-width: 290px; horizontal-stretch: 6; spacing: 18px;
         hero := Rectangle {
             height: clamp(parent.width * 0.42, 204px, 320px);
-            background: Theme.panel; border-radius: 7px; clip: true;
+            background: #000000; border-radius: 7px; clip: true;
             Image { source: @image-url("assets/brand-character.png"); image-fit: contain; x: parent.width * 0.14; width: parent.width * 0.86; height: parent.height; }
-            Rectangle { background: @linear-gradient(180deg, #08080a00 34%, #08080a8c 66%, #08080af5 100%); }
+            Rectangle { background: @linear-gradient(180deg, #00000000 34%, #0000008c 66%, #000000f5 100%); }
             hero-content := HorizontalLayout {
                 x: 18px; y: parent.height - self.height - 16px;
                 width: parent.width - 36px; height: 48px; spacing: 12px;
