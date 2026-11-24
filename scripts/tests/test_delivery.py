@@ -4,6 +4,21 @@ from pathlib import Path
 
 spec=importlib.util.spec_from_file_location('delivery',Path(__file__).resolve().parents[1]/'delivery.py');d=importlib.util.module_from_spec(spec);spec.loader.exec_module(d)
 class DeliveryTests(unittest.TestCase):
+    def test_superseded_source_does_not_prepare_a_publication(self):
+        source='a'*40
+        latest='b'*40
+        remote=subprocess.CompletedProcess([],0,stdout=f'{latest}\trefs/heads/test\n')
+        with patch.dict(os.environ,{'GITHUB_REF_NAME':'test','GITHUB_SHA':source}), \
+             patch.object(d,'run',return_value=remote), patch.object(d,'file_inventory') as inventory:
+            self.assertFalse(d.publish())
+            inventory.assert_not_called()
+
+    def test_remote_lookup_failure_still_fails_publication(self):
+        failure=subprocess.CalledProcessError(128,['git','ls-remote'])
+        with patch.dict(os.environ,{'GITHUB_REF_NAME':'test','GITHUB_SHA':'a'*40}), \
+             patch.object(d,'run',side_effect=failure), self.assertRaises(subprocess.CalledProcessError):
+            d.publish()
+
     def test_partial_index_commit_does_not_require_unchanged_foundation_blob(self):
         with tempfile.TemporaryDirectory()as root:
             root=Path(root)

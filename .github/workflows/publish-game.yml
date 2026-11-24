@@ -1,14 +1,15 @@
 name: Publish game delivery
 on:
   workflow_call:
+    outputs:
+      published:
+        description: Whether the game delivery was published for this source commit
+        value: ${{ jobs.game.outputs.published }}
     secrets:
       LAUNTEST_DELIVERY_PRIVATE_KEY:
         required: true
 permissions:
   contents: read
-concurrency:
-  group: game-delivery-${{ github.ref }}
-  cancel-in-progress: true
 jobs:
   game:
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/test' || github.ref == 'refs/heads/launtest'
@@ -16,20 +17,30 @@ jobs:
     timeout-minutes: 40
     permissions:
       contents: write
+    outputs:
+      published: ${{ steps.publish.outputs.published || 'false' }}
     steps:
       - uses: actions/checkout@v7
+      - name: Check whether this commit is still current
+        id: source
+        run: python scripts/delivery.py check-current
       - uses: actions/setup-java@v6
+        if: steps.source.outputs.current == 'true'
         with:
           distribution: temurin
           java-version: '17'
       - uses: actions/cache@v5
+        if: steps.source.outputs.current == 'true'
         with:
           path: |
             .local/deps
             .local/delivery-inputs
           key: delivery-inputs-${{ hashFiles('bootstrap/base.lock.json', 'bootstrap/input-manifest.json', 'dependencies.lock.json') }}
       - run: python scripts/delivery.py prepare
+        if: steps.source.outputs.current == 'true'
       - name: Publish only successful current source
+        id: publish
+        if: steps.source.outputs.current == 'true'
         run: python scripts/delivery.py publish
         env:
           DELIVERY_PRIVATE_KEY: ${{ secrets.LAUNTEST_DELIVERY_PRIVATE_KEY }}
