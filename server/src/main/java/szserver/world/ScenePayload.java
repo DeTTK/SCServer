@@ -1,6 +1,7 @@
 package szserver.world;
 
 import com.github.luben.zstd.Zstd;
+import szserver.client.SceneLightMigration;
 import szserver.net.Wire;
 import java.nio.*;
 import java.util.*;
@@ -75,6 +76,32 @@ public final class ScenePayload {
         public byte[] encode(){byte[] blob=objects.isEmpty()?new byte[0]:Zstd.compress(frames(objects,false),3);return Wire.bytes(out->{Wire.varint(out,blob.length);out.write(blob);out.writeBoolean(raw);out.writeBoolean(enabled);if(raw)out.write(frames(containerObjects,true));else out.write(containerNbt);out.write(mesh);});}
     }
     public record Layout(int terrainEnd,Channels channels){}
+    public record NormalizedLights(Channels value,int migrated){}
+    private record NormalizedFrames(List<byte[]> frames,int migrated){}
+    private static NormalizedFrames normalizeLights(List<byte[]> frames,SceneRegistry.Manifest registry){
+        List<byte[]> changed=null;
+        int count=0;
+        for(int i=0;i<frames.size();i++){
+            byte[] frame=frames.get(i);
+            var definition=registry.ids().get(ByteBuffer.wrap(frame).getShort()&65535);
+            if(definition==null)continue;
+            byte[] normalized=SceneLightMigration.frame(frame,definition.behaviour());
+            if(normalized!=frame){
+                if(changed==null)changed=new ArrayList<>(frames);
+                changed.set(i,normalized);
+                count++;
+            }
+        }
+        return new NormalizedFrames(changed==null?frames:changed,count);
+    }
+    public static NormalizedLights normalizeLights(Channels source,SceneRegistry.Manifest registry){
+        var objects=normalizeLights(source.objects,registry);
+        var container=normalizeLights(source.containerObjects,registry);
+        int count=objects.migrated()+container.migrated();
+        if(count==0)return new NormalizedLights(source,0);
+        return new NormalizedLights(new Channels(objects.frames(),source.raw,source.enabled,container.frames(),
+            source.containerNbt,source.mesh),count);
+    }
     public static Layout parse(byte[] record){
         return parse(record,0);
     }

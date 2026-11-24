@@ -17,6 +17,9 @@ public final class SceneObject {
     public String asset(){return asset;}public UUID identity(){return prefix.identity();}public int networkId(){return ByteBuffer.wrap(record).getShort();}
     /** Native per-instance behavior takes precedence over the asset's declared behavior. */
     public String behaviour(String declared){
+        return behaviour(prefix,declared);
+    }
+    public static String behaviour(Prefix prefix,String declared){
         if((prefix.flags()&0x200)==0)return declared;
         try{var in=new java.io.DataInputStream(new java.io.ByteArrayInputStream(prefix.nativeName()));String value=in.readUTF();if(in.available()!=0)throw new java.io.IOException("trailing behavior name");return value;}
         catch(java.io.IOException invalid){throw new IllegalArgumentException("scene_behavior_name",invalid);}

@@ -71,7 +71,15 @@ def build(output):
     shutil.copytree(inputs/'asset-overrides',player/'Server/resources/overrides')
     for p in (inputs/'server-resources').rglob('*'):
         if p.is_file():copy(p,ROOT/'.local/server-resources'/p.relative_to(inputs/'server-resources'))
-    tools.server(True);tools.completion()
+    server_classes, server_deps = tools.server(True)
+    subprocess.run(
+        [tools.tool('java'), '-Xmx1024m', '-cp', os.pathsep.join(map(str, [server_classes, *server_deps])),
+         'szserver.world.MapSceneNormalizer', str(player/'Map'),
+         str(player/'Server/registries/live-gameobjects.json'),
+         str(player/'Server/registries/live-object-codecs.json')],
+        check=True,
+    )
+    tools.completion()
     copy(ROOT/'build/server.jar',player/'Server/server.jar')
     copy(ROOT/'config/server.template.properties',player/'Server/server.template.properties')
     for dep in tools.dependencies():copy(dep,player/'Server/lib'/dep.name)

@@ -52,6 +52,7 @@ public final class ResidentMapRuntime implements WorldLoop.OwnerService {
         reads=new ResidentMapReads<>(128);readAdmissions=settings.loadingPerTick();
         var publishedCodec=new ResidentChunks.Codec<NativeResidentChunkCodec.Chunk,NativeResidentChunkCodec.Snapshot>(){
             public NativeResidentChunkCodec.Chunk decode(byte[] bytes)throws Exception{var chunk=codec.decode(bytes);if(registry!=null)chunk.prepareSceneReads(registry);return chunk;}
+            public boolean migratedOnLoad(NativeResidentChunkCodec.Chunk chunk){return codec.migratedOnLoad(chunk);}
             public long residentBytes(NativeResidentChunkCodec.Chunk chunk){return codec.residentBytes(chunk);}
             public NativeResidentChunkCodec.Snapshot freeze(NativeResidentChunkCodec.Chunk chunk)throws Exception{return codec.freeze(chunk);}
             public byte[] encode(NativeResidentChunkCodec.Snapshot snapshot)throws Exception{return codec.encode(snapshot);}

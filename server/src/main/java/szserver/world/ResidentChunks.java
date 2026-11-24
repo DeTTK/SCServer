@@ -66,6 +66,8 @@ public final class ResidentChunks<C,S> {
     public interface Codec<C,S> {
         /** Decode an isolated chunk on the storage worker, before owner publication. */
         C decode(byte[] bytes)throws Exception;
+        /** A format migration on the storage worker is persisted by the next normal save. */
+        default boolean migratedOnLoad(C chunk){return false;}
         long residentBytes(C chunk);
         /** Capture an immutable/detached view on the owner; no disk or resource loading. */
         S freeze(C chunk)throws Exception;
@@ -147,8 +149,9 @@ public final class ResidentChunks<C,S> {
     private void loaded(Entry entry,C chunk,long revision,long size) {
         try{evict(false,size);}catch(Exception failure){discardLoad(entry,chunk,failure);return;}
         if(closed||bytes+size>byteLimit){discardLoad(entry,chunk,new RejectedExecutionException("resident_map_byte_capacity"));if(dirty()&&saveFlight==null&&clock.getAsLong()>=retryAt)save();return;}
-        try{codec.activate(entry.key,chunk,revision);}catch(Exception failure){discardLoad(entry,chunk,failure);return;}
-        entry.chunk=chunk;entry.bytes=size;entry.revision=entry.savedRevision=revision;entry.loading=false;bytes+=size;loads++;
+        long loadedRevision;
+        try{loadedRevision=codec.migratedOnLoad(chunk)?Math.incrementExact(revision):revision;codec.activate(entry.key,chunk,loadedRevision);}catch(Exception failure){discardLoad(entry,chunk,failure);return;}
+        entry.chunk=chunk;entry.bytes=size;entry.revision=loadedRevision;entry.savedRevision=revision;entry.loading=false;bytes+=size;loads++;
         for(var future:entry.waiting){if(future.isCancelled())continue;Ticket ticket=new Ticket(entry);if(!future.complete(ticket))ticket.close();}entry.waiting.clear();
     }
     /** Recompute after native tile/object allocations; resident accounting must follow real state. */

@@ -2,6 +2,7 @@ package szserver.world;
 
 import com.google.gson.*;
 import szserver.client.SceneCompatibility;
+import szserver.client.SceneLightMigration;
 import java.nio.*;
 import java.nio.file.*;
 import java.security.*;
@@ -54,7 +55,7 @@ public final class SceneRegistry {
         return new Manifest(document.get("build").getAsString(),Map.copyOf(ids),Map.copyOf(names),digest(raw));
     }
     private static String digest(byte[] raw)throws Exception{return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(raw));}
-    private Manifest source(byte[] record)throws Exception{
+    Manifest source(byte[] record)throws Exception{
         String hash=digest(record);Path marker=provenance.resolve("records").resolve(hash.substring(0,2)).resolve(hash+".json");if(!Files.exists(marker))return source;
         if(Files.size(marker)>1024)throw new IllegalArgumentException("scene_provenance_marker_limit");String key=JsonParser.parseString(Files.readString(marker)).getAsJsonObject().get("registry_sha256").getAsString();if(!key.matches("[0-9a-f]{64}"))throw new IllegalArgumentException("scene_provenance_digest");
         Manifest cached=snapshots.get(key);if(cached!=null)return cached;Manifest loaded=load(provenance.resolve("manifests").resolve(key+".json"));if(!loaded.digest().equals(key))throw new IllegalArgumentException("scene_provenance_hash_mismatch");snapshots.put(key,loaded);while(snapshots.size()>8)snapshots.remove(snapshots.keySet().iterator().next());return loaded;
@@ -68,6 +69,7 @@ public final class SceneRegistry {
             if(original==null){to=target.ids().get(old);if(to==null)throw new IllegalArgumentException("scene_unknown_source_id:"+old);}else{to=target.names().get(original.name());if(to==null){dropped.incrementAndGet();continue;}if(!original.behaviour().equals(to.behaviour()))throw new IllegalArgumentException("scene_behaviour_changed:"+original.name());}
             byte[] updated=frame.clone();ByteBuffer.wrap(updated).putShort((short)to.id());
             if(from.build().equals("07.06")&&to.behaviour().isEmpty()&&updated[prefix.behaviourAt()]==0){byte[] expanded=new byte[updated.length+3];System.arraycopy(updated,0,expanded,0,prefix.behaviourAt());expanded[prefix.behaviourAt()]=10;System.arraycopy(updated,prefix.behaviourAt()+1,expanded,prefix.behaviourAt()+4,updated.length-prefix.behaviourAt()-1);updated=expanded;}
+            updated=SceneLightMigration.frame(updated,to.behaviour());
             // Existing metadata still owns serializer-epoch migrations, even for equal registry snapshots.
             if(!compatibility.hasMetadata(to.name())&&from.digest().equals(target.digest())&&(prefix.flags()&0x400)==0&&szserver.client.SceneAttributes.reviewedBehavior(to.behaviour()))szserver.client.SceneAttributes.validateCurrent(updated,to.behaviour());else try{updated=compatibility.object(updated,to);}catch(IllegalArgumentException error){throw new IllegalArgumentException("scene_asset_projection:"+to.name()+":flags="+prefix.flags()+":packed="+prefix.packed()+":behaviorAt="+prefix.behaviourAt()+":"+error.getMessage(),error);}new SceneObject(to.name(),updated);output.add(updated);if(old==to.id())unchanged.incrementAndGet();else translated.incrementAndGet();
         }return List.copyOf(output);

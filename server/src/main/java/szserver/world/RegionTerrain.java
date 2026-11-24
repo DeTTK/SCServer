@@ -122,7 +122,7 @@ public final class RegionTerrain implements Terrain {
     /** Dedicated catalogue worker only. Missing chunks are absent, corruption is an explicit error. */
     public synchronized UUID manifestRevision(int x,int z)throws IOException{
         if(Thread.currentThread().getName().equals("native-game-owner")||Thread.currentThread().getName().equals("world-tick"))throw new IllegalStateException("chunk_manifest_io_on_owner");
-        var nativeChunk=cache.committed().readChunk(x,z);if(nativeChunk!=null){ByteBuffer h=ByteBuffer.wrap(nativeChunk.record());return new UUID(h.getLong(17),h.getLong(25));}
+        var nativeChunk=cache.committed().readChunk(x,z);if(nativeChunk!=null){byte[] retained=nativeChunk.record();ByteBuffer h=ByteBuffer.wrap(retained);long high=h.getLong(17),low=h.getLong(25);if(manifestScenes!=null){var lights=ScenePayload.normalizeLights(capturedSceneChannels(retained),manifestScenes.target());if(lights.migrated()!=0)return sceneRevision(high,low,manifestScenes.target().digest(),lights.value().encode());}return new UUID(high,low);}
         int rx=Math.floorDiv(x,32),rz=Math.floorDiv(z,32);byte[] record;
         try(FileChannel channel=FileChannel.open(root.resolve("r."+rx+"."+rz+".szr"),StandardOpenOption.READ)){
             regionHeader(channel,rx,rz);record=regionRecord(channel,Math.floorMod(z,32)*32+Math.floorMod(x,32));
@@ -232,9 +232,12 @@ public final class RegionTerrain implements Terrain {
     }
     /** Locate old extra header bytes without decompressing the voxel arrays for catalog work. */
     static ScenePayload.Channels capturedSceneChannels(byte[] record)throws IOException{
-        ByteBuffer in=ByteBuffer.wrap(record);int x=in.getInt(),z=in.getInt(),terrain=in.get()&255;if(terrain==0)return ScenePayload.parseChannels(record,9,x,z);if(terrain!=1)throw new IOException("invalid_terrain_record");
+        return capturedSceneLayout(record).channels();
+    }
+    static ScenePayload.Layout capturedSceneLayout(byte[] record)throws IOException{
+        ByteBuffer in=ByteBuffer.wrap(record);int x=in.getInt(),z=in.getInt(),terrain=in.get()&255;if(terrain==0)return new ScenePayload.Layout(9,ScenePayload.parseChannels(record,9,x,z));if(terrain!=1)throw new IOException("invalid_terrain_record");
         int mask=in.getInt(),add=in.getInt();if((mask&~65535)!=0||(add&~mask)!=0)throw new IOException("invalid_terrain_mask");
-        for(int extra=0;extra<4;extra++){int at=33+extra;if(at+12>record.length)continue;int raw=in.getInt(at),size=in.getInt(at+4);if(raw>=0&&raw<=2*1024*1024&&size>=4&&(long)at+8+size<=record.length&&in.getInt(at+8)==0x28B52FFD)return ScenePayload.parseChannels(record,at+8+size,x,z);}throw new IOException("terrain_zstd_not_found");
+        for(int extra=0;extra<4;extra++){int at=33+extra;if(at+12>record.length)continue;int raw=in.getInt(at),size=in.getInt(at+4);if(raw>=0&&raw<=2*1024*1024&&size>=4&&(long)at+8+size<=record.length&&in.getInt(at+8)==0x28B52FFD){int end=at+8+size;return new ScenePayload.Layout(end,ScenePayload.parseChannels(record,end,x,z));}}throw new IOException("terrain_zstd_not_found");
     }
     /** Canonical original geometry for sparse metadata comparisons; worker only, no cache warming. */
     Map<UUID,ScenePayload.Entry> originalSceneEntries(int x,int z)throws Exception{
@@ -295,8 +298,9 @@ public final class RegionTerrain implements Terrain {
         byte[] geometryRaw=new byte[required+tiles.length];System.arraycopy(raw,0,geometryRaw,0,required);System.arraycopy(tiles,0,geometryRaw,required,tiles.length);
         byte[] geometryZstd=Zstd.compress(geometryRaw,3);final int arraysSize=required;
         long revisionHigh=b.getLong(17),revisionLow=b.getLong(25);
-        byte[] sideChannels=scenes==null?Wire.bytes(out->{out.writeByte(0);out.write(new byte[]{1,1,0,0,0,0});out.writeInt(x);out.writeInt(z);out.writeInt(0);}):complete!=null?ScenePayload.parseChannels(record,start+compressedSize,x,z).encode():projectScenes(record,start+compressedSize,x,z);
-        UUID revision=scenes==null||complete!=null?new UUID(revisionHigh,revisionLow):sceneRevision(revisionHigh,revisionLow,scenes.target().digest(),sideChannels);
+        var retainedScene=scenes!=null&&complete!=null?ScenePayload.normalizeLights(ScenePayload.parseChannels(record,start+compressedSize,x,z),scenes.target()):null;
+        byte[] sideChannels=scenes==null?Wire.bytes(out->{out.writeByte(0);out.write(new byte[]{1,1,0,0,0,0});out.writeInt(x);out.writeInt(z);out.writeInt(0);}):retainedScene!=null?retainedScene.value().encode():projectScenes(record,start+compressedSize,x,z);
+        UUID revision=scenes==null||retainedScene!=null&&retainedScene.migrated()==0?new UUID(revisionHigh,revisionLow):sceneRevision(revisionHigh,revisionLow,scenes.target().digest(),sideChannels);
         byte[] geometry=Wire.bytes(out->{out.writeInt(x);out.writeInt(z);out.writeBoolean(true);out.writeInt(mask);out.writeInt(add);out.writeLong(revision.getMostSignificantBits());out.writeLong(revision.getLeastSignificantBits());out.writeInt(arraysSize);out.writeInt(geometryZstd.length);out.write(geometryZstd);out.write(sideChannels);});
         try{ScenePayload.Channels channels=ScenePayload.parse(geometry).channels();Map<UUID,ScenePayload.Entry> index=scenes==null?Map.of():ScenePayload.index(channels,scenes.target());Map<UUID,NativePortal> portals=new HashMap<>();for(ScenePayload.Entry entry:index.values()){NativePortal portal=NativePortal.from(entry,this::sceneBehaviour);if(portal!=null)portals.put(portal.id(),portal);}return new Chunk(blocks,metadata,Map.copyOf(tileIndex),index,Map.copyOf(portals),channels.raw(),new SceneSource(geometry));}catch(Exception error){throw new IOException("scene_index_failed:"+error.getMessage(),error);}
     }

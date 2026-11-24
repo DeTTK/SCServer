@@ -16,12 +16,13 @@ import java.util.function.*;
 public final class NativeResidentChunkCodec implements ResidentChunks.Codec<NativeResidentChunkCodec.Chunk,NativeResidentChunkCodec.Snapshot> {
     private static final int MAGIC=0x535a4e43,VERSION=2,MAX_RECORD=4*1024*1024;
     private volatile SceneTypeIds.Catalog persistenceCatalog;
+    private volatile SceneRegistry.Manifest sceneManifest;
     private volatile String persistenceRegistry;
     /** Bootstrap/loader setup only; the immutable catalog was prepared with the registry. */
     public synchronized void persistenceRegistry(SceneRegistry.Manifest registry){
         Objects.requireNonNull(registry);
         if(persistenceRegistry!=null&&!persistenceRegistry.equals(registry.digest()))throw new IllegalStateException("resident_persistence_registry_changed");
-        persistenceCatalog=registry.persistent();persistenceRegistry=registry.digest();
+        persistenceCatalog=registry.persistent();persistenceRegistry=registry.digest();sceneManifest=registry;
     }
     private static final Map<String,String> HASHES=Map.of(
         "812508934","58b779c77e074b560e7f16d515dba7fb8ec8298ef5ebc227a62274d851650251",
@@ -94,6 +95,7 @@ public final class NativeResidentChunkCodec implements ResidentChunks.Codec<Nati
     public final class Chunk {
         private final Object nativeChunk;private final Object[] nativeSections;
         private final int x,z;private final UUID sourceRevision;private byte[] sideChannels;private SceneData sceneData;
+        private boolean migratedOnLoad;
         private final Object sceneOrigin=new Object();private long sceneVersion;
         private final Map<Integer,TilePayload.Tile> tiles=new TreeMap<>();private boolean changed;
         private long completeTileBytes;private int compactTileBytes;
@@ -306,7 +308,12 @@ public final class NativeResidentChunkCodec implements ResidentChunks.Codec<Nati
         ByteBuffer header=ByteBuffer.wrap(record);int x=header.getInt(0),z=header.getInt(4),mask=header.getInt(9),additional=header.getInt(13),size=header.getInt(33),count=Integer.bitCount(mask);
         if((mask&~65535)!=0||(additional&~mask)!=0||size!=count*12288+Integer.bitCount(additional)*2048+256)throw new IOException("resident_native_array_layout");
         byte[] raw=TilePayload.raw(record);List<TilePayload.Tile> tiles=TilePayload.decode(raw,size,x,z);ScenePayload.Layout scene=ScenePayload.parse(record);
-        Chunk result=new Chunk(chunkConstructor.newInstance(world,x,z),x,z,new UUID(header.getLong(17),header.getLong(25)),Arrays.copyOfRange(record,scene.terrainEnd(),record.length));
+        var manifest=sceneManifest;
+        var lights=manifest==null?new ScenePayload.NormalizedLights(scene.channels(),0):ScenePayload.normalizeLights(scene.channels(),manifest);
+        byte[] sideChannels=lights.migrated()==0?Arrays.copyOfRange(record,scene.terrainEnd(),record.length):lights.value().encode();
+        Chunk result=new Chunk(chunkConstructor.newInstance(world,x,z),x,z,new UUID(header.getLong(17),header.getLong(25)),sideChannels);
+        result.migratedOnLoad=lights.migrated()!=0;
+        result.changed=result.migratedOnLoad;
         int ordinal=0,highAt=count*12288;
         for(int s=0;s<16;s++)if((mask&(1<<s))!=0){Object section=sectionConstructor.newInstance(s*16);result.nativeSections[s]=section;byte[] ids=Arrays.copyOfRange(raw,ordinal*4096,(ordinal+1)*4096);low.set(section,ids);
             if((additional&(1<<s))!=0){high.set(section,nibbleConstructor.newInstance(Arrays.copyOfRange(raw,highAt,highAt+2048),4));highAt+=2048;}
@@ -327,6 +334,7 @@ public final class NativeResidentChunkCodec implements ResidentChunks.Codec<Nati
         if(!full.isEmpty())throw new IOException("resident_native_complete_without_tile");result.readSnapshot();return result;
     }
     @Override public long residentBytes(Chunk chunk){try{long bytes=4096+chunk.sideChannels.length+256;for(Object section:chunk.nativeSections)if(section!=null){bytes+=4096+128;for(Field group:groups){Object nibble=group.get(section);if(nibble!=null)bytes+=2048+48;}if(high.get(section)!=null)bytes+=2048+48;}bytes+=chunk.compactTileBytes+chunk.completeTileBytes+chunk.tiles.size()*768L;if(chunk.readSnapshot!=null)bytes+=chunk.readSnapshot.bytes();return bytes;}catch(ReflectiveOperationException failure){throw nativeFailure(failure);}}
+    @Override public boolean migratedOnLoad(Chunk chunk){return chunk.migratedOnLoad;}
     @Override public Snapshot freeze(Chunk chunk)throws Exception {
         chunk.current();if(chunk.transaction!=null)throw new IllegalStateException("resident_native_snapshot_during_transaction");
         return new Snapshot(chunk.readSnapshot());
