@@ -106,7 +106,7 @@ def sign(raw,key):
         return signature.read_bytes()
 def publish():
     channel=os.environ.get('GITHUB_REF_NAME','')
-    if channel not in ('main','test'):raise ValueError('Only main and test publication is enabled')
+    if channel not in ('main','test','launtest'):raise ValueError('Only main, test and launtest publication is enabled')
     source=os.environ['GITHUB_SHA']
     if not re.fullmatch('[0-9a-f]{40}',source):raise ValueError('Invalid source commit')
     latest=run('git','ls-remote','origin','refs/heads/'+channel,capture_output=True,text=True).stdout.split()[0]
