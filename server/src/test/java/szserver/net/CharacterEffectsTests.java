@@ -24,6 +24,23 @@ public final class CharacterEffectsTests {
         groups=groups.use(groupedB,groupedCatalog,2_000).after();
         if(groups.active(3_000).size()!=1||groups.active(3_000).iterator().next().item()!=103)throw new AssertionError("group refresh");checks++;
 
+        Medicine medkitA=medicine(26000,"item.effects.effect_type.healing",12,0,false),medkitB=medicine(26002,"item.effects.effect_type.healing",20,0,false);
+        Map<Integer,Medicine> realCatalog=Map.of(26000,medkitA,26002,medkitB);
+        CharacterEffects realGroups=new CharacterEffects();realGroups=realGroups.use(medkitA,realCatalog,1_000).after();
+        realGroups=realGroups.use(medkitB,realCatalog,2_000).after();
+        if(realGroups.active(3_000).size()!=1||realGroups.active(3_000).iterator().next().item()!=26002)throw new AssertionError("different medkits must refresh native healing group");checks++;
+
+        Medicine boosterA=medicine(20994,"item.effects.effect_type.booster",1.5,0,false),boosterB=new Medicine(20995,"item.effects.effect_type.booster",0,false,0,30,0,0,Map.of("speed",5f),new MedicineRules(0,0,false,0,0,0,0,0,false,0,MedicineStages.NONE,false));
+        Map<Integer,Medicine> boosterCatalog=Map.of(20994,boosterA,20995,boosterB);
+        CharacterEffects boosters=new CharacterEffects();boosters=boosters.use(boosterA,boosterCatalog,1_000).after();
+        boosters=boosters.use(boosterB,boosterCatalog,2_000).after();
+        if(boosters.active(3_000).size()!=1||boosters.active(3_000).iterator().next().item()!=20995)throw new AssertionError("different boosters must refresh native booster group");checks++;
+
+        Medicine morphine=new Medicine(26017,"item.effects.effect_type.short_time_medicine",7,false,0,270,5,0,Map.of("bullet_dmg_factor",21f),new MedicineRules(0,0,true,0,0,0,0,40,false,0,MedicineStages.NONE,false));Map<Integer,Medicine> morphineCatalog=Map.of(26017,morphine);
+        CharacterEffects narcotic=new CharacterEffects();narcotic=narcotic.use(morphine,morphineCatalog,1_000).after();
+        narcotic=narcotic.use(morphine,morphineCatalog,200_000).after();
+        if(narcotic.active(201_000).size()!=1||narcotic.active(201_000).iterator().next().item()!=26017)throw new AssertionError("persistent morphine must refresh instead of stacking");checks++;
+
         Medicine staged=new Medicine(104,"staged",0,false,0,60,0,0,Map.of("heal",9.5f),new MedicineRules(0,0,false,0,0,0,0,0,false,0,new MedicineStages(0,1_000,0,Map.of("heal",9.5f),null,false),false));Map<Integer,Medicine> stagedCatalog=Map.of(104,staged);
         CharacterEffects stages=new CharacterEffects();stages=stages.use(staged,stagedCatalog,1_000).after();
         stages=stages.use(staged.activeUse(),stagedCatalog,2_000).after();
