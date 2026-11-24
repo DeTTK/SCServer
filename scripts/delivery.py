@@ -1,6 +1,6 @@
 """Build owned game overlays and publish immutable signed file manifests."""
 from pathlib import Path,PurePosixPath
-import argparse,base64,hashlib,importlib.util,json,os,re,shutil,subprocess,tempfile,urllib.request,zipfile
+import argparse,hashlib,importlib.util,json,os,re,shutil,subprocess,tempfile,zipfile
 
 ROOT=Path(__file__).resolve().parents[1]
 LOCK=json.loads((ROOT/'bootstrap/base.lock.json').read_text('utf8'))
@@ -14,19 +14,6 @@ def digest(path):
     return h.hexdigest()
 def source_tool():
     spec=importlib.util.spec_from_file_location('source_build',ROOT/'scripts/build.py');m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m);return m
-def pinned(row):
-    path=ROOT/'.local/delivery-inputs'/row['file'];path.parent.mkdir(parents=True,exist_ok=True)
-    if path.is_file()and digest(path)==row['sha256']:return path
-    part=path.with_suffix(path.suffix+'.part')
-    req=urllib.request.Request(row['url'],headers={'User-Agent':'BSCPCRAFT-delivery/1'})
-    with urllib.request.urlopen(req,timeout=60)as src,part.open('wb')as dst:
-        count=0
-        while block:=src.read(131072):
-            count+=len(block)
-            if count>64*1024*1024:raise ValueError('Pinned build input too large')
-            dst.write(block)
-    if digest(part)!=row['sha256']:raise ValueError('Build input hash mismatch: '+row['file'])
-    part.replace(path);return path
 def safe_path(name):
     p=PurePosixPath(name)
     if not name or p.is_absolute()or any(x in ('','.','..')for x in name.split('/'))or '\\'in name or ':'in name:raise ValueError('Unsafe delivery path')

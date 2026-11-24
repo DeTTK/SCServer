@@ -35,6 +35,16 @@ def restore(directory):
 def copy(source,target):
     target.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(source,target)
 
+def pinned_input(row):
+    path = ROOT / '.local/delivery-inputs' / row['file']
+    if path.is_file() and tools.sha(path) == row['sha256']:
+        return path
+    path.parent.mkdir(parents=True, exist_ok=True)
+    part = path.with_suffix(path.suffix + '.part')
+    part.write_bytes(tools.dependency_bytes(row))
+    part.replace(path)
+    return path
+
 def entries(classes):return {p.relative_to(classes).as_posix():p.read_bytes() for p in classes.rglob('*.class')}
 
 def jar(path,values):
@@ -67,8 +77,7 @@ def build(output):
     for dep in tools.dependencies():copy(dep,player/'Server/lib'/dep.name)
     copy(ROOT/'build/command-completion.jar',player/'Client/mods/command-completion.jar')
     lock=json.loads((ROOT/'bootstrap/base.lock.json').read_text('utf8'))
-    spec=importlib.util.spec_from_file_location('delivery',ROOT/'scripts/delivery.py');delivery=importlib.util.module_from_spec(spec);spec.loader.exec_module(delivery)
-    asm,tree,kotlin=[delivery.pinned(lock[name]) for name in ('asm','asmTree','kotlin')]
+    asm,tree,kotlin=[pinned_input(lock[name]) for name in ('asm','asmTree','kotlin')]
     libraries=[runtime/'game.jar',runtime/'libraries.jar',*sorted((runtime/'dependencies').glob('*.jar'))]
     boot=tools.compile_java('player-bootstrap',[*(ROOT/'client/bootstrap').glob('*.java'),*(ROOT/'client/bootstrap-compat').rglob('*.java'),*(ROOT/'client/mod-runtime/src').rglob('*.java')],libraries)
     generators=tools.compile_java('player-bootstrap-generators',(ROOT/'client/bootstrap-tools').glob('*.java'),[asm])
