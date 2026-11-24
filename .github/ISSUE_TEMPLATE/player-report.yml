@@ -10,6 +10,13 @@ body:
       description: Укажите действия, ожидаемый результат и фактический результат.
     validations:
       required: true
+  - type: checkboxes
+    id: forum-check
+    attributes:
+      label: Проверка перед отправкой
+      options:
+        - label: Я обращался на [форум](https://t.me/stalzone_local) за поддержкой и не получил ответа.
+          required: true
   - type: textarea
     id: diagnostics
     attributes:
