@@ -453,6 +453,11 @@ public final class ClientStateAdapter implements AutoCloseable {
         for(int id:new TreeSet<>(cosmetics.classes.keySet()))try{cosmetics.factory(id);rows.put(id,cosmetics.bound(()->{Object item=cosmetics.stack.getConstructor(int.class,int.class,int.class).newInstance(id,1,0),size=geometry.invoke(null,item);return Map.of("limit",(Integer)limit.invoke(item),"width",shape.getField("try").getInt(size),"height",shape.getField("enum").getInt(size));}));}catch(Exception|LinkageError e){Throwable cause=e;while(cause instanceof InvocationTargetException&&cause.getCause()!=null)cause=cause.getCause();errors.put(id,cause.getClass().getSimpleName());}
         return new FactoryMetadataExport(Map.copyOf(rows),Map.copyOf(errors));
     }
+    szserver.inventory.LootboxCatalog.NativeTables lootTables(Path configs,szserver.inventory.ItemCatalog catalog,
+            Map<String,Integer> names)throws Exception{
+        warmItemNames(names);
+        return new NativeLootTables(cosmetics,configs,catalog);
+    }
     public Set<Integer> firearmFactories()throws Exception{Set<Integer> ids=new HashSet<>();Class<?> gun=Class.forName("1745367406",true,loader);for(var entry:moduleFactoryClasses.entrySet())if(gun.isAssignableFrom(Class.forName(entry.getValue(),true,loader)))ids.add(entry.getKey());return Set.copyOf(ids);}
     public void warmCosmetics(Map<Integer,String> classes,Map<Integer,String> definitions,
                               Map<Integer,String> resourceDeclarations)throws Exception{

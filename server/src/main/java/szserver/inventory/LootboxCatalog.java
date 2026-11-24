@@ -7,21 +7,36 @@ import java.security.MessageDigest;
 import java.util.*;
 import java.util.zip.GZIPInputStream;
 
-/** Native-exported loot groups and shuffle bags. No client-supplied rewards or odds. */
+/** Loot presets from the client, with persisted shuffle state and legacy compatibility. */
 public final class LootboxCatalog {
     public static final String RESOURCE="szserver/inventory/lootbox-tables.json.gz";
     public record Prize(int id,int count,int metadata,JsonObject tags) {}
     public record Draw(List<Prize> prizes,JsonObject progress) {}
+    public interface NativeTables {
+        boolean has(String name);
+        int size();
+        Map<String,String> malformed();
+        void validate(String name);
+        void draw(String name,Random random,List<Prize> output);
+    }
     private final ItemCatalog items;
+    private final NativeTables nativeTables;
     private final Map<Integer,JsonObject> boxes=new TreeMap<>();
     private final Map<Integer,String> unavailable=new TreeMap<>();
     private final JsonObject loot,bags;
     private final Map<String,String> bagHashes=new HashMap<>();
     public LootboxCatalog(ItemCatalog items,Path root)throws Exception {
-        this(items,read(root));
+        this(items,read(root),null);
+    }
+    public LootboxCatalog(ItemCatalog items,Path root,NativeTables nativeTables)throws Exception {
+        this(items,read(root),nativeTables);
     }
     public LootboxCatalog(ItemCatalog items,JsonObject data) {
+        this(items,data,null);
+    }
+    private LootboxCatalog(ItemCatalog items,JsonObject data,NativeTables nativeTables) {
         this.items=items;
+        this.nativeTables=nativeTables;
         loot=data.has("loot")?data.getAsJsonObject("loot"):new JsonObject();bags=data.has("bags")?data.getAsJsonObject("bags"):new JsonObject();
         for(int id=1;id<65536;id++) {
             ItemCatalog.Definition item;try{item=items.get(id);}catch(IllegalArgumentException absent){continue;}
@@ -44,7 +59,7 @@ public final class LootboxCatalog {
     public int key(int id){return box(id).get("key_item_id").getAsInt();}
     public boolean tradeable(int id){return Set.of("none","dupsa").contains(text(box(id),"bind_state","none").toLowerCase(Locale.ROOT));}
     public void available(int id){box(id);if(unavailable.containsKey(id))throw new IllegalArgumentException("lootbox_unavailable:"+unavailable.get(id));}
-    public Map<String,Object> metrics(){return Map.of("cases",boxes.size(),"enabled",boxes.size()-unavailable.size(),"unavailable",Map.copyOf(unavailable),"lootTables",loot.size(),"shuffleBags",bags.size());}
+    public Map<String,Object> metrics(){return Map.of("cases",boxes.size(),"enabled",boxes.size()-unavailable.size(),"unavailable",Map.copyOf(unavailable),"lootTables",loot.size(),"nativeTables",nativeTables==null?0:nativeTables.size(),"nativeUnreadable",nativeTables==null?Map.of():nativeTables.malformed(),"shuffleBags",bags.size());}
     private JsonObject box(int id){JsonObject value=boxes.get(id);if(value==null)throw new IllegalArgumentException("not_a_lootbox");return value;}
     private void validateBox(JsonObject box) {
         Set<String> visiting=new HashSet<>();
@@ -54,6 +69,7 @@ public final class LootboxCatalog {
         int key=box.get("key_item_id").getAsInt();if(key!=-1)items.get(key);
     }
     private void validateLoot(String name) {
+        if(nativeTables!=null&&nativeTables.has(name)){nativeTables.validate(name);return;}
         JsonObject table=loot.getAsJsonObject(name);if(table==null)throw new IllegalArgumentException("missing_loot_table:"+name);
         JsonArray groups=table.getAsJsonArray("groups");if(groups.size()>128)throw new IllegalArgumentException("loot_group_limit");
         for(var group:groups){JsonObject g=group.getAsJsonObject();number(g,"groupDropProbability",0,128);JsonArray entries=g.getAsJsonArray("entryList");if(entries.size()>8192)throw new IllegalArgumentException("loot_entry_limit");float total=0;for(var entry:entries){JsonObject e=entry.getAsJsonObject();total+=number(e,"weight",0,Float.MAX_VALUE);validatePrize(e);}if(!Float.isFinite(total))throw new IllegalArgumentException("invalid_loot_weight");}
@@ -89,6 +105,7 @@ public final class LootboxCatalog {
         if(selected==null)throw new IllegalArgumentException("lootbox_rank_table_missing");return selected;
     }
     private void table(String name,Random random,List<Prize> prizes) {
+        if(nativeTables!=null&&nativeTables.has(name)){nativeTables.draw(name,random,prizes);return;}
         JsonObject table=loot.getAsJsonObject(name);if(table==null)throw new IllegalArgumentException("missing_loot_table:"+name);
         for(var group:table.getAsJsonArray("groups")){JsonObject g=group.getAsJsonObject();JsonArray entries=g.getAsJsonArray("entryList");for(float left=g.get("groupDropProbability").getAsFloat();left>0;left-=1){if(random.nextFloat()>left||entries.isEmpty())continue;float total=0;for(var entry:entries)total+=entry.getAsJsonObject().get("weight").getAsFloat();float pick=random.nextFloat()*total,sum=0;JsonObject selected=entries.get(entries.size()-1).getAsJsonObject();for(var entry:entries){JsonObject e=entry.getAsJsonObject();sum+=e.get("weight").getAsFloat();if(sum>=pick){selected=e;break;}}prize(selected,random,prizes);}}
     }

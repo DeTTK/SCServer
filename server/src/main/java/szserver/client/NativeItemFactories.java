@@ -42,7 +42,7 @@ class NativeItemFactories {
     private Object json(JsonObject row)throws Exception{Object parsed=type("com.google.gson.JsonParser").getMethod("parseString",String.class).invoke(null,row.toString());return parsed.getClass().getMethod("getAsJsonObject").invoke(parsed);}
     private Object descriptor(int id,JsonObject row,String alias,Integer parent)throws Exception{return resource.getConstructor(String.class,json,int.class,String.class,Integer.class,String.class).newInstance("server_cosmetic_"+id,json(row),id,alias,parent,null);}
     /** Resolve names with the game's parser, then restore the headless environment before any factory/event work. */
-    private <T> T clientNames(java.util.concurrent.Callable<T> action)throws Exception{Class<?> env=type("220710426");Field f=env.getField("if");Object before=f.get(null);f.set(null,type("1553900928").getField("CLIENT").get(null));try{return action.call();}finally{f.set(null,before);}}
+    <T> T clientNames(java.util.concurrent.Callable<T> action)throws Exception{Class<?> env=type("220710426");Field f=env.getField("if");Object before=f.get(null);f.set(null,type("1553900928").getField("CLIENT").get(null));try{return action.call();}finally{f.set(null,before);}}
     private Object prepared(int id,Class<?> factoryType)throws Exception{
         JsonObject row=JsonParser.parseString(definitions.get(id)).getAsJsonObject();
         if (szserver.util.ItemResources.hasDynamicRegistration(row)) {

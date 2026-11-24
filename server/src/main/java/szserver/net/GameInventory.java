@@ -70,9 +70,17 @@ public final class GameInventory implements AutoCloseable {
     /** Isolated test fault injection, never set from the live configuration. */
     public GameInventory(Path root,Path data,Path runtime,Path registry,long testDelayMillis)throws Exception {
         equipmentRoot=root;
-        catalog=new ItemCatalog(root.resolve("fixtures/item-definitions.json"));lootboxes=new LootboxCatalog(catalog,root);journal=new InventoryJournal(data.resolve("characters.sjournal"),catalog,testDelayMillis);items=new GameItems(runtime,registry);
+        catalog=new ItemCatalog(root.resolve("fixtures/item-definitions.json"));
+        items=new GameItems(runtime,registry);
         physicalMechanisms=PhysicalReload.catalogue(root.resolve("fixtures/vr-weapon-catalog.json"));
-        items.warmGameplay(root.resolve("fixtures/item-definitions.json"),root.resolve("fixtures/artifact-settings.json"));
+        try {
+            items.warmGameplay(root.resolve("fixtures/item-definitions.json"),root.resolve("fixtures/artifact-settings.json"));
+            lootboxes=items.lootboxes(root,catalog);
+            journal=new InventoryJournal(data.resolve("characters.sjournal"),catalog,testDelayMillis);
+        } catch(Exception | LinkageError failure) {
+            try {items.close();} catch(Exception closeFailure) {failure.addSuppressed(closeFailure);}
+            throw failure;
+        }
         for(var entry:JsonParser.parseString(java.nio.file.Files.readString(root.resolve("fixtures/equipment-appearances.json"))).getAsJsonObject().entrySet())defaultAppearances.put(Integer.parseInt(entry.getKey()),HexFormat.of().parseHex(entry.getValue().getAsString()));
         for(int id=1;id<65536;id++){ItemCatalog.Definition definition;try{definition=catalog.get(id);}catch(IllegalArgumentException absent){continue;}if(definition.type().equals("bullet"))items.registerStateless(id);}
     }

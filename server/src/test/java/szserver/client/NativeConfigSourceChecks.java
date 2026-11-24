@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
+import java.util.Random;
+import szserver.inventory.ItemCatalog;
 import szserver.net.AreaRelations;
 import szserver.util.GameResources;
 import szserver.world.NativeAnomalyDefaults;
@@ -13,6 +15,7 @@ import szserver.world.NativeAnomalyDefaults;
 public final class NativeConfigSourceChecks {
     private static final String SICKNESS = "assets/stalker/sickness.json";
     private static final String ANOMALIES = "assets/anomalies/anomaly_config.json";
+    private static final String LOOT = "assets/customitems/loot/lootboxes.json";
     private static final String KEDR = "assets/weapons/items/avtomat/20000_kedr.json";
     private static final String ALLIANCES = "assets/bundle/alliances.json";
 
@@ -29,7 +32,13 @@ public final class NativeConfigSourceChecks {
                 check(codec.sicknessRules().profiles().size() >= 10, "archive sickness profiles");
                 check(!codec.areaRelations().friendly("stalkers", "bandits"), "archive faction definitions");
             }
-            verifyWeapon(server, runtime, true);
+            verifyItems(server, runtime, true);
+            var loot = JsonParser.parseString(GameResources.readString(configs.resolve(LOOT))).getAsJsonObject();
+            loot.add("ticket_parts", JsonParser.parseString("""
+                    [[{"stack":{"id":12800,"stackSize":3,"itemDamage":7,
+                    "tag":{"personal_on_get":{"type":"byte","value":1}}},"weight":1}]]
+                    """));
+            write(overrides.resolve(LOOT), loot.toString());
             var weaponFile = JsonParser.parseString(GameResources.readString(configs.resolve(KEDR))).getAsJsonArray();
             var weapon = weaponFile.get(0).getAsJsonObject();
             weapon.remove("default_attachments_id");
@@ -50,7 +59,7 @@ public final class NativeConfigSourceChecks {
             write(overrides.resolve(ALLIANCES), alliances.toString());
             GameResources.mount(configs, archive, overrides);
 
-            verifyWeapon(server, runtime, false);
+            verifyItems(server, runtime, false);
             SicknessPackets.verify(server, runtime, configs);
             AreaRelations.verify(server, runtime, configs);
             check(NativeAnomalyDefaults.damage(configs).get("carousel") == 17.25f, "mounted anomaly override");
@@ -64,12 +73,28 @@ public final class NativeConfigSourceChecks {
                 for (Path path : paths.sorted(Comparator.reverseOrder()).toList()) Files.delete(path);
             }
         }
-        System.out.println("PASS archive and overrides for weapon modules, anomaly damage, sickness and faction definitions");
+        System.out.println("PASS archive and overrides for weapon modules, loot rewards, anomaly damage, sickness and faction definitions");
     }
 
-    private static void verifyWeapon(Path server, Path runtime, boolean stock) throws Exception {
+    private static void verifyItems(Path server, Path runtime, boolean stock) throws Exception {
         try (var items = new GameItems(runtime, server.resolve("registries/client-current-item-states.json"))) {
             items.warmGameplay(server.resolve("fixtures/item-definitions.json"), server.resolve("fixtures/artifact-settings.json"));
+            var catalog = new ItemCatalog(server.resolve("fixtures/item-definitions.json"));
+            var loot = items.lootboxes(server, catalog);
+            check((int) loot.metrics().get("nativeTables") >= 2400, "native loot tables loaded");
+            var draw = loot.draw(15015, 1, "newbie", new JsonObject(), new Random(61));
+            check(draw.prizes().size() == 1 && draw.progress().get("opened").getAsInt() == 1,
+                    "native loot draw keeps server progress");
+            var prize = draw.prizes().get(0);
+            if (stock) {
+                check(prize.id() == 31825, "native stock loot draw");
+            } else {
+                check(prize.id() == 12800 && prize.count() == 3 && prize.metadata() == 7
+                        && prize.tags().getAsJsonObject("personal_on_get").get("value").getAsInt() == 1,
+                        "native archive reward override and typed NBT");
+                var reward = items.createStack(prize.id(), prize.count(), prize.metadata(), prize.tags());
+                check(reward.count() == 3 && reward.metadata() == 7, "native loot reward enters inventory");
+            }
             var gun = items.createStack(20000, 1, 0, new JsonObject());
             check(items.modules(gun).stream().anyMatch(module -> module.item() == 22915) == stock,
                     "native inbuilt forend follows the mounted config");

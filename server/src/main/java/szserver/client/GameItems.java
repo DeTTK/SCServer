@@ -51,6 +51,20 @@ public final class GameItems implements AutoCloseable {
     public Map<String,String> codecFailures(){return Map.copyOf(codecFailures);}
     private JsonObject definitions;
     private boolean itemResourcesMounted;
+    public szserver.inventory.LootboxCatalog lootboxes(Path root,szserver.inventory.ItemCatalog catalog)throws Exception{
+        if(!itemResourcesMounted)return new szserver.inventory.LootboxCatalog(catalog,root);
+        Map<String,Integer> aliases=new HashMap<>();
+        Set<String> ambiguous=new HashSet<>();
+        for(var entry:definitions.entrySet()){
+            var row=entry.getValue().getAsJsonObject();
+            if(!row.has("unlocalized_name"))continue;
+            String name=row.get("unlocalized_name").getAsString();
+            if(aliases.putIfAbsent(name,Integer.parseInt(entry.getKey()))!=null)ambiguous.add(name);
+        }
+        aliases.keySet().removeAll(ambiguous);
+        return new szserver.inventory.LootboxCatalog(catalog,root,
+                adapter.lootTables(root.resolve("resources/configs"),catalog,aliases));
+    }
     public record MedicineStages(long startMillis,long activeMillis,long endMillis,Map<String,Float> stats,String key,boolean stopOnFullHealth){
         public static final MedicineStages NONE=new MedicineStages(0,0,0,Map.of(),null,false);
         public MedicineStages{stats=Map.copyOf(stats);}
