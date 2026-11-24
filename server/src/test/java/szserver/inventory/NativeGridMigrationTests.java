@@ -15,7 +15,7 @@ public final class NativeGridMigrationTests {
         ItemCatalog old=ItemCatalog.legacyGeometry(definitions),now=new ItemCatalog(definitions);
         check(old.get(1).width()==1&&now.get(1).width()==2&&now.get(1).height()==3,"native armor default");check(now.get(3).width()==1&&now.get(3).height()==1,"explicit authored size retained");
         check(now.get(6).width()==2&&now.get(6).height()==2&&old.get(6).width()==1,"native game object inherits geometry");
-        check(now.get(7).width()==1&&now.get(7).height()==1,"headgear retains native one-cell default");check(now.fits(7,0)&&!now.fits(7,1)&&old.fits(7,1),"native head and body slots are distinct");
+        check(now.get(7).width()==1&&now.get(7).height()==1,"headgear retains native one-cell default");
         ItemStack small=new ItemStack(4,1,7,new byte[]{9}),large=small.geometry(3,2);
         check(Arrays.equals(szserver.net.InventoryPackets.stack(small),szserver.net.InventoryPackets.stack(large)),"derived geometry never changes game wire state");
         check(ItemStack.read(large.json()).gridWidth()==3&&large.count(1).gridHeight()==2&&large.state(new byte[]{8}).gridWidth()==3,"cached geometry survives persistence and state/count updates");

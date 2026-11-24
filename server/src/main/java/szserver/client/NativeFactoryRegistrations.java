@@ -36,17 +36,21 @@ final class NativeFactoryRegistrations implements Opcodes {
         if (registrations.isEmpty()) throw new IOException("native_factory_registrations_missing");
     }
 
-    Object create(String type, Class<?> expected, Object resource) throws Exception {
+    boolean matches(String type, String expected) throws IOException {
         Member function = registrations.get(type);
-        if (function == null) return null;
+        if (function == null) return false;
         Set<String> targets = constructors.get(function.owner());
         if (targets == null) {
             targets = directConstructors(function.owner());
             constructors.put(function.owner(), targets);
         }
-        // Legacy/debug IDs can use a specialized class despite an ordinary config type.
-        // Retain their pinned codec and never call a factory that declares a different product.
-        if (!targets.equals(Set.of(expected.getName()))) return null;
+        return targets.equals(Set.of(expected));
+    }
+
+    Object create(String type, Class<?> expected, Object resource) throws Exception {
+        // Legacy/debug IDs may have a specialized factory and wire codec.
+        if (!matches(type, expected.getName())) return null;
+        Member function = registrations.get(type);
         var field = Class.forName(function.owner(), true, loader).getDeclaredField(function.name());
         if (!field.trySetAccessible()) throw new IOException("native_factory_callback_access:" + type);
         @SuppressWarnings("unchecked")

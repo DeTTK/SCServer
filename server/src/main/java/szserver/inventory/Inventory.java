@@ -24,11 +24,11 @@ public final class Inventory {
         if(x+width>8||a.slot/8+height>(capacity+7)/8)throw new IllegalArgumentException("item_out_of_grid");
         BitSet cells=new BitSet(capacity);for(int y=0;y<height;y++)for(int dx=0;dx<width;dx++){int slot=a.slot+y*8+dx;if(slot>=capacity)throw new IllegalArgumentException("item_out_of_grid");cells.set(slot);}return cells;
     }
-    private int limit(Address a,ItemStack item){int normal=catalog.get(item.id()).stackLimit();return a.aggregate==2?NativeStackRules.storageLimit(normal):normal;}
+    private int limit(Address a,ItemStack item){int normal=catalog.limit(item);return a.aggregate==2?NativeStackRules.storageLimit(normal):normal;}
     private void validate(Map<Address,ItemStack> state){Map<String,BitSet> occupied=new HashMap<>();
         for(var e:state.entrySet()){Address a=e.getKey();ItemStack item=e.getValue();check(a);if(item==null)throw new IllegalArgumentException("null_inventory_value");
             if(item.count()>limit(a,item))throw new IllegalArgumentException("stack_limit");
-            if(item.stateful()&&catalog.get(item.id()).stackLimit()==1&&item.count()!=1)throw new IllegalArgumentException("stateful_stack_count");
+            if(item.stateful()&&catalog.limit(item)==1&&item.count()!=1)throw new IllegalArgumentException("stateful_stack_count");
             // Equipment has one root cell, not a universal one-item stack limit.
             // Native grenade stacks retain the same resource-defined cap here.
             // Native client owns equipment compatibility. Keep structural and quantity validation here.
@@ -45,26 +45,26 @@ public final class Inventory {
     public Plan move(Address source,Address destination,int requested,boolean split){
         check(source);check(destination);ItemStack from=at(source),to=at(destination);if(from==null)throw new IllegalArgumentException("inventory_source_empty");if(source.equals(destination))return replace(Map.of(),0);
         int count=requested==0?from.count():requested;if(count<1||count>from.count())throw new IllegalArgumentException("move_count");
-        if(count<from.count()&&from.stateful()&&catalog.get(from.id()).stackLimit()==1)throw new IllegalArgumentException("stateful_item_cannot_split");
+        if(count<from.count()&&from.stateful()&&catalog.limit(from)==1)throw new IllegalArgumentException("stateful_item_cannot_split");
         ItemStack sourceAfter,destinationAfter;int moved;
         deposit(destination);
-        if(to!=null&&from.mergeable(to)){
+        if(to!=null&&catalog.canMerge(from,to)){
             moved=Math.min(count,limit(destination,from)-to.count());if(moved<=0)throw new IllegalArgumentException("stack_full");
             sourceAfter=from.count(from.count()-moved);destinationAfter=to.count(to.count()+moved);
         }else if(count<from.count()){
             if(to!=null)throw new IllegalArgumentException("split_destination_occupied");moved=count;sourceAfter=from.count(from.count()-count);destinationAfter=from.count(count);
         }else{moved=count;sourceAfter=to;destinationAfter=from;}
-        if(sourceAfter!=null&&to!=null&&!from.mergeable(to))deposit(source);
+        if(sourceAfter!=null&&to!=null&&!catalog.canMerge(from,to))deposit(source);
         return replace(change(source,sourceAfter,destination,destinationAfter),moved);
     }
     public Plan quick(Address source,List<Address> destinations,int requested){
         ItemStack from=at(source);if(from==null)throw new IllegalArgumentException("inventory_source_empty");if(destinations.isEmpty()||destinations.size()>StorageLayout.MAX_CAPACITY||new HashSet<>(destinations).size()!=destinations.size()||destinations.contains(source))throw new IllegalArgumentException("quick_destination");
         if(requested<0)throw new IllegalArgumentException("move_count");int remaining=requested==0?from.count():Math.min(requested,from.count());int initial=remaining;Map<Address,ItemStack> changes=new LinkedHashMap<>();
-        for(Address a:destinations){check(a);deposit(a);ItemStack to=at(a);if(remaining==0||to!=null&&!from.mergeable(to))throw new IllegalArgumentException("quick_destination_occupied");
+        for(Address a:destinations){check(a);deposit(a);ItemStack to=at(a);if(remaining==0||to!=null&&!catalog.canMerge(from,to))throw new IllegalArgumentException("quick_destination_occupied");
             int moved=Math.min(remaining,limit(a,from)-(to==null?0:to.count()));if(moved<=0)throw new IllegalArgumentException("stack_full");
             changes.put(a,from.count((to==null?0:to.count())+moved));remaining-=moved;
         }
-        int moved=initial-remaining;if(from.stateful()&&catalog.get(from.id()).stackLimit()==1&&moved!=from.count())throw new IllegalArgumentException("stateful_item_cannot_split");changes.put(source,from.count(from.count()-moved));return replace(changes,moved);
+        int moved=initial-remaining;if(from.stateful()&&catalog.limit(from)==1&&moved!=from.count())throw new IllegalArgumentException("stateful_item_cannot_split");changes.put(source,from.count(from.count()-moved));return replace(changes,moved);
     }
     /** Give is all-or-nothing, first merging compatible stacks then packing rectangles. */
     public Plan give(ItemStack stack){return pack(stack,1);}
@@ -74,7 +74,7 @@ public final class Inventory {
         BitSet[] occupied=new BitSet[pages];for(int page=0;page<pages;page++)occupied[page]=new BitSet(aggregate==1?StorageLayout.BAG:StorageLayout.capacity(page));
         for(var entry:items.entrySet())if(entry.getKey().aggregate==aggregate){
             Address address=entry.getKey();occupied[address.container].or(cells(address,entry.getValue()));
-            if(remaining>0&&(aggregate==1||StorageLayout.canDeposit(address.container))&&stack.mergeable(entry.getValue())){int moved=Math.min(remaining,limit(address,stack)-entry.getValue().count());if(moved>0){changes.put(address,entry.getValue().count(entry.getValue().count()+moved));remaining-=moved;}}
+            if(remaining>0&&(aggregate==1||StorageLayout.canDeposit(address.container))&&catalog.canMerge(stack,entry.getValue())){int moved=Math.min(remaining,limit(address,stack)-entry.getValue().count());if(moved>0){changes.put(address,entry.getValue().count(entry.getValue().count()+moved));remaining-=moved;}}
         }
         for(int page=0;page<pages&&remaining>0;page++){if(aggregate==2&&!StorageLayout.canDeposit(page))continue;int capacity=aggregate==1?StorageLayout.BAG:StorageLayout.capacity(page);for(int slot=0;slot<capacity&&remaining>0;slot++){
             Address address=new Address(aggregate,page,slot);BitSet footprint;try{footprint=cells(address,stack);}catch(IllegalArgumentException outside){continue;}

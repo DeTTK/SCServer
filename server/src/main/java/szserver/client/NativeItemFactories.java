@@ -62,6 +62,12 @@ class NativeItemFactories {
         if(row.has("slot_size")){String[] size=row.get("slot_size").getAsString().split("x");Class<?> geometry=type("1824362651");geometry.getMethod("catch",int.class,geometry).invoke(null,id,geometry.getConstructor(float.class,float.class).newInstance(Float.parseFloat(size[0]),Float.parseFloat(size[1])));}
         return descriptor(id,row,null,null);
     }
+    boolean hasHeadlessArchiveFactory(int id) throws IOException {
+        String kind=resourceTypes.get(id), factory=classes.get(id);
+        // Weather presets initialize a full hideout scene in their constructors.
+        return kind!=null&&!kind.equals("hideout/weather_preset")&&factory!=null&&registrations.matches(kind,factory);
+    }
+
     Object factory(int id)throws Exception{
         Object cached=factories.get(id);if(cached!=null)return cached;String name=classes.get(id);if(name==null||!descriptors.containsKey(id))throw new IOException("cosmetic_factory_missing:"+id);
         if(Set.of("native-game-owner","world-tick").contains(Thread.currentThread().getName()))throw new IOException("cosmetic_factory_on_owner");

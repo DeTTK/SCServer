@@ -9,6 +9,9 @@ import java.util.Comparator;
 import java.util.Random;
 import java.util.Set;
 import szserver.inventory.ItemCatalog;
+import szserver.inventory.ItemStack;
+import szserver.inventory.Inventory;
+import szserver.inventory.InventoryJournal;
 import szserver.net.AreaRelations;
 import szserver.util.GameResources;
 import szserver.world.NativeAnomalyDefaults;
@@ -18,6 +21,8 @@ public final class NativeConfigSourceChecks {
     private static final String ANOMALIES = "assets/anomalies/anomaly_config.json";
     private static final String LOOT = "assets/customitems/loot/lootboxes.json";
     private static final String SHUFFLE = "assets/customitems/shufflebags/newyear25.json";
+    private static final String AMMO = "assets/weapons/items/ammo_inside.json";
+    private static final String KNIFE = "assets/weapons/items/game_modes/9150_reich/9174_nr43.json";
     private static final String KEDR = "assets/weapons/items/avtomat/20000_kedr.json";
     private static final String ALLIANCES = "assets/bundle/alliances.json";
 
@@ -34,7 +39,7 @@ public final class NativeConfigSourceChecks {
                 check(codec.sicknessRules().profiles().size() >= 10, "archive sickness profiles");
                 check(!codec.areaRelations().friendly("stalkers", "bandits"), "archive faction definitions");
             }
-            verifyItems(server, runtime, true);
+            verifyItems(server, runtime, true, overrides);
             var loot = JsonParser.parseString(GameResources.readString(configs.resolve(LOOT))).getAsJsonObject();
             loot.add("ticket_parts", JsonParser.parseString("""
                     [[{"stack":{"id":12800,"stackSize":3,"itemDamage":7,
@@ -47,6 +52,21 @@ public final class NativeConfigSourceChecks {
                      {"amount":1,"stack":{"id":12810,"stackSize":1}}]
                     """));
             write(overrides.resolve(SHUFFLE), shuffle.toString());
+            var ammunition = JsonParser.parseString(GameResources.readString(configs.resolve(AMMO))).getAsJsonArray();
+            var bullet = ammunition.asList().stream().map(row -> row.getAsJsonObject())
+                    .filter(row -> row.get("item_id").getAsInt() == 12800).findFirst().orElseThrow();
+            bullet.addProperty("slot_size", "2x1");
+            bullet.addProperty("stack_size", 7);
+            write(overrides.resolve(AMMO), ammunition.toString());
+            var melee = JsonParser.parseString(GameResources.readString(configs.resolve(KNIFE))).getAsJsonArray();
+            var knife = melee.get(0).getAsJsonObject();
+            knife.addProperty("damage_strong", "60..70");
+            knife.addProperty("angle_strong", 79);
+            knife.addProperty("radius_strong", 3.5);
+            knife.addProperty("delay_strong", 11);
+            knife.addProperty("cd_strong", 33);
+            knife.addProperty("piercing", 29);
+            write(overrides.resolve(KNIFE), melee.toString());
             var weaponFile = JsonParser.parseString(GameResources.readString(configs.resolve(KEDR))).getAsJsonArray();
             var weapon = weaponFile.get(0).getAsJsonObject();
             weapon.remove("default_attachments_id");
@@ -67,7 +87,7 @@ public final class NativeConfigSourceChecks {
             write(overrides.resolve(ALLIANCES), alliances.toString());
             GameResources.mount(configs, archive, overrides);
 
-            verifyItems(server, runtime, false);
+            verifyItems(server, runtime, false, overrides);
             SicknessPackets.verify(server, runtime, configs);
             AreaRelations.verify(server, runtime, configs);
             check(NativeAnomalyDefaults.damage(configs).get("carousel") == 17.25f, "mounted anomaly override");
@@ -81,13 +101,29 @@ public final class NativeConfigSourceChecks {
                 for (Path path : paths.sorted(Comparator.reverseOrder()).toList()) Files.delete(path);
             }
         }
-        System.out.println("PASS archive and overrides for weapon modules, loot and shuffle progress, anomaly damage, sickness and factions");
+        System.out.println("PASS archive overrides and replay for item facts, weapon modules, melee, loot, anomalies, sickness and factions");
     }
 
-    private static void verifyItems(Path server, Path runtime, boolean stock) throws Exception {
+    private static void verifyItems(Path server, Path runtime, boolean stock, Path scratch) throws Exception {
         try (var items = new GameItems(runtime, server.resolve("registries/client-current-item-states.json"))) {
             items.warmGameplay(server.resolve("fixtures/item-definitions.json"), server.resolve("fixtures/artifact-settings.json"));
             var catalog = new ItemCatalog(server.resolve("fixtures/item-definitions.json"));
+            var melee = items.meleeProfiles().get(9174);
+            check(melee.get(0).size() == 3 && melee.get(1).size() == 1, "native melee combo count");
+            var strong = melee.get(1).get(0);
+            close(strong.delay(), stock ? .45 : .55, "native strong delay");
+            close(strong.cooldown(), stock ? .9 : 1.65, "native strong cooldown");
+            close(strong.reach(), stock ? 2.1 : 3.5, "native strong radius");
+            close(strong.angle(), Math.toRadians(stock ? 15 : 79), "native strong angle");
+            close(strong.damage(), stock ? 101 : 65, "native strong damage range");
+            close(strong.piercing(), stock ? 70 : 29, "native piercing");
+            check(items.createStack(5901, 1, 0, new JsonObject()).stateful(),
+                    "hideout weather item uses its verified wire state without creating a scene");
+            var knifeOne = items.createStack(9174, 1, 0, new JsonObject());
+            var knifeTwo = items.createStack(9174, 1, 0, new JsonObject());
+            check(!items.identity(knifeOne).equals(items.identity(knifeTwo)), "fresh identity from native default");
+            if (!stock) verifyInventoryFacts(items, catalog, scratch);
+
             var loot = items.lootboxes(server, catalog);
             check((int) loot.metrics().get("nativeTables") >= 2400, "native loot tables loaded");
             check((int) loot.metrics().get("nativeShuffleBags") >= 125, "native shuffle tables loaded");
@@ -126,6 +162,37 @@ public final class NativeConfigSourceChecks {
                 }
             }
         }
+    }
+
+    private static void verifyInventoryFacts(GameItems items, ItemCatalog catalog, Path scratch) throws Exception {
+        var current = items.createStack(12800, 1, 0, new JsonObject());
+        var old = new ItemStack(12800, 8, 0, new byte[0]);
+        check(java.util.Arrays.equals(szserver.net.InventoryPackets.stack(current),
+                szserver.net.InventoryPackets.stack(current.inventoryFacts(0,0,0))),
+                "server inventory facts do not change the wire bytes");
+        check(catalog.width(current) == 2 && catalog.limit(current) == 7, "native geometry and stack limit from archive");
+        check(catalog.width(old) == 1 && catalog.limit(old) >= 8, "historical replay geometry and limit");
+        var first = new Inventory.Address(1, 0, 0);
+        var second = new Inventory.Address(1, 0, 1);
+        var uuid = java.util.UUID.randomUUID();
+        Path journal = scratch.resolve("native-facts.sjournal");
+        try (var store = new InventoryJournal(journal, catalog)) {
+            store.commit(uuid, store.load(uuid).replace(java.util.Map.of(first, old), 8)).get();
+            var grant = store.load(uuid).give(current.count(8));
+            check(grant.after().at(first).count() == 8 && grant.after().at(second).count() == 7,
+                    "different layouts stay separate and native stack splits");
+            store.commit(uuid, grant).get();
+            store.compact().get();
+        }
+        try (var store = new InventoryJournal(journal, catalog)) {
+            var resumed = store.load(uuid);
+            check(resumed.at(first).nativeStackLimit() == 0 && resumed.at(second).nativeStackLimit() == 7
+                    && resumed.at(second).gridWidth() == 2, "old and new facts survive journal replay");
+        }
+    }
+
+    private static void close(double actual, double wanted, String description) {
+        check(Math.abs(actual - wanted) < 0.0001, description + " (" + actual + ")");
     }
 
     private static void write(Path file, String value) throws IOException {

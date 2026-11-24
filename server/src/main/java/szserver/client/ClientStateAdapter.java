@@ -447,6 +447,19 @@ public final class ClientStateAdapter implements AutoCloseable {
     public MedicineRequest medicineRequest(byte[] raw)throws Exception{return medicinePackets.read(raw);}
     public Map<String,Float> medicineStats(Collection<Map<String,Float>> banks)throws Exception{return medicineEffects.aggregate(banks);}
     public byte[] medicineEffects(List<Integer> removed,Collection<GameItems.MedicineEffect> added,Set<Integer> suppressed,long now)throws Exception{return medicineEffects.delta(removed,added,suppressed,now);}
+    record FactoryMetadata(int width,int height,int limit){}
+    FactoryMetadata factoryMetadata(int id)throws Exception{
+        cosmetics.factory(id);
+        Class<?> shape=Class.forName("61438557",true,loader);
+        Method geometry=NativeMethods.staticMethod(Class.forName("1824362651",true,loader),"while",shape,cosmetics.stack);
+        Method limit=NativeMethods.instance(cosmetics.stack,"finally",int.class);
+        return cosmetics.bound(List.of(id),()->{
+            Object item=cosmetics.stack.getConstructor(int.class,int.class,int.class).newInstance(id,1,0);
+            Object size=geometry.invoke(null,item);
+            return new FactoryMetadata(shape.getField("try").getInt(size),shape.getField("enum").getInt(size),
+                    (Integer)limit.invoke(item));
+        });
+    }
     public record FactoryMetadataExport(Map<Integer,Map<String,Integer>> rows,Map<Integer,String> errors){}
     public FactoryMetadataExport exportFactoryMetadata()throws Exception{
         Map<Integer,Map<String,Integer>> rows=new TreeMap<>();Map<Integer,String> errors=new TreeMap<>();Class<?> shape=Class.forName("61438557",true,loader);Method geometry=NativeMethods.staticMethod(Class.forName("1824362651",true,loader),"while",shape,cosmetics.stack),limit=NativeMethods.instance(cosmetics.stack,"finally",int.class);
@@ -488,6 +501,9 @@ public final class ClientStateAdapter implements AutoCloseable {
         return read.invoke(null,new DataInputStream(new ByteArrayInputStream(new byte[]{(byte)code})));
     }
     public Attachment nativeSlot(String kind,byte[] parent,byte[] attached,int slot,boolean bolt)throws Exception{var edit=itemSlots.edit(parent,attached,slot,bolt);Stack changed=readStack(edit.stack());return new Attachment(changed.state(),edit.previous(),false);}
+    boolean hasHeadlessArchiveFactory(int id)throws IOException{
+        return cosmetics!=null&&cosmetics.hasHeadlessArchiveFactory(id);
+    }
     byte[] nativeItemDefault(int id,String kind)throws Exception{
         Object value=itemSlots.defaultState(id);
         if(value==null||!value.getClass().getName().equals(kind))
@@ -546,6 +562,9 @@ public final class ClientStateAdapter implements AutoCloseable {
 
             return new szserver.inventory.WeaponProfile(capacity,Arrays.stream(ammunition).boxed().toList(),gun.getField("synchronized").getFloat(factory),gun.getField("throw").getFloat(factory),(Float)NativeMethods.instance(gun,"import",float.class,stack).invoke(factory,value),(Float)NativeMethods.instance(gun,"float",float.class,stack).invoke(factory,value),(Float)NativeMethods.instance(gun,"throws",float.class,stack).invoke(factory,value),(Float)NativeMethods.instance(gun,"private",float.class,stack).invoke(factory,value),reload*modifier,tactical*modifier,gun.getField("i").getFloat(factory),reloadByRounds);
         });
+    }
+    Map<Integer,List<List<szserver.net.MeleeProfile>>> meleeProfiles()throws Exception{
+        return NativeMeleeProfiles.read(cosmetics);
     }
     boolean defaultModule(int weapon,int selection)throws Exception{
         Object factory=moduleFactory(weapon);

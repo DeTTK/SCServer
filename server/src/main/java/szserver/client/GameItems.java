@@ -16,6 +16,7 @@ public final class GameItems implements AutoCloseable {
         if(definition.has("can_drop_manually")&&!definition.get("can_drop_manually").getAsBoolean()||definition.has("bind_state")&&Set.of("no_drop","non_drop").contains(definition.get("bind_state").getAsString().toLowerCase(Locale.ROOT)))return new ClientStateAdapter.DropPolicy(false,policy.pickupOwner());
         return policy;
     }
+    private final Map<Integer,byte[]> factoryDefaults=new HashMap<>();
     private final Set<String> verified=new HashSet<>();
     private final Map<String,String> codecFailures=new TreeMap<>();
     private final ClientStateAdapter adapter;
@@ -50,6 +51,7 @@ public final class GameItems implements AutoCloseable {
     }
     public Map<String,String> codecFailures(){return Map.copyOf(codecFailures);}
     private JsonObject definitions;
+    private final Map<Integer,ClientStateAdapter.FactoryMetadata> inventoryFacts=new HashMap<>();
     private boolean itemResourcesMounted;
     public szserver.inventory.LootboxCatalog lootboxes(Path root,szserver.inventory.ItemCatalog catalog)throws Exception{
         if(!itemResourcesMounted)return new szserver.inventory.LootboxCatalog(catalog,root);
@@ -89,6 +91,7 @@ public final class GameItems implements AutoCloseable {
     public szserver.inventory.Inventory.Address quickSelect(byte[] raw,int slot,Map<szserver.inventory.Inventory.Address,szserver.inventory.ItemStack> candidates)throws Exception{return adapter.quickSelect(raw,slot,candidates);}
     public record MedicineEffect(int id,long until,Medicine medicine){}
     private final Map<Integer,Medicine> medicines=new HashMap<>();private Set<Integer> firearmFactories=Set.of();
+    public Map<Integer,List<List<szserver.net.MeleeProfile>>> meleeProfiles()throws Exception{return adapter.meleeProfiles();}
     public boolean firearm(int id){return firearmFactories.contains(id);}
     private final Map<Integer,szserver.inventory.ExplosiveProfile> explosives=new HashMap<>();
     public Map<Integer,szserver.inventory.ExplosiveProfile> explosives(){return Map.copyOf(explosives);}
@@ -143,7 +146,7 @@ public final class GameItems implements AutoCloseable {
             String kind=row.get("state").getAsString();
             byte[] state=adapter.nativeItemDefault(id,kind);
             if(!Arrays.equals(state,adapter.roundTrip(kind,state)))throw new IllegalStateException("archive_item_default_state:"+id);
-            row.addProperty("default",HexFormat.of().formatHex(state));
+            factoryDefaults.put(id,state);
         }
         firearmFactories=adapter.firearmFactories();
         medicines.clear();medicines.putAll(adapter.warmMedicines());statOrdinals=adapter.statOrdinals();for(var entry:catalog.entrySet()){
@@ -369,7 +372,7 @@ public final class GameItems implements AutoCloseable {
         List<szserver.inventory.ItemStack> removed=new ArrayList<>();for(byte[] raw:result.removed())removed.add(readStack(raw));return new ModuleBatch(geometry(weapon.state(result.state())),List.copyOf(removed));
     }
     public szserver.inventory.ItemStack createStack(int id,int count,int metadata,JsonObject tags)throws Exception{
-        byte[] state=create(id,new JsonObject());var original=new szserver.inventory.ItemStack(id,count,metadata,state);if(tags.isEmpty())return geometry(original);
+        byte[] state=create(id,new JsonObject());var original=new szserver.inventory.ItemStack(id,count,metadata,state);if(tags.isEmpty())return inventoryFacts(original);
         byte[] wire=szserver.net.InventoryPackets.stack(original);return validateStack(adapter.applyTags(Arrays.copyOfRange(wire,1,wire.length),NativeTypedNbt.encode(tags)));
     }
     public szserver.inventory.ItemStack readEditedStack(byte[] raw)throws Exception{return validateStack(adapter.readEditedStack(raw));}
@@ -384,7 +387,24 @@ public final class GameItems implements AutoCloseable {
         String expected=row.has("state")?row.get("state").getAsString():null;
         if(!Objects.equals(expected,decoded.kind()))throw new IllegalArgumentException("item_state_factory_mismatch");
         if(expected!=null&&!verified.contains(expected))throw new IllegalArgumentException("state_codec_not_verified");
-        return geometry(new szserver.inventory.ItemStack(decoded.id(),decoded.count(),decoded.metadata(),decoded.state(),decoded.properties(),decoded.equipmentMask()));
+        return inventoryFacts(new szserver.inventory.ItemStack(decoded.id(),decoded.count(),decoded.metadata(),decoded.state(),decoded.properties(),decoded.equipmentMask()));
+    }
+    /** Journal the native creation-time facts, with no changes to the client wire format. */
+    private szserver.inventory.ItemStack inventoryFacts(szserver.inventory.ItemStack item)throws Exception{
+        var facts=inventoryFacts(item.id());
+        if(facts!=null)item=item.inventoryFacts(facts.width(),facts.height(),facts.limit());
+        return geometry(item);
+    }
+    private ClientStateAdapter.FactoryMetadata inventoryFacts(int id)throws Exception{
+        if(!itemResourcesMounted||!adapter.hasHeadlessArchiveFactory(id))return null;
+        var facts=inventoryFacts.get(id);
+        if(facts==null){
+            facts=adapter.factoryMetadata(id);
+            if(facts.width()<1||facts.width()>256||facts.height()<1||facts.height()>256||facts.limit()<1)
+                throw new IllegalStateException("native_inventory_facts:"+id);
+            inventoryFacts.put(id,facts);
+        }
+        return facts;
     }
     public szserver.inventory.ItemStack geometry(szserver.inventory.ItemStack item)throws Exception{
         if(definitions==null||!definitions.has(Integer.toString(item.id())))return item;
@@ -393,7 +413,9 @@ public final class GameItems implements AutoCloseable {
         String kind=stateKind(item);if(!Set.of("1535556086","259689215").contains(kind))return item;
         byte[] wire=szserver.net.InventoryPackets.stack(item);int[] size=adapter.weaponGeometry(Arrays.copyOfRange(wire,1,wire.length));return item.geometry(size[0],size[1]);
     }
-    public int stackLimit(int id){
+    public int stackLimit(int id)throws Exception{
+        var facts=inventoryFacts(id);
+        if(facts!=null)return facts.limit();
         JsonElement row=registry.get(Integer.toString(id));if(row==null)throw new IllegalArgumentException("unknown_item_id");
         return row.getAsJsonObject().has("state")?1:64;
     }
@@ -404,9 +426,18 @@ public final class GameItems implements AutoCloseable {
         if(!row.has("state")){if(tags.size()!=0)throw new IllegalArgumentException("item_has_no_extended_state");return new byte[0];}
         String kind=row.get("state").getAsString();
         if(!verified.contains(kind))throw new IllegalArgumentException("state_codec_not_verified:"+kind);
-        if(!row.has("default"))throw new IllegalArgumentException("item_default_missing");
-        byte[] state=HexFormat.of().parseHex(row.get("default").getAsString());
-        // Never give multiple items the factory fixture's UUID.
+        byte[] state=factoryDefaults.get(id);
+        if(state==null&&adapter.hasHeadlessArchiveFactory(id)){
+            state=adapter.nativeItemDefault(id,kind);
+            if(!Arrays.equals(state,adapter.roundTrip(kind,state)))
+                throw new IllegalStateException("archive_item_default_state:"+id);
+            factoryDefaults.put(id,state);
+        }
+        if(state==null){
+            if(!row.has("default"))throw new IllegalArgumentException("item_default_missing");
+            state=HexFormat.of().parseHex(row.get("default").getAsString());
+        }
+        // Each new item and its nested modules receive fresh identities.
         if(firearm(id)&&Set.of("1535556086","259689215").contains(kind))state=adapter.initialModules(id,kind,state);
         state=adapter.freshTreeIdentity(kind,state);
         if(!tags.isEmpty())return createStack(id,1,0,tags).state();

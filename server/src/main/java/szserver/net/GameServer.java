@@ -35,7 +35,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
     private static final int CHUNK_QUEUE=(256*1100+FRAGMENT-1)/FRAGMENT;
     private record LauncherReload(long deadline,long life,int hand,UUID firearm,UUID launcher,int ammo,ItemStack expected) {}
     private record ShotKey(long seed,int sequence){}
-    private record Swing(int kind,int combo,int weapon,long ready,long expires,MeleeProfile profile){}
+    private record Swing(int kind,int combo,ItemStack weapon,long ready,long expires,MeleeProfile profile){}
     private record BotKey(String id,long incarnation){}
     private record Recipient(InetSocketAddress address,UUID incarnation){}
     private final NativeEntityIds entityIds=new NativeEntityIds();
@@ -1191,12 +1191,12 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
     private void meleeSwing(Session s,byte[] body)throws IOException{
         if(body.length!=8)throw new IOException("melee_swing_size");ByteBuffer raw=ByteBuffer.wrap(body);int kind=raw.getInt(),combo=raw.getInt();if(kind<0||kind>2||combo<0||combo>32)throw new IOException("melee_swing_kind");
         long now=System.nanoTime();ItemStack knife=inventory(s).at(new Inventory.Address(0,5,0));if(knife==null||s.hp<=0||s.holstered||s.physicalPending||s.unjamming!=null||s.unjammingPending||!s.weaponActions.isEmpty()||kind!=2&&s.handContainer!=5||s.reloadAt!=0||now+15_000_000L<s.nextAttack||now<s.drawUntil||inventories.busy(character(s)))return;
-        MeleeProfile profile=MeleeProfile.from(inventories.catalog().get(knife.id()).properties(),kind,combo);long interval=(long)(Math.max(profile.delay(),profile.cooldown())*1e9);s.animation.swing(kind);s.nextAttack=now+interval;s.swing=new Swing(kind,combo,knife.id(),now+(long)(profile.delay()*1e9),now+interval+750_000_000,profile);
+        MeleeProfile profile=inventories.melee(knife.id(),kind,combo);if(profile==null)return;long interval=(long)(Math.max(profile.delay(),profile.cooldown())*1e9);s.animation.swing(kind);s.nextAttack=now+interval;s.swing=new Swing(kind,combo,knife,now+(long)(profile.delay()*1e9),now+interval+750_000_000,profile);
     }
     private void meleeHit(Session s,byte[] body)throws IOException{
         if(body.length<7||body.length>8192)throw new IOException("melee_hit_size");var in=Wire.input(body);int kind=in.readByte(),combo=in.readByte();in.readInt();int count=in.readUnsignedByte();if(count<1||count>16)throw new IOException("melee_targets_limit");Set<Integer> claims=new HashSet<>();
         for(int n=0;n<count;n++){if(in.readUnsignedByte()!=0)return;claims.add(in.readInt());for(int coordinate=0;coordinate<6;coordinate++)if(!Double.isFinite(in.readDouble()))throw new IOException("melee_geometry_nonfinite");if(!Float.isFinite(in.readFloat()))throw new IOException("melee_geometry_nonfinite");int absent=in.readUnsignedByte();if(absent>1)throw new IOException("melee_bone_presence");if(absent==0&&in.readUTF().length()>128)throw new IOException("melee_bone_limit");}if(in.available()!=0)throw new IOException("melee_trailing_bytes");
-        Swing swing=s.swing;long now=System.nanoTime();ItemStack knife=inventory(s).at(new Inventory.Address(0,5,0));lastMelee=Map.of("stage","claim","kind",kind,"combo",combo,"targets",claims,"pending",swing!=null,"hand",s.handContainer,"untilReadyMs",swing==null?0:(swing.ready()-now)/1e6);if(swing==null||knife==null||knife.id()!=swing.weapon()||s.hp<=0||s.holstered||swing.kind()!=2&&s.handContainer!=5||kind!=swing.kind()||combo!=swing.combo()||now<swing.ready()-150_000_000||now>swing.expires())return;s.swing=null;
+        Swing swing=s.swing;long now=System.nanoTime();ItemStack knife=inventory(s).at(new Inventory.Address(0,5,0));lastMelee=Map.of("stage","claim","kind",kind,"combo",combo,"targets",claims,"pending",swing!=null,"hand",s.handContainer,"untilReadyMs",swing==null?0:(swing.ready()-now)/1e6);if(swing==null||knife!=swing.weapon()||s.hp<=0||s.holstered||swing.kind()!=2&&s.handContainer!=5||kind!=swing.kind()||combo!=swing.combo()||now<swing.ready()-150_000_000||now>swing.expires())return;s.swing=null;
         double yaw=Math.toRadians(s.yaw),pitch=Math.toRadians(s.pitch);double[] eye=CharacterScale.eye(s.pos,s.posture.locomotion(),s.characterScale),forward={-Math.sin(yaw)*Math.cos(pitch),-Math.sin(pitch),Math.cos(yaw)*Math.cos(pitch)};
         List<MeleeCandidate> candidates=new ArrayList<>();long life=s.life;
         for(Session target:sessions.values())if(target!=s&&target.ready&&target.hp>0&&target.gameplayMode==PlayerRules.Mode.STALKER&&claims.contains(target.entity)){
@@ -1220,7 +1220,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         fpvMap.nearestVisible(rays).whenComplete((result,error)->{
             if(!combatCompleted.offer(()->{
                 if(sessions.get(attacker.address)!=attacker||attacker.life!=life||attacker.hp<=0||attacker.holstered||attacker.handContainer!=5&&swing.kind()!=2||System.nanoTime()>deadline)return;
-                ItemStack knife=inventory(attacker).at(new Inventory.Address(0,5,0));if(knife==null||knife.id()!=swing.weapon())return;
+                ItemStack knife=inventory(attacker).at(new Inventory.Address(0,5,0));if(knife!=swing.weapon())return;
                 Throwable failure=error;while(failure instanceof CompletionException&&failure.getCause()!=null)failure=failure.getCause();
                 if(failure==null)try{result.authorization().checkCurrent();}catch(IllegalArgumentException stale){failure=stale;}
                 if(failure!=null){if("block_publication_stale".equals(failure.getMessage())&&retries<2){visibleMelee(attacker,life,swing,eye,candidates,deadline,retries+1);return;}visibilityErrors++;return;}
