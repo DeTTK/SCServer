@@ -82,7 +82,8 @@ pub fn write_telemetry_context(
     let settings = layout.load()?;
     let branch = hex::encode(sha2::Sha256::digest(settings.game_branch.as_bytes()));
     let installed: Value =
-        read_json(&layout.at(&format!("state/channels/{}/installed.json", &branch[..20])))?;
+        read_json(&layout.at(&format!("state/channels/{}/installed.json", &branch[..20])))
+            .unwrap_or(Value::Null);
     let mods = ModManager::new(layout)
         .snapshot()
         .map(|s| {
