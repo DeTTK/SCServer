@@ -22,7 +22,7 @@ use std::{
 };
 
 pub const GAME_REPOSITORY: &str = "DeTTK/SCServer";
-const SELECTABLE_CHANNELS: [&str; 3] = ["main", "test", "launtest"];
+pub const SELECTABLE_CHANNELS: [&str; 3] = ["main", "test", "launtest"];
 const PUBLIC_KEY: &str = include_str!("../../../channel-public-key.txt");
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
