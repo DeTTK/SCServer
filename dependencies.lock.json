@@ -1,4 +1,5 @@
 {
   "gson": {"file":"gson-2.13.2.jar","url":"https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.13.2/gson-2.13.2.jar","sha256":"dd0ce1b55a3ed2080cb70f9c655850cda86c206862310009dcb5e5c95265a5e0"},
+  "asm": {"file":"asm-9.7.1.jar","url":"https://repo.maven.apache.org/maven2/org/ow2/asm/asm/9.7.1/asm-9.7.1.jar","sha256":"8cadd43ac5eb6d09de05faecca38b917a040bb9139c7edeb4cc81c740b713281"},
   "zstd": {"file":"zstd-jni-1.5.0-5.jar","url":"https://repo.maven.apache.org/maven2/com/github/luben/zstd-jni/1.5.0-5/zstd-jni-1.5.0-5.jar","sha256":"bf7396cc177e40713afc3a4e1dbbd4039f013c0f9ddf4579bc25f19be6f0196f"}
 }

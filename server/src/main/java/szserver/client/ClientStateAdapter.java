@@ -48,13 +48,14 @@ public final class ClientStateAdapter implements AutoCloseable {
         }
     }
     private final NativeLoader loader;
+    private final Path runtime;
     private final Map<String,Constructor<?>> factories=new HashMap<>();
     private final Class<?> compound;
     private final Map<String, Codec> codecs = new ConcurrentHashMap<>();
     public void resources(Path root)throws IOException{loader.resources(root);}
 
     public ClientStateAdapter(Path runtime) throws Exception {
-        runtime = runtime.toRealPath();NativeItemRulesRelease.verify(runtime);
+        runtime = runtime.toRealPath();this.runtime=runtime;NativeItemRulesRelease.verify(runtime);
         if (!Files.exists(RuntimeFiles.location(runtime.resolve("classes"))))
             throw new IOException("Missing canonical runtime classes: " + runtime);
         // Array call-site guards are tied to reviewed bytecode. Refuse a changed
@@ -455,7 +456,8 @@ public final class ClientStateAdapter implements AutoCloseable {
     public Set<Integer> firearmFactories()throws Exception{Set<Integer> ids=new HashSet<>();Class<?> gun=Class.forName("1745367406",true,loader);for(var entry:moduleFactoryClasses.entrySet())if(gun.isAssignableFrom(Class.forName(entry.getValue(),true,loader)))ids.add(entry.getKey());return Set.copyOf(ids);}
     public void warmCosmetics(Map<Integer,String> classes,Map<Integer,String> definitions,
                               Map<Integer,String> resourceDeclarations)throws Exception{
-        cosmetics=new NativeCosmetics(loader,definitions,classes,resourceDeclarations);itemNbt=null;itemSlots=new NativeItemSlots(cosmetics,this::bank);itemSlotPackets=new NativeItemSlotPackets(cosmetics);quickSlots=new NativeQuickSlots(cosmetics);itemNbt();}
+        var registrations=resourceDeclarations.isEmpty()?null:new NativeFactoryRegistrations(runtime,loader);
+        cosmetics=new NativeCosmetics(loader,definitions,classes,resourceDeclarations,registrations);itemNbt=null;itemSlots=new NativeItemSlots(cosmetics,this::bank);itemSlotPackets=new NativeItemSlotPackets(cosmetics);quickSlots=new NativeQuickSlots(cosmetics);itemNbt();}
     public record QuickBindRequest(int owner,int index,szserver.inventory.Inventory.Address source,String label){}
     public QuickBindRequest quickBindRequest(byte[] raw)throws Exception{return quickSlots.bindRequest(raw);}
     public int quickUseRequest(byte[] raw)throws Exception{return quickSlots.useRequest(raw);}
@@ -481,8 +483,11 @@ public final class ClientStateAdapter implements AutoCloseable {
         return read.invoke(null,new DataInputStream(new ByteArrayInputStream(new byte[]{(byte)code})));
     }
     public Attachment nativeSlot(String kind,byte[] parent,byte[] attached,int slot,boolean bolt)throws Exception{var edit=itemSlots.edit(parent,attached,slot,bolt);Stack changed=readStack(edit.stack());return new Attachment(changed.state(),edit.previous(),false);}
-    byte[] artifactEquipmentDefault(int id,String kind)throws Exception{
-        return encode(codec(kind),itemSlots.defaultState(id));
+    byte[] nativeItemDefault(int id,String kind)throws Exception{
+        Object value=itemSlots.defaultState(id);
+        if(value==null||!value.getClass().getName().equals(kind))
+            throw new IOException("native_item_default_kind:"+id+":"+kind);
+        return encode(codec(kind),value);
     }
     public GameItems.EquipmentStats containerStats(byte[] raw)throws Exception{return itemSlots.container(raw);}
     public byte[] builtinModule(String kind,byte[] raw)throws Exception{Object state=decode(codec(kind),raw);state.getClass().getField("instanceof").setBoolean(state,true);return encode(codec(kind),state);}
@@ -537,10 +542,18 @@ public final class ClientStateAdapter implements AutoCloseable {
             return new szserver.inventory.WeaponProfile(capacity,Arrays.stream(ammunition).boxed().toList(),gun.getField("synchronized").getFloat(factory),gun.getField("throw").getFloat(factory),(Float)NativeMethods.instance(gun,"import",float.class,stack).invoke(factory,value),(Float)NativeMethods.instance(gun,"float",float.class,stack).invoke(factory,value),(Float)NativeMethods.instance(gun,"throws",float.class,stack).invoke(factory,value),(Float)NativeMethods.instance(gun,"private",float.class,stack).invoke(factory,value),reload*modifier,tactical*modifier,gun.getField("i").getFloat(factory),reloadByRounds);
         });
     }
+    boolean defaultModule(int weapon,int selection)throws Exception{
+        Object factory=moduleFactory(weapon);
+        Class<?> gun=Class.forName("1745367406",true,loader);
+        for(int id:(int[])gun.getField("do").get(factory))if(id==selection)return true;
+        return false;
+    }
     /** Actual native gun initializer populates resource inbuilt_* slots; caller gives this only to a new item. */
     public byte[] initialModules(int id,String kind,byte[] state)throws Exception{
         Object factory=moduleFactory(id);Class<?> gun=Class.forName("1745367406",true,loader);
-        Map<?,?> builtins=(Map<?,?>)gun.getField("n").get(factory);for(Object value:builtins.values())moduleFactory((Integer)value);
+        Map<?,?> builtins=(Map<?,?>)gun.getField("n").get(factory);
+        if(builtins.isEmpty())return state;
+        for(Object value:builtins.values())moduleFactory((Integer)value);
         byte[] raw=szserver.net.Wire.bytes(out->{out.writeShort(id);out.writeInt(1);out.writeShort(0);out.writeBoolean(true);out.write(state);out.writeByte(0);});
         Object stack=prepareModuleGun(raw);Object initialized=withModuleFactories(()->{
             Map<Object,Object> existing=new LinkedHashMap<>(moduleMap(stack));Arrays.stream(gun.getMethods()).filter(method->method.getName().equals("try")&&method.getReturnType()==void.class&&Arrays.equals(method.getParameterTypes(),new Class<?>[]{stack.getClass()})).findFirst().orElseThrow(()->new IOException("native_builtin_initializer_missing")).invoke(factory,stack);

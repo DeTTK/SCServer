@@ -5,8 +5,9 @@ import szserver.net.*;
 /** Native local-player sickness component update, without fabricated medicine effects. */
 public final class SicknessPackets {
     public static final String UPDATE="1608929782";
-    public static void verify(java.nio.file.Path root,java.nio.file.Path runtime)throws Exception{
+    public static void verify(java.nio.file.Path root,java.nio.file.Path runtime,java.nio.file.Path configs)throws Exception{
         var m=com.google.gson.JsonParser.parseString(java.nio.file.Files.readString(root.resolve("fixtures/native-sickness.json"))).getAsJsonObject();for(var e:m.getAsJsonObject("classHashes").entrySet()){var p=runtime.resolve("classes").resolve(e.getKey()+".class");if(!e.getKey().matches("[0-9]+")||!java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(RuntimeFiles.read(p))).equals(e.getValue().getAsString()))throw new java.io.IOException("native_sickness_release_changed");}
+        if(szserver.util.GameResources.isFile(configs.resolve("assets/stalker/sickness.json")))return;
         var p=root.resolve("fixtures/native-resources/assets/stalker/sickness.json");if(!java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(RuntimeFiles.read(p))).equals(m.get("resourceSha256").getAsString()))throw new java.io.IOException("native_sickness_resource_changed");
     }
     public static byte[] body(SicknessRules.Profile profile,SicknessRules.State state,float incoming,int penetration){

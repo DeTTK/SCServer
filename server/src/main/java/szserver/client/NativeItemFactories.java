@@ -7,14 +7,17 @@ import java.util.*;
 
 /** Original resource graph and scoped genuine item factories; shared by cosmetic and medicine adapters. */
 class NativeItemFactories {
+    private final NativeFactoryRegistrations registrations;
+    private final Map<Integer,String> resourceTypes = new HashMap<>();
     protected final ClassLoader loader;protected final Map<Integer,String> definitions,classes;
     protected final Map<Integer,Object> descriptors=new HashMap<>(),factories=new LinkedHashMap<>();
     protected final Class<?> resource,json,base,skin,style,stack;protected final Object[] registry;
     NativeItemFactories(ClassLoader loader,Map<Integer,String> definitions,Map<Integer,String> classes)throws Exception{
-        this(loader,definitions,classes,Map.of());
+        this(loader,definitions,classes,Map.of(),null);
     }
     NativeItemFactories(ClassLoader loader,Map<Integer,String> definitions,Map<Integer,String> classes,
-                        Map<Integer,String> resourceDeclarations)throws Exception{
+                        Map<Integer,String> resourceDeclarations,NativeFactoryRegistrations registrations)throws Exception{
+        this.registrations=registrations;
         this.loader=loader;this.definitions=Map.copyOf(definitions);this.classes=Map.copyOf(classes);
         resource=type("1422486348");json=type("com.google.gson.JsonObject");base=type("1366800141");skin=type("1078890796");style=type("871813794");stack=type("211097523");registry=(Object[])base.getField("import").get(null);
         Object global=type("498192453").getField("long").get(null),manager=global.getClass().getField("class").get(global);
@@ -25,6 +28,15 @@ class NativeItemFactories {
         List<Object> rows=new ArrayList<>();for(var e:declared.entrySet()){JsonObject row=JsonParser.parseString(e.getValue()).getAsJsonObject();Object descriptor=descriptor(e.getKey(),row,aliases.get(e.getKey()),row.has("extends_item")?row.get("extends_item").getAsInt():null);descriptors.put(e.getKey(),descriptor);rows.add(descriptor);}
         // This is the original resource-loader merge and descendant-index construction.
         type("985191831").getMethod("else",Collection.class).invoke(manager,rows);
+        if(registrations!=null) {
+            Field data=resource.getField("strictfp");
+            Method get=json.getMethod("get",String.class);
+            Method string=type("com.google.gson.JsonElement").getMethod("getAsString");
+            for(int id:resourceDeclarations.keySet()) {
+                Object kind=get.invoke(data.get(descriptors.get(id)),"type");
+                if(kind!=null)resourceTypes.put(id,(String)string.invoke(kind));
+            }
+        }
     }
     protected Class<?> type(String name)throws ClassNotFoundException{return Class.forName(name,true,loader);}
     private Object json(JsonObject row)throws Exception{Object parsed=type("com.google.gson.JsonParser").getMethod("parseString",String.class).invoke(null,row.toString());return parsed.getClass().getMethod("getAsJsonObject").invoke(parsed);}
@@ -54,7 +66,11 @@ class NativeItemFactories {
         Object cached=factories.get(id);if(cached!=null)return cached;String name=classes.get(id);if(name==null||!descriptors.containsKey(id))throw new IOException("cosmetic_factory_missing:"+id);
         if(Set.of("native-game-owner","world-tick").contains(Thread.currentThread().getName()))throw new IOException("cosmetic_factory_on_owner");
         Class<?> type=type(name);Object existing=registry[id];if(existing!=null&&existing.getClass()==type){factories.put(id,existing);return existing;}Object descriptor=prepared(id,type),prior=registry[id];registry[id]=null;
-        try{Object value=type.getConstructor(resource).newInstance(descriptor);if(skin.isInstance(value))skin.getMethod("implements",resource).invoke(value,descriptors.get(id));factories.put(id,value);return value;}finally{registry[id]=prior;}
+        try{Object value;
+            String kind=resourceTypes.get(id);
+            value=kind==null?null:registrations.create(kind,type,descriptor);
+            if(value==null)value=type.getConstructor(resource).newInstance(descriptor);
+            if(skin.isInstance(value))skin.getMethod("implements",resource).invoke(value,descriptors.get(id));factories.put(id,value);return value;}finally{registry[id]=prior;}
     }
     <T> T bound(java.util.concurrent.Callable<T> action)throws Exception{return bound(factories.keySet(),action);}
     <T> T bound(Collection<Integer> ids,java.util.concurrent.Callable<T> action)throws Exception{Map<Integer,Object> prior=new HashMap<>();for(int id:ids){Object factory=factories.get(id);if(factory==null)continue;prior.put(id,registry[id]);registry[id]=factory;}try{return action.call();}finally{for(var e:prior.entrySet())registry[e.getKey()]=e.getValue();}}

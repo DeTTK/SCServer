@@ -9,8 +9,8 @@ import java.util.*;
 final class NativeCosmetics extends NativeItemFactories {
     private final Class<?> target,kind;
     NativeCosmetics(ClassLoader loader,Map<Integer,String> definitions,Map<Integer,String> classes,
-                    Map<Integer,String> resourceDeclarations)throws Exception{
-        super(loader,definitions,classes,resourceDeclarations);target=type("714221946");kind=type("1847365303");
+                    Map<Integer,String> resourceDeclarations,NativeFactoryRegistrations registrations)throws Exception{
+        super(loader,definitions,classes,resourceDeclarations,registrations);target=type("714221946");kind=type("1847365303");
         for(int id:new TreeSet<>(classes.keySet())){Class<?> c=type(classes.get(id));if(skin.isAssignableFrom(c)||style.isAssignableFrom(c))factory(id);}
     }
     record Skin(Object state,int previous,boolean unchanged){}

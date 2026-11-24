@@ -1,5 +1,7 @@
 package szserver.net;
 
+import szserver.util.GameResources;
+
 import szserver.client.*;
 import environment.protocol.EnvironmentWire;
 import scvehicles.protocol.VehicleWire;
@@ -289,7 +291,8 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         sceneAccess=new szserver.commands.SceneAccess(world,commands);rollback.push(sceneAccess);
         healthRules=HealthRules.read(com.google.gson.JsonParser.parseString(szserver.util.ItemResources.gameplaySettings(root.resolve("fixtures/artifact-settings.json"))).getAsJsonObject());
         this.world=Objects.requireNonNull(world);this.regions=terrain instanceof szserver.world.RegionTerrain r?r:null;this.spawn=spawn.clone();
-        var anomalyResources=world.actorMotion() instanceof NativeActorMotion nativeMotion&&nativeMotion.anomalyResources()!=null?nativeMotion.anomalyResources():fpvSettings.boxes();anomalies=new AnomalySimulation(new Random(),szserver.world.NativeAnomalyDefaults.damage(anomalyResources));
+        Path liveConfigs=root.resolve("resources/configs");
+        var anomalyResources=GameResources.isFile(liveConfigs.resolve("assets/anomalies/anomaly_config.json"))?liveConfigs:world.actorMotion() instanceof NativeActorMotion nativeMotion&&nativeMotion.anomalyResources()!=null?nativeMotion.anomalyResources():fpvSettings.boxes();anomalies=new AnomalySimulation(new Random(),szserver.world.NativeAnomalyDefaults.damage(anomalyResources));
         fpvMap=new szserver.world.MapObstructionAccess(world,terrain,fpvSettings.boxes(),fpvSettings.baseBytes(),fpvSettings.editedBytes(),regions==null?szserver.world.SceneRegistry.load(registry.resolveSibling("active-stock-gameobjects.json")).names():regions.collisionDefinitions());rollback.push(fpvMap);zombies=new ZombieHorde(world,commands,fpvMap);fpvReceipts=new FpvReceipts(data);rollback.push(fpvReceipts);
         if(world.beforeStart())world.bootstrap(w->{w.actorMaps(fpvMap);return true;});else world.submit(w->{w.actorMaps(fpvMap);return true;}).get(5,TimeUnit.SECONDS);
         locations=new CharacterLocations(data,regions==null?"flat:arena-v1":regions.identity());rollback.push(locations);allianceState=new AllianceState(data);rollback.push(allianceState);warps=new szserver.persistence.WarpStore(data);rollback.push(warps);environment=commands.environment();environmentAccess=new EnvironmentAccess(environment,new szserver.persistence.WeatherConfigurations(data,runtime));rollback.push(environmentAccess);
@@ -301,7 +304,17 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         for(var e:com.google.gson.JsonParser.parseString(Files.readString(root.resolve("fixtures/equipment-appearances.json"))).getAsJsonObject().entrySet())appearances.put(Integer.parseInt(e.getKey()),HexFormat.of().parseHex(e.getValue().getAsString()));inventories=new GameInventory(root,data,runtime,registry);rollback.push(inventories);itemWorld=regions==null?"flat:arena-v1":regions.identity();worldItems=new szserver.world.WorldItems(fpvMap,itemWorld,entityIds::actor);rollback.push(worldItems);if(fpvSettings.toggleItemId()!=0)inventories.catalog().get(fpvSettings.toggleItemId());GrenadePackets.verifyRelease(root,runtime);LauncherPackets.verifyRelease(root,runtime);UnderbarrelPackets.verifyRelease(root,runtime);
         for(var e:inventories.explosives().entrySet())try{var definition=inventories.catalog().get(e.getKey()).properties();blastRules.put(e.getKey(),nativePackets.blastRules(definition.has("explosive_props")?definition.getAsJsonObject("explosive_props"):definition));var areas=nativePackets.grenadeAreas(e.getKey(),definition);if(!areas.isEmpty()){grenadeAreaProfiles.put(e.getKey(),areas);throw new IllegalArgumentException("grenade_area_gameplay_pending");}var profile=nativePackets.grenadeProfile(definition);if(e.getValue().radius()>128)throw new IllegalArgumentException("grenade_radius_budget");var use=nativePackets.grenadeUse(e.getKey(),definition);grenadeProfiles.put(e.getKey(),profile);grenadeUseRules.put(e.getKey(),use);}catch(IllegalArgumentException unsupported){grenadeUnavailable.put(e.getKey(),unsupported.getMessage());}
         boltRules=inventories.warmBolts();
-        SicknessPackets.verify(root,runtime);try(ClientSceneCodec codec=new ClientSceneCodec(runtime,root.resolve("fixtures/native-resources"))){sicknessRules=codec.sicknessRules();areaRelations=codec.areaRelations();continuousEffectKind=codec.grenadeEffectKind(false);instantEffectKind=codec.grenadeEffectKind(true);}AreaRelations.verify(root,runtime);for(var profile:sicknessRules.profiles())nativePackets.roundTrip(SicknessPackets.UPDATE,SicknessPackets.body(profile,sicknessRules.empty(profile.kind()),0,0));
+        Path compatibilityResources=root.resolve("fixtures/native-resources");
+        SicknessPackets.verify(root,runtime,liveConfigs);
+        AreaRelations.verify(root,runtime,liveConfigs);
+        try(ClientSceneCodec codec=new ClientSceneCodec(runtime,
+                GameResources.exists(liveConfigs)?liveConfigs:null,compatibilityResources)){
+            sicknessRules=codec.sicknessRules();
+            areaRelations=codec.areaRelations();
+            continuousEffectKind=codec.grenadeEffectKind(false);
+            instantEffectKind=codec.grenadeEffectKind(true);
+        }
+        for(var profile:sicknessRules.profiles())nativePackets.roundTrip(SicknessPackets.UPDATE,SicknessPackets.body(profile,sicknessRules.empty(profile.kind()),0,0));
         inventories.pulseProfiles(grenadeAreaProfiles);
         Set<Integer> effectOnlyAreas=new HashSet<>();for(int id:List.of(12359,12404)){var definition=inventories.catalog().get(id).properties();if(definition.has("has_effect")&&definition.get("has_effect").getAsBoolean()&&!definition.has("effect_aoe_object")&&!definition.has("effect_aoe")&&!definition.has("effects_aoe"))effectOnlyAreas.add(id);}
         grenadeAreaScenes=new GrenadeAreaScenes(root,runtime,registry,fpvSettings.boxes(),regions==null?Map.of():regions.collisionDefinitions(),grenadeAreaProfiles,inventories.explosives(),regions==null?null:regions.sceneResources(),effectOnlyAreas);rollback.push(grenadeAreaScenes);

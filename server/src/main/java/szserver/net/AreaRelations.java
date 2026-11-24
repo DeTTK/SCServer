@@ -4,8 +4,10 @@ import java.util.*;
 
 /** Cold native alliance table and typed equivalents of default player target rules. */
 public final class AreaRelations {
-    public static void verify(java.nio.file.Path root,java.nio.file.Path runtime)throws Exception{
-        var m=com.google.gson.JsonParser.parseString(java.nio.file.Files.readString(root.resolve("fixtures/native-grenade-policy.json"))).getAsJsonObject();for(var e:m.getAsJsonObject("classHashes").entrySet()){if(!e.getKey().matches("[0-9]+"))throw new java.io.IOException("area_native_class");verifyHash(runtime.resolve("classes/"+e.getKey()+".class"),e.getValue().getAsString());}verifyHash(root.resolve("fixtures/native-resources/assets/bundle/alliances.json"),m.get("resourceSha256").getAsString());
+    public static void verify(java.nio.file.Path root,java.nio.file.Path runtime,java.nio.file.Path configs)throws Exception{
+        var m=com.google.gson.JsonParser.parseString(java.nio.file.Files.readString(root.resolve("fixtures/native-grenade-policy.json"))).getAsJsonObject();for(var e:m.getAsJsonObject("classHashes").entrySet()){if(!e.getKey().matches("[0-9]+"))throw new java.io.IOException("area_native_class");verifyHash(runtime.resolve("classes/"+e.getKey()+".class"),e.getValue().getAsString());}
+        if(!szserver.util.GameResources.isFile(configs.resolve("assets/bundle/alliances.json")))
+            verifyHash(root.resolve("fixtures/native-resources/assets/bundle/alliances.json"),m.get("resourceSha256").getAsString());
     }
     private static void verifyHash(java.nio.file.Path path,String expected)throws Exception{if(!java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(szserver.client.RuntimeFiles.read(path))).equals(expected))throw new java.io.IOException("area_native_release_changed:"+path);}
     public enum Mode { DEFAULT,WILD,SUPER_WILD,SAME_ORIGIN_TRUCE,FULL_TRUCE }
