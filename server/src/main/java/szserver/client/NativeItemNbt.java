@@ -38,9 +38,18 @@ final class NativeItemNbt {
     byte[] stream(byte[] raw)throws Exception{Object value=decode(raw),root=root(value);return bound(root,()->canonical(value));}
     byte[] config(byte[] raw)throws Exception{Object value=decode(raw);var output=new ByteArrayOutputStream();try(var gzip=new java.util.zip.GZIPOutputStream(output)){writeNbt.invoke(null,root(value),new DataOutputStream(gzip));}return output.toByteArray();}
     byte[] configImport(byte[] raw)throws Exception{
-        if(raw.length<1||raw.length>65536)throw new IOException("item_config_size");Object root=parse(raw[0]==10?raw:NativeNbtLimits.expand(raw));return bound(root,()->canonical(nbtConstructor.newInstance(root)));
+        if(raw.length<1||raw.length>65536)throw new IOException("item_config_size");Object root=parse(raw[0]==10?raw:NativeNbtLimits.expand(raw)),value=nbtConstructor.newInstance(root);restoreArtifactBonuses(value,root,0);return bound(root,()->canonical(value));
     }
     byte[] apply(byte[] raw,byte[] tags)throws Exception{
-        Object root=root(decode(raw)),changes=parse(tags),tag=map(root).get(tagKey);if(tag==null){tag=compound.getConstructor().newInstance();map(root).put(tagKey,tag);}map(tag).putAll(map(changes));return bound(root,()->canonical(nbtConstructor.newInstance(root)));
+        Object root=root(decode(raw)),changes=parse(tags),tag=map(root).get(tagKey);if(tag==null){tag=compound.getConstructor().newInstance();map(root).put(tagKey,tag);}map(tag).putAll(map(changes));Object value=nbtConstructor.newInstance(root);restoreArtifactBonuses(value,root,0);return bound(root,()->canonical(value));
+    }
+    /** The native NBT constructor validates artifact tags but leaves the state's bonus enum set empty; replay it from the edited compound. */
+    private void restoreArtifactBonuses(Object value,Object root,int depth)throws Exception{
+        if(depth>8)throw new IOException("nested_item_depth");if(host==null)return;Object state=null;Class<?> base=host.type("154675812");
+        for(Method method:value.getClass().getMethods())if(method.getName().equals("finally")&&method.getParameterCount()==0&&method.getReturnType()==base){state=method.invoke(value);break;}
+        if(state==null)return;Object tag=map(root).get(tagKey);if(!compound.isInstance(tag))return;Map<String,Object> fields=map(tag);
+        if(state.getClass().getName().equals("1609149377")){Object bonus=fields.get("bonus_properties");if(bonus!=null){List<?> values=(List<?>)bonus.getClass().getField("for").get(bonus);if(values.size()>32)throw new IOException("artifact_bonus_count");Set<Object> selected=new HashSet<>();Class<?> type=host.type("1924679062");for(Object value0:values)selected.add(type.getMethod("valueOf",String.class).invoke(null,value0.getClass().getMethod("char").invoke(value0)));state.getClass().getField("interface").set(state,selected);}}
+        Object attachments=fields.get("attach");if(!compound.isInstance(attachments))return;Map<String,Object> nested=map(attachments);Class<?> stackType=host.type("211097523");
+        for(Field field:state.getClass().getFields())if(Map.class.isAssignableFrom(field.getType())){Object map=field.get(state);if(map==null)continue;for(var entry:((Map<?,?>)map).entrySet()){if(entry.getKey()==null||!stackType.isInstance(entry.getValue()))continue;for(Method method:state.getClass().getMethods())if(method.getName().equals("catch")&&method.getReturnType()==String.class&&method.getParameterCount()==1&&method.getParameterTypes()[0].isInstance(entry.getKey())){Object child=nested.get(method.invoke(state,entry.getKey()));if(compound.isInstance(child))restoreArtifactBonuses(entry.getValue(),child,depth+1);break;}}}
     }
 }
