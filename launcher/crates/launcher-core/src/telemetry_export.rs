@@ -185,7 +185,17 @@ fn faro_payload(config: &TelemetryConfig, events: &[TelemetryEvent]) -> Value {
                     .max(0)
             })
             .unwrap_or(0);
-        let context = json!({"event_id":event.id,"kind":event.kind,"role":role,"run_id":event.payload["run"].as_str().unwrap_or("launcher"),"run_group":event_run(event),"sample_time":event.created,"delivery_lag_ms":lag.to_string(),"file":event.payload["file"].as_str().unwrap_or(""),"game_branch":event.payload["gameBranch"].as_str().or_else(||event.payload["context"]["gameBranch"].as_str()).unwrap_or(""),"source_commit":event.payload["context"]["sourceCommit"].as_str().unwrap_or("")});
+        let mut context = json!({"event_id":event.id,"kind":event.kind,"role":role,"run_id":event.payload["run"].as_str().unwrap_or("launcher"),"run_group":event_run(event),"sample_time":event.created,"delivery_lag_ms":lag.to_string(),"file":event.payload["file"].as_str().unwrap_or(""),"game_branch":event.payload["gameBranch"].as_str().or_else(||event.payload["context"]["gameBranch"].as_str()).unwrap_or(""),"source_commit":event.payload["context"]["sourceCommit"].as_str().unwrap_or("")});
+        let launcher_error = event.kind == "launcher-error";
+        if launcher_error {
+            for (field, key) in [
+                ("component", "component"),
+                ("operation", "operation"),
+                ("error_code", "errorCode"),
+            ] {
+                context[field] = json!(event.payload[key].as_str().unwrap_or(""));
+            }
+        }
         let message = event.payload["text"]
             .as_str()
             .map(str::to_owned)
@@ -196,12 +206,12 @@ fn faro_payload(config: &TelemetryConfig, events: &[TelemetryEvent]) -> Value {
                 && event.payload["hasNativeCrash"] != true;
         let is_exception =
             event.kind == "exception" && event.payload["event"]["type"] == "exception";
-        logs.push(json!({"message":message,"level":if fatal||is_exception{"error"}else if event.kind=="performance-incident"{"warn"}else{"info"},"timestamp":event.created,"context":context}));
-        if fatal || is_exception {
-            let value = if event.kind == "launcher-panic" {
+        logs.push(json!({"message":message,"level":if fatal||is_exception||launcher_error{"error"}else if event.kind=="performance-incident"{"warn"}else{"info"},"timestamp":event.created,"context":context}));
+        if fatal || is_exception || launcher_error {
+            let value = if launcher_error || event.kind == "launcher-panic" {
                 event.payload["message"]
                     .as_str()
-                    .unwrap_or("Launcher panic")
+                    .unwrap_or("Launcher error")
             } else if event.kind == "native-crash" {
                 event.payload["text"].as_str().unwrap_or("Native JVM crash")
             } else if is_exception {
@@ -213,7 +223,7 @@ fn faro_payload(config: &TelemetryConfig, events: &[TelemetryEvent]) -> Value {
                     .as_str()
                     .unwrap_or("JVM exited with a nonzero status")
             };
-            exceptions.push(json!({"type":if event.kind=="launcher-panic"{"bscp.LauncherPanic"}else if event.kind=="native-crash"{"bscp.NativeCrash"}else if fatal{"bscp.ProcessExit"}else{"bscp.JavaException"},"value":value.chars().take(16000).collect::<String>(),"fatal":fatal,"timestamp":event.created,"context":context}));
+            exceptions.push(json!({"type":if launcher_error{"bscp.LauncherError"}else if event.kind=="launcher-panic"{"bscp.LauncherPanic"}else if event.kind=="native-crash"{"bscp.NativeCrash"}else if fatal{"bscp.ProcessExit"}else{"bscp.JavaException"},"value":value.chars().take(16000).collect::<String>(),"fatal":fatal,"timestamp":event.created,"context":context}));
         }
         if matches!(event.kind.as_str(), "performance" | "performance-incident") {
             for source in ["server", "client"] {
@@ -560,6 +570,50 @@ mod tests {
         assert_eq!(body["meta"]["app"]["name"], "BSCPCRAFT");
         assert!(!body.to_string().contains("private-value"));
         assert_eq!(body["logs"][0]["context"]["role"], "client");
+    }
+    #[test]
+    fn launcher_failure_is_delivered_with_cause_and_cancellation_is_local() {
+        let temp = tempfile::tempdir().unwrap();
+        let layout = Layout::new(temp.path());
+        layout.init().unwrap();
+        let (url, server) = receiver(204);
+        let config = TelemetryConfig {
+            enabled: true,
+            faro_url: url,
+            ..Default::default()
+        };
+        write_json(&layout.at("config/telemetry.json"), &config).unwrap();
+        let failure = anyhow::Error::new(std::io::Error::from_raw_os_error(10048))
+            .context("SERVER_PORT_BIND: game UDP port 29547");
+        record_launcher_error(&layout, "ui", "start-server", &failure).unwrap();
+        let cancelled = anyhow::anyhow!("CANCELLED: user cancelled installation");
+        record_launcher_error(&layout, "ui", "install", &cancelled).unwrap();
+        let queue = TelemetryOutbox::new(&layout);
+        let pending = queue.pending().unwrap();
+        assert_eq!(pending.len(), 1);
+        assert_eq!(pending[0].payload["osError"], 10048);
+        assert!(layout.at("logs/launcher-errors.jsonl").is_file());
+        assert_eq!(
+            flush_telemetry(&layout, Duration::from_secs(10))
+                .unwrap()
+                .sent_events,
+            1
+        );
+        let body = server.join().unwrap();
+        assert_eq!(body["logs"][0]["level"], "error");
+        let context = &body["logs"][0]["context"];
+        assert_eq!(context["role"], "launcher");
+        assert_eq!(context["component"], "ui");
+        assert_eq!(context["operation"], "start-server");
+        assert_eq!(context["error_code"], "SERVER_PORT_BIND");
+        assert_eq!(body["exceptions"][0]["type"], "bscp.LauncherError");
+        assert!(
+            body["exceptions"][0]["value"]
+                .as_str()
+                .unwrap()
+                .contains("game UDP port 29547")
+        );
+        assert!(queue.pending().unwrap().is_empty());
     }
     #[test]
     fn public_collect_url_is_required_and_embedded_config_has_no_secret() {

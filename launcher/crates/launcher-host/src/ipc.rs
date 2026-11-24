@@ -44,7 +44,7 @@ impl HostClient {
             1800
         };
         std::thread::spawn(move||tokio::runtime::Builder::new_current_thread().enable_all().build()?.block_on(async move {
- #[cfg(windows)] {let mut p=tokio::net::windows::named_pipe::ClientOptions::new().open(pipe_name(&root))?;verify_server_user(&p)?;let mut bytes=serde_json::to_vec(&json!({"ProtocolVersion":1,"RequestId":uuid::Uuid::new_v4().simple().to_string(),"Command":command,"Arguments":args}))?;bytes.push(b'\n');p.write_all(&bytes).await?;let raw=tokio::time::timeout(Duration::from_secs(deadline),line(&mut p)).await??;let v:Value=serde_json::from_slice(&raw)?;if v["Ok"]!=true {bail!("{}: {}",v["Code"],v["Error"])} Ok(v["Data"].clone())}
+ #[cfg(windows)] {let mut p=tokio::net::windows::named_pipe::ClientOptions::new().open(pipe_name(&root))?;verify_server_user(&p)?;let mut bytes=serde_json::to_vec(&json!({"ProtocolVersion":1,"RequestId":uuid::Uuid::new_v4().simple().to_string(),"Command":command,"Arguments":args}))?;bytes.push(b'\n');p.write_all(&bytes).await?;let raw=tokio::time::timeout(Duration::from_secs(deadline),line(&mut p)).await??;let v:Value=serde_json::from_slice(&raw)?;if v["Ok"]!=true {let code=v["Code"].as_str().unwrap_or("OPERATION_FAILED");let error=v["Error"].as_str().unwrap_or("Supervisor rejected the operation");if error.split(':').next()==Some(code){bail!("{error}")}bail!("{code}: {error}")} Ok(v["Data"].clone())}
  #[cfg(not(windows))] {let _=(root,command,args);bail!("Windows named pipes required")}
  })).join().map_err(|_|anyhow::anyhow!("IPC worker panicked"))?
     }
@@ -178,7 +178,7 @@ pub async fn serve(s: std::sync::Arc<crate::supervisor::Supervisor>) -> Result<(
                     } else {
                         "OPERATION_FAILED"
                     };
-                    json!({"Ok":false,"Data":null,"Code":code,"Error":message})
+                    json!({"Ok":false,"Data":null,"Code":code,"Error":format!("{e:#}")})
                 }
             };
             if let Ok(mut b) = serde_json::to_vec(&v) {

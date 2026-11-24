@@ -260,6 +260,8 @@ impl SelfUpdater {
             &[
                 "--apply-launcher-update",
                 plan_path.to_str().context("LAUNCHER_PATH")?,
+                "--root",
+                layout.root.to_str().context("LAUNCHER_PATH")?,
             ],
         )?;
         Ok(true)

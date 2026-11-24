@@ -5,7 +5,7 @@ use std::{
     fs::{self, File, OpenOptions},
     io::{BufReader, Read, Seek, SeekFrom, Write},
     path::{Path, PathBuf},
-    sync::Mutex,
+    sync::{LazyLock, Mutex},
 };
 pub fn redact(text: &str) -> String {
     let bearer = Regex::new(r#"(?i)(Bearer\s+)[^\s\"<>]+"#).unwrap();
@@ -32,6 +32,66 @@ pub fn redact(text: &str) -> String {
     private_key
         .replace_all(&s, "[private key redacted]")
         .into_owned()
+}
+/// Persist a technical failure before attempting delivery. Callers choose when to flush.
+pub fn record_launcher_error(
+    layout: &Layout,
+    component: &str,
+    operation: &str,
+    error: &anyhow::Error,
+) -> Result<()> {
+    static URL: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r#"(?i)(?:https?|file)://[^\s"'<>]+"#).unwrap());
+    static RUN: LazyLock<String> =
+        LazyLock::new(|| format!("launcher/{}", uuid::Uuid::new_v4().simple()));
+    let code = error
+        .chain()
+        .filter_map(|cause| {
+            let cause = cause.to_string();
+            let code = cause.split(':').next()?;
+            (code.len() <= 48
+                && (code.contains('_') || code == "CANCELLED")
+                && code.bytes().all(|c| c.is_ascii_uppercase() || c == b'_'))
+            .then(|| code.to_owned())
+        })
+        .find(|code| code != "OPERATION_FAILED" && code != "RPC_FAILED")
+        .unwrap_or_else(|| "LAUNCHER_ERROR".into());
+    let root = layout.root.display().to_string();
+    let message = redact(&URL.replace_all(&format!("{error:#}"), "[URL]"))
+        .replace(&root, "%LAUNCHER_ROOT%")
+        .chars()
+        .take(7000)
+        .collect::<String>();
+    let local = RotatingLog::new(layout.at("logs"), "launcher-errors")
+        .line(&format!("{component}/{operation} [{code}] {message}"));
+    if code == "CANCELLED" || message.contains("CANCELLED:") {
+        return local;
+    }
+    let branch = layout
+        .load()
+        .ok()
+        .map(|s| s.game_branch)
+        .filter(|branch| matches!(branch.as_str(), "main" | "test"));
+    let os_error = error
+        .chain()
+        .find_map(|cause| cause.downcast_ref::<std::io::Error>());
+    TelemetryOutbox::new(layout).enqueue(
+        "launcher-error",
+        serde_json::json!({
+            "role": "launcher",
+            "component": component,
+            "operation": operation,
+            "errorCode": code,
+            "message": message,
+            "run": RUN.as_str(),
+            "gameBranch": branch,
+            "os": std::env::consts::OS,
+            "architecture": std::env::consts::ARCH,
+            "osError": os_error.and_then(std::io::Error::raw_os_error),
+            "ioKind": os_error.map(|error| format!("{:?}", error.kind())),
+        }),
+    )?;
+    local
 }
 pub fn install_panic_logger(layout: &Layout) {
     let directory = layout.at("logs");
@@ -102,12 +162,12 @@ impl RotatingLog {
             }
         }
         let bounded = value.chars().take(32768).collect::<String>();
-        let line = serde_json::to_vec(
+        let mut line = serde_json::to_vec(
             &serde_json::json!({"time":chrono::Utc::now().to_rfc3339(),"message":redact(&bounded)}),
         )?;
+        line.push(b'\n');
         let mut f = OpenOptions::new().create(true).append(true).open(path)?;
         f.write_all(&line)?;
-        f.write_all(b"\n")?;
         f.flush()?;
         Ok(())
     }

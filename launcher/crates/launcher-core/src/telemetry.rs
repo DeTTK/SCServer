@@ -124,7 +124,7 @@ impl TelemetryOutbox {
 fn priority(kind: &str) -> u8 {
     match kind {
         "process-exit" | "native-crash" | "launcher-panic" | "run-summary" => 3,
-        "performance-incident" | "run-ended" => 2,
+        "performance-incident" | "run-ended" | "launcher-error" => 2,
         "exception" => 1,
         _ => 0,
     }

@@ -18,8 +18,12 @@ fn start() -> anyhow::Result<()> {
         Ok(true) => return Ok(()),
         Ok(false) => {}
         Err(error) => {
-            let _ = bscp_launcher_core::RotatingLog::new(layout.at("logs"), "launcher")
-                .line(&format!("launcher update deferred: {error:#}"));
+            let _ = bscp_launcher_core::record_launcher_error(
+                &layout,
+                "updater",
+                "handoff-launcher-update",
+                &error,
+            );
         }
     }
     if let Some(exe) = bscp_launcher_core::UpdateService::new(&layout)?.verified_launcher()? {
@@ -86,20 +90,21 @@ fn start() -> anyhow::Result<()> {
     Ok(())
 }
 
+fn report_terminal_error(
+    layout: Option<&bscp_launcher_core::Layout>,
+    component: &str,
+    operation: &str,
+    error: &anyhow::Error,
+) {
+    if let Some(layout) = layout {
+        let _ = bscp_launcher_core::record_launcher_error(layout, component, operation, error);
+        let _ = bscp_launcher_core::flush_telemetry(layout, std::time::Duration::from_secs(3));
+    }
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().collect();
-    if let Some(index) = args.iter().position(|v| v == "--apply-launcher-update") {
-        let result = args
-            .get(index + 1)
-            .ok_or_else(|| anyhow::anyhow!("Missing launcher update plan"))
-            .and_then(|p| bscp_launcher_core::SelfUpdater::apply_plan(std::path::Path::new(p)));
-        if let Err(error) = result {
-            eprintln!("{error:#}");
-            std::process::exit(1);
-        }
-        return;
-    }
-    let diagnostic_root = args
+    let diagnostic_layout = args
         .iter()
         .position(|arg| arg == "--root")
         .and_then(|i| args.get(i + 1))
@@ -108,15 +113,49 @@ fn main() {
             std::env::current_exe()
                 .ok()
                 .and_then(|p| p.parent().map(std::path::Path::to_path_buf))
-        });
-    if let Some(root) = diagnostic_root.as_ref() {
-        bscp_launcher_core::install_panic_logger(&bscp_launcher_core::Layout::new(root));
+        })
+        .map(bscp_launcher_core::Layout::new);
+    if let Some(layout) = diagnostic_layout.as_ref() {
+        bscp_launcher_core::install_panic_logger(layout);
+    }
+    if let Some(index) = args.iter().position(|v| v == "--apply-launcher-update") {
+        let result = args
+            .get(index + 1)
+            .ok_or_else(|| anyhow::anyhow!("Missing launcher update plan"))
+            .and_then(|p| bscp_launcher_core::SelfUpdater::apply_plan(std::path::Path::new(p)));
+        if let Err(error) = result {
+            report_terminal_error(
+                diagnostic_layout.as_ref(),
+                "updater",
+                "apply-launcher-update",
+                &error,
+            );
+            eprintln!("{}", bscp_launcher_core::redact(&format!("{error:#}")));
+            std::process::exit(1);
+        }
+        return;
     }
     if bscp_launcher_host::runtime::is_service_mode(&args) {
+        let operation = match args
+            .iter()
+            .position(|v| v == "--rpc")
+            .and_then(|i| args.get(i + 1))
+            .map(String::as_str)
+        {
+            Some("start") => "start-server",
+            Some("connect") => "connect",
+            Some("status" | "metrics" | "probe") => "rpc-observe",
+            Some(_) => "rpc-command",
+            None => "start-host",
+        };
         if let Err(error) = bscp_launcher_host::runtime::run(args) {
-            if let Some(root) = diagnostic_root.as_ref() {
-                let _ = bscp_launcher_core::RotatingLog::new(root.join("logs"), "startup-errors")
-                    .line(&format!("{error:#}"));
+            if operation != "rpc-observe" {
+                let component = if operation == "start-host" {
+                    "host"
+                } else {
+                    "rpc"
+                };
+                report_terminal_error(diagnostic_layout.as_ref(), component, operation, &error);
             }
             eprintln!("{}", bscp_launcher_core::redact(&format!("{error:#}")));
             std::process::exit(1);
@@ -125,13 +164,7 @@ fn main() {
     }
     if let Err(error) = start() {
         let message = bscp_launcher_core::redact(&format!("{error:#}"));
-        if let Some(root) = diagnostic_root.as_ref() {
-            let _ = bscp_launcher_core::RotatingLog::new(root.join("logs"), "startup-errors")
-                .line(&message);
-            let _ =
-                bscp_launcher_core::TelemetryOutbox::new(&bscp_launcher_core::Layout::new(root))
-                    .enqueue("launcher-error", serde_json::json!({"message":message}));
-        }
+        report_terminal_error(diagnostic_layout.as_ref(), "ui", "start-launcher", &error);
         rfd::MessageDialog::new()
             .set_title("BSCPCRAFT")
             .set_description(&message)

@@ -102,6 +102,26 @@ enum Work {
     Update(String, String),
     Report(String, BugReportDraft),
 }
+impl Work {
+    fn operation(&self) -> &'static str {
+        match self {
+            Self::Init => "initialize",
+            Self::Mods(..) => "manage-mods",
+            Self::Launch(false) => "start-server",
+            Self::Launch(true) => "start-singleplayer",
+            Self::Connect(..) => "connect",
+            Self::Select(..) => "select-world",
+            Self::Save(..) => "save-settings",
+            Self::Setup(..) => "first-run",
+            Self::Install(..) => "install",
+            Self::World(..) => "manage-world",
+            Self::Favorite(..) => "manage-favorites",
+            Self::Server(..) => "manage-server",
+            Self::Update(..) => "update-game",
+            Self::Report(..) => "bug-report",
+        }
+    }
+}
 
 pub struct Binding {
     alive: Arc<AtomicBool>,
@@ -880,6 +900,19 @@ pub fn bind(ui: &AppWindow, layout: Layout) -> Binding {
     let worker_layout = layout.clone();
     let worker_cancel = cancel.clone();
     let worker_local = local_work.clone();
+    let (delivery, wake_delivery) = mpsc::sync_channel(1);
+    let delivery_layout = layout.clone();
+    let delivery_alive = alive.clone();
+    std::thread::spawn(move || {
+        while delivery_alive.load(Ordering::Relaxed) {
+            let _ = flush_telemetry(&delivery_layout, Duration::from_secs(4));
+            if let Err(mpsc::RecvTimeoutError::Disconnected) =
+                wake_delivery.recv_timeout(Duration::from_secs(30))
+            {
+                break;
+            }
+        }
+    });
     std::thread::spawn(move || {
         while let Ok(work) = rx.recv() {
             let progress_ui = worker_ui.clone();
@@ -894,12 +927,18 @@ pub fn bind(ui: &AppWindow, layout: Layout) -> Binding {
                 }
                 let _ = progress_ui.upgrade_in_event_loop(move |ui| apply_progress(&ui, update));
             };
+            let operation = work.operation();
             let result = execute(work, &worker_layout, &worker_ui, &worker_cancel, &progress);
-            let log = RotatingLog::new(worker_layout.at("logs"), "launcher");
-            let _ = log.line(&match &result {
-                Ok(message) => format!("operation completed: {message}"),
-                Err(error) => format!("operation failed: {error:#}"),
-            });
+            match &result {
+                Ok(message) => {
+                    let _ = RotatingLog::new(worker_layout.at("logs"), "launcher")
+                        .line(&format!("operation completed: {message}"));
+                }
+                Err(error) => {
+                    let _ = record_launcher_error(&worker_layout, "ui", operation, error);
+                }
+            }
+            let _ = delivery.try_send(());
             worker_local.store(false, Ordering::Relaxed);
             operation_done(&worker_ui, result);
         }
@@ -1219,15 +1258,6 @@ fn execute(
         }
         Work::Init => {
             refresh(ui, layout, true)?;
-            let _ = collect_launcher_panics(layout);
-            if TelemetryOutbox::new(layout)
-                .pending()
-                .map(|p| !p.is_empty())
-                .unwrap_or(false)
-            {
-                progress("Отправляем сохранённую диагностику…".into());
-                let _ = flush_telemetry(layout, std::time::Duration::from_secs(4));
-            }
             match SelfUpdater::stage_latest(layout, cancel.clone(), Some(progress)) {
                 Ok(Some(version)) => {
                     let _ = ui.upgrade_in_event_loop(move |ui| {
@@ -1239,8 +1269,8 @@ fn execute(
                 }
                 Ok(None) => {}
                 Err(error) => {
-                    let _ = RotatingLog::new(layout.at("logs"), "launcher")
-                        .line(&format!("launcher update check: {error:#}"));
+                    let _ =
+                        record_launcher_error(layout, "updater", "check-launcher-update", &error);
                 }
             }
             let _ = ui.upgrade_in_event_loop(|ui| {
@@ -1272,6 +1302,7 @@ fn execute(
                         {
                             progress("Получаем изменившиеся игровые файлы…".into());
                             if let Err(e) = call(layout, "update", BTreeMap::new()) {
+                                let _ = record_launcher_error(layout, "ui", "update-game", &e);
                                 return Ok(format!(
                                     "Установленная игра доступна. Обновление: {}",
                                     friendly_error(&e).1
@@ -1286,6 +1317,7 @@ fn execute(
                         ));
                     }
                     Err(error) => {
+                        let _ = record_launcher_error(layout, "ui", "check-game-update", &error);
                         return Ok(format!(
                             "Установленная игра доступна. Проверка {}: {}",
                             s.game_branch,
@@ -1308,6 +1340,7 @@ fn execute(
                         ));
                     }
                     Err(error) => {
+                        let _ = record_launcher_error(layout, "ui", "check-game-update", &error);
                         let (_, message) = friendly_error(&error);
                         return Ok(format!("Игра доступна. Проверка обновлений: {message}"));
                     }
@@ -1420,6 +1453,7 @@ fn execute(
             if !branch.is_empty() {
                 progress("Получаем актуальные файлы выбранной ветки…".into());
                 if let Err(e) = call(layout, "update", BTreeMap::new()) {
+                    let _ = record_launcher_error(layout, "ui", "update-game", &e);
                     completion = format!(
                         "Основа установлена. Обновление ветки: {}",
                         friendly_error(&e).1
@@ -1430,7 +1464,10 @@ fn execute(
                 progress("Создаём ярлык на рабочем столе…".into());
                 match create_launcher_shortcut(&std::env::current_exe()?, &layout.root, None) {
                     Ok(_) => completion.push_str(" Ярлык создан на рабочем столе."),
-                    Err(_) => completion.push_str(" Ярлык создать не удалось. Игра подготовлена; лаунчер можно открыть напрямую."),
+                    Err(error) => {
+                        let _ = record_launcher_error(layout, "ui", "create-shortcut", &error);
+                        completion.push_str(" Ярлык создать не удалось. Игра подготовлена; лаунчер можно открыть напрямую.");
+                    }
                 }
             }
             refresh(ui, layout, true)?;

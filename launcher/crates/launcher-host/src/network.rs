@@ -54,10 +54,14 @@ pub fn check_ports(base: u16) -> Result<()> {
     if !(1024..=65000).contains(&base) {
         bail!("PORT_INVALID")
     }
-    let _a = std::net::TcpListener::bind(("0.0.0.0", base))?;
-    let _b = std::net::TcpListener::bind(("0.0.0.0", base + 1))?;
-    let _c = std::net::UdpSocket::bind(("0.0.0.0", base + 2))?;
-    let _d = std::net::TcpListener::bind(("127.0.0.1", base + 100))?;
+    let _a = std::net::TcpListener::bind(("0.0.0.0", base))
+        .with_context(|| format!("SERVER_PORT_BIND: backend TCP port {base}"))?;
+    let _b = std::net::TcpListener::bind(("0.0.0.0", base + 1))
+        .with_context(|| format!("SERVER_PORT_BIND: game TCP port {}", base + 1))?;
+    let _c = std::net::UdpSocket::bind(("0.0.0.0", base + 2))
+        .with_context(|| format!("SERVER_PORT_BIND: game UDP port {}", base + 2))?;
+    let _d = std::net::TcpListener::bind(("127.0.0.1", base + 100))
+        .with_context(|| format!("SERVER_PORT_BIND: local admin TCP port {}", base + 100))?;
     Ok(())
 }
 pub fn local_addresses() -> Vec<String> {

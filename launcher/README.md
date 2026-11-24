@@ -60,6 +60,8 @@ Iroh работает внутри того же EXE без VPN-драйвера
 
 Просмотр: Grafana → Explore → `grafanacloud-vividshark1612-logs`, запрос `{service_name="BSCPCRAFT"}`. Поля `context_run_id`, `context_role`, `context_file` связывают записи с запуском и процессом. Публичный Collect URL позволяет только принимать телеметрию; приватные ключи Grafana в EXE не включаются. Проверка на отдельном профиле: `cargo run -p bscp-launcher-core --example telemetry_probe -- <qa-profile> send-synthetic`.
 
+Ошибки лаунчера записываются в `logs/launcher-errors.jsonl` и отправляются через тот же Faro в фоне. Для поиска используйте `context_kind=launcher-error` и `context_operation=start-server`, `start-singleplayer` или `server-readiness`. В событии есть этап, код ошибки и цепочка причин. Запущенная JVM дополнительно сообщает о проблемах через журналы сессии.
+
 Программный рендерер выбран по умолчанию. `--renderer femtovg` включает GPU. Для диагностического снимка настоящего интерфейса: `--capture <snapshot.ppm>`; окно размещается вне видимой области и закрывается после снимка, рабочий стол не управляется.
 
 Slint Royalty-free 2.0: стандартный AboutSlint доступен через справку. Лицензии Slint, шрифта и зависимостей включаются в комплект.

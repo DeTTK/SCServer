@@ -216,6 +216,16 @@ impl Supervisor {
             tokio::task::spawn_blocking(move || write_telemetry_context(&layout, &folder, &group))
                 .await;
     }
+    fn report_background_error(&self, operation: &'static str, error: anyhow::Error) {
+        let layout = self.layout.clone();
+        let deliveries = self.deliveries.clone();
+        deliveries.fetch_add(1, std::sync::atomic::Ordering::AcqRel);
+        tokio::task::spawn_blocking(move || {
+            let _activity = DeliveryActivity(deliveries);
+            let _ = record_launcher_error(&layout, "host", operation, &error);
+            let _ = flush_telemetry(&layout, Duration::from_secs(4));
+        });
+    }
     fn game_agent(&self) -> Result<PathBuf> {
         if self.qa.is_some() && self.agent.is_file() {
             return Ok(self.agent.clone());
@@ -781,13 +791,16 @@ impl Supervisor {
                 &Arc::new(std::sync::atomic::AtomicBool::new(false)),
             )
         })
-        .await??;
+        .await?
+        .context("SERVER_WORLD_PREPARE: prepare the selected world")?;
         if world.base_identity_mode != "content-v2" {
             bail!("WORLD_MIGRATION")
         }
         let map = worlds.map(&world)?;
         let source = self.layout.bundle(&s, "server")?;
-        let java = self.java(&source)?;
+        let java = self
+            .java(&source)
+            .context("SERVER_JAVA: resolve the bundled JVM")?;
         {
             let _lease = worlds.lease(id)?;
         }
@@ -818,7 +831,8 @@ impl Supervisor {
             bail!("MAP_HASH")
         }
         network::check_ports(s.base_port as u16)?;
-        self.agent_config(&session, "server", Some(&source), None, id)?;
+        self.agent_config(&session, "server", Some(&source), None, id)
+            .context("SERVER_AGENT_CONFIG: prepare the Java diagnostics agent")?;
         self.write_run_context(&session, &relative(&self.layout.root, &session))
             .await;
         let child = launch::server(
@@ -829,8 +843,10 @@ impl Supervisor {
             &s,
             &self.game_agent()?,
             &java,
-        )?
-        .spawn()?;
+        )
+        .context("SERVER_RUNTIME: prepare the JVM command")?
+        .spawn()
+        .context("SERVER_JAVA_SPAWN: start the JVM")?;
         let pid = child.id().unwrap();
         pump(
             child,
@@ -1212,6 +1228,7 @@ impl Supervisor {
     }
     pub async fn monitor(self: Arc<Self>) {
         let mut idle_since = Some(std::time::Instant::now());
+        let mut startup = None::<(u32, std::time::Instant, bool)>;
         loop {
             tokio::time::sleep(Duration::from_secs(2)).await;
             let Ok(_lock) = self.lifecycle.try_lock() else {
@@ -1300,6 +1317,30 @@ impl Supervisor {
                         }
                     }
                 }
+                if starting && self.view.lock().unwrap()["State"] == "Starting" {
+                    if startup.as_ref().is_none_or(|(pid, _, _)| *pid != o.pid) {
+                        startup = Some((o.pid, std::time::Instant::now(), false));
+                    }
+                    if let Some((_, since, reported)) = &mut startup {
+                        if !*reported && since.elapsed() >= Duration::from_secs(120) {
+                            *reported = true;
+                            let stderr = self.layout.at(&o.session).join("server-stderr.log");
+                            let tail = diagnostic_tail(&stderr, 4096).unwrap_or_default();
+                            self.report_background_error(
+                                "server-readiness",
+                                anyhow::anyhow!(
+                                    "SERVER_READINESS_TIMEOUT: JVM still running; readiness checks did not pass within 120 seconds (pid {}). JVM stderr tail: {}",
+                                    o.pid,
+                                    String::from_utf8_lossy(&tail),
+                                ),
+                            );
+                        }
+                    }
+                } else {
+                    startup = None;
+                }
+            } else {
+                startup = None;
             }
             let idle = {
                 let r = self.running.lock().unwrap();
