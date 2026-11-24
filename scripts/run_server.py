@@ -65,7 +65,7 @@ def main():
                 if hashlib.sha256(resource.read_bytes()).hexdigest()!=row['sha256']:p.error('Private context source changed: '+leaf)
                 row['path']=resource.as_posix()
             path.write_text(json.dumps(value,indent=2),encoding='utf8')
-        config=(ROOT/'desktop/server.template.properties').read_text('utf8')
+        config=(ROOT/'config/server.template.properties').read_text('utf8')
         replacements={'ROOT':prop(bundle),'MAP':prop(world),'HOST':a.host,'HTTP':str(a.port),'GAME':str(a.port+1),'WORLD':str(a.port+2),'ADMIN':str(a.port+100),'DEV':str(a.port+104)}
         for key,value in replacements.items():config=config.replace('@'+key+'@',value)
         config='\n'.join('client.runtime='+prop(runtime) if line.startswith('client.runtime=') else line for line in config.splitlines())+'\n'

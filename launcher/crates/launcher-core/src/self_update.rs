@@ -54,21 +54,16 @@ fn package(releases: Vec<Release>, current: &str) -> Result<Option<(String, Pack
     let mut candidates = Vec::new();
     for r in releases {
         // Game releases, old .NET setup binaries and other repositories never qualify.
-        if r.draft {
+        if r.draft || r.prerelease {
             continue;
         }
-        let Some(v) = r
-            .tag_name
-            .strip_prefix("launcher-v")
-            .and_then(|v| v.strip_suffix("-launtest"))
-        else {
+        let Some(v) = r.tag_name.strip_prefix("launcher-v") else {
             continue;
         };
         let Some(numbers) = version(v) else { continue };
         if numbers <= current {
             continue;
         }
-        let _ = r.prerelease; // launtest explicitly accepts its own prereleases.
         let Some(a) = r.assets.into_iter().find(|a| a.name == "BSCPCRAFT.exe") else {
             continue;
         };
@@ -121,7 +116,7 @@ impl SelfUpdater {
         callback: Option<&Progress>,
     ) -> Result<Option<String>> {
         let settings = layout.load()?;
-        if settings.game_branch != "launtest" {
+        if settings.game_branch.is_empty() {
             return Ok(None);
         }
         let pending_path = layout.at("state/launcher-update.json");
@@ -413,9 +408,9 @@ mod tests {
     #[test]
     fn release_requires_repository_asset_digest_and_newer_version() {
         let release = |url: &str, digest: Option<String>| -> Vec<Release> {
-            serde_json::from_value(serde_json::json!([{"tag_name":"launcher-v0.5.1-launtest","draft":false,"prerelease":true,"assets":[{"name":"BSCPCRAFT.exe","size":4096,"digest":digest,"browser_download_url":url}]}])).unwrap()
+            serde_json::from_value(serde_json::json!([{"tag_name":"launcher-v0.5.1","draft":false,"prerelease":false,"assets":[{"name":"BSCPCRAFT.exe","size":4096,"digest":digest,"browser_download_url":url}]}])).unwrap()
         };
-        let url = "https://github.com/DeTTK/SCServer/releases/download/launcher-v0.5.1-launtest/BSCPCRAFT.exe";
+        let url = "https://github.com/DeTTK/SCServer/releases/download/launcher-v0.5.1/BSCPCRAFT.exe";
         assert!(package(release(url, None), "0.5.0").unwrap().is_none());
         let digest = Some(format!("sha256:{}", "a".repeat(64)));
         assert_eq!(
@@ -430,7 +425,7 @@ mod tests {
                 .unwrap()
                 .is_none()
         );
-        assert!(package(release("https://github.com/other/project/releases/download/launcher-v0.5.1-launtest/BSCPCRAFT.exe",digest),"0.5.0").is_err());
+        assert!(package(release("https://github.com/other/project/releases/download/launcher-v0.5.1/BSCPCRAFT.exe",digest),"0.5.0").is_err());
     }
     #[test]
     fn active_host_defers_replacement_and_corrupt_download_cannot_run() {

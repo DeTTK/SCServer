@@ -26,7 +26,7 @@ impl Default for TelemetryConfig {
             enabled: false,
             faro_url: String::new(),
             app_name: "BSCPCRAFT".into(),
-            environment: "launtest".into(),
+            environment: "production".into(),
         }
     }
 }

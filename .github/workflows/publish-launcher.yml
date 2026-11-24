@@ -1,7 +1,6 @@
 name: Publish native launcher
 on:
   workflow_call:
-  workflow_dispatch:
 permissions:
   contents: read
 concurrency:
@@ -9,7 +8,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   release:
-    if: github.ref == 'refs/heads/launtest'
+    if: github.ref == 'refs/heads/main'
     runs-on: windows-2022
     timeout-minutes: 50
     permissions:
@@ -28,7 +27,7 @@ jobs:
           $line=Select-String -Path launcher/Cargo.toml -Pattern '^version = "([0-9]+\.[0-9]+\.[0-9]+)"$'
           if(-not $line){throw 'Missing launcher version'}
           $version=$line.Matches.Groups[1].Value
-          $tag="launcher-v$version-launtest"
+          $tag="launcher-v$version"
           "tag=$tag" >> $env:GITHUB_OUTPUT
           gh release view $tag --repo $env:GITHUB_REPOSITORY *> $null
           "exists=$($LASTEXITCODE -eq 0)".ToLowerInvariant() >> $env:GITHUB_OUTPUT
@@ -59,5 +58,5 @@ jobs:
           $hash=(Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant()
           "$hash  BSCPCRAFT.exe" | Set-Content SHA256SUMS.txt -Encoding utf8NoBOM
           $sha=git rev-parse HEAD
-          gh release create $env:RELEASE_TAG $exe SHA256SUMS.txt --repo $env:GITHUB_REPOSITORY --target $sha --prerelease --title "BSCPCRAFT $env:RELEASE_TAG" --notes 'Native portable launcher for launtest. The game and Java are installed separately from the build branch. Executable updates are verified and applied on the next launch.'
+          gh release create $env:RELEASE_TAG $exe SHA256SUMS.txt --repo $env:GITHUB_REPOSITORY --target $sha --latest --title "BSCPCRAFT $env:RELEASE_TAG" --notes 'Портативный лаунчер BSCPCRAFT для Windows. Игровые файлы устанавливаются из build-main. Для тестовой версии игры выберите ветку test в настройках.'
           if($LASTEXITCODE -ne 0){throw 'Launcher release failed'}

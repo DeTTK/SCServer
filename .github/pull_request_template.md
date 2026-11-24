@@ -22,7 +22,7 @@ Closes #
   - [ ] `client/mod-runtime`, `sdk/`, `client/command-completion`
   - [ ] `client/resource-compat`
   - [ ] `client-compat/character-scale/`
-  - [ ] `desktop/` (лаунчер, установщик, ServerManager)
+  - [ ] `launcher/` (нативный лаунчер)
   - [ ] `mods/<name>/` — какой:
   - [ ] Только документация / сборочные скрипты
 
@@ -32,7 +32,7 @@ Closes #
 - [ ] `python -m unittest discover -s scripts/tests`
 - [ ] `python scripts/build.py test` → exit 0, `build/verification.json` приложен в описании
 - [ ] `python client-compat/character-scale/build.py` (если затронут клиент)
-- [ ] `python scripts/build.py desktop` на Windows (если затронут `desktop/`)
+- [ ] `cargo test --manifest-path launcher/Cargo.toml --workspace --locked` на Windows (если затронут `launcher/`)
 - [ ] Для модов: `python scripts/build.py sdk` / `python scripts/build.py command-completion`
 
 Результат команд (например, счётчик пройденных наборов):

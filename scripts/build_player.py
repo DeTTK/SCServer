@@ -63,7 +63,7 @@ def build(output):
         if p.is_file():copy(p,ROOT/'.local/server-resources'/p.relative_to(inputs/'server-resources'))
     tools.server(True);tools.completion()
     copy(ROOT/'build/server.jar',player/'Server/server.jar')
-    copy(ROOT/'desktop/server.template.properties',player/'Server/server.template.properties')
+    copy(ROOT/'config/server.template.properties',player/'Server/server.template.properties')
     for dep in tools.dependencies():copy(dep,player/'Server/lib'/dep.name)
     copy(ROOT/'build/command-completion.jar',player/'Client/mods/command-completion.jar')
     lock=json.loads((ROOT/'bootstrap/base.lock.json').read_text('utf8'))

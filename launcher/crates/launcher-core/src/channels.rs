@@ -237,7 +237,7 @@ impl RepositoryChannel {
         let mut result = branches
             .into_iter()
             .filter_map(|v| v["name"].as_str()?.strip_prefix("build-").map(String::from))
-            .filter(|v| validate_branch(v).is_ok())
+            .filter(|v| matches!(v.as_str(), "main" | "test"))
             .collect::<Vec<_>>();
         result.sort();
         result.dedup();

@@ -119,11 +119,11 @@ def sign(raw,key):
         return signature.read_bytes()
 def publish():
     channel=os.environ.get('GITHUB_REF_NAME','')
-    if channel!='launtest':raise ValueError('Only launtest publication is enabled')
+    if channel not in ('main','test'):raise ValueError('Only main and test publication is enabled')
     source=os.environ['GITHUB_SHA']
     if not re.fullmatch('[0-9a-f]{40}',source):raise ValueError('Invalid source commit')
     latest=run('git','ls-remote','origin','refs/heads/'+channel,capture_output=True,text=True).stdout.split()[0]
-    if latest!=source:print('Superseded source build; not publishing');return
+    if latest!=source:raise ValueError('Superseded source build; not publishing')
     manifest={'schemaVersion':2,'minimumLauncherVersion':'0.4.1','channel':channel,'sourceCommit':source,'sequence':int(os.environ['GITHUB_RUN_NUMBER']),
         'baseId':LOCK['id'],'files':file_inventory(OUT),'changelog':run('git','log','-1','--format=%s',capture_output=True,text=True).stdout.strip(),
         'mods':mod_catalogue(OUT)}
@@ -168,15 +168,15 @@ def publish():
         if source_file.is_file() and source_file.name!='foundation-export.json':
             relative=source_file.relative_to(foundation_output).as_posix();safe_path(relative);target=destination/relative;target.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(source_file,target);foundation_paths.append(relative)
     (destination/'delivery.json').write_bytes(raw);(destination/'delivery.json.sig').write_bytes(signature)
-    metadata={'bootstrap/base.json':json.dumps({'id':manifest['baseId'],'mode':'complete-indexed-foundation'if'foundation'in manifest else'installed-foundation'}),'map/base.json':json.dumps({'mode':'indexed-foundation'if'foundation'in manifest else'existing-world-base','defaultMap':manifest.get('defaultMap'),'existingWorldsRebased':False}),'launcher/README.md':'Launcher EXE updates belong to GitHub Releases.\n','README.md':'Complete generated game delivery. Develop in launtest; do not edit this branch.\n'}
+    metadata={'bootstrap/base.json':json.dumps({'id':manifest['baseId'],'mode':'complete-indexed-foundation'if'foundation'in manifest else'installed-foundation'}),'map/base.json':json.dumps({'mode':'indexed-foundation'if'foundation'in manifest else'existing-world-base','defaultMap':manifest.get('defaultMap'),'existingWorldsRebased':False}),'launcher/README.md':'Launcher EXE updates belong to GitHub Releases.\n','README.md':'Complete generated game delivery. Develop in the source branch; do not edit this generated branch.\n'}
     # Canonical descriptor and its signed manifest change in the same Git commit.
     if foundation_payload is not None:metadata[manifest['foundation']['path']]=foundation_payload.decode('utf8')
     for name,body in metadata.items():
         p=destination/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_text(body,'utf8')
     run('git','-C',destination,'add','--',*[r['path']for r in file_inventory(OUT)],'delivery.json','delivery.json.sig',*metadata,*foundation_paths,env=env)
-    commit_index(destination,'Build launtest from '+source[:12],env)
+    commit_index(destination,f'Build {channel} from {source[:12]}',env)
     latest=run('git','ls-remote','origin','refs/heads/'+channel,capture_output=True,text=True).stdout.split()[0]
-    if latest!=source:print('Source advanced before activation; not publishing');return
+    if latest!=source:raise ValueError('Source advanced before activation; not publishing')
     run('git','-C',destination,'push','origin','HEAD:refs/heads/'+branch,env=env)
     print('Published signed',branch,'from',source)
 if __name__=='__main__':

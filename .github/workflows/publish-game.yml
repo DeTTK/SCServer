@@ -1,9 +1,9 @@
-name: Publish launtest game
+name: Publish game delivery
 on:
-  push:
-    branches: [launtest]
-    paths-ignore: ['docs/**', '**/*.md', 'validation-*.json']
-  workflow_dispatch:
+  workflow_call:
+    secrets:
+      LAUNTEST_DELIVERY_PRIVATE_KEY:
+        required: true
 permissions:
   contents: read
 concurrency:
@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   game:
-    if: github.ref == 'refs/heads/launtest'
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/test'
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     permissions:
@@ -28,9 +28,6 @@ jobs:
             .local/deps
             .local/delivery-inputs
           key: delivery-inputs-${{ hashFiles('bootstrap/base.lock.json', 'bootstrap/input-manifest.json', 'dependencies.lock.json') }}
-      - run: python scripts/audit_public.py
-      - run: python -m unittest discover -s scripts/tests
-      - run: python scripts/build.py test
       - run: python scripts/delivery.py prepare
       - name: Publish only successful current source
         run: python scripts/delivery.py publish

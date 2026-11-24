@@ -24,8 +24,6 @@ jobs:
       - run: python -m unittest discover -s scripts/tests
       - run: python scripts/build.py test
       - run: python client-compat/character-scale/build.py
-      - if: runner.os == 'Windows'
-        run: python scripts/build.py desktop
   native-launcher:
     runs-on: windows-2022
     env:
@@ -53,9 +51,16 @@ jobs:
           distribution: temurin
           java-version: '17'
       - run: ./launcher/modules/bridge/test.ps1
-  publish-launcher:
+  publish-game:
     needs: [independent, native-launcher]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/launtest'
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/test')
+    permissions:
+      contents: write
+    uses: ./.github/workflows/publish-game.yml
+    secrets: inherit
+  publish-launcher:
+    needs: [publish-game]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     permissions:
       contents: write
     uses: ./.github/workflows/publish-launcher.yml

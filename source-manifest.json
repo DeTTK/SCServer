@@ -406,40 +406,10 @@
       "sha256": "6516c7c7edeb9bcc32ad002a88533a888e37a11b7655392cef8f3f0e6116796c"
     },
     {
-      "path": "desktop/legacy/LightLauncher.cs",
-      "source": "launcher/LightLauncher.cs",
-      "sha256": "fd2ecc9a5e6dde6e5e916b020b38c8f886dfeedc264812143e9ecba437e06cb8",
-      "adjusted": false
-    },
-    {
-      "path": "desktop/server.template.properties",
+      "path": "config/server.template.properties",
       "source": "tools/portable-20261118/server.template.properties",
       "sha256": "b596e71b6fe16c81d6c154d9e1ef38bb73e70f0e0d56bf3600fe6e053a99962d",
       "adjusted": false
-    },
-    {
-      "path": "desktop/src/LocalLauncher.cs",
-      "source": "tools/easy-local-20261119/LocalLauncher.cs",
-      "adjusted": false,
-      "sha256": "2803ec826bb143715b7a90a9e8f3f9cf7e75a29764f4d49da7ab248e0376edda"
-    },
-    {
-      "path": "desktop/src/Portable.cs",
-      "source": "tools/portable-20261118/Portable.cs",
-      "sha256": "965c4992d01f087631c686e3000a62517431d3346ca46e72588a6d7a9ab0770e",
-      "adjusted": true
-    },
-    {
-      "path": "desktop/src/Setup.cs",
-      "source": "publication/SCServer/desktop/src/Setup.cs",
-      "adjusted": true,
-      "sha256": "317820a1353471a36a52cdf32706783892c004bae542ea5ec62d7948c46ee8e4"
-    },
-    {
-      "path": "desktop/tests/SetupSafetyTests.cs",
-      "source": "publication/SCServer/desktop/tests/SetupSafetyTests.cs",
-      "adjusted": true,
-      "sha256": "ef6190cd1c3a1ac3877cb63fe81557fa054bca89028b838bd661df98a6c2e41d"
     },
     {
       "path": "docs/ALLIANCES.md",

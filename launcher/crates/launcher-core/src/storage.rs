@@ -76,7 +76,7 @@ impl Default for Settings {
             server_memory_mb: 2048,
             diagnostics: true,
             feed_url: String::new(),
-            game_branch: "launtest".into(),
+            game_branch: "main".into(),
             automatic_backups: 5,
             setup_completed: false,
         }
