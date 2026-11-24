@@ -111,6 +111,15 @@ export component Entry inherits Rectangle {
                 wrap: root.multiline ? word-wrap : no-wrap;
                 selection-background-color: Theme.accent; selection-foreground-color: Theme.ink;
                 accessible-label: root.label;
+                key-pressed(e) => {
+                    // Slint matches Latin V for paste. The same key reports М in the Russian layout.
+                    if e.modifiers.control && !e.modifiers.shift && !e.modifiers.alt && !e.modifiers.meta
+                        && (e.text == "м" || e.text == "М") {
+                        self.paste();
+                        return accept;
+                    }
+                    return reject;
+                }
                 cursor-position-changed(p) => {
                     inner.content-x = clamp(clamp(inner.content-x, 1px - p.x, inner.width - 2px - p.x), inner.width - inner.content-width, 0px);
                     if root.multiline {
