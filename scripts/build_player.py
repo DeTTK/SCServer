@@ -91,8 +91,10 @@ def build(output):
     generators=tools.compile_java('player-bootstrap-generators',(ROOT/'client/bootstrap-tools').glob('*.java'),[asm])
     for generator in ('GenerateLegacyAdapter','GenerateCommandPackets','InstallFpvPackets','InstallVehiclePackets'):
         subprocess.run([tools.tool('java'),'-cp',os.pathsep.join(map(str,[generators,asm])),generator,str(boot)],check=True)
-    jar(runtime/'bootstrap.jar',entries(boot))
-    verify=tools.compile_java('player-bootstrap-verify',[ROOT/'client/bootstrap-tools/tests/BootstrapAbiTest.java'])
+    bootstrap = entries(boot)
+    bootstrap['szcustom/loading.gif'] = (ROOT/'client/bootstrap/resources/szcustom/loading.gif').read_bytes()
+    jar(runtime/'bootstrap.jar',bootstrap)
+    verify=tools.compile_java('player-bootstrap-verify',[ROOT/'client/bootstrap-tools/tests/BootstrapAbiTest.java'],[runtime/'bootstrap.jar',*libraries])
     subprocess.run([tools.tool('java'),'-cp',os.pathsep.join(map(str,[verify,runtime/'bootstrap.jar',*libraries])),'BootstrapAbiTest'],check=True)
     imgui={}
     for dependency in (runtime/'dependencies').glob('imgui-java-*-1.82.2.jar'):

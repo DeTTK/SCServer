@@ -1,4 +1,8 @@
 {
+  "client/bootstrap/resources/szcustom/loading.gif": {
+    "size": 2703494,
+    "sha256": "a236d44808b8da791de3e7d372e697255d0e424e55609195c449cb9365913c86"
+  },
   "launcher/crates/launcher-app/ui/assets/outpost.png": {
     "size": 2259006,
     "sha256": "da7f3254ebe2dc916d062c412effab581810da3312a5b0391e9ae5e83ddc5203"

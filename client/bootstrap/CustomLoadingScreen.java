@@ -19,6 +19,7 @@ public final class CustomLoadingScreen {
     private static final Map<Long, View> views = new HashMap<>();
     private static final Map<String, Field> fields = new HashMap<>();
     private static volatile Animation animation;
+    private static volatile String animationFailure;
     private static volatile String failure;
     private static volatile boolean preparing;
 
@@ -29,7 +30,10 @@ public final class CustomLoadingScreen {
             try (InputStream input = CustomLoadingScreen.class.getResourceAsStream("/szcustom/loading.gif")) {
                 if (input == null) throw new IOException("Loading image unavailable");
                 animation = decode(input);
-            } catch (Exception e) { failure = e.getClass().getSimpleName(); }
+            } catch (Exception e) {
+                animationFailure = e.toString();
+                System.err.println("[loading-screen] Could not load startup animation: " + animationFailure);
+            }
         }, "Loading image");
         thread.setDaemon(true);
         thread.start();
@@ -164,7 +168,7 @@ public final class CustomLoadingScreen {
         View view = views.remove(GLFW.glfwGetCurrentContext());
         if (view != null) view.close();
     }
-    public static String diagnostic() { return failure; }
+    public static String diagnostic() { return failure != null ? failure : animationFailure; }
 
     private static final class State {
         final int program = GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM), vao = GL11.glGetInteger(GL30.GL_VERTEX_ARRAY_BINDING);
