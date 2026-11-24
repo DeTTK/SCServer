@@ -9,10 +9,12 @@ public final class BoltAnomalyTests {
         var electro=zone("electra",1);var funnel=zone("funnel",1);
         check(BoltAnomalies.containing(List.of(electro),new World.Vec(0,0,0))==electro,"bolt inside anomaly triggers it");
         check(BoltAnomalies.containing(List.of(electro),new World.Vec(10,0,0))==null,"bolt far away triggers nothing");
+        check(BoltAnomalies.containing(List.of(electro),new World.Vec(0,.2,0))!=null,"small vertical offset still triggers");
         check(BoltAnomalies.containing(List.of(electro),new World.Vec(0,4,0))==null,"bolt above anomaly does not trigger");
         check(BoltAnomalies.containing(List.of(),new World.Vec(0,0,0))==null,"no zones means no trigger");
         check(BoltAnomalies.containing(List.of(electro,funnel),new World.Vec(1.4,0,0))==electro,"first matching anomaly wins");
         check(BoltAnomalies.containing(List.of(funnel),new World.Vec(2.4,0,1.2))==funnel,"native rounded shape is honoured");
+        check(BoltAnomalies.containing(List.of(electro),new World.Vec(4,0,0),new World.Vec(-4,0,0))==electro,"fast bolt crossing the zone still triggers");
         System.out.println("PASS "+checks+" thrown bolt anomaly activation checks");
     }
 }

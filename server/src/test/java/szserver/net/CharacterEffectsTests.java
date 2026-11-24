@@ -6,8 +6,8 @@ public final class CharacterEffectsTests {
         return new Medicine(id,group,0,false,0,duration,cooldown,0,Map.of("heal",9.5f),new MedicineRules(0,0,false,0,0,0,0,0,false,0,MedicineStages.NONE,active));
     }
     public static void main(String[] args)throws Exception{
-        int checks=0;Medicine ungrouped=medicine(100,null,60,60,false),other=medicine(101,null,60,60,false);
-        Map<Integer,Medicine> catalog=Map.of(100,ungrouped,101,other);
+        int checks=0;Medicine ungrouped=medicine(100,null,60,60,false),other=medicine(101,null,30,60,false),twin=medicine(105,null,60,60,false);
+        Map<Integer,Medicine> catalog=Map.of(100,ungrouped,101,other,105,twin);
         CharacterEffects effects=new CharacterEffects();
         effects=effects.use(ungrouped,catalog,1_000).after();
         if(effects.active(2_000).size()!=1)throw new AssertionError("first effect");checks++;
@@ -15,6 +15,8 @@ public final class CharacterEffectsTests {
         if(effects.active(62_000).size()!=1||effects.active(62_000).iterator().next().until()!=121_000)throw new AssertionError("ungrouped consumable stacked");checks++;
         effects=effects.use(other,catalog,63_000).after();
         if(effects.active(64_000).size()!=2)throw new AssertionError("different consumables merged");checks++;
+        effects=effects.use(twin,catalog,65_000).after();
+        if(effects.active(66_000).size()!=2||effects.active(66_000).stream().noneMatch(e->e.item()==105))throw new AssertionError("identical ungrouped effect stacked");checks++;
 
         Medicine groupedA=medicine(102,"heal",60,0,false),groupedB=medicine(103,"heal",60,0,false);
         Map<Integer,Medicine> groupedCatalog=Map.of(102,groupedA,103,groupedB);

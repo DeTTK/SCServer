@@ -37,7 +37,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
     private record BotKey(String id,long incarnation){}
     private record Recipient(InetSocketAddress address,UUID incarnation){}
     private final NativeEntityIds entityIds=new NativeEntityIds();
-    private final szserver.world.WorldItems worldItems;private final String itemWorld;private long itemCollected,itemDropped,itemFailures,itemRequests,boltTriggers;private String lastItemFailure="";private final Set<UUID> remoteItemExpiry=new HashSet<>(),boltTriggered=new HashSet<>();
+    private final szserver.world.WorldItems worldItems;private final String itemWorld;private long itemCollected,itemDropped,itemFailures,itemRequests,boltTriggers;private String lastItemFailure="";private final Set<UUID> remoteItemExpiry=new HashSet<>(),boltTriggered=new HashSet<>();private final Map<UUID,World.Vec> boltPositions=new HashMap<>();
     private final CorpseLifecycle<Recipient> corpses=new CorpseLifecycle<>(entityIds);
     private record CorpseDonor(int entity,boolean release){}
     // Native ragdolls copy the donor skeleton asynchronously; retire both together.
@@ -1035,8 +1035,9 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         for(var n:world.snapshot().entities())if(n.health()>0&&targets.size()<256&&players.values().stream().anyMatch(p->Math.hypot(p.pos[0]-n.x(),p.pos[2]-n.z())<96)){String key="npc:"+n.id()+":"+n.incarnation();npcs.put(key,n);var b=n.body();targets.add(new AnomalySimulation.Target(key,botEntities.getOrDefault(botKey(n),-1),new World.Vec(n.x(),n.y(),n.z()),Math.max(b.xx()-b.x(),b.zz()-b.z())*.5,b.yy()-b.y(),n.health(),n.stats(),true));}
         if(anomalyQuery!=null&&anomalyQuery.isDone()){try{anomalyScene=anomalyQuery.join();anomalyScene.authorization().checkCurrent();anomalySceneAt=anomalyClock;}catch(RuntimeException error){anomalyScene=null;anomalyErrors++;}anomalyQuery=null;}
         if(anomalyScene!=null)try{anomalyScene.authorization().checkCurrent();if(anomalyClock-anomalySceneAt>20)anomalyScene=null;}catch(RuntimeException stale){anomalyScene=null;}
-        if(anomalyQuery==null&&(anomalyScene==null||anomalyClock%4==0)&&!targets.isEmpty()){
-            var areas=new LinkedHashMap<String,szserver.world.SceneCollision.Box>();for(var t:targets){var p=t.position();int x=(int)Math.floor(p.x()/8),y=(int)Math.floor(p.y()/8),z=(int)Math.floor(p.z()/8);areas.putIfAbsent(x+":"+y+":"+z,new szserver.world.SceneCollision.Box(x*8-4,y*8-4,z*8-4,x*8+12,y*8+12,z*8+12));}anomalyQuery=fpvMap.anomalies(new ArrayList<>(areas.values()));
+        var bolts=new ArrayList<World.Vec>();for(var body:worldItems.all())if(isBolt(body.item))bolts.add(body.position);
+        if(anomalyQuery==null&&(anomalyScene==null||anomalyClock%4==0)&&(!targets.isEmpty()||!bolts.isEmpty())){
+            var areas=new LinkedHashMap<String,szserver.world.SceneCollision.Box>();for(var t:targets){var p=t.position();int x=(int)Math.floor(p.x()/8),y=(int)Math.floor(p.y()/8),z=(int)Math.floor(p.z()/8);areas.putIfAbsent(x+":"+y+":"+z,new szserver.world.SceneCollision.Box(x*8-4,y*8-4,z*8-4,x*8+12,y*8+12,z*8+12));}for(var p:bolts){int x=(int)Math.floor(p.x()/8),y=(int)Math.floor(p.y()/8),z=(int)Math.floor(p.z()/8);areas.putIfAbsent(x+":"+y+":"+z,new szserver.world.SceneCollision.Box(x*8-4,y*8-4,z*8-4,x*8+12,y*8+12,z*8+12));}anomalyQuery=fpvMap.anomalies(new ArrayList<>(areas.values()));
         }
         var circuses=new HashSet<UUID>();if(anomalyScene!=null)for(var z:anomalyScene.zones())if(z.kind().equals("circus")){
             circuses.add(z.id());for(var viewer:sessions.values())if(viewer.ready&&Math.hypot(viewer.pos[0]-z.center().x(),viewer.pos[2]-z.center().z())<128&&viewer.anomalyCircuses.add(z.id()))for(int i=0;i<3;i++){
@@ -1060,15 +1061,16 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         for(var s:sessions.values())if(s.ready){UUID next=s.hp>0&&!s.respawning&&s.teleport==null?stasis.get(s):null;if(!Objects.equals(next,s.anomalyStasis)){if(s.anomalyStasis!=null)stasisOverlay(s,s.anomalyStasis,false);if(next!=null)stasisOverlay(s,next,true);s.anomalyStasis=next;}}
         triggerBolts(anomalyScene==null?List.of():anomalyScene.zones());
     }
-    /** A thrown bolt that has come to rest inside an anomaly fires its native activation effect once. */
+    private boolean isBolt(WorldItem item){try{var definition=inventories.catalog().get(item.stack().id());return definition!=null&&definition.type().equals("bolt");}catch(RuntimeException missing){return false;}}
+    /** A thrown bolt inside an anomaly fires its native activation effect once. */
     private void triggerBolts(List<szserver.world.AnomalyZone> zones){
         Set<UUID> live=new HashSet<>();
-        for(var body:worldItems.all()){UUID id=body.item.id();if(!inventories.catalog().get(body.item.stack().id()).type().equals("bolt"))continue;live.add(id);if(!boltTriggered.add(id))continue;
-            szserver.world.AnomalyZone zone=BoltAnomalies.containing(zones,body.position);if(zone==null){boltTriggered.remove(id);continue;}boltTriggers++;
+        for(var body:worldItems.all()){UUID id=body.item.id();if(!isBolt(body.item))continue;live.add(id);World.Vec previous=boltPositions.put(id,body.position);if(!boltTriggered.add(id))continue;
+            szserver.world.AnomalyZone zone=BoltAnomalies.containing(zones,previous==null?body.position:previous,body.position);if(zone==null){boltTriggered.remove(id);continue;}boltTriggers++;
             for(Session viewer:sessions.values())if(viewer.ready&&Math.hypot(viewer.pos[0]-zone.center().x(),viewer.pos[2]-zone.center().z())<128){int entity=body.entity;UUID zoneId=zone.id();enqueue(viewer,0,Wire.dynamic("1726532531",Wire.bytes(out->{out.writeLong(zoneId.getMostSignificantBits());out.writeLong(zoneId.getLeastSignificantBits());out.writeInt(entity);})));
             }
         }
-        boltTriggered.retainAll(live);
+        boltTriggered.retainAll(live);boltPositions.keySet().retainAll(live);
     }
     private void releaseAnomalies(Session s){
         for(var event:anomalies.removeTarget("player:"+character(s)+":"+s.life))if(event.type().equals("leave"))for(Session viewer:sessions.values())if(viewer.ready){int entity=viewer==s?0:s.entity;UUID id=event.zone().id();enqueue(viewer,0,Wire.dynamic("1410763904",Wire.bytes(out->{out.writeLong(id.getMostSignificantBits());out.writeLong(id.getLeastSignificantBits());out.writeInt(entity);out.writeBoolean(true);})) );}
