@@ -149,7 +149,12 @@ fn set_draft(ui: &AppWindow, s: &Settings) {
     ui.set_relay_enabled(s.relay_enabled);
     ui.set_feed_url(s.feed_url.clone().into());
     ui.set_game_branch(s.game_branch.clone().into());
-    ui.set_branches(rows(vec![SharedString::from(s.game_branch.as_str())]));
+    ui.set_branches(rows(
+        SELECTABLE_CHANNELS
+            .iter()
+            .map(|channel| SharedString::from(*channel))
+            .collect(),
+    ));
 }
 fn load_bundle(layout: &Layout, s: &Settings) -> String {
     if let Ok(stored) = read_json::<BTreeMap<String, String>>(&layout.at("state/bootstrap.json")) {
@@ -1277,17 +1282,20 @@ fn execute(
                 ui.set_setup_visible(!ui.get_configured());
                 ui.set_setup_step(0);
             });
+            let service = RepositoryChannel::new(layout)?.with_cancel(cancel.clone());
+            let mut branches = service.list().unwrap_or_else(|_| {
+                SELECTABLE_CHANNELS
+                    .iter()
+                    .map(|channel| (*channel).to_string())
+                    .collect()
+            });
+            if !s.game_branch.is_empty() && !branches.contains(&s.game_branch) {
+                branches.push(s.game_branch.clone());
+            }
+            let _ = ui.upgrade_in_event_loop(move |ui| {
+                ui.set_branches(rows(branches.into_iter().map(SharedString::from).collect()))
+            });
             if !s.game_branch.is_empty() {
-                let service = RepositoryChannel::new(layout)?.with_cancel(cancel.clone());
-                let mut branches = service
-                    .list()
-                    .unwrap_or_else(|_| vec![s.game_branch.clone()]);
-                if !branches.contains(&s.game_branch) {
-                    branches.push(s.game_branch.clone());
-                }
-                let _ = ui.upgrade_in_event_loop(move |ui| {
-                    ui.set_branches(rows(branches.into_iter().map(SharedString::from).collect()))
-                });
                 progress(format!("Проверяем готовую сборку {}…", s.game_branch).into());
                 match service.check(&s.game_branch) {
                     Ok(available) => {
