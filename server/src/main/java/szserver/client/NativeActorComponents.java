@@ -37,7 +37,7 @@ final class NativeActorComponents {
     private static void set(Class<?> type,String name,Object owner,Object value)throws Exception{Field f=type.getDeclaredField(name);f.setAccessible(true);f.set(owner,value);}
     private void prepareItems(Path path)throws Exception {
         if(RuntimeFiles.size(path)>32L*1024*1024)throw new IllegalArgumentException("actor_component_definitions_size");
-        var definitions=new com.google.gson.JsonObject();try(var text=Files.newBufferedReader(path);var input=new com.google.gson.stream.JsonReader(text)){input.setLenient(true);input.beginObject();while(input.hasNext()){String key=input.nextName();if(Set.of("14987","21059","21085").contains(key))definitions.add(key,com.google.gson.JsonParser.parseReader(input));else input.skipValue();}input.endObject();}
+        var definitions=szserver.inventory.CatalogDefinitions.read(path);
         Class<?> parserType=type("com.google.gson.JsonParser"),json=type("com.google.gson.JsonObject"),descriptor=type("1422486348");
         Object parser=parserType.getConstructor().newInstance();Object[] factories=(Object[])type("1366800141").getField("import").get(null);
         for(int id:new int[]{14987,21059,21085}) {

@@ -15,8 +15,8 @@ public final class GrenadePackets {
     public static void verifyRelease(Path root,Path runtime)throws Exception {prepareDirected(root);for(String fixture:List.of("native-grenades.json","native-grenade-cooking.json","native-grenade-areas.json","native-grenade-fire.json","native-grenade-continuous.json","native-grenade-fast.json")){var manifest=com.google.gson.JsonParser.parseString(RuntimeFiles.readString(root.resolve("fixtures/"+fixture))).getAsJsonObject();for(var entry:manifest.getAsJsonObject("classHashes").entrySet()){String name=entry.getKey();if(!name.matches("[0-9]+"))throw new IOException("grenade_release_class");String digest=HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(RuntimeFiles.read(runtime.resolve("classes").resolve(name+".class"))));if(!digest.equals(entry.getValue().getAsString()))throw new IOException("grenade_native_release_changed:"+name);}}}
     private static volatile Set<Integer> directedItems=Set.of();
     /** Native launcher ammunition uses the directed renderer; hand grenades retain their tumble. */
-    private static void prepareDirected(Path root)throws IOException {
-        var definitions=com.google.gson.JsonParser.parseString(RuntimeFiles.readString(root.resolve("fixtures/item-definitions.json"))).getAsJsonObject();Set<Integer> result=new HashSet<>();
+    private static void prepareDirected(Path root)throws Exception {
+        var definitions=CatalogDefinitions.read(root.resolve("fixtures/item-definitions.json"));Set<Integer> result=new HashSet<>();
         for(var entry:definitions.entrySet()){var value=entry.getValue().getAsJsonObject();if(value.has("hand_use")&&!value.get("hand_use").getAsBoolean()&&value.has("type")&&Set.of("grenade","explosive").contains(value.get("type").getAsString()))result.add(Integer.parseInt(entry.getKey()));}
         directedItems=Set.copyOf(result);
     }

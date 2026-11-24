@@ -172,7 +172,7 @@ public final class NativeCreatureModel implements AutoCloseable {
         public void close()throws Exception{if(disposed)return;active();enter();try{method(creature,"throw",void.class).invoke(actor);}finally{disposed=true;sessions.remove(id);clock.exit();}}
     }
     private void items(Path root)throws Exception {
-        var selected=new JsonObject();try(var in=new com.google.gson.stream.JsonReader(Files.newBufferedReader(root.resolve("fixtures/item-definitions.json")))){in.setLenient(true);in.beginObject();while(in.hasNext()){String key=in.nextName();if(Set.of("14987","21059","21085").contains(key))selected.add(key,JsonParser.parseReader(in));else in.skipValue();}in.endObject();}
+        var selected=szserver.inventory.CatalogDefinitions.read(root.resolve("fixtures/item-definitions.json"));
         Class<?> parser=type("com.google.gson.JsonParser"),json=type("com.google.gson.JsonObject"),descriptor=type("1422486348");
         for(int id:new int[]{14987,21059,21085}){Object parsed=parser.getMethod("parseString",String.class).invoke(null,selected.getAsJsonObject(Integer.toString(id)).toString());parsed=parsed.getClass().getMethod("getAsJsonObject").invoke(parsed);
             Object value=descriptor.getConstructor(String.class,json,int.class,String.class,Integer.class,String.class).newInstance("creature_base_"+id,parsed,id,null,null,null);type(id==14987?"942610364":"124763289").getConstructor(descriptor).newInstance(value);

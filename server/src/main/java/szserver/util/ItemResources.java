@@ -7,7 +7,7 @@ import java.util.*;
 
 /** Resource definitions shared by inventory and independent native factory hosts. */
 public final class ItemResources {
-    private static final Set<String> LIVE_TYPES = Set.of("medicine", "medicine_animated", "bolt", "bolt_gem");
+    private static final Set<String> DYNAMIC_FAMILIES = Set.of("medicine", "medicine_animated", "bolt", "bolt_gem");
     private static final Map<Object, JsonObject> INDEXES = new WeakHashMap<>();
 
     private ItemResources() {}
@@ -16,9 +16,31 @@ public final class ItemResources {
         return fixture.resolveSibling("../resources/configs").normalize();
     }
 
-    public static boolean manages(JsonObject row) {
-        var kind = row.get("type");
-        return kind != null && kind.isJsonPrimitive() && LIVE_TYPES.contains(kind.getAsString());
+    public static boolean hasDynamicRegistration(JsonObject row) {
+        return row.has("type") && DYNAMIC_FAMILIES.contains(row.get("type").getAsString());
+    }
+
+    /** The native loader inherits top-level fields, then removes explicit <default> values. */
+    public static JsonObject resolved(JsonObject row,JsonObject definitions) {
+        var chain = new ArrayDeque<JsonObject>();
+        for (;;) {
+            chain.push(row);
+            var parent = row.get("extends_item");
+            if (parent == null || parent.isJsonNull()) break;
+            row = definitions.getAsJsonObject(Integer.toString(parent.getAsInt()));
+        }
+        var result = new JsonObject();
+        while (!chain.isEmpty()) {
+            for (var field : chain.pop().entrySet()) {
+                String key = field.getKey();
+                JsonElement value = field.getValue();
+                if (value.isJsonPrimitive() && value.getAsJsonPrimitive().isString()
+                        && value.getAsString().equalsIgnoreCase("<default>")) result.remove(key);
+                else result.add(key,value.deepCopy());
+            }
+        }
+        result.remove("extends_item");
+        return result;
     }
 
     public static String gameplaySettings(Path fixture) throws IOException {
@@ -65,8 +87,9 @@ public final class ItemResources {
                     JsonElement data = JsonParser.parseString(raw);
                     Iterable<JsonElement> entries = data.isJsonArray() ? data.getAsJsonArray() : List.of(data);
                     for (JsonElement value : entries) {
-                        if (!value.isJsonObject() || !manages(value.getAsJsonObject())) continue;
+                        if (!value.isJsonObject()) continue;
                         JsonObject row = value.getAsJsonObject();
+                        if (!row.has("type") || !row.has("item_id")) continue;
                         int id = row.get("item_id").getAsBigDecimal().intValueExact();
                         if (id < 1 || id > 65535 || result.has(Integer.toString(id)))
                             throw new IOException("item_resource_duplicate_or_invalid:"+id+":"+resource);
@@ -78,18 +101,15 @@ public final class ItemResources {
                 }
             }
         }
-        if (!types.containsAll(LIVE_TYPES)) throw new IOException("item_resource_family_missing:"+types);
+        if (!types.containsAll(DYNAMIC_FAMILIES)) throw new IOException("item_resource_family_missing:"+types);
         for (var entry : result.entrySet()) {
             Set<Integer> seen = new HashSet<>();
             JsonObject row = entry.getValue().getAsJsonObject();
             while (row.has("extends_item") && !row.get("extends_item").isJsonNull()) {
                 int id = row.get("extends_item").getAsBigDecimal().intValueExact();
                 if (!seen.add(id) || seen.size() > 64) throw new IOException("item_resource_inheritance_cycle:"+id);
-                String type = row.get("type").getAsString();
                 row = result.getAsJsonObject(Integer.toString(id));
                 if (row == null) throw new IOException("item_resource_parent_missing:"+id);
-                if (!row.get("type").getAsString().equals(type))
-                    throw new IOException("item_resource_parent_type:"+id);
             }
         }
         return result;

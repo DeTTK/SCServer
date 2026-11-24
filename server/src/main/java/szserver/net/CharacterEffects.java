@@ -19,7 +19,33 @@ public final class CharacterEffects {
     public CharacterEffects(){this(Map.of(),Map.of(),1_000_000);}
     private CharacterEffects(Map<Integer,Effect> effects,Map<String,Long> cooldowns,int nextId){this.effects=Map.copyOf(effects);this.cooldowns=Map.copyOf(cooldowns);this.nextId=nextId;}
     public Collection<Effect> active(long now){return effects.values().stream().filter(e->e.until()>now).sorted(Comparator.comparingInt(Effect::id)).toList();}
-    public Map<String,Float> stats(Map<Integer,Medicine> catalog,long now){Map<String,Float> result=new TreeMap<>();for(Effect effect:active(now))effect.definition(catalog).stats().forEach((key,value)->result.merge(key,value,Float::sum));return Map.copyOf(result);}
+    public Set<Integer> suppressed(Map<Integer,Medicine> catalog,long now){
+        var running=active(now);
+        Set<Integer> suppressed=new TreeSet<>();
+        for(Effect effect:running){
+            Medicine medicine=effect.definition(catalog);
+            for(Effect other:running){
+                if(other.id()==effect.id())continue;
+                Medicine contender=other.definition(catalog);
+                if(sameGroup(medicine,contender)&&(contender.priority()>medicine.priority()
+                        ||contender.priority()==medicine.priority()&&other.id()>effect.id())){
+                    suppressed.add(effect.id());
+                    break;
+                }
+            }
+        }
+        return suppressed;
+    }
+    public List<Effect> effective(Map<Integer,Medicine> catalog,long now){
+        Set<Integer> suppressed=suppressed(catalog,now);
+        return active(now).stream().filter(effect->!suppressed.contains(effect.id())).toList();
+    }
+    public Map<String,Float> stats(Map<Integer,Medicine> catalog,long now){
+        Map<String,Float> result=new TreeMap<>();
+        for(Effect effect:effective(catalog,now))
+            effect.definition(catalog).stats().forEach((key,value)->result.merge(key,value,Float::sum));
+        return Map.copyOf(result);
+    }
     public Selection select(Inventory inventory,Integer slot,Map<Integer,Medicine> catalog,long now){
         return selectAddress(inventory,slot==null?null:new Inventory.Address(1,0,slot),catalog,now,m->true);
     }
@@ -27,7 +53,6 @@ public final class CharacterEffects {
         Selection selected=null;for(var entry:inventory.items().entrySet()){
             if(address==null&&entry.getKey().aggregate()!=1||address!=null&&!entry.getKey().equals(address))continue;
             Medicine medicine=catalog.get(entry.getValue().id());if(medicine==null||address==null&&!medicine.rules().quickEligible()||!allowed.test(medicine)||deadline(medicine)>now)continue;
-            if(blockedByPriority(medicine,catalog,now,0))continue;
             if(selected==null||medicine.rules().quickRank()>selected.medicine().rules().quickRank()||medicine.rules().quickRank()==selected.medicine().rules().quickRank()&&entry.getKey().compareTo(selected.address())>0)selected=new Selection(entry.getKey(),medicine);
         }return selected;
     }
@@ -37,29 +62,34 @@ public final class CharacterEffects {
         return a.rules().active()==b.rules().active()&&!a.stats().isEmpty()&&a.duration()==b.duration()
                 &&a.stats().equals(b.stats())&&a.rules().stages().stats().equals(b.rules().stages().stats());
     }
-    private boolean blockedByPriority(Medicine medicine,Map<Integer,Medicine> catalog,long now,int excluded){
-        for(Effect effect:effects.values()){
-            if(effect.id()==excluded||effect.until()<=now)continue;
-            Medicine current=effect.definition(catalog);
-            if(sameGroup(medicine,current)&&current.priority()>medicine.priority())return true;
-        }
-        return false;
-    }
     public Change transition(int activeId,Medicine replacement,Map<Integer,Medicine> catalog,long now){
-        if(replacement!=null&&blockedByPriority(replacement,catalog,now,activeId))throw new IllegalStateException("medicine_effect_priority");
-        Map<Integer,Effect> after=new TreeMap<>(effects);List<Effect> removed=new ArrayList<>();for(Effect effect:effects.values())if(effect.id()==activeId||effect.until()<=now||replacement!=null&&sameGroup(replacement,effect.definition(catalog))){removed.add(effect);after.remove(effect.id());}
-        if(replacement!=null&&replacement.duration()>0&&(after.size()>=32||nextId==Integer.MAX_VALUE))throw new IllegalStateException("effect_limit");Effect added=replacement!=null&&replacement.duration()>0?new Effect(nextId,replacement.id(),now+Math.round(replacement.duration()*1000),replacement):null;if(added!=null)after.put(added.id(),added);
-        return new Change(new CharacterEffects(after,cooldowns,added==null?nextId:nextId+1),List.copyOf(removed),added);
+        return apply(activeId,replacement,catalog,now,cooldowns);
+    }
+    private Change apply(int activeId,Medicine medicine,Map<Integer,Medicine> catalog,long now,Map<String,Long> deadlines){
+        Map<Integer,Effect> after=new TreeMap<>(effects);
+        List<Effect> removed=new ArrayList<>();
+        for(Effect effect:effects.values()){
+            Medicine current=effect.definition(catalog);
+            boolean refresh=medicine!=null&&medicine.duration()>0&&sameGroup(medicine,current)
+                    &&(medicine.id()==current.id()||medicine.priority()==current.priority());
+            if(effect.id()==activeId||effect.until()<=now||refresh){
+                removed.add(effect);after.remove(effect.id());
+            }
+        }
+        if(medicine!=null&&medicine.duration()>0&&(after.size()>=32||nextId==Integer.MAX_VALUE))
+            throw new IllegalStateException("effect_limit");
+        Effect added=medicine!=null&&medicine.duration()>0
+                ?new Effect(nextId,medicine.id(),now+Math.round(medicine.duration()*1000),medicine):null;
+        if(added!=null)after.put(added.id(),added);
+        return new Change(new CharacterEffects(after,deadlines,added==null?nextId:nextId+1),List.copyOf(removed),added);
     }
     private long deadline(Medicine medicine){long end=cooldowns.getOrDefault(medicine.cooldownKey(),0L);return medicine.group()==null?Math.max(end,cooldowns.getOrDefault("medicine",0L)):end;}
     public Change use(Medicine medicine,Map<Integer,Medicine> catalog,long now){
         if(deadline(medicine)>now)throw new IllegalStateException("medicine_cooldown");
-        if(blockedByPriority(medicine,catalog,now,0))throw new IllegalStateException("medicine_effect_priority");
-        Map<Integer,Effect> after=new TreeMap<>(effects);List<Effect> removed=new ArrayList<>();for(Effect effect:effects.values())if(effect.until()<=now||sameGroup(medicine,effect.definition(catalog))){removed.add(effect);after.remove(effect.id());}
-        if(medicine.duration()>0&&(after.size()>=32||nextId==Integer.MAX_VALUE))throw new IllegalStateException("effect_limit");
-        Effect added=medicine.duration()>0?new Effect(nextId,medicine.id(),now+Math.round(medicine.duration()*1000),medicine):null;if(added!=null)after.put(added.id(),added);
-        Map<String,Long> cooldown=new TreeMap<>();cooldowns.forEach((key,end)->{if(end>now)cooldown.put(key,end);});cooldown.put(medicine.cooldownKey(),now+Math.round(medicine.cooldown()*1000));
-        return new Change(new CharacterEffects(after,cooldown,added==null?nextId:nextId+1),List.copyOf(removed),added);
+        Map<String,Long> cooldown=new TreeMap<>();
+        cooldowns.forEach((key,end)->{if(end>now)cooldown.put(key,end);});
+        cooldown.put(medicine.cooldownKey(),now+Math.round(medicine.cooldown()*1000));
+        return apply(0,medicine,catalog,now,cooldown);
     }
     /** Medicines have no KEEP_ON_DEATH; sequence and group cooldowns are retained. */
     public Change onDeath(){return new Change(new CharacterEffects(Map.of(),cooldowns,nextId),effects.values().stream().sorted(Comparator.comparingInt(Effect::id)).toList(),null);}

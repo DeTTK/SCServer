@@ -50,16 +50,27 @@ public final class CharacterEffectsTests {
         if(stages.active(2_500).size()!=1)throw new AssertionError("active stage and base stacked within one category");checks++;
         var transition=stages.transition(stages.active(2_500).stream().filter(e->e.definition(stagedCatalog).rules().active()).findFirst().orElseThrow().id(),staged,stagedCatalog,2_600);stages=transition.after();
         if(stages.active(3_000).size()!=1||stages.active(3_000).iterator().next().definition(stagedCatalog).rules().active())throw new AssertionError("active stage transition");checks++;
-        Medicine strong=medicine(110,"heal",60,0,false,3), weak=medicine(111,"heal",60,0,false,-1);
+        Medicine strong=medicine(110,"heal",10,0,false,3), weak=medicine(111,"heal",60,0,false,-1);
         Medicine independent=medicine(112,"booster",60,0,false,0);
         var priorityCatalog=Map.of(110,strong,111,weak,112,independent);
-        var priority=new CharacterEffects().use(weak,priorityCatalog,1_000).after();
-        priority=priority.use(strong,priorityCatalog,2_000).after().use(independent,priorityCatalog,3_000).after();
-        if(priority.active(4_000).size()!=2||priority.active(4_000).stream().anyMatch(e->e.item()==111))throw new AssertionError("stronger replaces only its group");checks++;
-        try{priority.use(weak,priorityCatalog,4_000);throw new AssertionError("weaker medicine replaced an active effect");}
-        catch(IllegalStateException expected){if(!"medicine_effect_priority".equals(expected.getMessage()))throw expected;}checks++;
-        try{priority.transition(0,weak,priorityCatalog,4_000);throw new AssertionError("weak stage displaced stronger effect");}
-        catch(IllegalStateException expected){if(!"medicine_effect_priority".equals(expected.getMessage()))throw expected;}checks++;
+        var priority=new CharacterEffects().use(strong,priorityCatalog,1_000).after();
+        var queued=priority.use(weak,priorityCatalog,2_000);
+        priority=queued.after().use(independent,priorityCatalog,3_000).after();
+        if(priority.active(4_000).size()!=3||!priority.suppressed(priorityCatalog,4_000).equals(Set.of(queued.added().id())))
+            throw new AssertionError("weak medicine must stay visible and suppressed");checks++;
+        if(priority.stats(priorityCatalog,4_000).get("heal")!=19f)throw new AssertionError("suppressed stats leaked");checks++;
+        priority=CharacterEffects.read(priority.json(),priorityCatalog,4_000);
+        if(!priority.suppressed(priorityCatalog,4_000).contains(queued.added().id()))throw new AssertionError("suppression lost on reload");checks++;
+        var expired=priority.expire(11_000).after();
+        if(!expired.suppressed(priorityCatalog,11_000).isEmpty()
+                ||expired.effective(priorityCatalog,11_000).stream().noneMatch(e->e.id()==queued.added().id()&&e.until()==62_000))
+            throw new AssertionError("waiting medicine must resume on its original deadline");checks++;
+        var reverse=new CharacterEffects().use(weak,priorityCatalog,1_000).after().use(strong,priorityCatalog,2_000).after();
+        if(reverse.effective(priorityCatalog,13_000).stream().noneMatch(e->e.item()==111))
+            throw new AssertionError("stronger medicine permanently deleted earlier weaker medicine");checks++;
+        var shortWeak=medicine(111,"heal",1,0,false,-1);
+        var alreadyExpired=new CharacterEffects().use(strong,priorityCatalog,1_000).after().use(shortWeak,priorityCatalog,2_000).after();
+        if(!alreadyExpired.effective(priorityCatalog,11_000).isEmpty())throw new AssertionError("expired queued medicine reappeared");checks++;
         var oldSave=new CharacterEffects().use(ungrouped,catalog,1_000).after().json();
         var parsed=CharacterEffects.read(oldSave,catalog,2_000).use(twin,catalog,2_000).after();
         if(parsed.active(3_000).size()!=1)throw new AssertionError("same effect stacked after save");checks++;

@@ -460,7 +460,7 @@ public final class ClientStateAdapter implements AutoCloseable {
     public record MedicineRequest(int owner,int sequence,szserver.inventory.Inventory.Address address){}
     public MedicineRequest medicineRequest(byte[] raw)throws Exception{return medicinePackets.read(raw);}
     public Map<String,Float> medicineStats(Collection<Map<String,Float>> banks)throws Exception{return medicineEffects.aggregate(banks);}
-    public byte[] medicineEffects(List<Integer> removed,Collection<GameItems.MedicineEffect> added,long now)throws Exception{return medicineEffects.delta(removed,added,now);}
+    public byte[] medicineEffects(List<Integer> removed,Collection<GameItems.MedicineEffect> added,Set<Integer> suppressed,long now)throws Exception{return medicineEffects.delta(removed,added,suppressed,now);}
     public record FactoryMetadataExport(Map<Integer,Map<String,Integer>> rows,Map<Integer,String> errors){}
     public FactoryMetadataExport exportFactoryMetadata()throws Exception{
         Map<Integer,Map<String,Integer>> rows=new TreeMap<>();Map<Integer,String> errors=new TreeMap<>();Class<?> shape=Class.forName("61438557",true,loader);Method geometry=NativeMethods.staticMethod(Class.forName("1824362651",true,loader),"while",shape,cosmetics.stack),limit=NativeMethods.instance(cosmetics.stack,"finally",int.class);

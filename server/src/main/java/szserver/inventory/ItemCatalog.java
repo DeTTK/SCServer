@@ -22,7 +22,7 @@ public final class ItemCatalog {
         Map<String,JsonObject> objects=new HashMap<>();for(var entry:data.entrySet()){JsonObject row=entry.getValue().getAsJsonObject();if(row.has("object_id"))objects.put(row.get("object_id").getAsString(),row);}
         for (var row:data.entrySet()) {
             JsonObject p=row.getValue().getAsJsonObject();int id=Integer.parseInt(row.getKey());
-            boolean live=mounted&&ItemResources.manages(p);
+            boolean live=mounted&&ItemResources.hasDynamicRegistration(p);
             JsonObject geometry=live?ItemResources.inheritedGeometry(p,data):p;
             String fallback=!legacyGeometry&&text(p,"type","").equals("armor")&&(!p.has("armor_slot")||p.get("armor_slot").getAsInt()==1)?"2x3":"1x1";
             // Native armor factory 1598274006 supplies 2x3 when slot_size is absent.

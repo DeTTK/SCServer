@@ -15,11 +15,16 @@ public final class CatalogDefinitions {
         Path config = ItemResources.root(file);
         boolean mounted = GameResources.mounted(config);
         if (mounted) {
-            rows.entrySet().removeIf(entry -> ItemResources.manages(entry.getValue().getAsJsonObject()));
+            rows.entrySet().removeIf(entry -> ItemResources.hasDynamicRegistration(entry.getValue().getAsJsonObject()));
             JsonObject live = ItemResources.definitions(config);
             for (var entry : live.entrySet()) {
-                if (rows.has(entry.getKey())) throw new IOException("item_resource_id_conflict:"+entry.getKey());
-                rows.add(entry.getKey(),entry.getValue());
+                JsonObject row=entry.getValue().getAsJsonObject();
+                JsonObject previous=rows.getAsJsonObject(entry.getKey());
+                // Families with exported state codecs keep their existing supported ID set.
+                if(previous==null&&!ItemResources.hasDynamicRegistration(row))continue;
+                if(previous!=null&&!previous.get("type").equals(row.get("type")))
+                    throw new IOException("item_resource_id_conflict:"+entry.getKey());
+                rows.add(entry.getKey(),ItemResources.hasDynamicRegistration(row)?row:ItemResources.resolved(row,live));
             }
         }
         Path defaults=file.resolveSibling("native-resource-stack-defaults.json");
@@ -28,14 +33,14 @@ public final class CatalogDefinitions {
             if(nativeDefaults.get("version").getAsInt()!=1)throw new IllegalArgumentException("native_stack_defaults_version");
             JsonObject limits=nativeDefaults.getAsJsonObject("defaultLimits");
             for(var entry:rows.entrySet()){
-                JsonObject row=entry.getValue().getAsJsonObject();if(mounted&&ItemResources.manages(row))continue;String kind=row.has("type")?row.get("type").getAsString():"";
+                JsonObject row=entry.getValue().getAsJsonObject();if(mounted&&ItemResources.hasDynamicRegistration(row))continue;String kind=row.has("type")?row.get("type").getAsString():"";
                 if(!row.has("stack_size")&&limits.has(kind))row.add("stack_size",limits.get(kind).deepCopy());
             }
         }
         // The optional compatibility file may predate newly reviewed factory families.
         // Fill absent fields only; authored limits continue to win.
         for(var entry:rows.entrySet()){
-            JsonObject row=entry.getValue().getAsJsonObject();if(mounted&&ItemResources.manages(row))continue;String kind=row.has("type")?row.get("type").getAsString():"";
+            JsonObject row=entry.getValue().getAsJsonObject();if(mounted&&ItemResources.hasDynamicRegistration(row))continue;String kind=row.has("type")?row.get("type").getAsString():"";
             Integer limit=NativeStackRules.DEFAULTS.get(kind);if(!row.has("stack_size")&&limit!=null)row.addProperty("stack_size",limit);
         }
         merge(rows,file.resolveSibling("native-builtin-definitions.json"));

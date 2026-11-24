@@ -84,7 +84,7 @@ public final class GameItems implements AutoCloseable {
     public boolean medicineAllowed(int id,String mode,String location)throws Exception{return adapter.medicineAllowed(id,mode,location);}
     public ClientStateAdapter.MedicineRequest medicineRequest(byte[] body)throws Exception{return adapter.medicineRequest(body);}
     public Map<String,Float> medicineStats(Collection<Map<String,Float>> banks)throws Exception{return adapter.medicineStats(banks);}
-    public byte[] medicineEffects(List<Integer> removed,Collection<MedicineEffect> added,long now)throws Exception{return adapter.medicineEffects(removed,added,now);}
+    public byte[] medicineEffects(List<Integer> removed,Collection<MedicineEffect> added,Set<Integer> suppressed,long now)throws Exception{return adapter.medicineEffects(removed,added,suppressed,now);}
     public Map<String,Integer> statOrdinals(){return statOrdinals;}
     public String upgradeTag()throws Exception{return adapter.upgradeTag();}
     public void warmGameplay(Path definitionsPath,Path artifactSettings)throws Exception{
@@ -145,7 +145,7 @@ public final class GameItems implements AutoCloseable {
         }
         for(var entry:catalog.entrySet()){
             var definition=entry.getValue().getAsJsonObject();
-            if(!ItemResources.manages(definition))continue;
+            if(!ItemResources.hasDynamicRegistration(definition))continue;
             String key=entry.getKey();
             int id=Integer.parseInt(key);
             String kind=definition.get("type").getAsString();

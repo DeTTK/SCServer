@@ -14,7 +14,7 @@ final class NativeActorBuffs {
     private final Class<?> component,bank,builder,time,attribute,kind,stat;
     private final Constructor<?> componentCtor,bankCtor,builderCtor,timeCtor;
     private final Method bankPut,bankExport,attachBank,attachKind,attachAttribute,make,register,rebuild,clearDirty,active;
-    private final Field stateField,nextField,effectiveBank;
+    private final Field stateField,nextField,effectiveBank,suppressedField;
     private final Object medicineKind,timerAttribute,itemAttribute,groupAttribute,priorityAttribute;
     private final Map<String,Object> statKeys=new HashMap<>();
     private final Map<Integer,ActorBuff> medicines=new HashMap<>();
@@ -28,8 +28,8 @@ final class NativeActorBuffs {
         component=type(loader,"1967986234");bank=type(loader,"964863275");builder=type(loader,"222945433");time=type(loader,"1819519616");attribute=type(loader,"461891820");kind=type(loader,"1585835196");stat=type(loader,"1924679062");
         componentCtor=component.getConstructor(boolean.class,boolean.class);bankCtor=bank.getConstructor();builderCtor=builder.getConstructor();timeCtor=time.getConstructor(Instant.class,Duration.class);
         bankPut=bank.getMethod("double",stat,float.class);bankExport=Arrays.stream(bank.getMethods()).filter(m->m.getName().equals("float")&&m.getParameterCount()==0&&Map.class.isAssignableFrom(m.getReturnType())).findFirst().orElseThrow();
-        attachBank=builder.getMethod("native",bank);attachKind=builder.getMethod("catch",kind);attachAttribute=builder.getMethod("instanceof",attribute,Object.class);make=builder.getMethod("char");register=component.getMethod("char",type(loader,"837608172"));rebuild=component.getMethod("synchronized");clearDirty=component.getMethod("new");active=time.getMethod("public",Instant.class);
-        nextField=component.getField("volatile");effectiveBank=component.getField("break");stateField=type(loader,"szserver.bridge.ActorLivingProfile").getField("buffState");life=new NativeActorLife(loader);
+        attachBank=builder.getMethod("native",bank);attachKind=builder.getMethod("catch",kind);attachAttribute=builder.getMethod("instanceof",attribute,Object.class);make=builder.getMethod("char");register=NativeMethods.instance(component,"char",type(loader,"837608172"),type(loader,"837608172"));rebuild=component.getMethod("synchronized");clearDirty=component.getMethod("new");active=time.getMethod("public",Instant.class);
+        nextField=component.getField("volatile");effectiveBank=component.getField("break");suppressedField=component.getField("protected");stateField=type(loader,"szserver.bridge.ActorLivingProfile").getField("buffState");life=new NativeActorLife(loader);
         Class<?> attributes=type(loader,"626983914");timerAttribute=attributes.getField("try").get(null);itemAttribute=attributes.getField("assert").get(null);groupAttribute=attributes.getField("import").get(null);priorityAttribute=attributes.getField("boolean").get(null);medicineKind=kind.getField("MEDICINE").get(null);
         for(Object key:stat.getEnumConstants())statKeys.put((String)stat.getField("for").get(key),key);
         var nativeCatalog=NativeMedicines.load(loader,definitions,registry,this::export);for(var medicine:nativeCatalog.profiles().values())medicines.put(medicine.id(),new ActorBuff(medicine.id(),medicine.cooldownKey(),medicine.priority(),Math.round(medicine.duration()*20),Math.round(medicine.cooldown()*20),medicine.instant(),medicine.stats()));
@@ -46,13 +46,26 @@ final class NativeActorBuffs {
     private State state(Object actor)throws Exception{return (State)stateField.get(actor);}
     private State build(Base base,List<Entry> rows,Map<String,Long> cooldowns,int next,long tick)throws Exception{
         if(rows.size()>32||cooldowns.size()>64||next<1_000_000||next==Integer.MAX_VALUE&&rows.stream().anyMatch(e->e.id()>=next))throw new IllegalArgumentException("actor_buff_limit");now(tick);
-        Object target=componentCtor.newInstance(false,false);var entries=new ArrayList<Entry>();Set<Integer> ids=new HashSet<>();Set<String> groups=new HashSet<>();
+        Object target=componentCtor.newInstance(false,false);
+        var entries=new ArrayList<Entry>();
+        Set<Integer> ids=new HashSet<>();
+        var winners=new HashMap<String,Entry>();
+        for(Entry row:rows){
+            winners.merge(row.definition().group(),row,(a,b)->{
+                int order=Integer.compare(a.definition().priority(),b.definition().priority());
+                return order>0||order==0&&a.id()>b.id()?a:b;
+            });
+        }
+        @SuppressWarnings("unchecked")
+        Set<Object> suppressed=(Set<Object>)suppressedField.get(target);
         for(var row:rows){
-            if(row.id()<1_000_000||row.id()>=next||!ids.add(row.id())||!groups.add(row.definition().group())||row.start()<0||row.start()>tick||row.until()<=tick)throw new IllegalArgumentException("actor_buff_entry");
+            if(row.id()<1_000_000||row.id()>=next||!ids.add(row.id())||row.start()<0||row.start()>tick||row.until()<=tick)throw new IllegalArgumentException("actor_buff_entry");
             Object values=bankCtor.newInstance();for(var e:row.definition().stats().entrySet()){Object key=statKeys.get(e.getKey());if(key==null)throw new IllegalArgumentException("actor_buff_stat_unknown");bankPut.invoke(values,key,e.getValue());}
             Object b=builderCtor.newInstance(),timer=timeCtor.newInstance(now(row.start()),Duration.ofMillis(row.definition().durationTicks()*50));attachBank.invoke(b,values);attachKind.invoke(b,medicineKind);
             attachAttribute.invoke(b,timerAttribute,timer);attachAttribute.invoke(b,itemAttribute,(short)row.definition().item());attachAttribute.invoke(b,groupAttribute,row.definition().group());attachAttribute.invoke(b,priorityAttribute,(byte)Math.max(-128,Math.min(127,row.definition().priority())));
-            nextField.setInt(target,row.id());register.invoke(target,make.invoke(b));entries.add(new Entry(row.id(),row.definition(),row.start(),timer));
+            nextField.setInt(target,row.id());Object registered=register.invoke(target,make.invoke(b));
+            if(winners.get(row.definition().group())!=row)suppressed.add(registered);
+            entries.add(new Entry(row.id(),row.definition(),row.start(),timer));
         }
         nextField.setInt(target,next);rebuild.invoke(target);clearDirty.invoke(target);
         var effective=new TreeMap<>(base.stats());export(effectiveBank.get(target)).forEach((key,value)->effective.merge(key,value,Float::sum));
@@ -86,11 +99,12 @@ final class NativeActorBuffs {
     void use(Object actor,Object controller,ActorControllerEngine.PreparedMedicine prepared,long tick)throws Exception{
         if(!(prepared instanceof Prepared p)||p.owner()!=this)throw new IllegalArgumentException("actor_medicine_loader");if(life.health(actor)<=0)throw new IllegalArgumentException("actor_medicine_dead");advance(actor,controller,tick);State old=state(actor);ActorBuff definition=p.definition();
         if(old.cooldowns().getOrDefault(definition.group(),0L)>tick)throw new IllegalArgumentException("actor_medicine_cooldown");
-        if(old.entries().stream().anyMatch(e->e.definition().group().equals(definition.group())&&e.definition().priority()>definition.priority()))throw new IllegalArgumentException("actor_medicine_priority");
-        var entries=new ArrayList<>(old.entries().stream().filter(e->!e.definition().group().equals(definition.group())).toList());int next=old.next();
+        var entries=new ArrayList<>(old.entries().stream().filter(e->definition.durationTicks()==0||!e.definition().group().equals(definition.group())
+                ||e.definition().item()!=definition.item()&&e.definition().priority()!=definition.priority()).toList());int next=old.next();
         if(definition.durationTicks()>0){if(next==Integer.MAX_VALUE)throw new IllegalArgumentException("actor_buff_sequence");entries.add(new Entry(next++,definition,tick,null));}
         var cooldowns=new TreeMap<>(old.cooldowns());if(definition.cooldownTicks()>0)cooldowns.put(definition.group(),Math.addExact(tick,definition.cooldownTicks()));
-        publish(actor,controller,build(old.base(),entries,cooldowns,next,tick));float healed=szserver.net.HealthRules.instant(life.health(actor),NativeActorLife.stats(actor),definition.instant());life.health(actor,healed);
+        publish(actor,controller,build(old.base(),entries,cooldowns,next,tick));boolean suppressed=definition.durationTicks()>0&&entries.stream().anyMatch(e->e.definition().group().equals(definition.group())&&e.definition().priority()>definition.priority());
+        if(!suppressed)life.health(actor,szserver.net.HealthRules.instant(life.health(actor),NativeActorLife.stats(actor),definition.instant()));
     }
     void remove(Object actor,Object controller,int id,long tick)throws Exception{advance(actor,controller,tick);State old=state(actor);if(id<0||id!=0&&old.entries().stream().noneMatch(e->e.id()==id))throw new IllegalArgumentException("actor_buff_not_found");publish(actor,controller,build(old.base(),id==0?List.of():old.entries().stream().filter(e->e.id()!=id).toList(),old.cooldowns(),old.next(),tick));}
     void death(Object actor,Object controller)throws Exception{State old=state(actor);if(!old.entries().isEmpty())publish(actor,controller,build(old.base(),List.of(),old.cooldowns(),old.next(),old.tick()));}
