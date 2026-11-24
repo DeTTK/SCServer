@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   game:
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/test'
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/test' || github.ref == 'refs/heads/launtest'
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     permissions:
