@@ -1,5 +1,6 @@
 package szserver.world;
 
+import szserver.inventory.ItemStack;
 import szserver.inventory.WorldItem;
 import java.util.*;
 import java.util.concurrent.*;
@@ -9,9 +10,10 @@ import java.util.function.*;
 public final class WorldItems implements AutoCloseable {
     public static final class Body {
         public final WorldItem item;public final int entity;
+        public final UUID throwingSession;public final int prediction;
         public World.Vec position,velocity;public boolean ground,claiming,expiring,settlePending,settledSaved;public long retry;
         int quiet;
-        Body(WorldItem item,int entity){this.item=item;this.entity=entity;position=new World.Vec(item.x(),item.y(),item.z());velocity=new World.Vec(item.vx(),item.vy(),item.vz());ground=item.vx()==0&&item.vy()==0&&item.vz()==0;settledSaved=ground;}
+        Body(WorldItem item,int entity,UUID throwingSession,int prediction){this.item=item;this.entity=entity;this.throwingSession=throwingSession;this.prediction=prediction;position=new World.Vec(item.x(),item.y(),item.z());velocity=new World.Vec(item.vx(),item.vy(),item.vz());ground=item.vx()==0&&item.vy()==0&&item.vz()==0;settledSaved=ground;}
     }
     private record Key(int x,int y,int z) {static Key at(World.Vec p){return new Key((int)Math.floor(p.x()/8),(int)Math.floor(p.y()/8),(int)Math.floor(p.z()/8));}World.Vec center(){return new World.Vec(x*8+4,y*8+4,z*8+4);}}
     private static final class Local {ItemCollisionScene scene;CompletableFuture<ItemCollisionScene> pending;long retry;}
@@ -22,7 +24,26 @@ public final class WorldItems implements AutoCloseable {
     public WorldItems(ProjectileMaps maps,String world,IntSupplier ids){this.maps=Objects.requireNonNull(maps);this.world=Objects.requireNonNull(world);this.ids=Objects.requireNonNull(ids);}
     public Collection<Body> all(){return Collections.unmodifiableCollection(bodies.values());}
     public List<Body> removed(){List<Body> result=List.copyOf(removed);removed.clear();return result;}
-    public void sync(Map<UUID,WorldItem> saved){for(var it=bodies.entrySet().iterator();it.hasNext();){var e=it.next();if(!saved.containsKey(e.getKey())){removed.add(e.getValue());it.remove();}}for(var item:saved.values())if(item.world().equals(world)&&!bodies.containsKey(item.id()))bodies.put(item.id(),new Body(item,ids.getAsInt()));}
+    public boolean throwBolt(UUID creator,UUID session,ItemStack stack,World.Vec start,World.Vec velocity,
+                             int prediction,long now,long lifetime){
+        if(bodies.size()>=2048)return false;
+        WorldItem item=new WorldItem(UUID.randomUUID(),creator,world,stack.count(1),start.x(),start.y(),start.z(),
+                velocity.x(),velocity.y(),velocity.z(),now,now+lifetime,null);
+        bodies.put(item.id(),new Body(item,ids.getAsInt(),session,prediction));
+        return true;
+    }
+    public void sync(Map<UUID,WorldItem> saved){
+        long now=System.currentTimeMillis();
+        for(var it=bodies.entrySet().iterator();it.hasNext();){
+            var entry=it.next();
+            var body=entry.getValue();
+            if(body.throwingSession==null?!saved.containsKey(entry.getKey()):now>=body.item.expires()){
+                removed.add(body);it.remove();
+            }
+        }
+        for(var item:saved.values())if(item.world().equals(world)&&!bodies.containsKey(item.id()))
+            bodies.put(item.id(),new Body(item,ids.getAsInt(),null,-1));
+    }
     private static void close(Local l){if(l.scene!=null)l.scene.close();if(l.pending!=null)l.pending.thenAccept(ItemCollisionScene::close);}
     private ItemCollisionScene scene(World.Vec p){
         Key key=Key.at(p);Local local=scenes.get(key);

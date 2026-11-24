@@ -11,7 +11,7 @@ public final class GrenadeUse {
         public boolean expired(int elapsedTicks){return ignites&&cooking(elapsedTicks)>1f;}
     }
     public record Held(ItemStack item,Rules rules,int mode,long life,int hand,boolean holstered,long started) {
-        public Held {if(item==null||rules==null||!rules.handUse()||mode<0||mode>1||mode==0&&(hand!=4||holstered))throw new IllegalArgumentException("grenade_use_selection");}
+        public Held {if(item==null||rules==null||!rules.handUse()||mode<0||mode>1||mode==0&&(hand!=4&&hand!=10||holstered))throw new IllegalArgumentException("grenade_use_selection");}
         public int elapsed(long now){return (int)Math.min(12000,Math.max(0,now-started)/50_000_000L);}
         public boolean valid(ItemStack equipped,long currentLife,int currentHand,boolean currentHolstered){return life==currentLife&&item.equals(equipped)&&(mode!=0||currentHand==hand&&currentHolstered==holstered);}
     }

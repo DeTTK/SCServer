@@ -159,6 +159,8 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
     private final Map<UUID,Set<Session>> droneObservers=new HashMap<>();
     private FpvExplosion fpvExplosion;
     private GameGrenades grenadeBridge;private final GrenadeOutbox grenadeOutbox;private final GrenadeAreaStore grenadeAreas;private final GrenadeCompletion grenadeCompletion;private final GrenadeAreaScenes grenadeAreaScenes;
+    private final Map<Integer,GrenadePackets.Profile> boltProfiles=new HashMap<>();
+    private final Map<Integer,GrenadeUse.Rules> boltRules=new HashMap<>();
     private final Map<Integer,GrenadePackets.Profile> grenadeProfiles=new HashMap<>();private final Map<Integer,GrenadeUse.Rules> grenadeUseRules=new HashMap<>();
     private final AreaRelations areaRelations;private final int continuousEffectKind,instantEffectKind;private final Map<Integer,BlastRules> blastRules=new HashMap<>();
     private final Map<Integer,List<GrenadeAreaProfile>> grenadeAreaProfiles=new HashMap<>(),enabledAreaProfiles=new HashMap<>();
@@ -298,6 +300,11 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         try(GameItems items=new GameItems(runtime,registry)){byte[] empty=items.create(20004,new JsonObject());for(int n=0;n<=30;n++)baseMagazines[n]=items.magazine(empty,12714,n);}
         for(var e:com.google.gson.JsonParser.parseString(Files.readString(root.resolve("fixtures/equipment-appearances.json"))).getAsJsonObject().entrySet())appearances.put(Integer.parseInt(e.getKey()),HexFormat.of().parseHex(e.getValue().getAsString()));inventories=new GameInventory(root,data,runtime,registry);rollback.push(inventories);itemWorld=regions==null?"flat:arena-v1":regions.identity();worldItems=new szserver.world.WorldItems(fpvMap,itemWorld,entityIds::actor);rollback.push(worldItems);if(fpvSettings.toggleItemId()!=0)inventories.catalog().get(fpvSettings.toggleItemId());GrenadePackets.verifyRelease(root,runtime);LauncherPackets.verifyRelease(root,runtime);UnderbarrelPackets.verifyRelease(root,runtime);
         for(var e:inventories.explosives().entrySet())try{var definition=inventories.catalog().get(e.getKey()).properties();blastRules.put(e.getKey(),nativePackets.blastRules(definition.has("explosive_props")?definition.getAsJsonObject("explosive_props"):definition));var areas=nativePackets.grenadeAreas(e.getKey(),definition);if(!areas.isEmpty()){grenadeAreaProfiles.put(e.getKey(),areas);throw new IllegalArgumentException("grenade_area_gameplay_pending");}var profile=nativePackets.grenadeProfile(definition);if(e.getValue().radius()>128)throw new IllegalArgumentException("grenade_radius_budget");var use=nativePackets.grenadeUse(e.getKey(),definition);grenadeProfiles.put(e.getKey(),profile);grenadeUseRules.put(e.getKey(),use);}catch(IllegalArgumentException unsupported){grenadeUnavailable.put(e.getKey(),unsupported.getMessage());}
+        for(var bolt:inventories.catalog().bolts()){
+            var profile=nativePackets.grenadeProfile(bolt.properties());
+            boltProfiles.put(bolt.id(),profile);
+            boltRules.put(bolt.id(),new GrenadeUse.Rules(0,profile.chargeTicks(),0,0,false,true));
+        }
         SicknessPackets.verify(root,runtime);try(ClientSceneCodec codec=new ClientSceneCodec(runtime,root.resolve("fixtures/native-resources"))){sicknessRules=codec.sicknessRules();areaRelations=codec.areaRelations();continuousEffectKind=codec.grenadeEffectKind(false);instantEffectKind=codec.grenadeEffectKind(true);}AreaRelations.verify(root,runtime);for(var profile:sicknessRules.profiles())nativePackets.roundTrip(SicknessPackets.UPDATE,SicknessPackets.body(profile,sicknessRules.empty(profile.kind()),0,0));
         inventories.pulseProfiles(grenadeAreaProfiles);
         Set<Integer> effectOnlyAreas=new HashSet<>();for(int id:List.of(12359,12404)){var definition=inventories.catalog().get(id).properties();if(definition.has("has_effect")&&definition.get("has_effect").getAsBoolean()&&!definition.has("effect_aoe_object")&&!definition.has("effect_aoe")&&!definition.has("effects_aoe"))effectOnlyAreas.add(id);}
@@ -774,11 +781,13 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         }
     }
     private boolean grenadeUserAllowed(Session s){return s.ready&&s.hp>0&&!s.respawning&&s.teleport==null&&!piloting(s)&&s.gameplayMode==PlayerRules.Mode.STALKER;}
-    private boolean grenadeUseValid(Session s,GrenadeUse.Held held){return grenadeUserAllowed(s)&&held.valid(inventories.inventory(character(s)).at(new Inventory.Address(0,4,0)),s.life,s.handContainer,s.holstered);}
+    private boolean grenadeUseValid(Session s,GrenadeUse.Held held){return grenadeUserAllowed(s)&&held.valid(inventories.inventory(character(s)).at(new Inventory.Address(0,held.mode()==0?held.hand():4,0)),s.life,s.handContainer,s.holstered);}
     private void grenadeStart(Session s,int mode){
         // OVERLAP_GRENADE is a native contextual override slot, not equipment4.
-        if(mode==2||!grenadeUserAllowed(s)||inventories.busy(character(s))||grenadeBridge.busy(character(s))||thrownGrenades.size()>=szserver.world.Grenades.LIMIT||mode==0&&(s.handContainer!=4||s.holstered)){grenadeDenied++;return;}
-        ItemStack item=inventories.inventory(character(s)).at(new Inventory.Address(0,4,0));GrenadeUse.Rules rules=item==null?null:grenadeUseRules.get(item.id());
+        if(mode==2||!grenadeUserAllowed(s)||inventories.busy(character(s))||grenadeBridge.busy(character(s))||thrownGrenades.size()>=szserver.world.Grenades.LIMIT||mode==0&&(s.handContainer!=4&&s.handContainer!=10||s.holstered)){grenadeDenied++;return;}
+        int slot=mode==0?s.handContainer:4;
+        ItemStack item=inventories.inventory(character(s)).at(new Inventory.Address(0,slot,0));
+        GrenadeUse.Rules rules=item==null?null:(slot==10?boltRules:grenadeUseRules).get(item.id());
         if(rules==null||!rules.handUse()||!s.grenadeUse.start(item,rules,mode,s.life,s.handContainer,s.holstered,System.nanoTime())){grenadeDenied++;return;}
     }
     private void grenadeThrow(Session s,GrenadePackets.Throw request){
@@ -788,7 +797,15 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         if(request.charge()<1||request.charge()>held.rules().throwTicks()||elapsed<Math.max(0,held.rules().prepareTicks()-2)){s.grenadeUse.cancel();grenadeDenied++;grenadePrepareDenied++;return;}
         s.grenadeUse.take();boolean inHand=held.rules().expired(elapsed);
         if(request.prediction()!=-1)s.grenadePrediction=request.prediction();
+        if(held.mode()==0&&held.hand()==10){throwBolt(s,held.item(),request);return;}
         submitGrenade(s,held,request,elapsed,inHand);
+    }
+    private void throwBolt(Session s,ItemStack item,GrenadePackets.Throw request){
+        var profile=boltProfiles.get(item.id());
+        var origin=GrenadePackets.origin(CharacterScale.eye(s.pos,s.posture.locomotion(),s.characterScale),request.yaw(),request.pitch());
+        var velocity=profile.velocity(request);
+        if(!worldItems.throwBolt(character(s),s.incarnation,item,origin,velocity,request.prediction(),
+                System.currentTimeMillis(),profile.lifetime()*50L))itemFailures++;
     }
     private void advanceGrenadeUses(long now){
         for(Session s:List.copyOf(sessions.values())){GrenadeUse.Held held=s.grenadeUse.held();if(held==null)continue;
@@ -983,7 +1000,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         worldItems.step(players.stream().map(s->point(s.pos)).toList());int settlements=2,expirations=2,pickups=4,pickupChecks=16;
         var bodies=new ArrayList<>(worldItems.all());
         for(int index=0;index<bodies.size();index++){var body=bodies.get((int)Math.floorMod((long)tick*17+index,bodies.size()));
-            if(body.claiming||body.expiring)continue;
+            if(body.throwingSession!=null||body.claiming||body.expiring)continue;
             if(now>=body.item.expires()){
                 if(expirations-->0&&now>=body.retry){body.expiring=true;inventories.expireWorldItem(body.item.id(),now).whenComplete((v,error)->{if(error!=null)try{adminTask(()->{body.expiring=false;body.retry=System.currentTimeMillis()+1000;itemFailures++;});}catch(RejectedExecutionException stopped){}});}continue;
             }
@@ -1003,7 +1020,16 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
             Set<UUID> visible=new HashSet<>();for(var body:bodies)if(!body.expiring&&Math.abs(body.position.x()-s.pos[0])<64&&Math.abs(body.position.z()-s.pos[2])<64&&Math.abs(body.position.y()-s.pos[1])<48)visible.add(body.item.id());
             for(var it=s.worldItemsSeen.iterator();it.hasNext();){UUID id=it.next();if(!visible.contains(id)){for(var body:bodies)if(body.item.id().equals(id)){enqueueOrRetire(s,WorldItemPackets.remove(body.entity));break;}it.remove();}}
             int sent=0;for(int n=0;n<bodies.size()&&sent<32;n++){var body=bodies.get((int)Math.floorMod((long)tick*32+n,bodies.size()));if(!visible.contains(body.item.id()))continue;
-                if(s.worldItemsSeen.add(body.item.id())){enqueueOrRetire(s,WorldItemPackets.spawn(body.entity,body.position,body.item.stack()));enqueueOrRetire(s,WorldItemPackets.update(body));sent++;}
+                if(s.worldItemsSeen.add(body.item.id())){
+                    if(body.throwingSession==null)enqueueOrRetire(s,WorldItemPackets.spawn(body.entity,body.position,body.item.stack()));
+                    else {
+                        int item=body.item.stack().id();
+                        enqueueOrRetire(s,GrenadePackets.bolt(body.entity,item,body.position,boltProfiles.get(item)));
+                        if(s.incarnation.equals(body.throwingSession)&&body.prediction>=0)
+                            enqueueOrRetire(s,GrenadePackets.prediction(body.entity,body.prediction));
+                    }
+                    enqueueOrRetire(s,WorldItemPackets.update(body));sent++;
+                }
                 else if(body.velocity.x()!=0||body.velocity.y()!=0||body.velocity.z()!=0||tick%20==Math.floorMod(body.entity,20)){enqueueOrRetire(s,WorldItemPackets.update(body));sent++;}
             }
         }

@@ -41,6 +41,15 @@ public final class GrenadePackets {
     public static byte[] spawn(int entity,int item,World.Vec p,Profile profile){return spawn(entity,item,p,profile,null);}
     public static byte[] spawn(int entity,int item,World.Vec p,Profile profile,World.Vec velocity){byte[] subtype=subtype(item,profile);float[] direction=directed(item)?heading(velocity):new float[]{0,0};return Wire.dynamic(SPAWN,Wire.bytes(out->{out.writeByte(PROJECTILE_TYPE);out.writeByte(angle(direction[0])^26);out.writeInt(coord(p.y())-(int)2315843772L);out.writeInt((coord(p.z())+716018694)^0xc7a787d8);out.writeInt(Integer.rotateRight(coord(p.x()),15)-1385050365);out.writeInt(entity-1630978953);out.writeByte(((angle(direction[1])>>>3)|(angle(direction[1])<<5))+211);Wire.varint(out,subtype.length);out.write(subtype);out.write(new byte[2]);}));}
 
+    /** Native throwable actor 939250848, registered before the grenade subclass. */
+    public static byte[] bolt(int entity,int item,World.Vec p,Profile profile){
+        byte[] subtype=Wire.bytes(out->{out.writeInt(item);out.writeBoolean(true);out.write(profile.properties());out.writeBoolean(false);});
+        return Wire.dynamic(SPAWN,Wire.bytes(out->{
+            out.writeByte(3);out.writeByte(26);out.writeInt(coord(p.y())-(int)2315843772L);
+            out.writeInt((coord(p.z())+716018694)^0xc7a787d8);out.writeInt(Integer.rotateRight(coord(p.x()),15)-1385050365);
+            out.writeInt(entity-1630978953);out.writeByte(211);Wire.varint(out,subtype.length);out.write(subtype);out.write(new byte[2]);
+        }));
+    }
     public static byte[] update(int entity,World.Vec p,World.Vec v){return Wire.dynamic(UPDATE,Wire.bytes(out->{out.writeInt(entity);out.writeFloat((float)p.x());out.writeFloat((float)p.y());out.writeFloat((float)p.z());out.writeFloat((float)v.x()/20);out.writeFloat((float)v.y()/20);out.writeFloat((float)v.z()/20);}));}
     /** Native projectile tick owns frame interpolation and derives directed heading from velocity.
      * Feeding its actor into the player spline creates a second position writer and visible rewinds. */
