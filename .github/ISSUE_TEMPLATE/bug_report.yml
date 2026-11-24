@@ -1,0 +1,56 @@
+name: Ошибка
+description: Воспроизводимая проблема клиента, сервера или мода
+title: "[Ошибка] "
+body:
+  - type: checkboxes
+    id: existing-check
+    attributes:
+      label: Проверка перед отправкой
+      options:
+        - label: Я проверил существующие Issuses и не нашёл аналогичных обращений.
+          required: true
+  - type: input
+    id: version
+    attributes:
+      label: Версия проекта / commit
+    validations:
+      required: true
+  - type: input
+    id: component
+    attributes:
+      label: Компонент
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: ОС и JDK
+    validations:
+      required: true
+  - type: input
+    id: private-base
+    attributes:
+      label: Версия/хеш частной базы
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Шаги воспроизведения
+    validations:
+      required: true
+  - type: textarea
+    id: expected-actual
+    attributes:
+      label: Ожидалось / получилось
+    validations:
+      required: true
+  - type: textarea
+    id: stack-trace
+    attributes:
+      label: Очищенный stack trace
+    validations:
+      required: false
+  - type: markdown
+    attributes:
+      value: Не прикладывайте токены, ключи, профили аккаунтов, полные игровые архивы или логи с чужими персональными данными.
