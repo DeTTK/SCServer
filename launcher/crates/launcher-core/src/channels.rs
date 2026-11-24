@@ -22,6 +22,7 @@ use std::{
 };
 
 pub const GAME_REPOSITORY: &str = "DeTTK/SCServer";
+const SELECTABLE_CHANNELS: [&str; 3] = ["main", "test", "launtest"];
 const PUBLIC_KEY: &str = include_str!("../../../channel-public-key.txt");
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -237,7 +238,7 @@ impl RepositoryChannel {
         let mut result = branches
             .into_iter()
             .filter_map(|v| v["name"].as_str()?.strip_prefix("build-").map(String::from))
-            .filter(|v| matches!(v.as_str(), "main" | "test"))
+            .filter(|v| SELECTABLE_CHANNELS.contains(&v.as_str()))
             .collect::<Vec<_>>();
         result.sort();
         result.dedup();
@@ -741,6 +742,14 @@ mod tests {
             assert!(validate_branch(name).is_err())
         }
         assert!(validate_branch("feature/fpv").is_ok());
+    }
+    #[test]
+    fn selectable_channels_include_launtest_without_derived_build_refs() {
+        assert_eq!(SELECTABLE_CHANNELS, ["main", "test", "launtest"]);
+        assert!(SELECTABLE_CHANNELS
+            .iter()
+            .all(|channel| validate_branch(channel).is_ok()));
+        assert!(!SELECTABLE_CHANNELS.contains(&"build-launtest"));
     }
     #[test]
     fn urls_pin_commit_and_encode_only_safe_paths() {
