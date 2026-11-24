@@ -27,7 +27,21 @@ public final class BoltAnomalyTests {
             check(items.all().size()==1&&items.removed().get(0).prediction==43,"expiry removes a bolt without a persisted item");
         }
     }
+    static void funnelContact(){
+        var funnel=zone("funnel",1);
+        var from=new World.Vec(-5,0,1);
+        var to=new World.Vec(5,0,1);
+        var hit=BoltAnomalies.funnelImpact(List.of(funnel),from,to);
+        check(hit!=null&&hit.time()>0&&hit.time()<.5,"swept bolt strikes the near side of the funnel");
+        check(Math.abs(Math.hypot(hit.point().x(),hit.point().z())-3.125)<1e-8,"effect uses the boundary contact point");
+        check(hit.rebound().x()<0&&hit.rebound().z()>0&&hit.rebound().y()>0,"grazing bolt rebounds outwards and up");
+        check(BoltAnomalies.funnelImpact(List.of(funnel),to,to)==null,"a stationary bolt cannot strike a funnel");
+        check(BoltAnomalies.funnelImpact(List.of(funnel),hit.point(),new World.Vec(-6,0,2))==null,"an outbound bolt cannot hit again");
+        check(BoltAnomalies.funnelImpact(List.of(funnel),new World.Vec(-5,5,0),new World.Vec(5,5,0))==null,"passing above the funnel is a miss");
+        check(BoltAnomalies.funnelImpact(List.of(zone("electra",1)),from,to)==null,"other anomalies retain their own response");
+    }
     public static void main(String[] args){
+        funnelContact();
         nativeThrow();
         var electro=zone("electra",1);var funnel=zone("funnel",1);
         check(BoltAnomalies.containing(List.of(electro),new World.Vec(0,0,0))==electro,"bolt inside anomaly triggers it");

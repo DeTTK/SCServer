@@ -37,7 +37,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
     private record BotKey(String id,long incarnation){}
     private record Recipient(InetSocketAddress address,UUID incarnation){}
     private final NativeEntityIds entityIds=new NativeEntityIds();
-    private final szserver.world.WorldItems worldItems;private final String itemWorld;private long itemCollected,itemDropped,itemFailures,itemRequests,boltTriggers;private String lastItemFailure="";private final Set<UUID> remoteItemExpiry=new HashSet<>(),boltTriggered=new HashSet<>();private final Map<UUID,World.Vec> boltPositions=new HashMap<>();
+    private final szserver.world.WorldItems worldItems;private final String itemWorld;private long itemCollected,itemDropped,itemFailures,itemRequests,boltTriggers;private String lastItemFailure="";private final Set<UUID> remoteItemExpiry=new HashSet<>(),boltTriggered=new HashSet<>();
     private final CorpseLifecycle<Recipient> corpses=new CorpseLifecycle<>(entityIds);
     private record CorpseDonor(int entity,boolean release){}
     // Native ragdolls copy the donor skeleton asynchronously; retire both together.
@@ -80,6 +80,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         final ArrayDeque<QuickIntent> quickIntents=new ArrayDeque<>();boolean quickPending;
         final WorldEditChat editor=new WorldEditChat();
         PlayerRules.Mode gameplayMode=PlayerRules.Mode.STALKER;String faction="stalker";
+        boolean pointFunnelImpacts;
         final GrenadeUse grenadeUse=new GrenadeUse();int grenadePrediction=-1;
         UUID grenadeDeath;long reviveCheckAt;CorpseLifecycle.Corpse<Recipient> lastCorpse;Swing swing;long nextAttack,life,deathGeneration,drawUntil;Integer lastShotClientTick;
         CompletableFuture<LocalAccounts.Grant> authentication;UUID loginProtocol;CompletableFuture<Integer> placement;CompletableFuture<Void> spawnSave;CompletableFuture<Integer> spawnCheck;long spawnDeadline,nextSpawnCheck;World.Vec requestedSpawn;UUID spawnScope;double[][] candidates;int candidate;long placementDeadline,nextPlacement;boolean positioned,inventoryReady,respawning;long last=System.nanoTime();boolean accepted,ready;final InventoryScreen inventoryScreen=new InventoryScreen();int handContainer=6;GameInventory.Weapon weapon;LocalAccounts.Grant grant;int entity,clientTick,sequence,rounds=30,reserve=90;long lastShot,reloadAt;Unjamming unjamming;boolean unjammingPending;float hp=100,maxHp=100,yaw,pitch;double[] pos;byte[][] magazines;final PlayerPosture posture=new PlayerPosture();int mode;double speed;boolean ground=true,holstered;UUID firearm;final ChunkSubscriptions chunks=new ChunkSubscriptions();final Map<Long,Long> chunkRevisions=new HashMap<>();TerrainProjection.Prepared deltas;long deltaChunk;int deltaAt;final Set<Long> pendingChunks=new LinkedHashSet<>();int chunkX=Integer.MIN_VALUE,chunkZ=Integer.MIN_VALUE;final Map<ShotKey,Long> seenShots=new LinkedHashMap<>();
@@ -522,7 +523,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         if(id==280){if(body.length!=0&&body.length!=5)throw new IOException("reload_request_size");int ammo=body.length==0?0:ByteBuffer.wrap(body).getInt();if(ammo<0||ammo>65535||body.length==5&&(body[4]<0||body[4]>1))throw new IOException("reload_request_ammunition");if(body.length==5&&body[4]==1){queueLauncherReload(s,ammo);return;}queueReload(s,ammo);return;}
         if(id==1013){changeMode(s,body);return;}
         if(id==1661){requestRespawn(s,body);return;}
-        if(id==5){var in=Wire.input(body);String cls=in.readUTF();if(cls.equals(playerscale.ScaleProtocol.INPUT)){scaleHello(s,in.readAllBytes());}else if(cls.equals(EnvironmentWire.INPUT)){try{environmentAccess.request(s.environmentClient,in.readAllBytes(),playerRules.editor(character(s),worldEditors));}catch(Exception failure){environmentAccess.disconnect(s.environmentClient);JsonObject reply=EnvironmentWire.message("ack");reply.addProperty("ok",false);reply.addProperty("error",Objects.toString(failure.getMessage(),failure.getClass().getSimpleName()));enqueue(s,0,EnvironmentAccess.frame(reply));}}else if(cls.equals(WeaponJammingPackets.REQUEST)){WeaponJammingPackets.read(in.readAllBytes());queueUnjam(s);}else if(cls.equals(UnderbarrelPackets.UNLOAD_REQUEST)){unloadLauncher(s,UnderbarrelPackets.unload(in.readAllBytes()));}else if(cls.equals(UnderbarrelPackets.REQUEST)){UnderbarrelPackets.read(in.readAllBytes());launchUnderbarrel(s);}else if(cls.equals(LauncherPackets.REQUEST)){LauncherPackets.read(in.readAllBytes());launchPrimary(s);}else if(cls.equals(GrenadePackets.START)){grenadeStart(s,GrenadePackets.start(in.readAllBytes()));}else if(cls.equals(GrenadePackets.THROW)){grenadeThrow(s,GrenadePackets.read(in.readAllBytes()));}else if(szserver.client.HandPackets.selectionClass(cls)){selectHand(s,szserver.client.HandPackets.read(in.readAllBytes()));}else if(NativeAdminPackets.giveClass(cls)){nativeGive(s,NativeAdminPackets.give(in.readAllBytes()));}else if(NativeAdminPackets.ammoClass(cls)){nativeAmmo(s,in.readAllBytes());}else if(NativeAdminPackets.addressClass(cls)){s.adminSelected=NativeAdminPackets.address(in.readAllBytes());}else if(NativeAdminPackets.echoClass(cls)){nativeEcho(s,in.readAllBytes());}else if(cls.equals(PhysicalReload.REQUEST)){physicalRequest(s,in.readAllBytes());}else if(cls.equals(CommandSupport.REQUEST)){completion(s,in.readAllBytes());}else if(cls.equals(Vehicles.INPUT)){vehicle(s,in.readAllBytes());}else if(FpvPackets.inputClass(cls)){fpv(s,in.readAllBytes());}else if(cls.equals("1618367864")){anomalyVelocityEcho(in.readAllBytes());}else if(cls.equals("804507492")){anomalyForceEcho(in.readAllBytes());}else if(cls.equals("1552498486")){anomalyStrengthSave(s,in.readAllBytes());}else if(cls.equals("1019975257")){anomalyConfigurationSave(s,in.readAllBytes());}else if(SceneConfigurationPackets.requestClass(cls)){sceneConfiguration(s,in.readAllBytes());}else if(SceneConfigurationPackets.saveClass(cls)){sceneConfigurationSave(s,in.readAllBytes(),false);}else if(SceneConfigurationPackets.settingsClass(cls)){sceneConfigurationSave(s,in.readAllBytes(),true);}else if(szserver.client.SceneEditPackets.kind(cls)!=null){sceneEdit(s,szserver.client.SceneEditPackets.kind(cls),in.readAllBytes());}else if(cls.equals("146340354")){nativeDestroy(s,in.readAllBytes());}else if(cls.equals("1056067431")){NativeBlockPackets.target(in.readAllBytes(),false);nativeBlockIntents++;}else if(szserver.client.PortalPackets.useClass(cls)){nativeBlockIntents++;szserver.client.PortalPackets.emptyHand(in.readAllBytes());}else if(szserver.client.TeleportPackets.mapClass(cls)){try{teleport(s,TeleportCommands.map(in.readAllBytes()),"Телепортация по карте выполнена.");}catch(IllegalArgumentException error){enqueue(s,0,GamePackets.chat(error.getMessage()));}}else if(szserver.client.PermissionPackets.modeClass(cls)){changeMode(s,in.readAllBytes());}else if(cls.equals("1102124358")){requestRespawn(s,in.readAllBytes());}else if(cls.equals("677917411")){receiveChat(s,in.readAllBytes());}return;}
+        if(id==5){var in=Wire.input(body);String cls=in.readUTF();if(cls.equals("szmods.bridge.FunnelImpactReady")){if(in.available()!=0)throw new IOException("funnel_capability_size");s.pointFunnelImpacts=true;return;}if(cls.equals(playerscale.ScaleProtocol.INPUT)){scaleHello(s,in.readAllBytes());}else if(cls.equals(EnvironmentWire.INPUT)){try{environmentAccess.request(s.environmentClient,in.readAllBytes(),playerRules.editor(character(s),worldEditors));}catch(Exception failure){environmentAccess.disconnect(s.environmentClient);JsonObject reply=EnvironmentWire.message("ack");reply.addProperty("ok",false);reply.addProperty("error",Objects.toString(failure.getMessage(),failure.getClass().getSimpleName()));enqueue(s,0,EnvironmentAccess.frame(reply));}}else if(cls.equals(WeaponJammingPackets.REQUEST)){WeaponJammingPackets.read(in.readAllBytes());queueUnjam(s);}else if(cls.equals(UnderbarrelPackets.UNLOAD_REQUEST)){unloadLauncher(s,UnderbarrelPackets.unload(in.readAllBytes()));}else if(cls.equals(UnderbarrelPackets.REQUEST)){UnderbarrelPackets.read(in.readAllBytes());launchUnderbarrel(s);}else if(cls.equals(LauncherPackets.REQUEST)){LauncherPackets.read(in.readAllBytes());launchPrimary(s);}else if(cls.equals(GrenadePackets.START)){grenadeStart(s,GrenadePackets.start(in.readAllBytes()));}else if(cls.equals(GrenadePackets.THROW)){grenadeThrow(s,GrenadePackets.read(in.readAllBytes()));}else if(szserver.client.HandPackets.selectionClass(cls)){selectHand(s,szserver.client.HandPackets.read(in.readAllBytes()));}else if(NativeAdminPackets.giveClass(cls)){nativeGive(s,NativeAdminPackets.give(in.readAllBytes()));}else if(NativeAdminPackets.ammoClass(cls)){nativeAmmo(s,in.readAllBytes());}else if(NativeAdminPackets.addressClass(cls)){s.adminSelected=NativeAdminPackets.address(in.readAllBytes());}else if(NativeAdminPackets.echoClass(cls)){nativeEcho(s,in.readAllBytes());}else if(cls.equals(PhysicalReload.REQUEST)){physicalRequest(s,in.readAllBytes());}else if(cls.equals(CommandSupport.REQUEST)){completion(s,in.readAllBytes());}else if(cls.equals(Vehicles.INPUT)){vehicle(s,in.readAllBytes());}else if(FpvPackets.inputClass(cls)){fpv(s,in.readAllBytes());}else if(cls.equals("1618367864")){anomalyVelocityEcho(in.readAllBytes());}else if(cls.equals("804507492")){anomalyForceEcho(in.readAllBytes());}else if(cls.equals("1552498486")){anomalyStrengthSave(s,in.readAllBytes());}else if(cls.equals("1019975257")){anomalyConfigurationSave(s,in.readAllBytes());}else if(SceneConfigurationPackets.requestClass(cls)){sceneConfiguration(s,in.readAllBytes());}else if(SceneConfigurationPackets.saveClass(cls)){sceneConfigurationSave(s,in.readAllBytes(),false);}else if(SceneConfigurationPackets.settingsClass(cls)){sceneConfigurationSave(s,in.readAllBytes(),true);}else if(szserver.client.SceneEditPackets.kind(cls)!=null){sceneEdit(s,szserver.client.SceneEditPackets.kind(cls),in.readAllBytes());}else if(cls.equals("146340354")){nativeDestroy(s,in.readAllBytes());}else if(cls.equals("1056067431")){NativeBlockPackets.target(in.readAllBytes(),false);nativeBlockIntents++;}else if(szserver.client.PortalPackets.useClass(cls)){nativeBlockIntents++;szserver.client.PortalPackets.emptyHand(in.readAllBytes());}else if(szserver.client.TeleportPackets.mapClass(cls)){try{teleport(s,TeleportCommands.map(in.readAllBytes()),"Телепортация по карте выполнена.");}catch(IllegalArgumentException error){enqueue(s,0,GamePackets.chat(error.getMessage()));}}else if(szserver.client.PermissionPackets.modeClass(cls)){changeMode(s,in.readAllBytes());}else if(cls.equals("1102124358")){requestRespawn(s,in.readAllBytes());}else if(cls.equals("677917411")){receiveChat(s,in.readAllBytes());}return;}
         if(unknown.containsKey(id)||unknown.size()<128)unknown.merge(id,1L,Long::sum);if(unknown.size()>256)unknown.clear();
     }
     private void repairNativeBlock(Session s,World.Block p){long key=szserver.world.BlockOverlays.key(Math.floorDiv(p.x(),16),Math.floorDiv(p.z(),16));if(!s.blockRepairs.containsKey(key)&&s.blockRepairs.size()>=9)return;BlockRepair repair=s.blockRepairs.computeIfAbsent(key,k->new BlockRepair());if(repair.points.size()<32)repair.points.add(p);}
@@ -997,7 +998,9 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
             inventories.expireWorldItem(saved.id(),now).whenComplete((v,error)->{try{adminTask(()->{remoteItemExpiry.remove(saved.id());if(error!=null)itemFailures++;});}catch(RejectedExecutionException stopped){}});if(--left==0)break;
         }}
         List<Session> players=sessions.values().stream().filter(s->s.ready&&!s.respawning&&s.hp>0&&s.teleport==null).toList();
-        worldItems.step(players.stream().map(s->point(s.pos)).toList());int settlements=2,expirations=2,pickups=4,pickupChecks=16;
+        worldItems.step(players.stream().map(s->point(s.pos)).toList());
+        var boltEvents=resolveBoltImpacts();
+        int settlements=2,expirations=2,pickups=4,pickupChecks=16;
         var bodies=new ArrayList<>(worldItems.all());
         for(int index=0;index<bodies.size();index++){var body=bodies.get((int)Math.floorMod((long)tick*17+index,bodies.size()));
             if(body.throwingSession!=null||body.claiming||body.expiring)continue;
@@ -1033,6 +1036,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
                 else if(body.velocity.x()!=0||body.velocity.y()!=0||body.velocity.z()!=0||tick%20==Math.floorMod(body.entity,20)){enqueueOrRetire(s,WorldItemPackets.update(body));sent++;}
             }
         }
+        for(var event:boltEvents)publishBoltImpact(event);
     }
 
     private void lootboxPreview(Session s,int item){
@@ -1085,18 +1089,52 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
             }
         }
         for(var s:sessions.values())if(s.ready){UUID next=s.hp>0&&!s.respawning&&s.teleport==null?stasis.get(s):null;if(!Objects.equals(next,s.anomalyStasis)){if(s.anomalyStasis!=null)stasisOverlay(s,s.anomalyStasis,false);if(next!=null)stasisOverlay(s,next,true);s.anomalyStasis=next;}}
-        triggerBolts(anomalyScene==null?List.of():anomalyScene.zones());
     }
-    private boolean isBolt(WorldItem item){try{var definition=inventories.catalog().get(item.stack().id());return definition!=null&&definition.type().equals("bolt");}catch(RuntimeException missing){return false;}}
-    /** A thrown bolt inside an anomaly fires its native activation effect once. */
-    private void triggerBolts(List<szserver.world.AnomalyZone> zones){
+    private boolean isBolt(WorldItem item){return boltProfiles.containsKey(item.stack().id());}
+    private record BoltEvent(szserver.world.AnomalyZone zone,int entity,World.Vec impact){}
+    /** Resolve contacts before publishing the tick's projectile positions. */
+    private List<BoltEvent> resolveBoltImpacts(){
+        List<szserver.world.AnomalyZone> zones=List.of();
+        if(anomalyScene!=null)try{
+            anomalyScene.authorization().checkCurrent();
+            zones=anomalyScene.zones();
+        }catch(RuntimeException stale){anomalyScene=null;}
+        List<BoltEvent> events=new ArrayList<>();
         Set<UUID> live=new HashSet<>();
-        for(var body:worldItems.all()){UUID id=body.item.id();if(!isBolt(body.item))continue;live.add(id);World.Vec previous=boltPositions.put(id,body.position);if(!boltTriggered.add(id))continue;
-            szserver.world.AnomalyZone zone=BoltAnomalies.containing(zones,previous==null?body.position:previous,body.position);if(zone==null){boltTriggered.remove(id);continue;}boltTriggers++;
-            for(Session viewer:sessions.values())if(viewer.ready&&Math.hypot(viewer.pos[0]-zone.center().x(),viewer.pos[2]-zone.center().z())<128){int entity=body.entity;UUID zoneId=zone.id();enqueue(viewer,0,Wire.dynamic("1726532531",Wire.bytes(out->{out.writeLong(zoneId.getMostSignificantBits());out.writeLong(zoneId.getLeastSignificantBits());out.writeInt(entity);})));
+        for(var body:worldItems.all()){
+            UUID id=body.item.id();
+            if(!isBolt(body.item))continue;
+            live.add(id);
+            if(boltTriggered.contains(id))continue;
+            World.Vec from=body.previousPosition();
+            var impact=BoltAnomalies.funnelImpact(zones,from,body.position);
+            var zone=impact==null?BoltAnomalies.containing(zones,from,body.position):impact.zone();
+            if(zone==null||impact==null&&zone.kind().equals("funnel"))continue;
+            if(impact!=null){
+                body.position=impact.point();
+                body.velocity=impact.rebound();
+                body.ground=false;
             }
+            boltTriggered.add(id);
+            boltTriggers++;
+            events.add(new BoltEvent(zone,body.entity,impact==null?null:impact.point()));
         }
-        boltTriggered.retainAll(live);boltPositions.keySet().retainAll(live);
+        boltTriggered.retainAll(live);
+        return events;
+    }
+    private void publishBoltImpact(BoltEvent event){
+        var zone=event.zone();
+        UUID id=zone.id();
+        World.Vec at=event.impact();
+        byte[] legacy=Wire.dynamic("1726532531",Wire.bytes(out->{
+            out.writeLong(id.getMostSignificantBits());out.writeLong(id.getLeastSignificantBits());out.writeInt(event.entity());
+        }));
+        byte[] packet=at==null?legacy:Wire.dynamic("szmods.bridge.FunnelImpact",Wire.bytes(out->{
+            out.writeLong(id.getMostSignificantBits());out.writeLong(id.getLeastSignificantBits());
+            out.writeFloat((float)at.x());out.writeFloat((float)at.y());out.writeFloat((float)at.z());
+        }));
+        for(Session viewer:sessions.values())if(viewer.ready&&Math.hypot(viewer.pos[0]-zone.center().x(),viewer.pos[2]-zone.center().z())<128)
+            enqueueOrRetire(viewer,viewer.pointFunnelImpacts?packet:legacy);
     }
     private void releaseAnomalies(Session s){
         for(var event:anomalies.removeTarget("player:"+character(s)+":"+s.life))if(event.type().equals("leave"))for(Session viewer:sessions.values())if(viewer.ready){int entity=viewer==s?0:s.entity;UUID id=event.zone().id();enqueue(viewer,0,Wire.dynamic("1410763904",Wire.bytes(out->{out.writeLong(id.getMostSignificantBits());out.writeLong(id.getLeastSignificantBits());out.writeInt(entity);out.writeBoolean(true);})) );}

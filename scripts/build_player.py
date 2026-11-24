@@ -89,7 +89,7 @@ def build(output):
     libraries=[runtime/'game.jar',runtime/'libraries.jar',*sorted((runtime/'dependencies').glob('*.jar'))]
     boot=tools.compile_java('player-bootstrap',[*(ROOT/'client/bootstrap').glob('*.java'),*(ROOT/'client/bootstrap-compat').rglob('*.java'),*(ROOT/'client/mod-runtime/src').rglob('*.java')],libraries)
     generators=tools.compile_java('player-bootstrap-generators',(ROOT/'client/bootstrap-tools').glob('*.java'),[asm])
-    for generator in ('GenerateLegacyAdapter','GenerateCommandPackets','InstallFpvPackets','InstallVehiclePackets'):
+    for generator in ('GenerateLegacyAdapter','GenerateCommandPackets','InstallFpvPackets','InstallVehiclePackets','InstallFunnelImpact'):
         subprocess.run([tools.tool('java'),'-cp',os.pathsep.join(map(str,[generators,asm])),generator,str(boot)],check=True)
     bootstrap = entries(boot)
     bootstrap['szcustom/loading.gif'] = (ROOT/'client/bootstrap/resources/szcustom/loading.gif').read_bytes()

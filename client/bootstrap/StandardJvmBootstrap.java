@@ -1164,6 +1164,7 @@ public final class StandardJvmBootstrap {
         // standard-JVM launches. Keep the current game reference available to
         // lazy renderer repair before any render-path lookup can run.
         controlGame = game;
+        szmods.runtime.FunnelImpact.advertise(game);
         szmods.runtime.ModLoader.frame(game);
         szmods.runtime.ModLoader.input(modInputSnapshot());
         synchronizeVisualWorldClock(game);
