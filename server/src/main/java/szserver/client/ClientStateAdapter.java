@@ -468,7 +468,9 @@ public final class ClientStateAdapter implements AutoCloseable {
         return new FactoryMetadataExport(Map.copyOf(rows),Map.copyOf(errors));
     }
     public Set<Integer> firearmFactories()throws Exception{Set<Integer> ids=new HashSet<>();Class<?> gun=Class.forName("1745367406",true,loader);for(var entry:moduleFactoryClasses.entrySet())if(gun.isAssignableFrom(Class.forName(entry.getValue(),true,loader)))ids.add(entry.getKey());return Set.copyOf(ids);}
-    public void warmCosmetics(Map<Integer,String> classes,Map<Integer,String> definitions)throws Exception{cosmetics=new NativeCosmetics(loader,definitions,classes);itemNbt=null;itemSlots=new NativeItemSlots(cosmetics,this::bank);itemSlotPackets=new NativeItemSlotPackets(cosmetics);quickSlots=new NativeQuickSlots(cosmetics);itemNbt();}
+    public void warmCosmetics(Map<Integer,String> classes,Map<Integer,String> definitions,
+                              Map<Integer,String> resourceDeclarations)throws Exception{
+        cosmetics=new NativeCosmetics(loader,definitions,classes,resourceDeclarations);itemNbt=null;itemSlots=new NativeItemSlots(cosmetics,this::bank);itemSlotPackets=new NativeItemSlotPackets(cosmetics);quickSlots=new NativeQuickSlots(cosmetics);itemNbt();}
     public record QuickBindRequest(int owner,int index,szserver.inventory.Inventory.Address source,String label){}
     public QuickBindRequest quickBindRequest(byte[] raw)throws Exception{return quickSlots.bindRequest(raw);}
     public int quickUseRequest(byte[] raw)throws Exception{return quickSlots.useRequest(raw);}

@@ -8,8 +8,9 @@ import java.util.*;
 /** Original cosmetic compatibility and slot operations on the shared item-factory host. */
 final class NativeCosmetics extends NativeItemFactories {
     private final Class<?> target,kind;
-    NativeCosmetics(ClassLoader loader,Map<Integer,String> definitions,Map<Integer,String> classes)throws Exception{
-        super(loader,definitions,classes);target=type("714221946");kind=type("1847365303");
+    NativeCosmetics(ClassLoader loader,Map<Integer,String> definitions,Map<Integer,String> classes,
+                    Map<Integer,String> resourceDeclarations)throws Exception{
+        super(loader,definitions,classes,resourceDeclarations);target=type("714221946");kind=type("1847365303");
         for(int id:new TreeSet<>(classes.keySet())){Class<?> c=type(classes.get(id));if(skin.isAssignableFrom(c)||style.isAssignableFrom(c))factory(id);}
     }
     record Skin(Object state,int previous,boolean unchanged){}

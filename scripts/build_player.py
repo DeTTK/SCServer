@@ -101,11 +101,13 @@ def build(output):
     subprocess.run([tools.tool('java'),'-cp',os.pathsep.join(map(str,[verify,runtime/'bootstrap.jar',*libraries])),'BootstrapAbiTest'],check=True)
     item_checks=('NativeBoltFactoryChecks','NativeMedicineResourceChecks')
     item_tests=tools.compile_java('player-item-verify',
-        [ROOT/f'server/src/test/java/szserver/client/{name}.java' for name in item_checks],[server_classes,*server_deps])
+        [ROOT/f'server/src/test/java/szserver/client/{name}.java' for name in (*item_checks,'NativeCosmeticTests')],[server_classes,*server_deps])
     item_test_cp=os.pathsep.join(map(str,[item_tests,server_classes,*server_deps]))
     for name in item_checks:
         subprocess.run([tools.tool('java'),'-Xmx512m','-cp',item_test_cp,
                         'szserver.client.'+name,str(player/'Server'),str(runtime)],check=True)
+    subprocess.run([tools.tool('java'),'-Xmx512m','-cp',item_test_cp,
+                    'szserver.client.NativeCosmeticTests',str(runtime),str(player/'Server')],check=True)
     imgui={}
     for dependency in (runtime/'dependencies').glob('imgui-java-*-1.82.2.jar'):
         with zipfile.ZipFile(dependency) as z:

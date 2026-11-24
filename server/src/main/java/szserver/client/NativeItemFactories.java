@@ -11,11 +11,18 @@ class NativeItemFactories {
     protected final Map<Integer,Object> descriptors=new HashMap<>(),factories=new LinkedHashMap<>();
     protected final Class<?> resource,json,base,skin,style,stack;protected final Object[] registry;
     NativeItemFactories(ClassLoader loader,Map<Integer,String> definitions,Map<Integer,String> classes)throws Exception{
+        this(loader,definitions,classes,Map.of());
+    }
+    NativeItemFactories(ClassLoader loader,Map<Integer,String> definitions,Map<Integer,String> classes,
+                        Map<Integer,String> resourceDeclarations)throws Exception{
         this.loader=loader;this.definitions=Map.copyOf(definitions);this.classes=Map.copyOf(classes);
         resource=type("1422486348");json=type("com.google.gson.JsonObject");base=type("1366800141");skin=type("1078890796");style=type("871813794");stack=type("211097523");registry=(Object[])base.getField("import").get(null);
         Object global=type("498192453").getField("long").get(null),manager=global.getClass().getField("class").get(global);
         Map<Integer,String> aliases=new HashMap<>((Map<Integer,String>)type("985191831").getField("package").get(manager));
-        List<Object> rows=new ArrayList<>();for(var e:new TreeMap<>(definitions).entrySet()){JsonObject row=JsonParser.parseString(e.getValue()).getAsJsonObject();Object descriptor=descriptor(e.getKey(),row,aliases.get(e.getKey()),row.has("extends_item")?row.get("extends_item").getAsInt():null);descriptors.put(e.getKey(),descriptor);rows.add(descriptor);}
+        // Effective factory parameters alone lose the original descendant graph used by cosmetics.
+        var declared=new TreeMap<>(definitions);
+        declared.putAll(resourceDeclarations);
+        List<Object> rows=new ArrayList<>();for(var e:declared.entrySet()){JsonObject row=JsonParser.parseString(e.getValue()).getAsJsonObject();Object descriptor=descriptor(e.getKey(),row,aliases.get(e.getKey()),row.has("extends_item")?row.get("extends_item").getAsInt():null);descriptors.put(e.getKey(),descriptor);rows.add(descriptor);}
         // This is the original resource-loader merge and descendant-index construction.
         type("985191831").getMethod("else",Collection.class).invoke(manager,rows);
     }

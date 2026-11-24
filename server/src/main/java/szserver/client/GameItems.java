@@ -118,7 +118,15 @@ public final class GameItems implements AutoCloseable {
         adapter.warmArmorUpgrades(definitionsPath.getParent().resolve("native-resources"),armors);
         adapter.warmArtifacts(ItemResources.gameplaySettings(artifactSettings),artifacts,definitionsPath.getParent().resolve("native-resources"));containerExempt=adapter.containerExemptStats();definitions=catalog;
         LauncherPackets.verifyManifest(fixtures.getParent(),runtime,"native-weapon-modules.json");LauncherPackets.verifyManifest(fixtures.getParent(),runtime,"native-weapon-jamming.json");
-        Map<Integer,String> moduleClasses=new HashMap<>(),moduleDefs=new HashMap<>();for(var entry:registry.entrySet())if(entry.getValue().getAsJsonObject().has("definition")){int id=Integer.parseInt(entry.getKey());if(catalog.has(entry.getKey())){moduleClasses.put(id,entry.getValue().getAsJsonObject().get("definition").getAsString());moduleDefs.put(id,catalog.get(entry.getKey()).toString());}}adapter.moduleDefinitions(moduleClasses,moduleDefs);adapter.warmCosmetics(moduleClasses,moduleDefs);firearmFactories=adapter.firearmFactories();
+        Map<Integer,String> moduleClasses=new HashMap<>(),moduleDefs=new HashMap<>();for(var entry:registry.entrySet())if(entry.getValue().getAsJsonObject().has("definition")){int id=Integer.parseInt(entry.getKey());if(catalog.has(entry.getKey())){moduleClasses.put(id,entry.getValue().getAsJsonObject().get("definition").getAsString());moduleDefs.put(id,catalog.get(entry.getKey()).toString());}}adapter.moduleDefinitions(moduleClasses,moduleDefs);
+        Map<Integer,String> resourceDeclarations=new HashMap<>();
+        if(itemResourcesMounted){
+            var resources=ItemResources.definitions(ItemResources.root(definitionsPath));
+            for(var entry:resources.entrySet())
+                resourceDeclarations.put(Integer.parseInt(entry.getKey()),entry.getValue().toString());
+        }
+        adapter.warmCosmetics(moduleClasses,moduleDefs,resourceDeclarations);
+        firearmFactories=adapter.firearmFactories();
         medicines.clear();medicines.putAll(adapter.warmMedicines());statOrdinals=adapter.statOrdinals();for(var entry:catalog.entrySet()){
             JsonObject item=entry.getValue().getAsJsonObject();int id=Integer.parseInt(entry.getKey());
             if(item.get("type").getAsString().equals("grenade"))explosives.put(id,adapter.explosive(id,(item.has("explosive_props")?item.getAsJsonObject("explosive_props"):item).toString()));
