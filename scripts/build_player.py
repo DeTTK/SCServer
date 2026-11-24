@@ -122,7 +122,15 @@ def build(output):
     jar(player/'Client/compat/game-resource-compat.jar',values)
     weapon=compile_internal('player-weapon-events',(ROOT/'client/weapon-events/src').glob('*.java'),output);values=entries(weapon)
     values['META-INF/MANIFEST.MF']=b'Manifest-Version: 1.0\nPremain-Class: ReloadEventAgent\nAgent-Class: MeleeBodyAgent\nCan-Retransform-Classes: true\n\n'
-    jar(player/'Client/compat/weapon-events.jar',values)
+    weapon_agent=player/'Client/compat/weapon-events.jar'
+    jar(weapon_agent,values)
+    probe=compile_internal('player-melee-test',[ROOT/'client/weapon-events/tests/MeleeInventoryProbe.java'],output)
+    probe_entries=entries(probe)
+    probe_entries['META-INF/MANIFEST.MF']=b'Manifest-Version: 1.0\nPremain-Class: MeleeInventoryProbe\n\n'
+    probe_agent=output/'melee-inventory-test.jar'
+    jar(probe_agent,probe_entries)
+    subprocess.run([tools.tool('java'),EXPORT,'-Xverify:all',f'-javaagent:{probe_agent}',f'-javaagent:{weapon_agent}',
+                    '-cp',os.pathsep.join(map(str,[probe_agent,runtime/'bootstrap.jar',*libraries])),'MeleeInventoryProbe'],check=True)
     bridge=compile_internal('player-bridge',(ROOT/'launcher/modules/bridge/src').rglob('*.java'),output);values=entries(bridge)
     values['META-INF/MANIFEST.MF']=(ROOT/'launcher/modules/bridge/manifest.mf').read_bytes();jar(player/'Bootstrap/bscp-bridge.jar',values)
     verify=tools.compile_java('player-bridge-verify',[ROOT/'launcher/modules/bridge/tests/ServerShapeTest.java'],[bridge])
