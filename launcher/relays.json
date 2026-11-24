@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "relays": [
+    "https://euc1-1.relay.n0.iroh.link./",
+    "https://use1-1.relay.n0.iroh.link./",
+    "https://usw1-1.relay.n0.iroh.link./",
+    "https://aps1-1.relay.n0.iroh.link./"
+  ]
+}

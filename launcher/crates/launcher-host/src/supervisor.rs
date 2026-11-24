@@ -188,13 +188,15 @@ impl Supervisor {
         if !s.relay_enabled || self.running.lock().unwrap().server_tunnel.is_some() {
             return;
         }
-        self.view.lock().unwrap()["RelayStatus"] = json!("Подключаем ретранслятор…");
+        self.view.lock().unwrap()["RelayStatus"] = json!("Проверяем ретрансляторы…");
         match crate::relay::Tunnel::host(base, &s.relay_url).await {
             Ok(t) => {
+                let host = t.relay_host();
                 self.running.lock().unwrap().server_tunnel = Some(t);
-                self.view.lock().unwrap()["RelayStatus"] = json!(
-                    "Приглашение доступно. Соединение выбирается автоматически: напрямую или через ретранслятор."
-                );
+                self.view.lock().unwrap()["RelayStatus"] = json!(match host {
+                    Some(host) => format!("Приглашение готово · {host}"),
+                    None => "Приглашение готово".into(),
+                });
             }
             Err(e) => {
                 self.view.lock().unwrap()["RelayStatus"] = json!(format!(

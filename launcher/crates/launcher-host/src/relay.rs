@@ -1,4 +1,5 @@
 //! Capability-scoped game tunnel. It exposes only backend, gateway and world traffic.
+use crate::relay_catalog::ranked_relays;
 use anyhow::{Context, Result, bail};
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use iroh::{
@@ -103,6 +104,34 @@ async fn endpoint(custom: &str, relay_only: bool) -> Result<Endpoint> {
     }
     Ok(builder.bind().await?)
 }
+
+async fn online_endpoint(custom: &str, relay_only: bool, wait: Duration) -> Result<Endpoint> {
+    let ep = endpoint(custom, relay_only).await?;
+    if tokio::time::timeout(wait, ep.online()).await.is_err() {
+        ep.close().await;
+        bail!("RELAY_OFFLINE: Сеть Iroh недоступна")
+    }
+    Ok(ep)
+}
+
+async fn host_endpoint(custom: &str, relay_only: bool) -> Result<Endpoint> {
+    if custom.trim().is_empty() {
+        let ranked = ranked_relays().await.unwrap_or_default();
+        let deadline = Instant::now() + Duration::from_secs(8);
+        for relay in ranked {
+            let remaining = deadline.saturating_duration_since(Instant::now());
+            if remaining.is_zero() {
+                break;
+            }
+            let wait = remaining.min(Duration::from_secs(4));
+            if let Ok(ep) = online_endpoint(relay.as_str(), relay_only, wait).await {
+                return Ok(ep);
+            }
+        }
+    }
+    online_endpoint(custom, relay_only, Duration::from_secs(20)).await
+}
+
 fn task(stop: &CancellationToken, future: impl std::future::Future<Output = ()> + Send + 'static) {
     let s = stop.clone();
     tokio::spawn(async move {
@@ -110,18 +139,19 @@ fn task(stop: &CancellationToken, future: impl std::future::Future<Output = ()> 
     });
 }
 impl Tunnel {
+    pub fn relay_host(&self) -> Option<String> {
+        self.endpoint
+            .addr()
+            .relay_urls()
+            .find_map(|url| url.host_str())
+            .map(|host| host.trim_end_matches('.').to_owned())
+    }
+
     pub async fn host(base: u16, custom: &str) -> Result<Self> {
         Self::host_mode(base, custom, false).await
     }
     async fn host_mode(base: u16, custom: &str, relay_only: bool) -> Result<Self> {
-        let ep = endpoint(custom, relay_only).await?;
-        if tokio::time::timeout(Duration::from_secs(20), ep.online())
-            .await
-            .is_err()
-        {
-            ep.close().await;
-            bail!("RELAY_OFFLINE: Сеть Iroh недоступна")
-        }
+        let ep = host_endpoint(custom, relay_only).await?;
         let mut bytes = [0; 32];
         rand::RngCore::fill_bytes(&mut rand::rngs::OsRng, &mut bytes);
         let ticket = Invite {
@@ -446,7 +476,14 @@ mod tests {
             }
         });
         // Disable all IP transports on both endpoints: success proves the relay path.
+        let ranked = ranked_relays().await.unwrap();
+        assert!(
+            !ranked.is_empty(),
+            "no public relay passed the HTTPS probes"
+        );
         let host = Tunnel::host_mode(base, "", true).await.unwrap();
+        let selected = host.relay_host().expect("selected relay");
+        eprintln!("Selected public relay: {selected}");
         let mut invalid = Invite::parse(&host.invite).unwrap();
         invalid.key = "00".repeat(32);
         assert!(
