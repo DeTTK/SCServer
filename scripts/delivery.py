@@ -104,13 +104,28 @@ def sign(raw,key):
         source=folder/'manifest';source.write_bytes(raw);signature=folder/'signature'
         run('openssl','dgst','-sha256','-sign',private,'-out',signature,source,capture_output=True)
         return signature.read_bytes()
-def publish():
+def publication_source():
     channel=os.environ.get('GITHUB_REF_NAME','')
     if channel not in ('main','test'):raise ValueError('Only main and test publication is enabled')
     source=os.environ['GITHUB_SHA']
     if not re.fullmatch('[0-9a-f]{40}',source):raise ValueError('Invalid source commit')
-    latest=run('git','ls-remote','origin','refs/heads/'+channel,capture_output=True,text=True).stdout.split()[0]
-    if latest!=source:raise ValueError('Superseded source build; not publishing')
+    return channel,source
+
+def source_is_current(channel,source):
+    ref='refs/heads/'+channel
+    output=run('git','ls-remote','--exit-code','origin',ref,capture_output=True,text=True).stdout
+    latest,separator,reported_ref=output.strip().partition('\t')
+    if not separator or reported_ref!=ref or not re.fullmatch('[0-9a-f]{40}',latest):
+        raise ValueError(f'Invalid remote response for {ref}')
+    if latest!=source:
+        print(f'Skipping publication for {channel}: {source[:12]} was superseded by {latest[:12]}')
+        return False
+    return True
+
+def publish():
+    channel,source=publication_source()
+    if not source_is_current(channel,source):
+        return False
     manifest={'schemaVersion':2,'minimumLauncherVersion':'0.4.1','channel':channel,'sourceCommit':source,'sequence':int(os.environ['GITHUB_RUN_NUMBER']),
         'baseId':LOCK['id'],'files':file_inventory(OUT),'changelog':run('git','log','-1','--format=%s',capture_output=True,text=True).stdout.strip(),
         'mods':mod_catalogue(OUT)}
@@ -162,10 +177,29 @@ def publish():
         p=destination/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_text(body,'utf8')
     run('git','-C',destination,'add','--',*[r['path']for r in file_inventory(OUT)],'delivery.json','delivery.json.sig',*metadata,*foundation_paths,env=env)
     commit_index(destination,f'Build {channel} from {source[:12]}',env)
-    latest=run('git','ls-remote','origin','refs/heads/'+channel,capture_output=True,text=True).stdout.split()[0]
-    if latest!=source:raise ValueError('Source advanced before activation; not publishing')
-    run('git','-C',destination,'push','origin','HEAD:refs/heads/'+branch,env=env)
+    if not source_is_current(channel,source):
+        return False
+    try:
+        run('git','-C',destination,'push','--porcelain','origin','HEAD:refs/heads/'+branch,env=env,stdout=subprocess.PIPE,text=True)
+    except subprocess.CalledProcessError as error:
+        print(error.stdout,end='')
+        rejected=any(line.startswith('!\t') and line.endswith(('[rejected] (fetch first)','[rejected] (non-fast-forward)')) for line in error.stdout.splitlines())
+        if rejected and not source_is_current(channel,source):
+            return False
+        raise
     print('Published signed',branch,'from',source)
+    return True
+
+def workflow_output(name,value):
+    if output:=os.environ.get('GITHUB_OUTPUT'):
+        with open(output,'a',encoding='utf8') as file:
+            file.write(f'{name}={str(value).lower()}\n')
+
 if __name__=='__main__':
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('command',choices=['prepare','publish']);a=p.parse_args()
-    {'prepare':prepare,'publish':publish}[a.command]()
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('command',choices=['check-current','prepare','publish']);a=p.parse_args()
+    if a.command=='check-current':
+        workflow_output('current',source_is_current(*publication_source()))
+    elif a.command=='prepare':
+        prepare()
+    else:
+        workflow_output('published',publish())

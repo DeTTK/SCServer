@@ -60,7 +60,7 @@ jobs:
     secrets: inherit
   publish-launcher:
     needs: [publish-game]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.publish-game.outputs.published == 'true'
     permissions:
       contents: write
     uses: ./.github/workflows/publish-launcher.yml
