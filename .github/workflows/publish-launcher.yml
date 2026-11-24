@@ -58,5 +58,5 @@ jobs:
           $hash=(Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant()
           "$hash  BSCPCRAFT.exe" | Set-Content SHA256SUMS.txt -Encoding utf8NoBOM
           $sha=git rev-parse HEAD
-          gh release create $env:RELEASE_TAG $exe SHA256SUMS.txt --repo $env:GITHUB_REPOSITORY --target $sha --latest --title "BSCPCRAFT $env:RELEASE_TAG" --notes 'Портативный лаунчер BSCPCRAFT для Windows. Игровые файлы устанавливаются из build-main. Для тестовой версии игры выберите ветку test в настройках.'
+          gh release create $env:RELEASE_TAG $exe SHA256SUMS.txt --repo $env:GITHUB_REPOSITORY --target $sha --latest --title "BSCPCRAFT $env:RELEASE_TAG" --notes 'Портативный лаунчер BSCPCRAFT для Windows. Список доступных игровых веток обновляется с GitHub. Ветку можно выбрать в настройках.'
           if($LASTEXITCODE -ne 0){throw 'Launcher release failed'}

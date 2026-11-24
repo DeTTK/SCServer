@@ -1,5 +1,5 @@
 use crate::{AppWindow, AttachmentRow, ChangeRow, ModRow, ServerRow, WorldRow};
-use anyhow::{Context, Result, bail};
+use anyhow::{Context, Result, bail, ensure};
 use bscp_launcher_core::*;
 use bscp_launcher_host::{HostClient, ensure_host};
 use slint::{ComponentHandle, Model, ModelRc, SharedString, VecModel};
@@ -149,13 +149,11 @@ fn set_draft(ui: &AppWindow, s: &Settings) {
     ui.set_relay_enabled(s.relay_enabled);
     ui.set_feed_url(s.feed_url.clone().into());
     ui.set_game_branch(s.game_branch.clone().into());
-    ui.set_branches(rows(
-        SELECTABLE_CHANNELS
-            .iter()
-            .map(|channel| SharedString::from(*channel))
-            .collect(),
-    ));
 }
+fn set_channels(ui: &AppWindow, channels: Vec<String>) {
+    ui.set_branches(rows(channels.into_iter().map(SharedString::from).collect()));
+}
+
 fn load_bundle(layout: &Layout, s: &Settings) -> String {
     if let Ok(stored) = read_json::<BTreeMap<String, String>>(&layout.at("state/bootstrap.json")) {
         if let Some(path) = stored.get("path").or_else(|| stored.get("Path")) {
@@ -184,6 +182,21 @@ fn refresh(ui: &slint::Weak<AppWindow>, layout: &Layout, drafts: bool) -> Result
         .unwrap_or_default();
     let history: Vec<ServerEntry> = read_json(&layout.at("config/server-history.json"))?;
     let bundle = load_bundle(layout, &s);
+    let channels = if drafts {
+        Some(
+            RepositoryChannel::cached_list(layout)
+                .ok()
+                .flatten()
+                .unwrap_or_else(|| {
+                    (!s.game_branch.is_empty())
+                        .then(|| s.game_branch.clone())
+                        .into_iter()
+                        .collect()
+                }),
+        )
+    } else {
+        None
+    };
     let selected = worlds
         .iter()
         .find(|w| w.id == s.selected_world)
@@ -206,7 +219,8 @@ fn refresh(ui: &slint::Weak<AppWindow>, layout: &Layout, drafts: bool) -> Result
             .flatten()
     };
     let _ = ui.upgrade_in_event_loop(move |ui| {
-        if drafts {
+        if let Some(channels) = channels {
+            set_channels(&ui, channels);
             set_draft(&ui, &s);
             ui.set_bundle_path(bundle.into());
         }
@@ -1283,18 +1297,16 @@ fn execute(
                 ui.set_setup_step(0);
             });
             let service = RepositoryChannel::new(layout)?.with_cancel(cancel.clone());
-            let mut branches = service.list().unwrap_or_else(|_| {
-                SELECTABLE_CHANNELS
-                    .iter()
-                    .map(|channel| (*channel).to_string())
-                    .collect()
-            });
-            if !s.game_branch.is_empty() && !branches.contains(&s.game_branch) {
-                branches.push(s.game_branch.clone());
+            if let Ok(branches) = service.list() {
+                let retired = !s.game_branch.is_empty() && !branches.contains(&s.game_branch);
+                let _ = ui.upgrade_in_event_loop(move |ui| set_channels(&ui, branches));
+                if retired {
+                    return Ok(format!(
+                        "Ветка {} больше не публикуется. Выберите доступную ветку в настройках.",
+                        s.game_branch
+                    ));
+                }
             }
-            let _ = ui.upgrade_in_event_loop(move |ui| {
-                ui.set_branches(rows(branches.into_iter().map(SharedString::from).collect()))
-            });
             if !s.game_branch.is_empty() {
                 progress(format!("Проверяем готовую сборку {}…", s.game_branch).into());
                 match service.check(&s.game_branch) {
@@ -1638,9 +1650,16 @@ fn execute(
                 }
                 match action.as_str() {
                     "check" => {
-                        let available = RepositoryChannel::new(layout)?
-                            .with_cancel(cancel.clone())
-                            .check(&s.game_branch)?;
+                        let service = RepositoryChannel::new(layout)?.with_cancel(cancel.clone());
+                        if let Ok(branches) = service.list() {
+                            let retired = !branches.contains(&s.game_branch);
+                            let _ = ui.upgrade_in_event_loop(move |ui| set_channels(&ui, branches));
+                            ensure!(
+                                !retired,
+                                "CHANNEL_UNAVAILABLE: выберите активную ветку в настройках"
+                            );
+                        }
+                        let available = service.check(&s.game_branch)?;
                         refresh(ui, layout, false)?;
                         return Ok(format!(
                             "{}: доступна сборка {}",

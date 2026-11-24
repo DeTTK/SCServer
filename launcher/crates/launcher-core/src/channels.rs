@@ -22,7 +22,8 @@ use std::{
 };
 
 pub const GAME_REPOSITORY: &str = "DeTTK/SCServer";
-pub const SELECTABLE_CHANNELS: [&str; 3] = ["main", "test", "launtest"];
+const CHANNEL_LIST_CACHE: &str = "state/channels/branches.json";
+const BRANCH_PAGE_SIZE: usize = 100;
 const PUBLIC_KEY: &str = include_str!("../../../channel-public-key.txt");
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -169,6 +170,22 @@ impl ChannelManifest {
         Ok(())
     }
 }
+#[derive(Deserialize)]
+struct RepositoryBranch {
+    name: String,
+}
+
+fn published_channels(branches: &HashSet<String>) -> Vec<String> {
+    let mut channels: Vec<_> = branches
+        .iter()
+        .filter_map(|name| name.strip_prefix("build-"))
+        .filter(|name| validate_branch(name).is_ok() && branches.contains(*name))
+        .map(str::to_owned)
+        .collect();
+    channels.sort();
+    channels
+}
+
 pub struct RepositoryChannel {
     pub layout: Layout,
     http: reqwest::blocking::Client,
@@ -229,20 +246,35 @@ impl RepositoryChannel {
         manifest.validate(branch)?;
         Ok(manifest)
     }
+    pub fn cached_list(layout: &Layout) -> Result<Option<Vec<String>>> {
+        let mut cached: Option<Vec<String>> = read_json(&layout.at(CHANNEL_LIST_CACHE))?;
+        if let Some(channels) = &mut cached {
+            channels.retain(|name| validate_branch(name).is_ok());
+            channels.sort();
+            channels.dedup();
+        }
+        Ok(cached)
+    }
+
     pub fn list(&self) -> Result<Vec<String>> {
-        let raw = self.small(
-            &format!("https://api.github.com/repos/{GAME_REPOSITORY}/branches?per_page=100"),
-            256 * 1024,
-        )?;
-        let branches: Vec<serde_json::Value> = serde_json::from_slice(&raw)?;
-        let mut result = branches
-            .into_iter()
-            .filter_map(|v| v["name"].as_str()?.strip_prefix("build-").map(String::from))
-            .filter(|v| SELECTABLE_CHANNELS.contains(&v.as_str()))
-            .collect::<Vec<_>>();
-        result.sort();
-        result.dedup();
-        Ok(result)
+        let mut branches = HashSet::new();
+        for page in 1..=20 {
+            let raw = self.small(
+                &format!(
+                    "https://api.github.com/repos/{GAME_REPOSITORY}/branches?per_page={BRANCH_PAGE_SIZE}&page={page}"
+                ),
+                256 * 1024,
+            )?;
+            let page: Vec<RepositoryBranch> = serde_json::from_slice(&raw)?;
+            let complete = page.len() < BRANCH_PAGE_SIZE;
+            branches.extend(page.into_iter().map(|branch| branch.name));
+            if complete {
+                let channels = published_channels(&branches);
+                let _ = write_json(&self.layout.at(CHANNEL_LIST_CACHE), &channels);
+                return Ok(channels);
+            }
+        }
+        bail!("CHANNEL_LIMIT: слишком много веток для проверки")
     }
     pub fn check(&self, branch: &str) -> Result<ChannelAvailable> {
         validate_branch(branch)?;
@@ -744,12 +776,23 @@ mod tests {
         assert!(validate_branch("feature/fpv").is_ok());
     }
     #[test]
-    fn selectable_channels_include_launtest_without_derived_build_refs() {
-        assert_eq!(SELECTABLE_CHANNELS, ["main", "test", "launtest"]);
-        assert!(SELECTABLE_CHANNELS
-            .iter()
-            .all(|channel| validate_branch(channel).is_ok()));
-        assert!(!SELECTABLE_CHANNELS.contains(&"build-launtest"));
+    fn channels_are_live_source_and_build_pairs() {
+        let branches: HashSet<String> = [
+            "main",
+            "build-main",
+            "preview/nightly",
+            "build-preview/nightly",
+            "draft",
+            "build-retired",
+            "bad.branch",
+            "build-bad.branch",
+            "build-build-main",
+            "other",
+        ]
+        .into_iter()
+        .map(str::to_owned)
+        .collect();
+        assert_eq!(published_channels(&branches), ["main", "preview/nightly"]);
     }
     #[test]
     fn urls_pin_commit_and_encode_only_safe_paths() {
