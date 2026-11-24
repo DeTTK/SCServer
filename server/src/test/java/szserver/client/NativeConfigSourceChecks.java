@@ -7,6 +7,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.Random;
+import java.util.Set;
 import szserver.inventory.ItemCatalog;
 import szserver.net.AreaRelations;
 import szserver.util.GameResources;
@@ -16,6 +17,7 @@ public final class NativeConfigSourceChecks {
     private static final String SICKNESS = "assets/stalker/sickness.json";
     private static final String ANOMALIES = "assets/anomalies/anomaly_config.json";
     private static final String LOOT = "assets/customitems/loot/lootboxes.json";
+    private static final String SHUFFLE = "assets/customitems/shufflebags/newyear25.json";
     private static final String KEDR = "assets/weapons/items/avtomat/20000_kedr.json";
     private static final String ALLIANCES = "assets/bundle/alliances.json";
 
@@ -39,6 +41,12 @@ public final class NativeConfigSourceChecks {
                     "tag":{"personal_on_get":{"type":"byte","value":1}}},"weight":1}]]
                     """));
             write(overrides.resolve(LOOT), loot.toString());
+            var shuffle = JsonParser.parseString(GameResources.readString(configs.resolve(SHUFFLE))).getAsJsonObject();
+            shuffle.add("ny25_case1", JsonParser.parseString("""
+                    [{"amount":1,"stack":{"id":12800,"stackSize":1}},
+                     {"amount":1,"stack":{"id":12810,"stackSize":1}}]
+                    """));
+            write(overrides.resolve(SHUFFLE), shuffle.toString());
             var weaponFile = JsonParser.parseString(GameResources.readString(configs.resolve(KEDR))).getAsJsonArray();
             var weapon = weaponFile.get(0).getAsJsonObject();
             weapon.remove("default_attachments_id");
@@ -73,7 +81,7 @@ public final class NativeConfigSourceChecks {
                 for (Path path : paths.sorted(Comparator.reverseOrder()).toList()) Files.delete(path);
             }
         }
-        System.out.println("PASS archive and overrides for weapon modules, loot rewards, anomaly damage, sickness and faction definitions");
+        System.out.println("PASS archive and overrides for weapon modules, loot and shuffle progress, anomaly damage, sickness and factions");
     }
 
     private static void verifyItems(Path server, Path runtime, boolean stock) throws Exception {
@@ -82,6 +90,7 @@ public final class NativeConfigSourceChecks {
             var catalog = new ItemCatalog(server.resolve("fixtures/item-definitions.json"));
             var loot = items.lootboxes(server, catalog);
             check((int) loot.metrics().get("nativeTables") >= 2400, "native loot tables loaded");
+            check((int) loot.metrics().get("nativeShuffleBags") >= 125, "native shuffle tables loaded");
             var draw = loot.draw(15015, 1, "newbie", new JsonObject(), new Random(61));
             check(draw.prizes().size() == 1 && draw.progress().get("opened").getAsInt() == 1,
                     "native loot draw keeps server progress");
@@ -94,6 +103,12 @@ public final class NativeConfigSourceChecks {
                         "native archive reward override and typed NBT");
                 var reward = items.createStack(prize.id(), prize.count(), prize.metadata(), prize.tags());
                 check(reward.count() == 3 && reward.metadata() == 7, "native loot reward enters inventory");
+                var first = loot.draw(15000, 1, "newbie", new JsonObject(), new Random(61));
+                var reloaded = items.lootboxes(server, catalog);
+                var second = reloaded.draw(15000, 1, "newbie", first.progress(), new Random(61));
+                check(first.prizes().size() == 1 && second.prizes().size() == 1
+                        && Set.of(first.prizes().get(0).id(), second.prizes().get(0).id()).equals(Set.of(12800, 12810)),
+                        "mounted shuffle rewards stay without replacement across reload");
             }
             var gun = items.createStack(20000, 1, 0, new JsonObject());
             check(items.modules(gun).stream().anyMatch(module -> module.item() == 22915) == stock,
