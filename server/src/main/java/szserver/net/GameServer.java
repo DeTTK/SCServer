@@ -481,6 +481,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         if(id==1022){meleeSwing(s,body);return;}
         if(id==1435){meleeHit(s,body);return;}
         if(id==WorldItemPackets.DROP_ID){dropItem(s,WorldItemPackets.drop(body));return;}
+        if(id==InventoryPackets.DELETE_ID){inventoryDelete(s,body);return;}
         if(id==1842){var request=inventories.quickBindRequest(body);if(request.owner()!=0||request.source()!=null&&(request.source().aggregate()>1||!StorageLayout.validAddress(request.source())))throw new IOException("quick_binding_owner_or_address");queueQuick(s,new QuickIntent(request,null,request.source()==null?null:inventory(s).at(request.source())));return;}
         if(id==1628){queueQuick(s,new QuickIntent(null,inventories.quickUseRequest(body),null));return;}
         if(id==693){var use=inventories.medicineRequest(body,s.inventoryScreen.page());int owner=use.owner(),sequence=use.sequence();Inventory.Address address=use.address();Runnable ack=()->enqueue(s,0,InventoryPackets.ack(owner,sequence));
@@ -1468,6 +1469,12 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
             if(plan.changes().size()>32&&plan.changes().keySet().stream().noneMatch(a->a.aggregate()==0)){inventorySnapshot(s,0);if(s.inventoryScreen.storageOpen())inventorySnapshot(s,-1);refreshReserve(s);done.run();}
             else inventoryChanged(s,plan,done);
         },error->rejected.run());
+    }
+    private void inventoryDelete(Session s,byte[] body)throws Exception{
+        var request=InventoryPackets.delete(body);int owner=request.owner(),sequence=request.sequence();Inventory.Address address=request.address();Runnable ack=()->enqueue(s,0,InventoryPackets.ack(owner,sequence));
+        if(owner==-1){if(!s.inventoryScreen.storageOpen()){inventorySnapshot(s,-1);ack.run();return;}if(address.aggregate()==0&&address.container()==0)address=new Inventory.Address(2,s.inventoryScreen.page(),address.slot());}
+        if(owner!=0&&owner!=-1||!StorageLayout.validAddress(address)){inventorySnapshot(s,owner==-1?-1:0);ack.run();return;}
+        inventories.delete(character(s),address,plan->inventoryChanged(s,plan,ack),error->{inventorySnapshot(s,owner==-1?-1:0);ack.run();enqueue(s,0,GamePackets.chat(error));});
     }
     private void inventoryRequest(Session s,int id,byte[] body)throws Exception{
         if(id==1627){var request=inventories.itemSlotRequest(true,body);Inventory.Address source=request.source();Runnable ack=()->enqueue(s,0,InventoryPackets.ack(request.owner(),request.sequence()));

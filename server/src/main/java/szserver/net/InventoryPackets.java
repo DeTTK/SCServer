@@ -7,9 +7,17 @@ import com.github.luben.zstd.Zstd;
 
 /** Current native inventory wire formats, kept outside the inventory domain. */
 public final class InventoryPackets {
-    public static final int SORT_ID=1506;
+    public static final int SORT_ID=1506,DELETE_ID=523;public static final String DELETE_REQUEST="749436561";
     public record Request(int owner,int sequence,Inventory.Address source,List<Inventory.Address> destinations,int count,boolean split,int targetAggregate) {
         public Request{Objects.requireNonNull(source);destinations=List.copyOf(destinations);}
+    }
+    public record DeleteRequest(int owner,int sequence,Inventory.Address address){}
+    /** Native context-menu delete: owner and sequence first, then one exact inventory address. */
+    public static DeleteRequest delete(byte[] body)throws IOException{
+        DataInputStream in=Wire.input(body);int owner=in.readShort(),sequence=in.readShort();
+        Inventory.Address address=new Inventory.Address(in.readUnsignedByte(),in.readUnsignedByte(),in.readUnsignedShort());
+        if(in.available()!=0)throw new IOException("inventory_delete_layout");
+        return new DeleteRequest(owner,sequence,address);
     }
     private static Inventory.Address address(DataInputStream in,int owner,int page)throws IOException {
         int aggregate=in.readUnsignedByte(),container=in.readUnsignedByte(),slot=in.readUnsignedShort();

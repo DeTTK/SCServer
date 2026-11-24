@@ -1,6 +1,7 @@
 package szserver.client;
 
 import java.util.Map;
+import szserver.net.InventoryPackets;
 
 /** Explicit current-client aliases accepted by the active old gameplay handlers.
  * A dynamic envelope enters the same registered handler, including its bounds,
@@ -9,6 +10,7 @@ public final class GameplayPacketAliases {
     private static final Map<String,Integer> IDS=Map.ofEntries(
         Map.entry(AlliancePackets.JOIN,AlliancePackets.JOIN_ID),
         Map.entry(WorldItemPackets.DROP,WorldItemPackets.DROP_ID),
+        Map.entry(InventoryPackets.DELETE_REQUEST,InventoryPackets.DELETE_ID),
         Map.entry(PortalPackets.INTERACT_CLASS,PortalPackets.INTERACT_ID),
         Map.entry(PortalPackets.STATUS_CLASS,PortalPackets.STATUS_ID),
         Map.entry("423821855",1842),Map.entry("1491633278",1628),

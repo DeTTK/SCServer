@@ -454,6 +454,11 @@ public final class GameInventory implements AutoCloseable {
         Character c=character(id);if(c.busy||c.failed||c.deathClear){denied++;failure.accept("inventory_busy");return;}c.busy=true;
         try{Inventory.Plan plan=c.inventory.remove(command.slot(),command.count());ItemStack source=c.inventory.at(new Inventory.Address(1,0,command.slot()));WorldDrop drop=command.operation().equals("drop")?WorldDrop.create(id,position,source.count(plan.moved())):null;persist(id,c,plan,null,drop,success,failure);}catch(RuntimeException error){c.busy=false;denied++;failure.accept(Objects.toString(error.getMessage(),"inventory_remove_failed"));}
     }
+    /** Native context-menu delete removes the whole root at an arbitrary inventory address. */
+    public void delete(UUID id,Inventory.Address address,Consumer<Inventory.Plan> success,Consumer<String> failure){
+        Character c=character(id);if(c.busy||c.failed||c.deathClear){denied++;failure.accept("inventory_busy");return;}c.busy=true;
+        try{Inventory.Plan plan=c.inventory.remove(address,null);persist(id,c,plan,success,failure);}catch(RuntimeException error){c.busy=false;denied++;failure.accept(Objects.toString(error.getMessage(),"inventory_delete_failed"));}
+    }
     public void give(UUID id,int factory,int count,Consumer<Inventory.Plan> success,Consumer<String> failure){
         give(id,factory,count,0,new JsonObject(),success,failure);
     }
