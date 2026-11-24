@@ -480,6 +480,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         if(szserver.client.TeleportPackets.mapId(id,body.length)){try{teleport(s,TeleportCommands.map(body),"Телепортация по карте выполнена.");}catch(IllegalArgumentException error){enqueue(s,0,GamePackets.chat(error.getMessage()));}return;}
         if(id==1022){meleeSwing(s,body);return;}
         if(id==1435){meleeHit(s,body);return;}
+        if(id==SuicideCommand.PACKET_ID){if(body.length!=0)throw new IOException("suicide_request_size");suicide(s);return;}
         if(id==WorldItemPackets.DROP_ID){dropItem(s,WorldItemPackets.drop(body));return;}
         if(id==InventoryPackets.DELETE_ID){inventoryDelete(s,body);return;}
         if(id==1842){var request=inventories.quickBindRequest(body);if(request.owner()!=0||request.source()!=null&&(request.source().aggregate()>1||!StorageLayout.validAddress(request.source())))throw new IOException("quick_binding_owner_or_address");queueQuick(s,new QuickIntent(request,null,request.source()==null?null:inventory(s).at(request.source())));return;}
@@ -1144,6 +1145,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
             }))combatCompletionDrops.incrementAndGet();
         });
     }
+    private void suicide(Session s){if(s.hp<=0||s.respawning||s.teleport!=null)return;damage(null,"Самоубийство",s,s.hp,s.pos,null,new double[3],false);}
     private void damage(Session attacker,Session victim,float amount){damage(attacker,victim,amount,attacker.pos,null,new double[3],false);}
     private void damage(Session attacker,Session victim,float amount,double[] source,double[] impact,double[] impulse,boolean head){damage(attacker,attacker.grant.name(),victim,amount,source,impact,impulse,head);}
     private void damage(Session attacker,String killerName,Session victim,float amount,double[] source,double[] impact,double[] impulse,boolean head){
@@ -1741,7 +1743,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         hand.put(125,active?Wire.bytes(out->{out.writeLong(identity.getMostSignificantBits());out.writeLong(identity.getLeastSignificantBits());}):null);hand.put(126,active?InventoryPackets.stack(item):null);return hand;
     }
     private boolean commandRuntime(Session s,String text){
-        String verb=CommandSupport.verb(text);if(!Set.of("/clone","/anim","/apply","/help","/stats","/scale").contains(verb))return false;
+        String verb=CommandSupport.verb(text);if(!Set.of("/clone","/anim","/apply","/help","/stats","/scale","/suicide","/kill").contains(verb))return false;
         try{List<String> words=verb.equals("/apply")?CommandSupport.split(text):CommandSupport.words(text);
             switch(verb){
                 case "/scale" -> {requestScale(s,CharacterScale.command(text));}
@@ -1753,6 +1755,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
                     else throw new IllegalArgumentException("/anim <анимация|clear> | clone <код|имя> <анимация|clear>");enqueue(s,0,GamePackets.chat("Анимация изменена."));}
                 case "/apply" -> {if(!playerRules.entitled(character(s)))throw new IllegalArgumentException("apply_requires_admin");if(words.size()!=3)throw new IllegalArgumentException("/apply armor|skin|backpack|container|primary|secondary|melee <ID>");
                     PlayerCommands.Apply apply=PlayerCommands.apply(text);int container=apply.container(),factory=apply.factory();inventories.applyEquipment(character(s),container,factory,plan->inventoryChanged(s,plan,()->enqueue(s,0,GamePackets.chat("Экипировка изменена."))),error->enqueue(s,0,GamePackets.chat(error)));}
+                case "/suicide","/kill" -> {SuicideCommand.parse(text);suicide(s);}
                 case "/help" -> {if(words.size()!=1)throw new IllegalArgumentException("/help");enqueue(s,0,GamePackets.chat(CommandSupport.help()));}
                 case "/stats" -> {if(words.size()!=1)throw new IllegalArgumentException("/stats");enqueue(s,0,GamePackets.chat(CommandSupport.artifactStats(inventories.artifactStats(character(s)))));}
             }

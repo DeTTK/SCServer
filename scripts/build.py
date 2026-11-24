@@ -127,6 +127,8 @@ def tests():
     subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.client.AllianceRequestTests'],check=True)
     subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.net.BoltAnomalyTests'],check=True)
     results.append('thrown bolt anomaly activation and short projectile lifetime')
+    subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.net.SuicideCommandTests'],check=True)
+    results.append('give-up packet 1746 alias and /suicide,/kill arity')
     subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.world.CollisionCaseTests'],check=True)
     subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.AnomalyRadiusTests'],check=True)
     subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.AnomalyTests'],check=True)
