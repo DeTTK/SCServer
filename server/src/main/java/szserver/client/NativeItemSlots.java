@@ -6,14 +6,30 @@ import java.util.*;
 
 /** Genuine bolt/container factories, predicates, slot setter and banks. Inventory owns the transaction. */
 final class NativeItemSlots {
+    static final String ARTIFACT_FACTORY="702433834", CONTAINER_FACTORY="1441854005";
+    static String equipmentFactory(String type){
+        return switch(type){
+            case "artefakt","ravent/multiset_artefact" -> ARTIFACT_FACTORY;
+            case "backpack" -> CONTAINER_FACTORY;
+            default -> null;
+        };
+    }
+    static String equipmentState(String factory){
+        return switch(factory){
+            case ARTIFACT_FACTORY -> "1609149377";
+            case CONTAINER_FACTORY -> "1176431411";
+            default -> null;
+        };
+    }
     private final NativeItemFactories host;private final Class<?> bolt,gem,container,artifact,bank,slots;
-    private final Method readId,write,get,set,accept,mutable,gemAllows,researched,key,containerTotal,containerArtifacts;
-    private final Class<?> statsFactory;private final Method stats;private final Object boltKey;private final Field capacity;private final NativeMedicines.Export export;
+    private final Method readId,write,get,set,accept,mutable,gemAllows,researched,key,containerArtifacts;
+    private final Class<?> statsFactory;private final Method stats,artifactStats,defaultState;private final Object boltKey;private final Field capacity;private final NativeMedicines.Export export;
     NativeItemSlots(NativeItemFactories host,NativeMedicines.Export export)throws Exception{
-        this.host=host;this.export=export;statsFactory=host.type("59871510");stats=NativeMethods.instance(statsFactory,"for",host.type("964863275"),host.stack);bolt=host.type(NativeBoltFactory.BOLT_CLASS);gem=host.type(NativeBoltFactory.GEM_CLASS);container=host.type("1441854005");artifact=host.type("702433834");bank=host.type("964863275");slots=host.type("1579742958");
+        this.host=host;this.export=export;statsFactory=host.type("59871510");stats=NativeMethods.instance(statsFactory,"for",host.type("964863275"),host.stack);bolt=host.type(NativeBoltFactory.BOLT_CLASS);gem=host.type(NativeBoltFactory.GEM_CLASS);container=host.type(CONTAINER_FACTORY);artifact=host.type(ARTIFACT_FACTORY);bank=host.type("964863275");slots=host.type("1579742958");
         readId=NativeMethods.instance(host.stack,"continue",int.class);write=NativeMethods.instance(host.stack,"switch",void.class,DataOutput.class);get=NativeMethods.instance(slots,"implements",host.stack,host.stack,Object.class);set=NativeMethods.instance(slots,"public",void.class,host.stack,host.stack,Object.class);accept=NativeMethods.instance(slots,"else",boolean.class,host.stack,host.base,Object.class);mutable=NativeMethods.instance(slots,"volatile",boolean.class,Object.class,host.stack,host.stack);
         gemAllows=NativeMethods.instance(gem,"long",boolean.class,bolt);researched=NativeMethods.instance(artifact,"const",boolean.class,host.stack);key=NativeMethods.staticMethod(host.type("830745898"),"private",host.type("830745898"),int.class);boltKey=host.type("1750946572").getField("try").get(null);capacity=container.getField("else");
-        containerTotal=NativeMethods.instance(container,"for",bank,host.stack);containerArtifacts=NativeMethods.instance(container,"long",bank,host.stack);
+        artifactStats=NativeMethods.instance(artifact,"strictfp",bank,host.stack,boolean.class,boolean.class);containerArtifacts=NativeMethods.instance(container,"long",bank,host.stack);
+        defaultState=NativeMethods.instance(host.base,"default",host.type("154675812"));
         for(int id:new TreeSet<>(host.classes.keySet())){Class<?> t=host.type(host.classes.get(id));if(bolt.isAssignableFrom(t)||gem.isAssignableFrom(t)||container.isAssignableFrom(t)||artifact.isAssignableFrom(t)||statsFactory.isAssignableFrom(t))host.factory(id);}
     }
     private Object decode(byte[] raw)throws Exception{return host.stack.getConstructor(DataInput.class).newInstance(new BoundedNativeInput(raw));}
@@ -32,5 +48,30 @@ final class NativeItemSlots {
         if(s!=null&&!(Boolean)accept.invoke(factory,p,host.factory((Integer)readId.invoke(s)),k))throw new IOException("attachment_incompatible");
         set.invoke(factory,p,s,k);Object result=get.invoke(factory,p,k);if((s==null)!=(result==null)||s!=null&&!Arrays.equals(bytes(s),bytes(result)))throw new IOException("attachment_native_set_rejected");return new Edit(bytes(p),bytes(old));
     });}
-    GameItems.EquipmentStats container(byte[] raw)throws Exception{Object p=decode(raw);return bound(new Object[]{p},()->{int id=(Integer)readId.invoke(p);if(!statsFactory.isAssignableFrom(host.type(host.classes.get(id))))return new GameItems.EquipmentStats(Map.of(),Map.of());Object f=host.factory(id);return new GameItems.EquipmentStats(export.read(stats.invoke(f,p)),container.isInstance(f)?export.read(containerArtifacts.invoke(f,p)):Map.of());});}
+    Object defaultState(int id)throws Exception{
+        Object factory=host.factory(id);
+        return host.bound(List.of(id),()->defaultState.invoke(factory));
+    }
+    Map<String,Float> artifact(byte[] raw)throws Exception{
+        Object stack=decode(raw);
+        return bound(new Object[]{stack},()->{
+            Object factory=host.factory((Integer)readId.invoke(stack));
+            if(!artifact.isInstance(factory))throw new IOException("artifact_factory_kind");
+            return export.read(artifactStats.invoke(factory,stack,false,false));
+        });
+    }
+    GameItems.EquipmentStats container(byte[] raw)throws Exception{
+        Object stack=decode(raw);
+        return bound(new Object[]{stack},()->{
+            int id=(Integer)readId.invoke(stack);
+            String factoryClass=host.classes.get(id);
+            if(factoryClass==null||!statsFactory.isAssignableFrom(host.type(factoryClass)))
+                return new GameItems.EquipmentStats(Map.of(),Map.of());
+            Object factory=host.factory(id);
+            var total=export.read(stats.invoke(factory,stack));
+            var artifacts=container.isInstance(factory)?export.read(containerArtifacts.invoke(factory,stack)):
+                    artifact.isInstance(factory)?total:Map.<String,Float>of();
+            return new GameItems.EquipmentStats(total,artifacts);
+        });
+    }
 }

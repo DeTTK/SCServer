@@ -51,7 +51,6 @@ public final class GameItems implements AutoCloseable {
     public Map<String,String> codecFailures(){return Map.copyOf(codecFailures);}
     private JsonObject definitions;
     private boolean itemResourcesMounted;
-    private Set<String> containerExempt=Set.of();
     public record MedicineStages(long startMillis,long activeMillis,long endMillis,Map<String,Float> stats,String key,boolean stopOnFullHealth){
         public static final MedicineStages NONE=new MedicineStages(0,0,0,Map.of(),null,false);
         public MedicineStages{stats=Map.copyOf(stats);}
@@ -100,23 +99,22 @@ public final class GameItems implements AutoCloseable {
         NativeBlockItemsRelease.verifyDefinitions(fixtures);
         NativeDeveloperItemsRelease.verifyDefinitions(fixtures);
         NativeStorageLayoutRelease.verifyFile(fixtures.resolve("native-storage-layout.json"));
-        JsonObject catalog=szserver.inventory.CatalogDefinitions.read(definitionsPath);Map<Integer,String> artifacts=new TreeMap<>(),armors=new TreeMap<>();Map<String,Integer> names=new TreeMap<>();
+        JsonObject catalog=szserver.inventory.CatalogDefinitions.read(definitionsPath);Map<Integer,String> armors=new TreeMap<>();Map<String,Integer> names=new TreeMap<>();
         itemResourcesMounted=GameResources.mounted(ItemResources.root(definitionsPath));
-        if(itemResourcesMounted)registerArchiveResources(catalog,names);
+        List<Integer> artifactEquipment=itemResourcesMounted?registerArchiveResources(catalog,names):List.of();
         JsonObject nativeNames=JsonParser.parseString(RuntimeFiles.readString(definitionsPath.resolveSibling("native-item-names.json"))).getAsJsonObject();
         for(var entry:nativeNames.entrySet()){int id=entry.getValue().getAsInt();if(itemResourcesMounted&&archiveFactory(registry.getAsJsonObject(Integer.toString(id))))continue;JsonObject definition=catalog.getAsJsonObject(Integer.toString(id));if(definition==null||!definition.has("unlocalized_name")||!definition.get("unlocalized_name").getAsString().equals(entry.getKey()))throw new IllegalArgumentException("native_item_name_catalog_mismatch:"+entry.getKey());Integer previous=names.putIfAbsent(entry.getKey(),id);if(previous!=null&&previous!=id)throw new IllegalArgumentException("native_item_name_catalog_conflict:"+entry.getKey());}
         for(var entry:catalog.entrySet()){
             JsonObject item=entry.getValue().getAsJsonObject();String type=item.get("type").getAsString();
             int id=Integer.parseInt(entry.getKey());
             if(type.equals("armor"))armors.put(id,item.toString());
-            if(type.equals("artefakt")||type.equals("artifact"))artifacts.put(Integer.parseInt(entry.getKey()),item.toString());
         }
         // Real gun factories read animation metadata and collision boxes while
         // preparing pure inventory rules. These roots are shipped with the server.
         for(String directory:List.of("resources/configs","resources/boxes")){Path extra=fixtures.getParent().resolve(directory);if(szserver.util.GameResources.exists(extra))adapter.resources(extra);}
         adapter.warmItemNames(names);adapter.warmArmor(armors);
         adapter.warmArmorUpgrades(definitionsPath.getParent().resolve("native-resources"),armors);
-        adapter.warmArtifacts(ItemResources.gameplaySettings(artifactSettings),artifacts,definitionsPath.getParent().resolve("native-resources"));containerExempt=adapter.containerExemptStats();definitions=catalog;
+        adapter.warmArtifactSettings(ItemResources.root(definitionsPath),artifactSettings);definitions=catalog;
         LauncherPackets.verifyManifest(fixtures.getParent(),runtime,"native-weapon-modules.json");LauncherPackets.verifyManifest(fixtures.getParent(),runtime,"native-weapon-jamming.json");
         Map<Integer,String> moduleClasses=new HashMap<>(),moduleDefs=new HashMap<>();for(var entry:registry.entrySet())if(entry.getValue().getAsJsonObject().has("definition")){int id=Integer.parseInt(entry.getKey());if(catalog.has(entry.getKey())){moduleClasses.put(id,entry.getValue().getAsJsonObject().get("definition").getAsString());moduleDefs.put(id,catalog.get(entry.getKey()).toString());}}adapter.moduleDefinitions(moduleClasses,moduleDefs);
         Map<Integer,String> resourceDeclarations=new HashMap<>();
@@ -126,6 +124,13 @@ public final class GameItems implements AutoCloseable {
                 resourceDeclarations.put(Integer.parseInt(entry.getKey()),entry.getValue().toString());
         }
         adapter.warmCosmetics(moduleClasses,moduleDefs,resourceDeclarations);
+        for(int id:artifactEquipment){
+            JsonObject row=registry.getAsJsonObject(Integer.toString(id));
+            String kind=row.get("state").getAsString();
+            byte[] state=adapter.artifactEquipmentDefault(id,kind);
+            if(!Arrays.equals(state,adapter.roundTrip(kind,state)))throw new IllegalStateException("artifact_equipment_state:"+id);
+            row.addProperty("default",HexFormat.of().formatHex(state));
+        }
         firearmFactories=adapter.firearmFactories();
         medicines.clear();medicines.putAll(adapter.warmMedicines());statOrdinals=adapter.statOrdinals();for(var entry:catalog.entrySet()){
             JsonObject item=entry.getValue().getAsJsonObject();int id=Integer.parseInt(entry.getKey());
@@ -141,10 +146,12 @@ public final class GameItems implements AutoCloseable {
 
     private static boolean archiveFactory(JsonObject row) {
         return boltFactory(row) || row!=null && row.has("definition")
-                && NativeMedicines.resourceType(row.get("definition").getAsString());
+                && (NativeMedicines.resourceType(row.get("definition").getAsString())
+                    ||NativeItemSlots.equipmentState(row.get("definition").getAsString())!=null);
     }
 
-    private void registerArchiveResources(JsonObject catalog,Map<String,Integer> names)throws Exception {
+    private List<Integer> registerArchiveResources(JsonObject catalog,Map<String,Integer> names)throws Exception {
+        var artifactEquipment=new ArrayList<Integer>();
         Map<String,JsonObject> stockStates=new HashMap<>();
         for(var entry:registry.entrySet()){
             var row=entry.getValue().getAsJsonObject();
@@ -160,12 +167,23 @@ public final class GameItems implements AutoCloseable {
             String type=switch(kind){
                 case "bolt" -> NativeBoltFactory.BOLT_CLASS;
                 case "bolt_gem" -> NativeBoltFactory.GEM_CLASS;
-                default -> NativeMedicines.factoryClass(kind);
+                default -> {
+                    String equipment=NativeItemSlots.equipmentFactory(kind);
+                    yield equipment==null?NativeMedicines.factoryClass(kind):equipment;
+                }
             };
+            String equipmentState=NativeItemSlots.equipmentState(type);
             if(registry.has(key)){
                 var current=registry.getAsJsonObject(key);
-                if(!archiveFactory(current)||!current.get("definition").getAsString().equals(type))
+                if(!archiveFactory(current)||!current.get("definition").getAsString().equals(type)
+                        ||equipmentState!=null&&(!current.has("state")||!equipmentState.equals(current.get("state").getAsString())))
                     throw new java.io.IOException("item_resource_state_conflict:"+id);
+            }else if(equipmentState!=null){
+                adapter.registerStateful(id,equipmentState);
+                var row=new JsonObject();
+                row.addProperty("definition",type);
+                row.addProperty("state",equipmentState);
+                registry.add(key,row);
             }else if(NativeMedicines.resourceType(type)){
                 adapter.registerStateless(id);
                 var row=new JsonObject();
@@ -177,11 +195,13 @@ public final class GameItems implements AutoCloseable {
                 adapter.registerStateful(id,state.get("state").getAsString());
                 registry.add(key,state.deepCopy());
             }
+            if(equipmentState!=null)artifactEquipment.add(id);
             if(!definition.has("unlocalized_name"))continue;
             String name=definition.get("unlocalized_name").getAsString();
             Integer previous=names.putIfAbsent(name,id);
             if(previous!=null&&previous!=id)throw new java.io.IOException("item_resource_duplicate_name:"+name);
         }
+        return artifactEquipment;
     }
 
     private static float number(JsonObject item,String key,float fallback){float value=item.has(key)?item.get(key).getAsFloat():fallback;if(!Float.isFinite(value))throw new IllegalArgumentException("resource_number_nonfinite:"+key);return value;}

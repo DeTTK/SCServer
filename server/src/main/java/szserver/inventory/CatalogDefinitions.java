@@ -15,7 +15,7 @@ public final class CatalogDefinitions {
         Path config = ItemResources.root(file);
         boolean mounted = GameResources.mounted(config);
         if (mounted) {
-            rows.entrySet().removeIf(entry -> ItemResources.hasDynamicRegistration(entry.getValue().getAsJsonObject()));
+            rows.entrySet().removeIf(entry -> ItemResources.requiresArchiveDefinition(entry.getValue().getAsJsonObject()));
             JsonObject live = ItemResources.definitions(config);
             for (var entry : live.entrySet()) {
                 JsonObject row=entry.getValue().getAsJsonObject();

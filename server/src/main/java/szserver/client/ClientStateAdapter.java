@@ -117,7 +117,6 @@ public final class ClientStateAdapter implements AutoCloseable {
     }
 
     public record Stack(int id,int count,int metadata,String kind,byte[] state,byte[] properties,int equipmentMask) {}
-    private final Map<Integer,Object> artifactFactories=new HashMap<>();
     private final Map<Integer,Object> armorFactories=new HashMap<>();
     /** Names are resolved before any factory construction, as in native resource loading. */
     @SuppressWarnings("unchecked")
@@ -196,27 +195,25 @@ public final class ClientStateAdapter implements AutoCloseable {
         Object json=Class.forName("com.google.gson.JsonParser",true,loader).getMethod("parseString",String.class).invoke(null,text);
         return json.getClass().getMethod("getAsJsonObject").invoke(json);
     }
-    /** Only reviewed, headless artifact factories; call before accepting connections. */
-    public void warmArtifacts(String settings,Map<Integer,String> definitions,Path resources)throws Exception{
-        loader.resources(resources);
-        Class<?> json=Class.forName("com.google.gson.JsonObject",true,loader),config=Class.forName("651451239",true,loader);
-        Object parsed=nativeJson(settings),global=config.getField("instanceof").get(null);
-        // Native initialization's quality/group readers, with the three scalars used
-        // by its stat formula. No resource manager, renderer or client singleton.
-        for(String method:List.of("long","try","short"))config.getMethod(method,json).invoke(global,parsed);
-        String[] names=(String[])Class.forName("1281655698",true,loader).getField("if").get(null);
-        for(Object[] field:List.of(new Object[]{"implements",26660},new Object[]{"void",48184})){
-            Object value=json.getMethod("get",String.class).invoke(parsed,names[(int)field[1]]);
-            config.getField((String)field[0]).setFloat(global,(Float)value.getClass().getMethod("getAsFloat").invoke(value));
+    /** Load the original global artifact configuration after mounting the game resources. */
+    public void warmArtifactSettings(Path configs,Path legacySettings)throws Exception{
+        Class<?> config=Class.forName("651451239",true,loader);
+        Object global=config.getField("instanceof").get(null);
+        if(szserver.util.GameResources.isFile(configs.resolve("assets/stalker/artefacts.json"))){
+            config.getMethod("this").invoke(global);
+            return;
         }
-        Class<?> resource=Class.forName("1422486348",true,loader),factory=Class.forName("702433834",true,loader);
-        Object[] registry=(Object[])Class.forName("1366800141",true,loader).getField("import").get(null);
-        for(var entry:definitions.entrySet()){
-            int id=entry.getKey();Object previous=registry[id];registry[id]=null;
-            try{
-                Object descriptor=resource.getConstructor(String.class,json,int.class,String.class,Integer.class,String.class).newInstance("server_artifact_"+id,nativeJson(entry.getValue()),0,null,null,null);
-                artifactFactories.put(id,factory.getConstructor(resource).newInstance(descriptor));
-            }catch(Exception | LinkageError error){registry[id]=previous;throw error;}
+
+        // Existing standalone servers can still supply the old extracted settings file.
+        Class<?> json=Class.forName("com.google.gson.JsonObject",true,loader);
+        Object parsed=nativeJson(szserver.util.GameResources.readString(legacySettings));
+        for(String reader:List.of("long","try","short","for","const"))
+            config.getMethod(reader,json).invoke(global,parsed);
+        Map<String,String> floatKeys=Map.of("implements","potential_level_bonus",
+                "class","max_durability_decrease_on_fail","void","start_quality");
+        for(var field:floatKeys.entrySet()){
+            Object value=json.getMethod("get",String.class).invoke(parsed,field.getValue());
+            config.getField(field.getKey()).setFloat(global,(Float)value.getClass().getMethod("getAsFloat").invoke(value));
         }
     }
     private Map<String,Float> bank(Object stats)throws Exception{
@@ -228,22 +225,10 @@ public final class ClientStateAdapter implements AutoCloseable {
             result.put(key,value);
         }return Map.copyOf(result);
     }
-    public Map<String,Float> artifactStats(byte[] raw)throws Exception{
-        Class<?> stackType=Class.forName("211097523",true,loader);Object stack=stackType.getConstructor(DataInput.class).newInstance(new BoundedNativeInput(raw));
-        Method id=Arrays.stream(stackType.getMethods()).filter(m->m.getName().equals("continue")&&m.getParameterCount()==0&&m.getReturnType()==int.class).findFirst().orElseThrow();
-        Object factory=artifactFactories.get((Integer)id.invoke(stack));if(factory==null)throw new IOException("artifact_factory_not_warmed");
-        // Server has no current client player; regional eligibility is evaluated
-        // separately, so this invokes the native context-free calculation.
-        return bank(factory.getClass().getMethod("strictfp",stackType,boolean.class,boolean.class).invoke(factory,stack,false,false));
-    }
+    public Map<String,Float> artifactStats(byte[] raw)throws Exception{return itemSlots.artifact(raw);}
     public Map<String,Float> numericStats(String definition)throws Exception{
         Class<?> stats=Class.forName("964863275",true,loader),json=Class.forName("com.google.gson.JsonObject",true,loader);
         return bank(stats.getMethod("long",json).invoke(null,nativeJson(definition)));
-    }
-    public Set<String> containerExemptStats()throws Exception{
-        Class<?> type=Class.forName("1049584909",true,loader),effect=Class.forName("1924679062",true,loader);
-        Object configuration=type.getField("class").get(null);Set<String> keys=new HashSet<>();
-        for(Object value:(Set<?>)type.getMethod("continue").invoke(configuration))keys.add((String)effect.getField("for").get(value));return Set.copyOf(keys);
     }
     public Map<String,Integer> statOrdinals()throws Exception{
         Class<?> type=Class.forName("1924679062",true,loader);Map<String,Integer> result=new TreeMap<>();
@@ -496,6 +481,9 @@ public final class ClientStateAdapter implements AutoCloseable {
         return read.invoke(null,new DataInputStream(new ByteArrayInputStream(new byte[]{(byte)code})));
     }
     public Attachment nativeSlot(String kind,byte[] parent,byte[] attached,int slot,boolean bolt)throws Exception{var edit=itemSlots.edit(parent,attached,slot,bolt);Stack changed=readStack(edit.stack());return new Attachment(changed.state(),edit.previous(),false);}
+    byte[] artifactEquipmentDefault(int id,String kind)throws Exception{
+        return encode(codec(kind),itemSlots.defaultState(id));
+    }
     public GameItems.EquipmentStats containerStats(byte[] raw)throws Exception{return itemSlots.container(raw);}
     public byte[] builtinModule(String kind,byte[] raw)throws Exception{Object state=decode(codec(kind),raw);state.getClass().getField("instanceof").setBoolean(state,true);return encode(codec(kind),state);}
     public Attachment attachment(String kind,byte[] raw,int slot,byte[] attached)throws Exception{

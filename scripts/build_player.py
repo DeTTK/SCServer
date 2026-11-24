@@ -99,7 +99,7 @@ def build(output):
     jar(runtime/'bootstrap.jar',bootstrap)
     verify=tools.compile_java('player-bootstrap-verify',[ROOT/'client/bootstrap-tools/tests/BootstrapAbiTest.java'],[runtime/'bootstrap.jar',*libraries])
     subprocess.run([tools.tool('java'),'-cp',os.pathsep.join(map(str,[verify,runtime/'bootstrap.jar',*libraries])),'BootstrapAbiTest'],check=True)
-    item_checks=('NativeBoltFactoryChecks','NativeMedicineResourceChecks')
+    item_checks=('NativeBoltFactoryChecks','NativeMedicineResourceChecks','NativeArtifactResourceChecks')
     item_tests=tools.compile_java('player-item-verify',
         [ROOT/f'server/src/test/java/szserver/client/{name}.java' for name in (*item_checks,'NativeCosmeticTests')],[server_classes,*server_deps])
     item_test_cp=os.pathsep.join(map(str,[item_tests,server_classes,*server_deps]))

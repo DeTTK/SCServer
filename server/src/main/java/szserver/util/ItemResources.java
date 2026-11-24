@@ -7,7 +7,8 @@ import java.util.*;
 
 /** Resource definitions shared by inventory and independent native factory hosts. */
 public final class ItemResources {
-    private static final Set<String> DYNAMIC_FAMILIES = Set.of("medicine", "medicine_animated", "bolt", "bolt_gem");
+    private static final Set<String> REQUIRED_FAMILIES = Set.of("medicine", "medicine_animated", "bolt", "bolt_gem");
+    private static final Set<String> EQUIPMENT_FAMILIES = Set.of("artefakt", "ravent/multiset_artefact", "backpack");
     private static final Map<Object, JsonObject> INDEXES = new WeakHashMap<>();
 
     private ItemResources() {}
@@ -17,7 +18,13 @@ public final class ItemResources {
     }
 
     public static boolean hasDynamicRegistration(JsonObject row) {
-        return row.has("type") && DYNAMIC_FAMILIES.contains(row.get("type").getAsString());
+        if(!row.has("type"))return false;
+        String type=row.get("type").getAsString();
+        return REQUIRED_FAMILIES.contains(type)||EQUIPMENT_FAMILIES.contains(type);
+    }
+
+    public static boolean requiresArchiveDefinition(JsonObject row){
+        return row.has("type")&&REQUIRED_FAMILIES.contains(row.get("type").getAsString());
     }
 
     /** The native loader inherits top-level fields, then removes explicit <default> values. */
@@ -101,7 +108,7 @@ public final class ItemResources {
                 }
             }
         }
-        if (!types.containsAll(DYNAMIC_FAMILIES)) throw new IOException("item_resource_family_missing:"+types);
+        if (!types.containsAll(REQUIRED_FAMILIES)) throw new IOException("item_resource_family_missing:"+types);
         for (var entry : result.entrySet()) {
             Set<Integer> seen = new HashSet<>();
             JsonObject row = entry.getValue().getAsJsonObject();
