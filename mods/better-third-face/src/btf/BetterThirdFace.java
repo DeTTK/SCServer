@@ -12,7 +12,7 @@ public final class BetterThirdFace implements ClientMod {
     public long cameraFrames,crosshairFrames;
     public double[] lastEye,lastCamera,lastShotOrigin,lastTarget;
     public double lastCrosshairX,lastCrosshairY,lastCollision=1;
-    public float lastFov; public boolean lastHit;
+    public boolean lastHit;
     public double[] lastAimPoint,lastShotEnd;
     public boolean lastAimBlocked;
     public long correctedShots;
@@ -20,7 +20,7 @@ public final class BetterThirdFace implements ClientMod {
         context=c;
         Path path=c.configDirectory().resolve("camera.properties");
         if(!Files.exists(path))Files.writeString(path,"""
-            # BetterThirdFace: distances in metres, vertical FOV in degrees.
+            # BetterThirdFace: distances in metres.
             startInThirdPerson=false
             hipDistance=2.65
             aimDistance=1.20
@@ -28,8 +28,6 @@ public final class BetterThirdFace implements ClientMod {
             aimShoulder=0.85
             hipHeight=0.18
             aimHeight=0.10
-            hipFov=78
-            aimFov=60
             aimSpeed=14
             shoulderSpeed=12
             # GLFW key code: X=88. Changes require a client restart.
@@ -80,7 +78,6 @@ public final class BetterThirdFace implements ClientMod {
         if(!active)return null;
         return switch(hook){
             case "camera.third-person.v1" -> args[0]==player&&"THIRD_PERSON_BACK".equals(args[4].toString())?position(args):null;
-            case "camera.fov.v1" -> args[0]==camera?(lastFov=(float)mix(cfg("hipFov",78,40,110),cfg("aimFov",60,30,100),ads)):null;
             case "hud.crosshair.v1" -> reticle(args);
             case "weapon.aim.v1" -> aimShot(args);
             case "audio.local-player.v1" -> args[0]==player||args[0]==camera?Boolean.TRUE:null;
