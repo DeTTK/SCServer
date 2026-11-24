@@ -46,10 +46,33 @@ public final class Bridge {
     }
     public static void frame(){long now=System.nanoTime(),previous=lastFrameNanos;lastFrameNanos=now;frames++;long gap=previous==0?0:now-previous;recentFrames.add(now,gap);if(previous!=0){maxFrameNanos=Math.max(maxFrameNanos,gap);if(gap>100_000_000L){slowFrames++;FramePause event=new FramePause();event.milliseconds=gap/1e6;event.commit();}}}
     @Name("bscp.FramePause") @Label("BSCP long frame") static class FramePause extends Event {@Label("Duration ms") double milliseconds;}
+    static InputStream openConfiguration(String argument, String temporaryDirectory) throws IOException {
+        try {
+            return Files.newInputStream(Path.of(argument));
+        } catch (NoSuchFileException | InvalidPathException original) {
+            // Windows JPLIS can decode the agent argument differently from JVM
+            // properties. The launcher puts both temp and agent.properties in
+            // the same per-process session directory.
+            if (temporaryDirectory == null) throw original;
+            Path temp = Path.of(temporaryDirectory).normalize();
+            Path session = temp.getParent();
+            if (!temp.isAbsolute() || session == null || session.getFileName() == null
+                    || !temp.getFileName().toString().equals("temp")
+                    || !argument.replace('\\', '/').endsWith("/" + session.getFileName() + "/agent.properties")) {
+                throw original;
+            }
+            try {
+                return Files.newInputStream(session.resolve("agent.properties"));
+            } catch (NoSuchFileException missing) {
+                original.addSuppressed(missing);
+                throw original;
+            }
+        }
+    }
     public static void premain(String argument, Instrumentation instrumentation) throws Exception {
         try {
             if(argument==null)throw new IllegalArgumentException("agent configuration is required");
-            try(var input=Files.newInputStream(Path.of(argument))){config.load(input);}
+            try(var input=openConfiguration(argument,System.getProperty("java.io.tmpdir"))){config.load(input);}
             output=Path.of(config.getProperty("output")).toAbsolutePath();Files.createDirectories(output);token=config.getProperty("token");kind=config.getProperty("kind","client");
             System.setOut(new PrintStream(new ConsoleLog(System.out,"stdout"),true,java.nio.charset.StandardCharsets.UTF_8));System.setErr(new PrintStream(new ConsoleLog(System.err,"stderr"),true,java.nio.charset.StandardCharsets.UTF_8));
             if(token==null||token.length()<32)throw new IllegalArgumentException("agent token missing");

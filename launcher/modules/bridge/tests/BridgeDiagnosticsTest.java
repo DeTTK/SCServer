@@ -31,6 +31,19 @@ public final class BridgeDiagnosticsTest {
         output.write(text,0,text.length);
         if(!Arrays.equals(text,original.toByteArray())||original.bulk!=1||original.single!=0)throw new AssertionError("console bulk output was altered or split into single-byte writes");
         if(Files.readString(Bridge.output.resolve("bridge.jsonl")).contains("private-value"))throw new AssertionError("secret leaked into diagnostic history");
+        var session=Bridge.output.toAbsolutePath().resolve("Профиль игрока").resolve("test-session");
+        Path temp=Files.createDirectories(session.resolve("temp"));
+        Path properties=Files.writeString(session.resolve("agent.properties"),"kind=client\n");
+        for(String argument:new String[]{properties.toString(),
+                Bridge.output.toAbsolutePath().resolve("Ãåéìåð").resolve("test-session/agent.properties").toString()}){
+            try(var input=Bridge.openConfiguration(argument,temp.toString())){
+                if(!new String(input.readAllBytes(),StandardCharsets.UTF_8).equals("kind=client\n"))
+                    throw new AssertionError("wrong bridge configuration");
+            }
+        }
+        try(var ignored=Bridge.openConfiguration(session.resolveSibling("other-session").resolve("agent.properties").toString(),temp.toString())){
+            throw new AssertionError("fallback read configuration from another session");
+        }catch(NoSuchFileException expected){}
         System.out.println("PASS short world pause, bounded console bulk logging, Unicode, secret redaction and CPU counters");
     }
 }
