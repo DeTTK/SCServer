@@ -22,5 +22,13 @@
     "side": "client",
     "required": false,
     "source": "mods/cinematic-camera"
+  },
+  {
+    "id": "fpv-drones",
+    "name": "FPV-дроны",
+    "description": "Установка FPV-дрона и подключение через САК-2. Удерживайте X, чтобы выбрать устройство. R — включить или выключить моторы.",
+    "side": "client",
+    "required": false,
+    "source": "mods/fpv-drones"
   }
 ]

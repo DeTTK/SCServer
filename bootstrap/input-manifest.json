@@ -3747,6 +3747,11 @@
       "size": 1521664,
       "sha256": "fb99c94e3d51231e32923c69123dbbae4385c199411ce697318526aa8aadf032",
       "kind": "vendor-native"
+    },
+    "bootstrap/inputs/client-assets/customitems/textures/items/fpv_drone.ol": {
+      "size": 46076,
+      "sha256": "626b256f9090ee48bdf45500fc29da4ea0dbf4a0338c3697c199ed99bcc4e73e",
+      "kind": "client-mod-asset"
     }
   },
   "objects": {
@@ -8845,6 +8850,13 @@
       "sha256": "e74089b9987868cddbc5521e11e20a562045428522a283870665b82ca4e003f8",
       "parts": [
         "bootstrap/inputs/runtime/natives/StoveC.dll"
+      ]
+    },
+    "client-assets/customitems/textures/items/fpv_drone.ol": {
+      "size": 46076,
+      "sha256": "626b256f9090ee48bdf45500fc29da4ea0dbf4a0338c3697c199ed99bcc4e73e",
+      "parts": [
+        "bootstrap/inputs/client-assets/customitems/textures/items/fpv_drone.ol"
       ]
     }
   }

@@ -93,6 +93,9 @@ def build(output):
         subprocess.run([tools.tool('java'),'-cp',os.pathsep.join(map(str,[generators,asm])),generator,str(boot)],check=True)
     bootstrap = entries(boot)
     bootstrap['szcustom/loading.gif'] = (ROOT/'client/bootstrap/resources/szcustom/loading.gif').read_bytes()
+    for asset in sorted((inputs/'client-assets').rglob('*')):
+        if asset.is_file():
+            bootstrap['assets/'+asset.relative_to(inputs/'client-assets').as_posix()] = asset.read_bytes()
     jar(runtime/'bootstrap.jar',bootstrap)
     verify=tools.compile_java('player-bootstrap-verify',[ROOT/'client/bootstrap-tools/tests/BootstrapAbiTest.java'],[runtime/'bootstrap.jar',*libraries])
     subprocess.run([tools.tool('java'),'-cp',os.pathsep.join(map(str,[verify,runtime/'bootstrap.jar',*libraries])),'BootstrapAbiTest'],check=True)

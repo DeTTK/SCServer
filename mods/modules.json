@@ -4,7 +4,7 @@
     "assetsIncluded": false
   },
   "fpv-drones": {
-    "status": "source-only; not in independent CI",
+    "status": "source-built optional signed catalogue",
     "assetsIncluded": false
   },
   "network-replay": {
