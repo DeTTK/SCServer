@@ -23,7 +23,7 @@ final class NativeActorComponents {
         ActorDispatcherRelease.verify(runtime);ActorLifeRelease.verify(runtime);this.loader=loader;this.unsafe=unsafe;this.allocate=allocate;
         entity=type("1217489680");player=type("200241649");living=type("820497227");contextType=type("358035993");flagsType=type("769798186");boxType=type("242639986");
         actorType=define.apply("szserver.bridge.ActorLivingProfile",NativeActorBridge.livingActor());life=new NativeActorLife(loader);
-        healthRules=szserver.net.HealthRules.read(com.google.gson.JsonParser.parseString(RuntimeFiles.readString(definitions.resolveSibling("artifact-settings.json"))).getAsJsonObject());
+        healthRules=szserver.net.HealthRules.read(com.google.gson.JsonParser.parseString(szserver.util.ItemResources.gameplaySettings(definitions.resolveSibling("artifact-settings.json"))).getAsJsonObject());
         position=entity.getMethod("throw",double.class,double.class,double.class);box=boxType.getMethod("synchronized",double.class,double.class,double.class,double.class,double.class,double.class);
         type("600030218").getField("volatile").set(null,type("1974661934").getField("RU").get(null));
         Class<?> metadata=type("1993742576");if(metadata.getField("it").get(null)==null)metadata.getMethod("interface").invoke(null);

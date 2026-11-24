@@ -3,7 +3,10 @@ import szserver.client.GameItems.*;
 import java.util.*;
 public final class CharacterEffectsTests {
     private static Medicine medicine(int id,String group,double duration,double cooldown,boolean active){
-        return new Medicine(id,group,0,false,0,duration,cooldown,0,Map.of("heal",9.5f),new MedicineRules(0,0,false,0,0,0,0,0,false,0,MedicineStages.NONE,active));
+        return medicine(id,group,duration,cooldown,active,0);
+    }
+    private static Medicine medicine(int id,String group,double duration,double cooldown,boolean active,int priority){
+        return new Medicine(id,group,priority,false,0,duration,cooldown,0,Map.of("heal",9.5f),new MedicineRules(0,0,false,0,0,0,0,0,false,0,MedicineStages.NONE,active));
     }
     public static void main(String[] args)throws Exception{
         int checks=0;Medicine ungrouped=medicine(100,null,60,60,false),other=medicine(101,null,30,60,false),twin=medicine(105,null,60,60,false);
@@ -44,9 +47,26 @@ public final class CharacterEffectsTests {
         Medicine staged=new Medicine(104,"staged",0,false,0,60,0,0,Map.of("heal",9.5f),new MedicineRules(0,0,false,0,0,0,0,0,false,0,new MedicineStages(0,1_000,0,Map.of("heal",9.5f),null,false),false));Map<Integer,Medicine> stagedCatalog=Map.of(104,staged);
         CharacterEffects stages=new CharacterEffects();stages=stages.use(staged,stagedCatalog,1_000).after();
         stages=stages.use(staged.activeUse(),stagedCatalog,2_000).after();
-        if(stages.active(2_500).size()!=2)throw new AssertionError("active stage must not merge with base");checks++;
+        if(stages.active(2_500).size()!=1)throw new AssertionError("active stage and base stacked within one category");checks++;
         var transition=stages.transition(stages.active(2_500).stream().filter(e->e.definition(stagedCatalog).rules().active()).findFirst().orElseThrow().id(),staged,stagedCatalog,2_600);stages=transition.after();
         if(stages.active(3_000).size()!=1||stages.active(3_000).iterator().next().definition(stagedCatalog).rules().active())throw new AssertionError("active stage transition");checks++;
+        Medicine strong=medicine(110,"heal",60,0,false,3), weak=medicine(111,"heal",60,0,false,-1);
+        Medicine independent=medicine(112,"booster",60,0,false,0);
+        var priorityCatalog=Map.of(110,strong,111,weak,112,independent);
+        var priority=new CharacterEffects().use(weak,priorityCatalog,1_000).after();
+        priority=priority.use(strong,priorityCatalog,2_000).after().use(independent,priorityCatalog,3_000).after();
+        if(priority.active(4_000).size()!=2||priority.active(4_000).stream().anyMatch(e->e.item()==111))throw new AssertionError("stronger replaces only its group");checks++;
+        try{priority.use(weak,priorityCatalog,4_000);throw new AssertionError("weaker medicine replaced an active effect");}
+        catch(IllegalStateException expected){if(!"medicine_effect_priority".equals(expected.getMessage()))throw expected;}checks++;
+        try{priority.transition(0,weak,priorityCatalog,4_000);throw new AssertionError("weak stage displaced stronger effect");}
+        catch(IllegalStateException expected){if(!"medicine_effect_priority".equals(expected.getMessage()))throw expected;}checks++;
+        var oldSave=new CharacterEffects().use(ungrouped,catalog,1_000).after().json();
+        var parsed=CharacterEffects.read(oldSave,catalog,2_000).use(twin,catalog,2_000).after();
+        if(parsed.active(3_000).size()!=1)throw new AssertionError("same effect stacked after save");checks++;
+        var oldDefinition=oldSave.getAsJsonArray("effects").get(0).getAsJsonObject().getAsJsonObject("definition");
+        oldDefinition.remove("duration");oldDefinition.remove("stageStats");
+        parsed=CharacterEffects.read(oldSave,catalog,2_000).use(twin,catalog,2_000).after();
+        if(parsed.active(3_000).size()!=1)throw new AssertionError("same effect stacked after legacy save");checks++;
         System.out.println("PASS "+checks+" ungrouped consumable refresh and grouped effect replacement checks");
     }
 }

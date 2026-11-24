@@ -15,6 +15,7 @@ public final class GameResources {
         ROOTS.put(root,new Mount(root,new XeonArchive(archive),overrides==null?null:overrides.toAbsolutePath().normalize()));
     }
     private static synchronized Mount find(Path path){Path full=path.toAbsolutePath().normalize();return ROOTS.values().stream().filter(m->full.startsWith(m.root)).max(Comparator.comparingInt(m->m.root.getNameCount())).orElse(null);}
+    static Object mountKey(Path path){return find(path);}
     public static boolean mounted(Path path){return find(path)!=null;}
     private static String key(Mount m,Path path)throws IOException{return XeonArchive.safe(m.root.relativize(path.toAbsolutePath().normalize()).toString().replace('\\','/'));}
     private static Path override(Mount m,String name)throws IOException {

@@ -287,7 +287,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         this.playerRules=Objects.requireNonNull(playerRules);this.fpvUseSettings=Objects.requireNonNull(fpvSettings);
         this.commands=Objects.requireNonNull(commands);this.worldEditors=Set.copyOf(worldEditors);
         sceneAccess=new szserver.commands.SceneAccess(world,commands);rollback.push(sceneAccess);
-        healthRules=HealthRules.read(com.google.gson.JsonParser.parseString(Files.readString(root.resolve("fixtures/artifact-settings.json"))).getAsJsonObject());
+        healthRules=HealthRules.read(com.google.gson.JsonParser.parseString(szserver.util.ItemResources.gameplaySettings(root.resolve("fixtures/artifact-settings.json"))).getAsJsonObject());
         this.world=Objects.requireNonNull(world);this.regions=terrain instanceof szserver.world.RegionTerrain r?r:null;this.spawn=spawn.clone();
         var anomalyResources=world.actorMotion() instanceof NativeActorMotion nativeMotion&&nativeMotion.anomalyResources()!=null?nativeMotion.anomalyResources():fpvSettings.boxes();anomalies=new AnomalySimulation(new Random(),szserver.world.NativeAnomalyDefaults.damage(anomalyResources));
         fpvMap=new szserver.world.MapObstructionAccess(world,terrain,fpvSettings.boxes(),fpvSettings.baseBytes(),fpvSettings.editedBytes(),regions==null?szserver.world.SceneRegistry.load(registry.resolveSibling("active-stock-gameobjects.json")).names():regions.collisionDefinitions());rollback.push(fpvMap);zombies=new ZombieHorde(world,commands,fpvMap);fpvReceipts=new FpvReceipts(data);rollback.push(fpvReceipts);

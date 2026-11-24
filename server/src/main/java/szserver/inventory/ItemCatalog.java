@@ -3,6 +3,8 @@ package szserver.inventory;
 import com.google.gson.*;
 import java.nio.file.*;
 import java.util.*;
+import szserver.util.GameResources;
+import szserver.util.ItemResources;
 
 /** Resolved current resource definitions. Geometry follows the native ceil rule. */
 public final class ItemCatalog {
@@ -16,17 +18,19 @@ public final class ItemCatalog {
     private ItemCatalog(Path file,boolean legacyGeometry) throws Exception {
         this.legacyGeometry=legacyGeometry;
         JsonObject data=CatalogDefinitions.read(file);Map<Integer,NativeItemMetadata.Row> nativeRows=legacyGeometry?Map.of():NativeItemMetadata.read(file);
-        boolean archiveBolts=szserver.util.GameResources.mounted(CatalogDefinitions.boltConfigRoot(file));
+        boolean mounted=GameResources.mounted(ItemResources.root(file));
         Map<String,JsonObject> objects=new HashMap<>();for(var entry:data.entrySet()){JsonObject row=entry.getValue().getAsJsonObject();if(row.has("object_id"))objects.put(row.get("object_id").getAsString(),row);}
         for (var row:data.entrySet()) {
             JsonObject p=row.getValue().getAsJsonObject();int id=Integer.parseInt(row.getKey());
+            boolean live=mounted&&ItemResources.manages(p);
+            JsonObject geometry=live?ItemResources.inheritedGeometry(p,data):p;
             String fallback=!legacyGeometry&&text(p,"type","").equals("armor")&&(!p.has("armor_slot")||p.get("armor_slot").getAsInt()==1)?"2x3":"1x1";
             // Native armor factory 1598274006 supplies 2x3 when slot_size is absent.
-            String[] size=(legacyGeometry?text(p,"slot_size",fallback):inheritedSize(p,objects,fallback)).toLowerCase(Locale.ROOT).split("x");
+            String[] size=(legacyGeometry?text(geometry,"slot_size",fallback):inheritedSize(geometry,objects,fallback)).toLowerCase(Locale.ROOT).split("x");
             if(size.length!=2)throw new IllegalArgumentException("invalid_item_size:"+id);
             int width=dimension(size[0]),height=dimension(size[1]);
-            int limit;if(nativeRows.isEmpty()||(archiveBolts&&CatalogDefinitions.isBolt(p)))limit=NativeStackRules.limit(id,p,objects,legacyGeometry);else{var nativeRow=nativeRows.get(id);if(nativeRow==null)throw new IllegalArgumentException("native_item_metadata_missing:"+id);width=nativeRow.width();height=nativeRow.height();limit=nativeRow.limit();}
-            double weight=p.has("weight")?p.get("weight").getAsDouble():0;
+            int limit;if(nativeRows.isEmpty()||live)limit=NativeStackRules.limit(id,geometry,objects,legacyGeometry);else{var nativeRow=nativeRows.get(id);if(nativeRow==null)throw new IllegalArgumentException("native_item_metadata_missing:"+id);width=nativeRow.width();height=nativeRow.height();limit=nativeRow.limit();}
+            double weight=geometry.has("weight")?geometry.get("weight").getAsDouble():0;
             // Native stack counts are signed 32-bit; 100000 is a storage rule, not a resource cap.
             if(limit<1||!Double.isFinite(weight)||weight<0)throw new IllegalArgumentException("invalid_item_definition:"+id);
             items.put(id,new Definition(id,width,height,limit,weight,text(p,"type",""),text(p,"weapon_type",""),p));

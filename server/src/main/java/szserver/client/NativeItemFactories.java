@@ -26,7 +26,7 @@ class NativeItemFactories {
     private <T> T clientNames(java.util.concurrent.Callable<T> action)throws Exception{Class<?> env=type("220710426");Field f=env.getField("if");Object before=f.get(null);f.set(null,type("1553900928").getField("CLIENT").get(null));try{return action.call();}finally{f.set(null,before);}}
     private Object prepared(int id,Class<?> factoryType)throws Exception{
         JsonObject row=JsonParser.parseString(definitions.get(id)).getAsJsonObject();
-        if (szserver.inventory.CatalogDefinitions.isBolt(row)) {
+        if (szserver.util.ItemResources.manages(row)) {
             // The native manager has resolved extends_item and resource defaults into this descriptor.
             Object resolved = resource.getField("strictfp").get(descriptors.get(id));
             row = JsonParser.parseString(resolved.toString()).getAsJsonObject();

@@ -99,10 +99,13 @@ def build(output):
     jar(runtime/'bootstrap.jar',bootstrap)
     verify=tools.compile_java('player-bootstrap-verify',[ROOT/'client/bootstrap-tools/tests/BootstrapAbiTest.java'],[runtime/'bootstrap.jar',*libraries])
     subprocess.run([tools.tool('java'),'-cp',os.pathsep.join(map(str,[verify,runtime/'bootstrap.jar',*libraries])),'BootstrapAbiTest'],check=True)
-    bolt_checks=tools.compile_java('player-bolt-verify',
-        [ROOT/'server/src/test/java/szserver/client/NativeBoltFactoryChecks.java'],[server_classes,*server_deps])
-    subprocess.run([tools.tool('java'),'-Xmx512m','-cp',os.pathsep.join(map(str,[bolt_checks,server_classes,*server_deps])),
-                    'szserver.client.NativeBoltFactoryChecks',str(player/'Server'),str(runtime)],check=True)
+    item_checks=('NativeBoltFactoryChecks','NativeMedicineResourceChecks')
+    item_tests=tools.compile_java('player-item-verify',
+        [ROOT/f'server/src/test/java/szserver/client/{name}.java' for name in item_checks],[server_classes,*server_deps])
+    item_test_cp=os.pathsep.join(map(str,[item_tests,server_classes,*server_deps]))
+    for name in item_checks:
+        subprocess.run([tools.tool('java'),'-Xmx512m','-cp',item_test_cp,
+                        'szserver.client.'+name,str(player/'Server'),str(runtime)],check=True)
     imgui={}
     for dependency in (runtime/'dependencies').glob('imgui-java-*-1.82.2.jar'):
         with zipfile.ZipFile(dependency) as z:
