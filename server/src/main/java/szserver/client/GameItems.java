@@ -1,6 +1,8 @@
 package szserver.client;
 
 import com.google.gson.*;
+import szserver.inventory.CatalogDefinitions;
+import szserver.util.GameResources;
 import szserver.util.Json;
 import java.nio.file.*;
 import java.util.*;
@@ -47,6 +49,7 @@ public final class GameItems implements AutoCloseable {
     }
     public Map<String,String> codecFailures(){return Map.copyOf(codecFailures);}
     private JsonObject definitions;
+    private boolean boltResourcesMounted;
     private Set<String> containerExempt=Set.of();
     public record MedicineStages(long startMillis,long activeMillis,long endMillis,Map<String,Float> stats,String key,boolean stopOnFullHealth){
         public static final MedicineStages NONE=new MedicineStages(0,0,0,Map.of(),null,false);
@@ -97,8 +100,10 @@ public final class GameItems implements AutoCloseable {
         NativeDeveloperItemsRelease.verifyDefinitions(fixtures);
         NativeStorageLayoutRelease.verifyFile(fixtures.resolve("native-storage-layout.json"));
         JsonObject catalog=szserver.inventory.CatalogDefinitions.read(definitionsPath);Map<Integer,String> artifacts=new TreeMap<>(),armors=new TreeMap<>();Map<String,Integer> names=new TreeMap<>();
+        boltResourcesMounted=GameResources.mounted(CatalogDefinitions.boltConfigRoot(definitionsPath));
+        if(boltResourcesMounted)registerBoltResources(catalog,names);
         JsonObject nativeNames=JsonParser.parseString(RuntimeFiles.readString(definitionsPath.resolveSibling("native-item-names.json"))).getAsJsonObject();
-        for(var entry:nativeNames.entrySet()){int id=entry.getValue().getAsInt();JsonObject definition=catalog.getAsJsonObject(Integer.toString(id));if(definition==null||!definition.has("unlocalized_name")||!definition.get("unlocalized_name").getAsString().equals(entry.getKey()))throw new IllegalArgumentException("native_item_name_catalog_mismatch:"+entry.getKey());names.put(entry.getKey(),id);}
+        for(var entry:nativeNames.entrySet()){int id=entry.getValue().getAsInt();if(boltResourcesMounted&&boltFactory(registry.getAsJsonObject(Integer.toString(id))))continue;JsonObject definition=catalog.getAsJsonObject(Integer.toString(id));if(definition==null||!definition.has("unlocalized_name")||!definition.get("unlocalized_name").getAsString().equals(entry.getKey()))throw new IllegalArgumentException("native_item_name_catalog_mismatch:"+entry.getKey());Integer previous=names.putIfAbsent(entry.getKey(),id);if(previous!=null&&previous!=id)throw new IllegalArgumentException("native_item_name_catalog_conflict:"+entry.getKey());}
         for(var entry:catalog.entrySet()){
             JsonObject item=entry.getValue().getAsJsonObject();String type=item.get("type").getAsString();
             int id=Integer.parseInt(entry.getKey());
@@ -119,6 +124,42 @@ public final class GameItems implements AutoCloseable {
 
         }
     }
+    private static boolean boltFactory(JsonObject row) {
+        if(row==null||!row.has("definition"))return false;
+        String type=row.get("definition").getAsString();
+        return type.equals(NativeBoltFactory.BOLT_CLASS)||type.equals(NativeBoltFactory.GEM_CLASS);
+    }
+
+    private void registerBoltResources(JsonObject catalog,Map<String,Integer> names)throws Exception {
+        Map<String,JsonObject> stockStates=new HashMap<>();
+        for(var entry:registry.entrySet()){
+            var row=entry.getValue().getAsJsonObject();
+            if(boltFactory(row)&&row.has("default")&&row.has("state"))
+                stockStates.putIfAbsent(row.get("definition").getAsString(),row);
+        }
+        for(var entry:catalog.entrySet()){
+            var definition=entry.getValue().getAsJsonObject();
+            if(!CatalogDefinitions.isBolt(definition))continue;
+            String key=entry.getKey();
+            int id=Integer.parseInt(key);
+            String type=definition.get("type").getAsString().equals("bolt")
+                    ?NativeBoltFactory.BOLT_CLASS:NativeBoltFactory.GEM_CLASS;
+            if(registry.has(key)){
+                var current=registry.getAsJsonObject(key);
+                if(!boltFactory(current)||!current.get("definition").getAsString().equals(type))
+                    throw new java.io.IOException("bolt_resource_state_conflict:"+id);
+            }else{
+                var state=stockStates.get(type);
+                if(state==null)throw new java.io.IOException("bolt_resource_state_schema_missing:"+type);
+                adapter.registerStateful(id,state.get("state").getAsString());
+                registry.add(key,state.deepCopy());
+            }
+            String name=definition.get("unlocalized_name").getAsString();
+            Integer previous=names.putIfAbsent(name,id);
+            if(previous!=null&&previous!=id)throw new java.io.IOException("bolt_resource_duplicate_name:"+name);
+        }
+    }
+
     private static float number(JsonObject item,String key,float fallback){float value=item.has(key)?item.get(key).getAsFloat():fallback;if(!Float.isFinite(value))throw new IllegalArgumentException("resource_number_nonfinite:"+key);return value;}
     private static void verifyDigest(Path file,String expected)throws Exception{String actual=HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(RuntimeFiles.read(file)));if(!actual.equals(expected))throw new java.io.IOException("native_gameplay_release_changed:"+file.getFileName());}
     public Map<String,Float> artifactStats(szserver.inventory.ItemStack artifact)throws Exception{
@@ -241,7 +282,10 @@ public final class GameItems implements AutoCloseable {
     public ModuleEdit socket(szserver.inventory.ItemStack parent,int slot,szserver.inventory.ItemStack artifact)throws Exception{
         if(parent.count()!=1||artifact!=null&&artifact.count()!=1)throw new IllegalArgumentException("artifact_socket_count");return nativeSlot(parent,artifact,slot,false);
     }
-    public Map<Integer,szserver.net.GrenadeUse.Rules> warmBolts()throws Exception{return adapter.warmBolts();}
+    public Map<Integer,szserver.net.GrenadeUse.Rules> warmBolts()throws Exception{
+        if(!boltResourcesMounted)throw new java.io.IOException("bolt_configs_xeon_not_mounted");
+        return adapter.warmBolts();
+    }
     public BoltProjectile boltProjectile(szserver.inventory.ItemStack item,double vx,double vz,float yaw,float pitch)throws Exception{
         byte[] stack=szserver.net.InventoryPackets.stack(item);
         return adapter.boltProjectile(Arrays.copyOfRange(stack,1,stack.length),vx,vz,yaw,pitch);

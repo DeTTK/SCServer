@@ -25,7 +25,13 @@ class NativeItemFactories {
     /** Resolve names with the game's parser, then restore the headless environment before any factory/event work. */
     private <T> T clientNames(java.util.concurrent.Callable<T> action)throws Exception{Class<?> env=type("220710426");Field f=env.getField("if");Object before=f.get(null);f.set(null,type("1553900928").getField("CLIENT").get(null));try{return action.call();}finally{f.set(null,before);}}
     private Object prepared(int id,Class<?> factoryType)throws Exception{
-        JsonObject row=JsonParser.parseString(definitions.get(id)).getAsJsonObject();for(String key:new ArrayList<>(row.keySet())){JsonElement v=row.get(key);if(v.isJsonPrimitive()&&v.getAsJsonPrimitive().isString()&&v.getAsString().equalsIgnoreCase("<default>"))row.remove(key);}
+        JsonObject row=JsonParser.parseString(definitions.get(id)).getAsJsonObject();
+        if (szserver.inventory.CatalogDefinitions.isBolt(row)) {
+            // The native manager has resolved extends_item and resource defaults into this descriptor.
+            Object resolved = resource.getField("strictfp").get(descriptors.get(id));
+            row = JsonParser.parseString(resolved.toString()).getAsJsonObject();
+        }
+        for(String key:new ArrayList<>(row.keySet())){JsonElement v=row.get(key);if(v.isJsonPrimitive()&&v.getAsJsonPrimitive().isString()&&v.getAsString().equalsIgnoreCase("<default>"))row.remove(key);}
         if(style.isAssignableFrom(factoryType)&&row.has("applicable_items")){
             JsonObject normalized=new JsonObject();for(var e:row.getAsJsonObject("applicable_items").entrySet()){
                 Collection<?> ids=(Collection<?>)clientNames(()->style.getMethod("default",String.class).invoke(null,e.getKey()));List<String> keys=new ArrayList<>();for(Object value:ids)keys.add(value.toString());normalized.add(String.join(",",keys),e.getValue());

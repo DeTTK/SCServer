@@ -9,6 +9,8 @@ import szserver.net.GrenadeUse;
 
 /** Executes the installed bolt factory against a detached player and exports its native projectile. */
 final class NativeBoltFactory {
+    static final String BOLT_CLASS = "942610364";
+    static final String GEM_CLASS = "725248314";
     private final NativeItemFactories host;
     private final Object player, motion, thrower, world;
     private final Set<Integer> boltIds;
@@ -21,7 +23,7 @@ final class NativeBoltFactory {
 
     NativeBoltFactory(NativeItemFactories host, BiFunction<String, byte[], Class<?>> define) throws Exception {
         this.host = host;
-        factoryType = host.type("942610364");
+        factoryType = host.type(BOLT_CLASS);
         var ids = new TreeSet<Integer>();
         for (var entry : host.classes.entrySet())
             if (factoryType.isAssignableFrom(host.type(entry.getValue())) && host.definitions.containsKey(entry.getKey()))
