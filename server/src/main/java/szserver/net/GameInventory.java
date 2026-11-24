@@ -83,6 +83,20 @@ public final class GameInventory implements AutoCloseable {
         try{factories.execute(()->{try{future.complete(items.actorEquipment(equipmentRoot,copy,held,encumbered));}catch(Throwable failure){future.completeExceptionally(failure);}});}catch(RejectedExecutionException failure){future.completeExceptionally(failure);}return future.copy();
     }
     public ItemCatalog catalog(){return catalog;}
+    public Map<Integer,GrenadeUse.Rules> warmBolts()throws Exception{return items.warmBolts();}
+    public void boltProjectile(ItemStack stack,double vx,double vz,float yaw,float pitch,
+                               Consumer<szserver.client.BoltProjectile> success,Consumer<String> failure){
+        try{
+            factories.execute(()->{
+                try{
+                    var projectile=items.boltProjectile(stack,vx,vz,yaw,pitch);
+                    completion(()->success.accept(projectile));
+                }catch(Exception|LinkageError error){
+                    completion(()->failure.accept(Objects.toString(error.getMessage(),"native_bolt_factory")));
+                }
+            });
+        }catch(RejectedExecutionException full){failure.accept("inventory_factory_queue_full");}
+    }
     public LootboxCatalog lootboxes(){return lootboxes;}
     public record LootResult(Inventory.Plan plan,UUID receipt,List<ItemStack> rewards){}
     public void openLootboxes(UUID id,int box,int count,Consumer<LootResult> success,Consumer<String> failure){

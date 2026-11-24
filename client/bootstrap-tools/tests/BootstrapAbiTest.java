@@ -1,7 +1,7 @@
 /** Resolve every generated dynamic packet without initializing the game. */
 public final class BootstrapAbiTest {
  public static void main(String[] args)throws Exception {
-  for(String name:new String[]{"LegacyAdapter","CommandRequest","CommandCatalog","FpvInput","FpvSnapshot","PlayerAnimation","MedicineUse","VehicleInput","VehicleSnapshot","VrWeapon","VrWeaponReply","FunnelImpact","FunnelImpactReady"})Class.forName("szmods.bridge."+name,false,BootstrapAbiTest.class.getClassLoader());
+  for(String name:new String[]{"LegacyAdapter","CommandRequest","CommandCatalog","FpvInput","FpvSnapshot","PlayerAnimation","MedicineUse","VehicleInput","VehicleSnapshot","VrWeapon","VrWeaponReply","FunnelImpact","FunnelImpactReady","BoltImpact","BoltImpactReady"})Class.forName("szmods.bridge."+name,false,BootstrapAbiTest.class.getClassLoader());
   Class.forName("exbo.stalcraft.engine.model.lktk.JNI",false,BootstrapAbiTest.class.getClassLoader());
   try (var input = CustomLoadingScreen.class.getResourceAsStream("/szcustom/loading.gif")) {
    if (input == null) throw new AssertionError("Missing startup GIF in bootstrap.jar");

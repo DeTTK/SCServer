@@ -38,7 +38,6 @@ public final class ItemCatalog {
     private static int dimension(String s){double n=Double.parseDouble(s);if(!Double.isFinite(n)||n<=0||n>256)throw new IllegalArgumentException("item_dimension");return (int)Math.ceil(n);}
     private static String text(JsonObject p,String k,String fallback){return p.has(k)?p.get(k).getAsString():fallback;}
     public Definition get(int id){Definition d=items.get(id);if(d==null)throw new IllegalArgumentException("unknown_item:"+id);return d;}
-    public List<Definition> bolts(){return items.values().stream().filter(d->d.type().equals("bolt")).toList();}
     public int size(){return items.size();}
     public boolean fits(ItemStack item,int container){return (item.equipmentMask()&(1<<container))!=0||fits(item.id(),container);}
     public boolean fits(int id,int container){Definition d=get(id);return switch(container){

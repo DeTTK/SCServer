@@ -241,6 +241,11 @@ public final class GameItems implements AutoCloseable {
     public ModuleEdit socket(szserver.inventory.ItemStack parent,int slot,szserver.inventory.ItemStack artifact)throws Exception{
         if(parent.count()!=1||artifact!=null&&artifact.count()!=1)throw new IllegalArgumentException("artifact_socket_count");return nativeSlot(parent,artifact,slot,false);
     }
+    public Map<Integer,szserver.net.GrenadeUse.Rules> warmBolts()throws Exception{return adapter.warmBolts();}
+    public BoltProjectile boltProjectile(szserver.inventory.ItemStack item,double vx,double vz,float yaw,float pitch)throws Exception{
+        byte[] stack=szserver.net.InventoryPackets.stack(item);
+        return adapter.boltProjectile(Arrays.copyOfRange(stack,1,stack.length),vx,vz,yaw,pitch);
+    }
     public ModuleEdit bolt(szserver.inventory.ItemStack parent,szserver.inventory.ItemStack source)throws Exception{if(parent.count()!=1)throw new IllegalArgumentException("bolt_target_count");return nativeSlot(parent,source==null?null:source.count(1),0,true);}
     private ModuleEdit nativeSlot(szserver.inventory.ItemStack parent,szserver.inventory.ItemStack source,int slot,boolean bolt)throws Exception{
         byte[] p=szserver.net.InventoryPackets.stack(parent),a=source==null?null:szserver.net.InventoryPackets.stack(source);var edit=adapter.nativeSlot(stateKind(parent),Arrays.copyOfRange(p,1,p.length),a==null?null:Arrays.copyOfRange(a,1,a.length),slot,bolt);return new ModuleEdit(parent.state(edit.state()),edit.previous()==null?null:readStack(edit.previous()));

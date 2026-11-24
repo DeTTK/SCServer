@@ -445,6 +445,14 @@ public final class ClientStateAdapter implements AutoCloseable {
     }
     public record Attachment(byte[] state,byte[] previous,boolean builtin) {}
     public String artifactResearchTag()throws Exception{return (String)Class.forName("1609149377",true,loader).getField("synchronized").get(null);}
+    private NativeBoltFactory bolts;
+    public Map<Integer,szserver.net.GrenadeUse.Rules> warmBolts()throws Exception{
+        bolts=new NativeBoltFactory(cosmetics,loader::define);
+        return bolts.rules();
+    }
+    public BoltProjectile boltProjectile(byte[] raw,double vx,double vz,float yaw,float pitch)throws Exception{
+        return bolts.launch(raw,vx,vz,yaw,pitch);
+    }
     private NativeQuickSlots quickSlots;private NativeCosmetics cosmetics;private NativeItemSlots itemSlots;private NativeItemSlotPackets itemSlotPackets;
     private NativeMedicines nativeMedicines;private NativeMedicineEffects medicineEffects;private NativeMedicinePackets medicinePackets;
     public Map<Integer,GameItems.Medicine> warmMedicines()throws Exception{nativeMedicines=new NativeMedicines(cosmetics,this::bank);medicineEffects=new NativeMedicineEffects(cosmetics,this::bank);medicinePackets=new NativeMedicinePackets(cosmetics);return nativeMedicines.profiles();}

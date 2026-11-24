@@ -29,6 +29,7 @@ public record FunnelImpact(UUID zone, float x, float y, float z) {
             if (connection != null) {
                 Object packet = Native.ready.newInstance();
                 Native.send.invoke(connection, Native.envelope.newInstance(packet));
+                Native.send.invoke(connection, Native.envelope.newInstance(Native.boltReady.newInstance()));
             }
             advertised = connection;
         } catch (ReflectiveOperationException e) {
@@ -51,7 +52,7 @@ public record FunnelImpact(UUID zone, float x, float y, float z) {
         }
     }
 
-    private static Method nativeMethod(Class<?> owner, String name, Class<?> returns, Class<?>... parameters)
+    static Method nativeMethod(Class<?> owner, String name, Class<?> returns, Class<?>... parameters)
             throws NoSuchMethodException {
         for (Method method : owner.getMethods()) {
             if (method.getName().equals(name) && method.getReturnType() == returns
@@ -62,7 +63,7 @@ public record FunnelImpact(UUID zone, float x, float y, float z) {
 
     private static final class Native {
         static final Method connection, send, registry, find, behaviour, particles, spawn, sound;
-        static final java.lang.reflect.Constructor<?> envelope, ready;
+        static final java.lang.reflect.Constructor<?> envelope, ready, boltReady;
         static final Class<?> funnel;
         static final Field world, impactEffect;
         static final String impactSound;
@@ -77,6 +78,7 @@ public record FunnelImpact(UUID zone, float x, float y, float z) {
                 send = net.getMethod("else", Class.forName("1884662238"));
                 envelope = Class.forName("385693344").getConstructor(Class.forName("499058674"));
                 ready = Class.forName("szmods.bridge.FunnelImpactReady").getConstructor();
+                boltReady = Class.forName("szmods.bridge.BoltImpactReady").getConstructor();
                 world = net.getField("const");
                 registry = scene.getMethod("try", worldBase);
                 find = scene.getMethod("throws", UUID.class);

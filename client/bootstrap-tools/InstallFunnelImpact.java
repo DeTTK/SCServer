@@ -7,8 +7,16 @@ import org.objectweb.asm.Opcodes;
 /** Wraps the impact decoder in a native dynamic packet with no registered ID. */
 public final class InstallFunnelImpact implements Opcodes {
     public static void main(String[] args) throws Exception {
-        String packet = "szmods/bridge/FunnelImpact";
-        String impact = "szmods/runtime/FunnelImpact";
+        Path root = Path.of(args[0]);
+        writePoint(root, "FunnelImpact");
+        writePoint(root, "BoltImpact");
+        writeCapability(root, "FunnelImpactReady");
+        writeCapability(root, "BoltImpactReady");
+    }
+
+    private static void writePoint(Path root, String name) throws Exception {
+        String packet = "szmods/bridge/" + name;
+        String impact = "szmods/runtime/" + name;
         String type = "L" + impact + ";";
         ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
         writer.visit(V17, ACC_PUBLIC | ACC_FINAL, packet, null, "499058674", null);
@@ -40,14 +48,13 @@ public final class InstallFunnelImpact implements Opcodes {
         receive.visitInsn(RETURN);
         finish(receive);
         writer.visitEnd();
-        Path path = Path.of(args[0]).resolve(packet + ".class");
+        Path path = root.resolve(packet + ".class");
         Files.createDirectories(path.getParent());
         Files.write(path, writer.toByteArray());
-        writeCapability(Path.of(args[0]));
     }
 
-    private static void writeCapability(Path root) throws Exception {
-        String packet = "szmods/bridge/FunnelImpactReady";
+    private static void writeCapability(Path root, String name) throws Exception {
+        String packet = "szmods/bridge/" + name;
         ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
         writer.visit(V17, ACC_PUBLIC | ACC_FINAL, packet, null, "499058674", null);
         MethodVisitor ctor = writer.visitMethod(ACC_PUBLIC, "<init>", "()V", null, null);

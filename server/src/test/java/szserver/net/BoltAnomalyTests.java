@@ -16,13 +16,14 @@ public final class BoltAnomalyTests {
         check(!held.valid(bolt,1,4,false)&&!held.valid(bolt,2,10,false),"slot and life changes cancel the throw");
         UUID character=UUID.randomUUID(),session=UUID.randomUUID();
         var xyz=new World.Vec(0,0,0);
+        var profile=new szserver.client.BoltProjectile(6,100,6,16,.98,.5,.6,false,xyz,new byte[]{1});
         try(var items=new WorldItems(ignored->{throw new AssertionError("no collision needed for lifecycle");},"test",()->7)){
             long now=System.currentTimeMillis();
-            check(items.throwBolt(character,session,bolt,xyz,xyz,42,now,5000),"server creates a temporary bolt");
+            check(items.throwBolt(character,session,bolt,xyz,xyz,42,now,profile),"server creates a temporary bolt");
             items.sync(Map.of());
             var thrown=items.all().iterator().next();
             check(thrown.throwingSession.equals(session)&&thrown.prediction==42,"temporary bolt preserves owner prediction");
-            check(items.throwBolt(character,session,bolt,xyz,xyz,43,now-1000,100),"expired bolt fixture is admitted");
+            check(items.throwBolt(character,session,bolt,xyz,xyz,43,now-6000,profile),"expired bolt fixture is admitted");
             items.sync(Map.of());
             check(items.all().size()==1&&items.removed().get(0).prediction==43,"expiry removes a bolt without a persisted item");
         }
