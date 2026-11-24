@@ -1,6 +1,7 @@
 package szserver.net;
 
 import szserver.client.GameItems;
+import szserver.client.ClientStateAdapter;
 import szserver.inventory.*;
 import szserver.util.Workers;
 import com.google.gson.JsonObject;
@@ -520,9 +521,20 @@ public final class GameInventory implements AutoCloseable {
     public void edit(UUID id,Inventory.Address address,byte[] raw,Consumer<Inventory.Plan> success,Consumer<String> failure){
         edit(id,address,raw,false,success,failure);
     }
+    public ClientStateAdapter.WeaponModuleRequest weaponModuleRequest(byte[] body)throws Exception{return items.weaponModuleRequest(body);}
+    public void weaponModule(UUID id,Inventory.Address target,Inventory.Address source,Consumer<Inventory.Plan> success,Consumer<String> failure){
+        editModule(id,target,source,items::weaponModule,success,failure);
+    }
     public void module(UUID id,Inventory.Address target,Inventory.Address source,int selection,int slot,Consumer<Inventory.Plan> success,Consumer<String> failure){
+        editModule(id,target,source,(weapon,attachment)->items.moduleBatch(weapon,slot,attachment,selection),success,failure);
+    }
+    @FunctionalInterface private interface ModuleEdit {
+        GameItems.ModuleBatch apply(ItemStack weapon,ItemStack attachment)throws Exception;
+    }
+    private void editModule(UUID id,Inventory.Address target,Inventory.Address source,ModuleEdit operation,
+            Consumer<Inventory.Plan> success,Consumer<String> failure){
         Character c=character(id);if(c.busy||c.failed||c.deathClear){denied++;failure.accept("inventory_busy");return;}Inventory before=c.inventory;ItemStack weapon=before.at(target),attached=source==null?null:before.at(source);if(weapon==null||source!=null&&(source.equals(target)||attached==null)){failure.accept("module_inventory_address");return;}c.busy=true;
-        try{factories.execute(()->{try{var edit=items.moduleBatch(weapon,slot,attached,selection);Map<Inventory.Address,ItemStack> changes=new LinkedHashMap<>();changes.put(target,edit.weapon());if(source!=null)changes.put(source,attached.count(attached.count()-1));Inventory after=before.replace(changes,0).after();for(ItemStack removed:edit.removed())after=after.give(removed).after();var info=items.inspectMagazine(edit.weapon());WeaponProfile profile=items.weaponProfile(edit.weapon());if(profile!=null){if(info.rounds()>profile.capacity())throw new IllegalArgumentException("module_loaded_magazine_capacity");}Map<Inventory.Address,ItemStack> delta=new LinkedHashMap<>();Set<Inventory.Address> addresses=new TreeSet<>(before.items().keySet());addresses.addAll(after.items().keySet());for(Inventory.Address address:addresses)if(before.at(address)!=after.at(address))delta.put(address,after.at(address));Inventory.Plan plan=before.replace(delta,0);completion(()->persist(id,c,plan,success,failure));}catch(Exception | LinkageError error){completion(()->{c.busy=false;denied++;failure.accept(Objects.toString(error.getMessage(),"module_failed"));});}});}catch(RejectedExecutionException error){c.busy=false;failure.accept("inventory_factory_queue_full");}
+        try{factories.execute(()->{try{var edit=operation.apply(weapon,attached);Map<Inventory.Address,ItemStack> changes=new LinkedHashMap<>();changes.put(target,edit.weapon());if(source!=null)changes.put(source,attached.count(attached.count()-1));Inventory after=before.replace(changes,0).after();for(ItemStack removed:edit.removed())after=after.give(removed).after();var info=items.inspectMagazine(edit.weapon());WeaponProfile profile=items.weaponProfile(edit.weapon());if(profile!=null){if(info.rounds()>profile.capacity())throw new IllegalArgumentException("module_loaded_magazine_capacity");}Map<Inventory.Address,ItemStack> delta=new LinkedHashMap<>();Set<Inventory.Address> addresses=new TreeSet<>(before.items().keySet());addresses.addAll(after.items().keySet());for(Inventory.Address address:addresses)if(before.at(address)!=after.at(address))delta.put(address,after.at(address));Inventory.Plan plan=before.replace(delta,0);completion(()->persist(id,c,plan,success,failure));}catch(Exception | LinkageError error){completion(()->{c.busy=false;denied++;failure.accept(Objects.toString(error.getMessage(),"module_failed"));});}});}catch(RejectedExecutionException error){c.busy=false;failure.accept("inventory_factory_queue_full");}
     }
     public void bolt(UUID id,Inventory.Address target,Inventory.Address source,Consumer<Inventory.Plan> success,Consumer<String> failure){
         Character c=character(id);if(c.busy||c.failed||c.deathClear){denied++;failure.accept("inventory_busy");return;}Inventory before=c.inventory;c.busy=true;

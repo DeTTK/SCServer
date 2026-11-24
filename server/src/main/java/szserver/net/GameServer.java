@@ -520,6 +520,17 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
             if(id==366&&source==null&&selection>0&&!playerRules.entitled(character(s))){inventorySnapshot(s,0);enqueue(s,0,InventoryPackets.ack(owner,sequence));enqueue(s,0,GamePackets.chat("paint_editor_requires_admin"));return;}
             inventories.cosmetic(character(s),target,source,selection,slot,id==598,plan->inventoryChanged(s,plan,()->enqueue(s,0,InventoryPackets.ack(owner,sequence))),error->{inventorySnapshot(s,0);enqueue(s,0,InventoryPackets.ack(owner,sequence));enqueue(s,0,GamePackets.chat(error));});return;}
         if(id==UnderbarrelPackets.UNLOAD_ID){unloadLauncher(s,UnderbarrelPackets.unload(body));return;}
+        if(id==GameplayPacketAliases.WEAPON_MODULE){
+            var request=inventories.weaponModuleRequest(body);
+            Inventory.Address target=request.target(),source=request.source();
+            if(target==null||target.aggregate()>1||!StorageLayout.validAddress(target)
+                    ||source!=null&&(source.aggregate()>1||!StorageLayout.validAddress(source)))throw new IOException("weapon_module_inventory_address");
+            if(!InventoryScreen.available(s.hp,s.respawning)){inventorySnapshot(s,0);return;}
+            inventories.weaponModule(character(s),target,source,plan->inventoryChanged(s,plan,()->{}),error->{
+                inventorySnapshot(s,0);enqueue(s,0,GamePackets.chat(error));
+            });
+            return;
+        }
         if(id==1449){var in=Wire.input(body);int owner=in.readShort(),sequence=in.readShort();Inventory.Address target=nullableAddress(in),source=nullableAddress(in);int selection=in.readInt(),slot=in.readUnsignedByte();if(owner!=0||target==null||target.aggregate()==2||source!=null&&source.aggregate()==2||selection<0||slot>=18||in.available()!=0)throw new IOException("module_request");inventories.module(character(s),target,source,selection,slot,plan->inventoryChanged(s,plan,()->enqueue(s,0,InventoryPackets.ack(owner,sequence))),error->{inventorySnapshot(s,0);enqueue(s,0,InventoryPackets.ack(owner,sequence));enqueue(s,0,GamePackets.chat(error));});return;}
         if(id==1138){var request=inventories.itemSlotRequest(false,body);int owner=request.owner(),sequence=request.sequence(),slot=request.slot();Inventory.Address target=request.target(),source=request.source();if(owner!=0||target==null||!StorageLayout.validAddress(target)||source!=null&&!StorageLayout.validAddress(source))throw new IOException("artifact_socket_request");if(!validInventoryTransfer(s,new InventoryTransfer(id,new InventoryPackets.Request(owner,sequence,target,source==null?List.of():List.of(source),0,false,-1),s.inventoryScreen.page()))){inventorySnapshot(s,owner);enqueue(s,0,InventoryPackets.ack(owner,sequence));return;}inventories.socket(character(s),target,source,slot,plan->inventoryChanged(s,plan,()->enqueue(s,0,InventoryPackets.ack(owner,sequence))),error->{inventorySnapshot(s,0);enqueue(s,0,InventoryPackets.ack(owner,sequence));enqueue(s,0,GamePackets.chat(error));});return;}
         if(id==1060){receiveChat(s,body);return;}

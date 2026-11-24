@@ -129,6 +129,7 @@ public final class GameItems implements AutoCloseable {
         // Real gun factories read animation metadata and collision boxes while
         // preparing pure inventory rules. These roots are shipped with the server.
         for(String directory:List.of("resources/configs","resources/boxes")){Path extra=fixtures.getParent().resolve(directory);if(szserver.util.GameResources.exists(extra))adapter.resources(extra);}
+        if(itemResourcesMounted)adapter.warmWeaponModules();
         adapter.warmItemNames(names);adapter.warmArmor(armors);
         adapter.warmArmorUpgrades(definitionsPath.getParent().resolve("native-resources"),armors);
         adapter.warmArtifactSettings(ItemResources.root(definitionsPath),artifactSettings);definitions=catalog;
@@ -164,6 +165,7 @@ public final class GameItems implements AutoCloseable {
     private static boolean archiveFactory(JsonObject row) {
         return boltFactory(row) || row!=null && row.has("definition")
                 && (NativeMedicines.resourceType(row.get("definition").getAsString())
+                    ||row.get("definition").getAsString().equals(ClientStateAdapter.WEAPON_MODULE_FACTORY)
                     ||NativeItemSlots.equipmentState(row.get("definition").getAsString())!=null);
     }
 
@@ -176,6 +178,7 @@ public final class GameItems implements AutoCloseable {
             int id=Integer.parseInt(key);
             String kind=definition.get("type").getAsString();
             String type=switch(kind){
+                case "weapon_module" -> ClientStateAdapter.WEAPON_MODULE_FACTORY;
                 case "bolt" -> NativeBoltFactory.BOLT_CLASS;
                 case "bolt_gem" -> NativeBoltFactory.GEM_CLASS;
                 default -> {
@@ -183,7 +186,7 @@ public final class GameItems implements AutoCloseable {
                     yield equipment==null?NativeMedicines.factoryClass(kind):equipment;
                 }
             };
-            String expectedState=NativeItemSlots.equipmentState(type);
+            String expectedState=kind.equals("weapon_module")?"623024217":NativeItemSlots.equipmentState(type);
             if(expectedState==null&&kind.equals("bolt"))expectedState="556314267";
             if(expectedState==null&&kind.equals("bolt_gem"))expectedState="907717666";
             if(registry.has(key)){
@@ -361,6 +364,19 @@ public final class GameItems implements AutoCloseable {
     public List<ClientStateAdapter.ModuleInfo> modules(szserver.inventory.ItemStack weapon)throws Exception{return adapter.modules(stateKind(weapon),weapon.state());}
     public ModuleEdit module(szserver.inventory.ItemStack weapon,int slot,szserver.inventory.ItemStack source,int selection)throws Exception{
         var batch=moduleBatch(weapon,slot,source,selection);if(batch.removed().size()>1)throw new IllegalArgumentException("module_multiple_removals");return new ModuleEdit(batch.weapon(),batch.removed().isEmpty()?null:batch.removed().get(0));
+    }
+    public ClientStateAdapter.WeaponModuleRequest weaponModuleRequest(byte[] body)throws Exception{
+        return adapter.weaponModuleRequest(body);
+    }
+    public ModuleBatch weaponModule(szserver.inventory.ItemStack weapon,szserver.inventory.ItemStack source)throws Exception{
+        if(weapon.count()!=1||source!=null&&source.count()!=1)throw new IllegalArgumentException("weapon_module_stack_count");
+        String kind=stateKind(weapon);
+        byte[] gun=szserver.net.InventoryPackets.stack(weapon);
+        byte[] module=source==null?null:szserver.net.InventoryPackets.stack(source);
+        var edit=adapter.weaponModule(Arrays.copyOfRange(gun,1,gun.length),kind,
+                module==null?null:Arrays.copyOfRange(module,1,module.length));
+        return new ModuleBatch(geometry(weapon.state(edit.state())),
+                edit.previous()==null?List.of():List.of(readStack(edit.previous())));
     }
     public ModuleBatch moduleBatch(szserver.inventory.ItemStack weapon,int slot,szserver.inventory.ItemStack source,int selection)throws Exception{
         JsonObject definition=registry.getAsJsonObject(Integer.toString(weapon.id()));String kind=definition.get("state").getAsString();if(!Set.of("1535556086","259689215").contains(kind))throw new IllegalArgumentException("module_target_not_firearm");

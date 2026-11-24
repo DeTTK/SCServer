@@ -28,10 +28,10 @@ public final class LootboxCatalog {
     private final JsonObject loot,bags;
     private final Map<String,String> bagHashes=new HashMap<>();
     public LootboxCatalog(ItemCatalog items,Path root)throws Exception {
-        this(items,read(root),null);
+        this(items,root,null);
     }
     public LootboxCatalog(ItemCatalog items,Path root,NativeTables nativeTables)throws Exception {
-        this(items,read(root),nativeTables);
+        this(items,read(root,nativeTables!=null),nativeTables);
     }
     public LootboxCatalog(ItemCatalog items,JsonObject data) {
         this(items,data,null);
@@ -55,14 +55,29 @@ public final class LootboxCatalog {
             try{validateBox(definition);}catch(IllegalArgumentException error){unavailable.put(id,error.getMessage());}
         }
     }
-    private static JsonObject read(Path root)throws Exception {
+    private static JsonObject read(Path root,boolean bagsOnly)throws Exception {
         Path path=root.resolve("fixtures/lootbox-tables.json.gz");
         InputStream raw=Files.isRegularFile(path)?Files.newInputStream(path):LootboxCatalog.class.getClassLoader().getResourceAsStream(RESOURCE);
         if(raw==null)return new JsonObject();
         try(raw;InputStream zip=new GZIPInputStream(raw)) {
             byte[] bytes=zip.readNBytes(32*1024*1024+1);if(bytes.length>32*1024*1024)throw new IOException("lootbox_resource_limit");
-            JsonObject value=JsonParser.parseString(new String(bytes,java.nio.charset.StandardCharsets.UTF_8)).getAsJsonObject();
-            if(!value.has("version")||value.get("version").getAsInt()!=1)throw new IOException("lootbox_resource_version");return value;
+            try(var reader=new com.google.gson.stream.JsonReader(new InputStreamReader(
+                    new ByteArrayInputStream(bytes),java.nio.charset.StandardCharsets.UTF_8))){
+                JsonObject value;
+                if(bagsOnly){
+                    value=new JsonObject();
+                    reader.beginObject();
+                    while(reader.hasNext()){
+                        String name=reader.nextName();
+                        if(name.equals("version")||name.equals("bags"))value.add(name,JsonParser.parseReader(reader));
+                        else reader.skipValue();
+                    }
+                    reader.endObject();
+                }else value=JsonParser.parseReader(reader).getAsJsonObject();
+                if(reader.peek()!=com.google.gson.stream.JsonToken.END_DOCUMENT)throw new IOException("lootbox_resource_trailing");
+                if(!value.has("version")||value.get("version").getAsInt()!=1)throw new IOException("lootbox_resource_version");
+                return value;
+            }
         }
     }
     public boolean isBox(int id){return boxes.containsKey(id);}

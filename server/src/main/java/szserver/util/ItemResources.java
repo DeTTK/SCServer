@@ -8,7 +8,7 @@ import java.util.*;
 /** Resource definitions shared by inventory and independent native factory hosts. */
 public final class ItemResources {
     private static final Set<String> REQUIRED_FAMILIES = Set.of("medicine", "medicine_animated", "bolt", "bolt_gem");
-    private static final Set<String> EQUIPMENT_FAMILIES = Set.of("artefakt", "ravent/multiset_artefact", "backpack");
+    private static final Set<String> EQUIPMENT_FAMILIES = Set.of("artefakt", "ravent/multiset_artefact", "backpack", "weapon_module");
     private static final Map<Object, JsonObject> INDEXES = new WeakHashMap<>();
 
     private ItemResources() {}

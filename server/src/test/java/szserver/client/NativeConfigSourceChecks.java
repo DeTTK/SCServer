@@ -21,6 +21,8 @@ public final class NativeConfigSourceChecks {
     private static final String ANOMALIES = "assets/anomalies/anomaly_config.json";
     private static final String LOOT = "assets/customitems/loot/lootboxes.json";
     private static final String SHUFFLE = "assets/customitems/shufflebags/newyear25.json";
+    private static final String WEAPON_MODULES = "assets/weapons/modules.json";
+    private static final int NEW_WEAPON_MODULE = 31993;
     private static final String AMMO = "assets/weapons/items/ammo_inside.json";
     private static final String KNIFE = "assets/weapons/items/game_modes/9150_reich/9174_nr43.json";
     private static final String KEDR = "assets/weapons/items/avtomat/20000_kedr.json";
@@ -52,6 +54,13 @@ public final class NativeConfigSourceChecks {
                      {"amount":1,"stack":{"id":12810,"stackSize":1}}]
                     """));
             write(overrides.resolve(SHUFFLE), shuffle.toString());
+            var weaponModules = JsonParser.parseString(GameResources.readString(configs.resolve(WEAPON_MODULES))).getAsJsonObject();
+            weaponModules.getAsJsonObject("attributes").getAsJsonObject("shooting_wear")
+                    .getAsJsonObject("weaponFactors").add("damage", JsonParser.parseString("[35,35]"));
+            write(overrides.resolve(WEAPON_MODULES), weaponModules.toString());
+            write(overrides.resolve("assets/weapons/items/qa_weapon_module.json"), """
+                    [{"type":"weapon_module","item_id":31993,"extends_item":11701,"unlocalized_name":"qa.special_module"}]
+                    """);
             var ammunition = JsonParser.parseString(GameResources.readString(configs.resolve(AMMO))).getAsJsonArray();
             var bullet = ammunition.asList().stream().map(row -> row.getAsJsonObject())
                     .filter(row -> row.get("item_id").getAsInt() == 12800).findFirst().orElseThrow();
@@ -122,7 +131,17 @@ public final class NativeConfigSourceChecks {
             var knifeOne = items.createStack(9174, 1, 0, new JsonObject());
             var knifeTwo = items.createStack(9174, 1, 0, new JsonObject());
             check(!items.identity(knifeOne).equals(items.identity(knifeTwo)), "fresh identity from native default");
-            if (!stock) verifyInventoryFacts(items, catalog, scratch);
+            if (!stock) {
+                verifyInventoryFacts(items, catalog, scratch);
+                var gun = items.createStack(20051, 1, 0, new JsonObject());
+                var mod = NativeCosmeticTests.rolledModule(items, NEW_WEAPON_MODULE);
+                var upgraded = items.weaponModule(gun, mod).weapon();
+                check(items.weaponProfile(upgraded).damage() > items.weaponProfile(gun).damage() * 1.2,
+                        "new module reads overridden native weapon factors directly from mounted configs");
+                check(items.weaponModule(upgraded, null).removed().get(0).id() == NEW_WEAPON_MODULE,
+                        "new archive module round trips without a captured ID");
+            }
+
 
             var loot = items.lootboxes(server, catalog);
             check((int) loot.metrics().get("nativeTables") >= 2400, "native loot tables loaded");

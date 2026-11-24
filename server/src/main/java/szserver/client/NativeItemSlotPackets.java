@@ -8,12 +8,39 @@ import szserver.inventory.Inventory;
 /** Original warmed request readers/writers. Native inventory transactions remain owned by the journal. */
 final class NativeItemSlotPackets {
     private record Codec(Object packet,Method read,Method write,Field target,Field source,Field slot){}
-    private final Codec bolt,socket;private final Method owner,sequence,aggregate,container,slot;
+    private final Codec bolt,socket,weaponModule;
+    private final Object weaponKey;
+    private final Field weaponSlot;private final Method owner,sequence,aggregate,container,slot;
     NativeItemSlotPackets(NativeItemFactories host)throws Exception{
         Class<?> address=host.type("949164803"),base=host.type("1799496656");owner=NativeMethods.instance(base,"volatile",int.class);sequence=NativeMethods.instance(base,"boolean",int.class);aggregate=NativeMethods.instance(address,"protected",int.class);container=NativeMethods.instance(address,"break",int.class);slot=NativeMethods.instance(address,"default",int.class);
+        weaponModule=codec(host,"309659025","volatile","abstract",null);
+        weaponSlot=weaponModule.packet().getClass().getField("enum");
+        weaponKey=host.type("359912486").getField("package").get(null);
         bolt=codec(host,"1271395251","class","synchronized",null);socket=codec(host,"1950979903","void","public","short");
         Object target=address.getConstructor(int.class,int.class,int.class).newInstance(1,0,7),source=address.getConstructor(int.class,int.class,int.class).newInstance(1,0,9);
+        weaponSlot.set(weaponModule.packet(),weaponKey);
+        weaponModule.target().set(weaponModule.packet(),target);
+        for(Object attached:Arrays.asList(source,null)){
+            weaponModule.source().set(weaponModule.packet(),attached);
+            var bytes=new ByteArrayOutputStream();
+            weaponModule.write().invoke(weaponModule.packet(),new DataOutputStream(bytes));
+            var request=weaponModule(bytes.toByteArray());
+            if(!request.target().equals(address(target))||!Objects.equals(request.source(),address(attached)))
+                throw new IOException("weapon_module_packet_warmup");
+        }
         for(Codec codec:List.of(bolt,socket)){for(boolean attached:List.of(false,true)){codec.target().set(codec.packet(),target);codec.source().set(codec.packet(),attached?source:null);if(codec.slot()!=null)codec.slot().setInt(codec.packet(),2);base.getField("volatile").setInt(codec.packet(),0);base.getField("this").setInt(codec.packet(),19);var bytes=new ByteArrayOutputStream();codec.write().invoke(codec.packet(),new DataOutputStream(bytes));var result=read(codec,bytes.toByteArray());if(result.owner()!=0||result.sequence()!=19||!result.target().equals(new Inventory.Address(1,0,7))||(result.source()!=null)!=attached||codec.slot()!=null&&result.slot()!=2)throw new IOException("native_item_slot_packet_warmup");}}
+    }
+    synchronized ClientStateAdapter.WeaponModuleRequest weaponModule(byte[] body)throws Exception{
+        Codec codec=weaponModule;
+        if(body.length>32)throw new IOException("weapon_module_request_size");
+        var in=new BoundedNativeInput(body);
+        codec.read().invoke(codec.packet(),in);
+        if(in.available()!=0||weaponSlot.get(codec.packet())!=weaponKey)throw new IOException("weapon_module_request_slot");
+        var canonical=new ByteArrayOutputStream();
+        codec.write().invoke(codec.packet(),new DataOutputStream(canonical));
+        if(!Arrays.equals(body,canonical.toByteArray()))throw new IOException("weapon_module_request_noncanonical");
+        return new ClientStateAdapter.WeaponModuleRequest(address(codec.target().get(codec.packet())),
+                address(codec.source().get(codec.packet())));
     }
     private static Codec codec(NativeItemFactories host,String name,String target,String source,String slot)throws Exception{Class<?> type=host.type(name);return new Codec(type.getConstructor().newInstance(),NativeMethods.instance(type,"extends",void.class,DataInput.class),NativeMethods.instance(type,"switch",void.class,DataOutput.class),type.getField(target),type.getField(source),slot==null?null:type.getField(slot));}
     private Inventory.Address address(Object value)throws Exception{return value==null?null:new Inventory.Address((Integer)aggregate.invoke(value),(Integer)container.invoke(value),(Integer)slot.invoke(value));}
