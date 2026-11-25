@@ -19,6 +19,19 @@ public final class InventoryTransferQueueTests{
         try(var journal=new InventoryJournal(root.resolve("characters.sjournal"),catalog)){UUID actor=UUID.randomUUID();journal.commit(actor,new Inventory(catalog).replace(rows,0)).get();journal.commit(actor,plan).get();check(journal.load(actor).at(new Inventory.Address(2,0,0)).count()==3200,"bulk persists before acknowledgement");bulk.complete("actor",batch);check(metric(bulk,"retained")==0,"durable completion releases entire bulk budget");}
         var wire=new java.io.ByteArrayOutputStream();try(var out=new java.io.DataOutputStream(wire)){out.writeShort(-1);out.writeShort(42);out.writeByte(0);out.writeByte(0);out.writeShort(9);out.writeByte(1);out.writeShort(0);out.writeInt(0);}
         var noRoom=InventoryPackets.read(2009,wire.toByteArray(),3);check(noRoom.destinations().isEmpty()&&noRoom.source().equals(new Inventory.Address(2,3,9))&&noRoom.sequence()==42,"native no-room quick request still decodes for acknowledgement");
+        var boltSlot=new Inventory.Address(0,10,0);
+        var bagSlot=new Inventory.Address(1,0,1);
+        byte[] stockMove=HexFormat.of().parseHex("01010000010001000a000000000006");
+        byte[] legacyMove=HexFormat.of().parseHex("0100000100000a000000000006");
+        for(byte[] move:List.of(stockMove,legacyMove)){
+            var request=InventoryPackets.read(1627,move,0);
+            check(request.source().equals(bagSlot)&&request.destinations().equals(List.of(boltSlot))&&request.owner()==0&&request.sequence()==6,"inventory move from bag to equipped bolt slot");
+        }
+        byte[] stockDrop=HexFormat.of().parseHex("01010000010100000006");
+        check(InventoryPackets.read(1627,stockDrop,0).destinations().isEmpty(),"stock nullable destination");
+        stockMove[6]=0;
+        try{InventoryPackets.read(1627,stockMove,0);throw new AssertionError("accepted missing stock destination address");}
+        catch(java.io.IOException expected){check(expected.getMessage().equals("inventory_address_missing"),"malformed stock address rejected");}
         System.out.println("PASS "+checks+" inventory transfer FIFO, duplicate, budget, disconnect and durable 50-request bulk checks");
     }
 }

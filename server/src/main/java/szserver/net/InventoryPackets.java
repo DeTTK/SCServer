@@ -23,6 +23,10 @@ public final class InventoryPackets {
         int aggregate=in.readUnsignedByte(),container=in.readUnsignedByte(),slot=in.readUnsignedShort();
         return normalizeAddress(new Inventory.Address(aggregate,container,slot),owner,page);
     }
+    private static Inventory.Address presentAddress(DataInputStream in,int owner,int page)throws IOException {
+        if(in.readUnsignedByte()!=1)throw new IOException("inventory_address_missing");
+        return address(in,owner,page);
+    }
     private static Inventory.Address normalizeAddress(Inventory.Address address,int owner,int page){return owner==-1&&address.aggregate()==0&&address.container()==0?new Inventory.Address(2,page,address.slot()):address;}
     public record MedicineRequest(int owner,int sequence,Inventory.Address address){}
     public static MedicineRequest medicine(int owner,int sequence,Inventory.Address raw,int page)throws IOException{
@@ -38,7 +42,12 @@ public final class InventoryPackets {
         }else if(id==1627||id==2040){
             // Owner trails the nullable addresses in these native variants.
             int ownerOffset=body.length-4;if(ownerOffset<5)throw new IOException("inventory_request_size");owner=java.nio.ByteBuffer.wrap(body).getShort(ownerOffset);
-            source=address(in,owner,page);int nil=in.readUnsignedByte();if(nil>1)throw new IOException("inventory_null_marker");if(nil==0)destinations.add(address(in,owner,page));
+            // The stock move packet writes address presence bytes in addition to its destination flag.
+            // Older clients use the same packet ID with four-byte addresses.
+            boolean nativeMove=id==1627&&(body.length==10||body.length==15);
+            source=nativeMove?presentAddress(in,owner,page):address(in,owner,page);
+            int nil=in.readUnsignedByte();if(nil>1)throw new IOException("inventory_null_marker");
+            if(nil==0)destinations.add(nativeMove?presentAddress(in,owner,page):address(in,owner,page));
             if(split){count=in.readInt();in.readUnsignedByte();}if(in.readShort()!=owner)throw new IOException("inventory_owner");sequence=in.readShort();
         }else throw new IOException("inventory_request_kind");
         if(in.available()!=0||count<0||split&&count==0||owner!=0&&owner!=-1)throw new IOException("inventory_request_layout");
