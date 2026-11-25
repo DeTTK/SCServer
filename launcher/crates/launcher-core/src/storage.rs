@@ -360,7 +360,60 @@ pub fn no_links(path: &Path) -> Result<()> {
     }
     Ok(())
 }
-/// Protects identity files using the Windows owner SID, without invoking a shell.
+#[cfg(windows)]
+pub fn current_user_sid() -> Result<String> {
+    process_user_sid(unsafe { windows_sys::Win32::System::Threading::GetCurrentProcess() })
+}
+#[cfg(windows)]
+pub fn process_user_sid(process: windows_sys::Win32::Foundation::HANDLE) -> Result<String> {
+    use windows_sys::Win32::{
+        Foundation::{CloseHandle, LocalFree},
+        Security::{
+            Authorization::ConvertSidToStringSidW, GetTokenInformation, TOKEN_QUERY, TOKEN_USER,
+            TokenUser,
+        },
+        System::Threading::OpenProcessToken,
+    };
+    unsafe {
+        let mut token = std::ptr::null_mut();
+        if OpenProcessToken(process, TOKEN_QUERY, &mut token) == 0 {
+            return Err(std::io::Error::last_os_error().into());
+        }
+        let mut needed = 0;
+        GetTokenInformation(token, TokenUser, std::ptr::null_mut(), 0, &mut needed);
+        // usize storage guarantees alignment for TOKEN_USER and its embedded SID.
+        let mut info = vec![0usize; (needed as usize).div_ceil(std::mem::size_of::<usize>())];
+        if GetTokenInformation(
+            token,
+            TokenUser,
+            info.as_mut_ptr().cast(),
+            needed,
+            &mut needed,
+        ) == 0
+        {
+            let error = std::io::Error::last_os_error();
+            CloseHandle(token);
+            return Err(error.into());
+        }
+        let user = &*(info.as_ptr() as *const TOKEN_USER);
+        let mut raw = std::ptr::null_mut();
+        if ConvertSidToStringSidW(user.User.Sid, &mut raw) == 0 {
+            let error = std::io::Error::last_os_error();
+            CloseHandle(token);
+            return Err(error.into());
+        }
+        let mut len = 0;
+        while *raw.add(len) != 0 {
+            len += 1
+        }
+        let result = String::from_utf16(std::slice::from_raw_parts(raw, len));
+        LocalFree(raw.cast());
+        CloseHandle(token);
+        Ok(result?)
+    }
+}
+
+/// Limits access to the current account, even when Windows assigns ownership to Administrators.
 pub fn owner_only(path: &Path, directory: bool) -> Result<()> {
     no_links(path)?;
     #[cfg(windows)]
@@ -373,11 +426,9 @@ pub fn owner_only(path: &Path, directory: bool) -> Result<()> {
                 DACL_SECURITY_INFORMATION, PROTECTED_DACL_SECURITY_INFORMATION, SetFileSecurityW,
             },
         };
-        let sddl = if directory {
-            "D:P(A;OICI;FA;;;OW)"
-        } else {
-            "D:P(A;;FA;;;OW)"
-        };
+        let user = current_user_sid()?;
+        let inheritance = if directory { "OICI" } else { "" };
+        let sddl = format!("D:P(A;{inheritance};FA;;;{user})");
         let wide = sddl.encode_utf16().chain(Some(0)).collect::<Vec<_>>();
         let name = path
             .as_os_str()

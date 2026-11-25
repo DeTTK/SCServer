@@ -1,4 +1,6 @@
 use anyhow::{Context, Result, bail};
+#[cfg(windows)]
+use bscp_launcher_core::storage::{current_user_sid, process_user_sid};
 use bscp_launcher_core::Layout;
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
@@ -221,57 +223,6 @@ mod tests {
         assert!(pipe_name(std::path::Path::new("X:/one")).contains("bscp-rust-"));
     }
 }
-#[cfg(windows)]
-fn current_user_sid() -> Result<String> {
-    process_user_sid(unsafe { windows_sys::Win32::System::Threading::GetCurrentProcess() })
-}
-#[cfg(windows)]
-fn process_user_sid(process: windows_sys::Win32::Foundation::HANDLE) -> Result<String> {
-    use windows_sys::Win32::{
-        Foundation::{CloseHandle, LocalFree},
-        Security::{
-            Authorization::ConvertSidToStringSidW, GetTokenInformation, TOKEN_QUERY, TOKEN_USER,
-            TokenUser,
-        },
-        System::Threading::OpenProcessToken,
-    };
-    unsafe {
-        let mut token = std::ptr::null_mut();
-        if OpenProcessToken(process, TOKEN_QUERY, &mut token) == 0 {
-            return Err(std::io::Error::last_os_error().into());
-        }
-        let mut needed = 0;
-        GetTokenInformation(token, TokenUser, std::ptr::null_mut(), 0, &mut needed);
-        // usize storage guarantees alignment for TOKEN_USER and its embedded SID.
-        let mut info = vec![0usize; (needed as usize).div_ceil(std::mem::size_of::<usize>())];
-        if GetTokenInformation(
-            token,
-            TokenUser,
-            info.as_mut_ptr().cast(),
-            needed,
-            &mut needed,
-        ) == 0
-        {
-            CloseHandle(token);
-            return Err(std::io::Error::last_os_error().into());
-        }
-        let user = &*(info.as_ptr() as *const TOKEN_USER);
-        let mut raw = std::ptr::null_mut();
-        if ConvertSidToStringSidW(user.User.Sid, &mut raw) == 0 {
-            CloseHandle(token);
-            return Err(std::io::Error::last_os_error().into());
-        }
-        let mut len = 0;
-        while *raw.add(len) != 0 {
-            len += 1
-        }
-        let result = String::from_utf16(std::slice::from_raw_parts(raw, len))?;
-        LocalFree(raw.cast());
-        CloseHandle(token);
-        Ok(result)
-    }
-}
-
 #[cfg(windows)]
 fn verify_server_user(pipe: &tokio::net::windows::named_pipe::NamedPipeClient) -> Result<()> {
     use std::os::windows::io::AsRawHandle;
