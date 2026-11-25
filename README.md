@@ -1,6 +1,6 @@
 # SCServer / Бскпкрафт
 
-**[Скачать BSCPCRAFT.exe для Windows](https://github.com/DeTTK/SCServer/releases/latest/download/BSCPCRAFT.exe)**
+**[Telegram Форум: Обсуждение, Новости, Щитпост](https://t.me/stalzone_local)**
 
 Локальный запуск сервера БСКПКрафт (stalzone.gay) сервер + клиент
 
