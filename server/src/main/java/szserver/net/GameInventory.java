@@ -133,6 +133,7 @@ public final class GameInventory implements AutoCloseable {
             completion(()->{if(c.deathClear||!admissionAllowed(id)){c.busy=false;failure.accept("lootbox_owner_changed");return;}persist(id,c,opened.plan(),progress,plan->success.accept(new LootResult(plan,receipt,opened.rewards())),failure);});
         }catch(Exception|LinkageError error){completion(()->{c.busy=false;denied++;failure.accept(Objects.toString(error.getMessage(),"lootbox_failed"));});}});}catch(RejectedExecutionException error){c.busy=false;failure.accept("inventory_factory_queue_full");}
     }
+    public boolean hasItemFactory(int id){return items.hasItemFactory(id);}
     public boolean hasAppearanceCodec(int id)throws Exception{return items.hasAppearanceCodec(id);}
     public byte[] appearance(UUID id,int container){return character(id).appearances.get(container);}
     public Map<String,Float> stats(UUID id){return character(id).stats;}

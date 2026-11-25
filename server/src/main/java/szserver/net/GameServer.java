@@ -1640,7 +1640,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         for(int id=1;id<65536;id++){
             if(id==29998||id==29999)continue; // Internal climb/parkour actions, not inventory factories.
             try{inventories.catalog().get(id);}catch(IllegalArgumentException absent){continue;}
-            if(!appearances.containsKey(id)&&!inventories.hasAppearanceCodec(id)){
+            if(!appearances.containsKey(id)&&inventories.hasItemFactory(id)&&!inventories.hasAppearanceCodec(id)){
                 int factory=id;appearances.put(id,Wire.bytes(out->{out.writeInt(factory);out.write(new byte[3]);}));
             }
         }

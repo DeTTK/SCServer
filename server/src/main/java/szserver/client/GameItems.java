@@ -321,6 +321,7 @@ public final class GameItems implements AutoCloseable {
     public ClientStateAdapter.FactoryMetadataExport exportFactoryMetadata()throws Exception{return adapter.exportFactoryMetadata();}
     public int verifiedCodecs(){return verified.size();}
     public int size(){return registry.size();}
+    public boolean hasItemFactory(int id){return registry.has(Integer.toString(id));}
     /** The native common appearance is sufficient only without a factory-specific codec. */
     public boolean hasAppearanceCodec(int id)throws Exception {
         JsonObject row=registry.getAsJsonObject(Integer.toString(id));
