@@ -596,12 +596,12 @@ public final class GameInventory implements AutoCloseable {
     }
     private void validateEditedWeapon(ItemStack item)throws Exception{
         if(!items.firearm(item.id()))return;
-        WeaponProfile profile=items.weaponProfile(item);
-        if(profile==null)return;
+        var rules=items.weaponMagazineRules(item);
+        if(rules==null)return;
         var magazine=items.inspectMagazine(item);
-        if(magazine.ammo()!=0&&!profile.ammunition().contains(magazine.ammo()))
+        if(magazine.ammo()!=0&&!rules.ammunition().contains(magazine.ammo()))
             throw new IllegalArgumentException("weapon_ammunition_type");
-        if(magazine.rounds()<0||magazine.rounds()>profile.capacity())
+        if(magazine.rounds()<0||magazine.rounds()>rules.capacity())
             throw new IllegalArgumentException("magazine_rounds");
     }
     /** Native I-window configuration uses the same grid and durable owner as commands. */

@@ -78,6 +78,8 @@ public final class ClientStateAdapter implements AutoCloseable {
             }
         }
         loader = new NativeLoader(urls.toArray(URL[]::new));
+        loader.define("211097523",NativeItemNbt.unsignedStackMetadata(
+                RuntimeFiles.read(runtime.resolve("classes/211097523.class"))));
         compound = Class.forName("98008865", true, loader);
         // The effect enum constructs descriptors from this class while initializing.
         // Initialize the descriptor owner first, as the native client does; entering
@@ -566,11 +568,27 @@ public final class ClientStateAdapter implements AutoCloseable {
         return quick.isInstance(factory)&&(Boolean)quick.getMethod("do").invoke(factory)
                 &&(Boolean)quick.getMethod("float").invoke(factory);
     }
+    public record WeaponMagazineRules(int capacity,List<Integer> ammunition){
+        public WeaponMagazineRules{ammunition=List.copyOf(ammunition);}
+    }
+    private static WeaponMagazineRules magazineRules(Class<?> gun,Object factory,Object stack)throws Exception{
+        int capacity=(Integer)NativeMethods.instance(gun,"default",int.class,stack.getClass()).invoke(factory,stack);
+        int[] ammunition=(int[])NativeMethods.instance(gun,"protected",int[].class,stack.getClass()).invoke(factory,stack);
+        return ammunition.length==0?null:new WeaponMagazineRules(capacity,Arrays.stream(ammunition).boxed().toList());
+    }
+    public WeaponMagazineRules weaponMagazineRules(byte[] raw)throws Exception{
+        int id=new DataInputStream(new ByteArrayInputStream(raw)).readUnsignedShort();
+        String name=moduleFactoryClasses.get(id);
+        Class<?> gun=Class.forName("1745367406",true,loader);
+        if(name==null||!gun.isAssignableFrom(Class.forName(name,true,loader)))return null;
+        Object stack=prepareModuleGun(raw),factory=moduleFactory(id);
+        return withModuleFactories(()->magazineRules(gun,factory,stack));
+    }
     /** Prepared on the inventory worker using the actual equipped state and its module factories. */
     public szserver.inventory.WeaponProfile weaponProfile(byte[] raw)throws Exception{
         int id=new DataInputStream(new ByteArrayInputStream(raw)).readUnsignedShort();String name=moduleFactoryClasses.get(id);Class<?> gun=Class.forName("1745367406",true,loader);if(name==null||!gun.isAssignableFrom(Class.forName(name,true,loader)))return null;
         Object value=prepareModuleGun(raw),factory=moduleFactory(id);Class<?> stack=value.getClass(),timing=Class.forName("1042667109",true,loader);Object complete=timing.getField("RELOAD_COMPLETE_DURATION").get(null);
-        return withModuleFactories(()->{int capacity=(Integer)NativeMethods.instance(gun,"default",int.class,stack).invoke(factory,value);int[] ammunition=(int[])NativeMethods.instance(gun,"protected",int[].class,stack).invoke(factory,value);if(ammunition.length==0)return null;
+        return withModuleFactories(()->{var magazine=magazineRules(gun,factory,value);if(magazine==null)return null;int capacity=magazine.capacity();
             double reload=(Float)NativeMethods.instance(gun,"synchronized",float.class,stack,timing).invoke(factory,value,complete),tactical=(Float)NativeMethods.instance(gun,"switch",float.class,stack,timing).invoke(factory,value,complete);
             double modifier=(Float)NativeMethods.instance(gun,"continue",float.class,stack).invoke(factory,value);if(!Double.isFinite(modifier)||modifier<=0)throw new IOException("weapon_reload_modifier");
             var animation=reloadAnimation(gun,factory,value,timing,(float)modifier);
@@ -585,24 +603,24 @@ public final class ClientStateAdapter implements AutoCloseable {
                 distant*=(Float)factor.invoke(factory,value,stat.getField("DAMAGE_DISTANT").get(null));
                 head*=(Float)factor.invoke(factory,value,stat.getField("HEAD_DAMAGE_MODIFIER").get(null));
             }
-            return new szserver.inventory.WeaponProfile(capacity,Arrays.stream(ammunition).boxed().toList(),damage,distant,(Float)NativeMethods.instance(gun,"import",float.class,stack).invoke(factory,value),(Float)NativeMethods.instance(gun,"float",float.class,stack).invoke(factory,value),(Float)NativeMethods.instance(gun,"throws",float.class,stack).invoke(factory,value),(Float)NativeMethods.instance(gun,"private",float.class,stack).invoke(factory,value),reload*modifier,tactical*modifier,head,reloadByRounds,animation);
+            return new szserver.inventory.WeaponProfile(capacity,magazine.ammunition(),damage,distant,(Float)NativeMethods.instance(gun,"import",float.class,stack).invoke(factory,value),(Float)NativeMethods.instance(gun,"float",float.class,stack).invoke(factory,value),(Float)NativeMethods.instance(gun,"throws",float.class,stack).invoke(factory,value),(Float)NativeMethods.instance(gun,"private",float.class,stack).invoke(factory,value),reload*modifier,tactical*modifier,head,reloadByRounds,animation);
         });
     }
     private szserver.inventory.WeaponProfile.ReloadAnimation reloadAnimation(Class<?> gun,Object factory,Object stack,Class<?> mode,float modifier)throws Exception{
         var config=Class.forName("1596256282",true,loader);
         Object presentation=NativeMethods.instance(gun,"strictfp",config,stack.getClass()).invoke(factory,stack);
         int sound=presentation!=null&&(Boolean)config.getMethod("return",int.class).invoke(presentation,-1)?-1:-2;
-        var empty=reloadTiming(gun,factory,stack,mode,modifier,"synchronized");
-        var tactical=reloadTiming(gun,factory,stack,mode,modifier,"switch");
-        szserver.inventory.WeaponProfile.ShellReload shells=null;
         if(gun.getField("cs").getBoolean(factory)){
-            // 1745367406.void with no player uses these config fields for the per-cartridge reload.
-            shells=new szserver.inventory.WeaponProfile.ShellReload(
+            // Stepwise guns use the per-cartridge timeline and leave magazine animation timings unset.
+            var shells=new szserver.inventory.WeaponProfile.ShellReload(
                     gun.getField("az").getFloat(factory),gun.getField("ba").getFloat(factory),
                     gun.getField("bm").getFloat(factory),gun.getField("bo").getFloat(factory),
                     gun.getField("bn").getInt(factory),gun.getField("h").getBoolean(factory),modifier);
+            return new szserver.inventory.WeaponProfile.ReloadAnimation(null,null,shells,sound);
         }
-        return new szserver.inventory.WeaponProfile.ReloadAnimation(empty,tactical,shells,sound);
+        var empty=reloadTiming(gun,factory,stack,mode,modifier,"synchronized");
+        var tactical=reloadTiming(gun,factory,stack,mode,modifier,"switch");
+        return new szserver.inventory.WeaponProfile.ReloadAnimation(empty,tactical,null,sound);
     }
     private static szserver.inventory.WeaponProfile.ReloadTiming reloadTiming(Class<?> gun,Object factory,Object stack,Class<?> mode,float modifier,String method)throws Exception{
         Method timing=NativeMethods.instance(gun,method,float.class,stack.getClass(),mode);

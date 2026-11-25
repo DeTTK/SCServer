@@ -3,9 +3,36 @@ package szserver.client;
 import java.io.*;
 import java.lang.reflect.*;
 import java.util.*;
+import org.objectweb.asm.*;
 
 /** Original complete-stack NBT import/export with scoped factories and lossless stream normalization. */
 final class NativeItemNbt {
+    static byte[] unsignedStackMetadata(byte[] source)throws IOException{
+        var reader=new ClassReader(source);
+        var writer=new ClassWriter(reader,0);
+        int[] replacements={0};
+        reader.accept(new ClassVisitor(Opcodes.ASM9,writer){
+            @Override public MethodVisitor visitMethod(int access,String name,String desc,String signature,String[] exceptions){
+                var method=super.visitMethod(access,name,desc,signature,exceptions);
+                if(!name.equals("<init>")||!desc.equals("(L98008865;)V"))return method;
+                return new MethodVisitor(Opcodes.ASM9,method){
+                    @Override public void visitMethodInsn(int opcode,String owner,String name,String descriptor,boolean itf){
+                        if(opcode==Opcodes.INVOKESTATIC&&owner.equals("java/lang/Math")&&name.equals("max")&&descriptor.equals("(II)I")){
+                            // The native NBT constructor clamps a signed short after reading it.
+                            // Stack packets and Item Editor metadata use the full unsigned 16-bit range.
+                            super.visitInsn(Opcodes.SWAP);
+                            super.visitInsn(Opcodes.POP);
+                            super.visitLdcInsn(0xffff);
+                            super.visitInsn(Opcodes.IAND);
+                            replacements[0]++;
+                        }else super.visitMethodInsn(opcode,owner,name,descriptor,itf);
+                    }
+                };
+            }
+        },0);
+        if(replacements[0]!=1)throw new IOException("native_stack_nbt_metadata_shape");
+        return writer.toByteArray();
+    }
     private final NativeItemFactories host;private final Class<?> stack,compound,nbt;
     private final Constructor<?> streamConstructor,nbtConstructor;private final Method read,export,write,writeNbt;
     private final Field fields;private final String idKey,tagKey;

@@ -277,6 +277,10 @@ public final class GameItems implements AutoCloseable {
         int mask=stack.equipmentMask();result[4]=(byte)((mask&(1<<8))!=0?1:0);result[5]=(byte)((mask&(1<<9))!=0?1:0);result[6]=(byte)((mask&(1<<11))!=0?1:0);return result;
     }
     public szserver.inventory.WeaponProfile weaponProfile(szserver.inventory.ItemStack item)throws Exception{if(item==null)return null;byte[] raw=szserver.net.InventoryPackets.stack(item);return adapter.weaponProfile(Arrays.copyOfRange(raw,1,raw.length));}
+    public ClientStateAdapter.WeaponMagazineRules weaponMagazineRules(szserver.inventory.ItemStack item)throws Exception{
+        byte[] raw=szserver.net.InventoryPackets.stack(item);
+        return adapter.weaponMagazineRules(Arrays.copyOfRange(raw,1,raw.length));
+    }
     public byte[] magazine(byte[] state,int ammo,int rounds)throws Exception{return adapter.magazine(state,ammo,rounds);}
     public ClientStateAdapter.Magazine inspectMagazine(byte[] state)throws Exception{return adapter.inspectMagazine(state);}
     private String stateKind(szserver.inventory.ItemStack item){return registry.getAsJsonObject(Integer.toString(item.id())).get("state").getAsString();}

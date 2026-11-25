@@ -170,6 +170,20 @@ public final class NativeConfigSourceChecks {
             var importedProgress=items.readConfig(items.stackConfig(Arrays.copyOfRange(progressBytes,1,progressBytes.length)));
             check(importedProgress.id()==16969&&Arrays.equals(progress.state(),importedProgress.state()),
                     "contextual item round trip without an empty captured state");
+            for(int metadata:new int[]{32767,32768,65535}){
+                var sample=items.createStack(9174,1,metadata,new JsonObject());
+                byte[] packet=szserver.net.InventoryPackets.stack(sample);
+                var imported=items.readConfig(items.stackConfig(Arrays.copyOfRange(packet,1,packet.length)));
+                check(imported.metadata()==metadata,"native Item Editor config preserves unsigned metadata");
+            }
+            var mosin=items.createStack(20201,1,0,new JsonObject());
+            var mosinProfile=items.weaponProfile(mosin);
+            check(mosinProfile.reloadTiming(0,1).complete()>0&&mosinProfile.reloadTiming(1,1).complete()>0,
+                    "stepwise weapon uses genuine cartridge timings");
+            var questFlamethrower=items.createStack(8271,1,0,new JsonObject());
+            var questMagazine=items.weaponMagazineRules(questFlamethrower);
+            check(questMagazine.capacity()==150000&&questMagazine.ammunition().contains(12742),
+                    "native grant accepts contextual capacity independently of combat profile");
             var knifeOne = items.createStack(9174, 1, 0, new JsonObject());
             var knifeTwo = items.createStack(9174, 1, 0, new JsonObject());
             check(!items.identity(knifeOne).equals(items.identity(knifeTwo)), "fresh identity from native default");
