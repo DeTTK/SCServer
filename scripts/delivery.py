@@ -69,6 +69,24 @@ def commit_index(destination,message,env):
     commit=run(*args,env=env,capture_output=True,text=True).stdout.strip()
     run('git','-C',destination,'update-ref','HEAD',commit,env=env,capture_output=True)
     return commit
+def build_vr_mod(tools,source,classpath,runtime):
+    classes=tools.compile_java('catalogue-stalcraft-vr',(source/'src').rglob('*.java'),classpath)
+    generators=tools.compile_java('vr-adapters',(source/'tools').glob('*.java'),classpath)
+    generator_cp=os.pathsep.join(map(str,[generators,*classpath]))
+    for generator in ('GenerateFpAdapter','GenerateSceneCopy'):
+        run(tools.tool('java'),'-cp',generator_cp,generator,classes)
+
+    files=[(source/'stalcraft-mod.properties','stalcraft-mod.properties')]
+    for path in sorted((source/'resources').iterdir()):
+        files.append((path,path.name))
+    jar=tools.jar('catalogue-stalcraft-vr',classes,files)
+    test_cp=[jar,runtime/'bootstrap.jar',*classpath]
+    tests=tools.compile_java('vr-mod-tests',(source/'tests').glob('*.java'),test_cp)
+    for name in ('VrTest','NativeContracts','VrReloadProtocolProbe','MasterMechanicsProbe','PhysicalActionsProbe','OpticGeometryProbe'):
+        run(tools.tool('java'),'-cp',os.pathsep.join(map(str,[tests,*test_cp])),'vr.'+name,cwd=tests)
+    return jar
+
+
 def prepare():
     tools=source_tool();(ROOT/'build').mkdir(exist_ok=True)
     spec=importlib.util.spec_from_file_location('player_build',ROOT/'scripts/build_player.py');module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
@@ -89,8 +107,11 @@ def prepare():
     for item in json.loads((ROOT/'delivery/mods.json').read_text('utf8')):
         if item['required']:continue
         source=ROOT/item['source'];ident=item['id']
-        classes=tools.compile_java('catalogue-'+ident,(source/'src').rglob('*.java'),classpath)
-        jar=tools.jar('catalogue-'+ident,classes,[(source/'stalcraft-mod.properties','stalcraft-mod.properties')])
+        if ident=='stalcraft-vr':
+            jar=build_vr_mod(tools,source,classpath,runtime)
+        else:
+            classes=tools.compile_java('catalogue-'+ident,(source/'src').rglob('*.java'),classpath)
+            jar=tools.jar('catalogue-'+ident,classes,[(source/'stalcraft-mod.properties','stalcraft-mod.properties')])
         dst=OUT/f'mods/{ident}/{ident}.jar';dst.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(jar,dst)
     rows=file_inventory(OUT)
     (ROOT/'build/delivery-verification.json').write_text(json.dumps({'files':rows,'bytes':sum(r['size']for r in rows),'foundation':foundation},indent=2),'utf8')
