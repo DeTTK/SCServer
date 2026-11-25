@@ -410,7 +410,8 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         }
     }
     private void sendRaw(Session s,byte[] bytes)throws IOException{udp.send(new DatagramPacket(bytes,bytes.length,s.address));}
-    private void enqueueOrRetire(Session s,byte[] stream){if(sessions.get(s.address)!=s)return;try{enqueue(s,0,stream);}catch(IllegalStateException slow){sessionError(s,"outbound_backpressure",slow);}}
+    private void enqueueOrRetire(Session s,byte[] stream){enqueueOrRetire(s,0,stream);}
+    private void enqueueOrRetire(Session s,int lane,byte[] stream){if(sessions.get(s.address)!=s)return;try{enqueue(s,lane,stream);}catch(IllegalStateException slow){sessionError(s,"outbound_backpressure",slow);}}
     private void reliable(Session s,int lane,int kind,int sequence,int time,byte[] payload)throws IOException{sendRaw(s,Wire.bytes(o->{o.writeInt(s.id);o.writeByte(lane);o.writeByte(kind);o.writeByte(0);o.writeShort(WINDOW);o.writeInt(time);o.writeInt(sequence);o.writeInt(s.lanes[lane].rx);o.writeInt((kind&7)==1?payload.length:1);o.write(payload);}));}
     private void enqueue(Session s,int lane,byte[] stream){if(s.vehicleCapable)stream=VehicleEnvelope.current(stream);Lane l=s.lanes[lane];int count=(stream.length+FRAGMENT-1)/FRAGMENT;if(l.queued.size()+count>MAX_QUEUE)throw new IllegalStateException("reliable_output_limit");for(int i=0;i<stream.length;i+=FRAGMENT)l.queued.add(Arrays.copyOfRange(stream,i,Math.min(stream.length,i+FRAGMENT)));}
     private void flush(Session s,long now)throws IOException{
@@ -1070,7 +1071,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         player.lastItemPickup=monotonic;
         var body=worldItems.byEntity(entity);
         if(body==null||body.throwingSession!=null||body.claiming||body.expiring
-                ||!player.worldItemsSeen.contains(body.item.id()))return;
+                ||!player.worldItemsSeen.contains(body.item.id())||!groundItemChunkVisible(player,body.position))return;
         if(body.item.pickupOwner()!=null&&!body.item.pickupOwner().equals(player.grant.name()))return;
         if(System.currentTimeMillis()>=body.item.expires()||inventories.busy(character(player)))return;
         var at=body.position;
@@ -1154,6 +1155,12 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
                     }
                 });
     }
+    private static boolean groundItemChunkVisible(Session player,World.Vec position){
+        if(player.teleport!=null||player.respawning||player.teleportGuard.awaitingArrival())return false;
+        long key=chunkKey((int)Math.floor(position.x()/16),(int)Math.floor(position.z()/16));
+        return player.window.inside(key)&&player.chunks.contains(key);
+    }
+    private static int worldItemLane(szserver.world.WorldItems.Body body){return body.throwingSession==null?1:0;}
     private void advanceWorldItems(){
         long now=System.currentTimeMillis();
         worldItems.sync(inventories.worldItems(),now);
@@ -1163,7 +1170,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
                     boolean predicted=gone.prediction>=0&&s.incarnation.equals(gone.throwingSession);
                     enqueueOrRetire(s,GrenadePackets.boltImpact(gone.entity,gone.position,predicted));
                 }
-                enqueueOrRetire(s,WorldItemPackets.remove(gone.entity));
+                enqueueOrRetire(s,worldItemLane(gone),WorldItemPackets.remove(gone.entity));
             }
             entityIds.release(gone.entity);
         }
@@ -1185,19 +1192,29 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
             }
         }
         for(Session s:List.copyOf(sessions.values()))if(s.ready){
-            Set<UUID> visible=new HashSet<>();for(var body:bodies)if(!body.expiring&&Math.abs(body.position.x()-s.pos[0])<64&&Math.abs(body.position.z()-s.pos[2])<64&&Math.abs(body.position.y()-s.pos[1])<48)visible.add(body.item.id());
-            for(var it=s.worldItemsSeen.iterator();it.hasNext();){UUID id=it.next();if(!visible.contains(id)){for(var body:bodies)if(body.item.id().equals(id)){enqueueOrRetire(s,WorldItemPackets.remove(body.entity));break;}it.remove();}}
+            Set<UUID> visible=new HashSet<>();
+            for(var body:bodies){
+                if(body.expiring)continue;
+                var p=body.position;
+                boolean tracked=body.throwingSession==null?groundItemChunkVisible(s,p):
+                    Math.abs(p.x()-s.pos[0])<64&&Math.abs(p.z()-s.pos[2])<64&&Math.abs(p.y()-s.pos[1])<48;
+                if(tracked)visible.add(body.item.id());
+            }
+            for(var it=s.worldItemsSeen.iterator();it.hasNext();){UUID id=it.next();if(!visible.contains(id)){for(var body:bodies)if(body.item.id().equals(id)){enqueueOrRetire(s,worldItemLane(body),WorldItemPackets.remove(body.entity));break;}it.remove();}}
             int sent=0;for(int n=0;n<bodies.size()&&sent<32;n++){var body=bodies.get((int)Math.floorMod((long)tick*32+n,bodies.size()));if(!visible.contains(body.item.id()))continue;
+                // Queue item traffic behind terrain and complete tile records on their reliable lane.
+                int lane=worldItemLane(body);
+                if(lane==1&&(s.completeTiles!=null||s.lanes[lane].queued.size()>=32))continue;
                 if(s.worldItemsSeen.add(body.item.id())){
-                    if(body.throwingSession==null)enqueueOrRetire(s,WorldItemPackets.spawn(body.entity,body.position,body.item.stack()));
+                    if(body.throwingSession==null)enqueueOrRetire(s,lane,WorldItemPackets.spawn(body.entity,body.position,body.item.stack()));
                     else {
                         enqueueOrRetire(s,GrenadePackets.bolt(body.entity,body.position,body.projectile));
                         if(s.incarnation.equals(body.throwingSession)&&body.prediction>=0)
                             enqueueOrRetire(s,GrenadePackets.prediction(body.entity,body.prediction));
                     }
-                    enqueueOrRetire(s,WorldItemPackets.update(body));sent++;
+                    enqueueOrRetire(s,lane,WorldItemPackets.update(body));sent++;
                 }
-                else if(body.velocity.x()!=0||body.velocity.y()!=0||body.velocity.z()!=0||tick%20==Math.floorMod(body.entity,20)){enqueueOrRetire(s,WorldItemPackets.update(body));sent++;}
+                else if(body.velocity.x()!=0||body.velocity.y()!=0||body.velocity.z()!=0||tick%20==Math.floorMod(body.entity,20)){enqueueOrRetire(s,lane,WorldItemPackets.update(body));sent++;}
             }
         }
         for(var event:boltEvents)publishBoltImpact(event);
@@ -1823,7 +1840,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         if(s.respawnStateSave==null||!s.respawnStateSave.isDone())return;
         try{s.respawnStateSave.join();}catch(CompletionException failure){s.respawnStateSave=null;remove(s);return;}
         s.respawnStateSave=null;
-        s.respawning=false;s.deadUntil=0;s.velocity=new double[3];s.motion.reset();respawns++;s.chunks.clear();s.chunkRevisions.clear();s.cachedRequests.clear();s.deliveries.clear();s.faults.clear();s.manifestRetryAt=0;s.deltas=null;s.completeTiles=null;s.completeTileAt=0;s.pendingChunks.clear();s.chunkX=Integer.MIN_VALUE;s.window.reset();s.windowEpoch++;enqueue(s,0,packets.respawn(s.pos));enqueue(s,0,scaledReady(s));loadout(s);sendPermissions(s,true);enqueue(s,0,GamePackets.attributes(++tick,0,Factions.attributes(s.faction)));for(Session other:sessions.values())if(other!=s&&other.ready)enqueue(other,0,GamePackets.vitals(tick,s.entity,s.hp,s.maxHp,s.animation.aiming()));
+        s.respawning=false;s.deadUntil=0;s.velocity=new double[3];s.motion.reset();respawns++;s.worldItemsSeen.clear();s.chunks.clear();s.chunkRevisions.clear();s.cachedRequests.clear();s.deliveries.clear();s.faults.clear();s.manifestRetryAt=0;s.deltas=null;s.completeTiles=null;s.completeTileAt=0;s.pendingChunks.clear();s.chunkX=Integer.MIN_VALUE;s.window.reset();s.windowEpoch++;enqueue(s,0,packets.respawn(s.pos));enqueue(s,0,scaledReady(s));loadout(s);sendPermissions(s,true);enqueue(s,0,GamePackets.attributes(++tick,0,Factions.attributes(s.faction)));for(Session other:sessions.values())if(other!=s&&other.ready)enqueue(other,0,GamePackets.vitals(tick,s.entity,s.hp,s.maxHp,s.animation.aiming()));
     }
     private void advancePlacement(Session s,long now){
         if(s.candidates==null)return;
