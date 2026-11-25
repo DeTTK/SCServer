@@ -647,9 +647,7 @@ public final class ClientStateAdapter implements AutoCloseable {
         });
     }
     private szserver.inventory.WeaponProfile.ReloadAnimation reloadAnimation(Class<?> gun,Object factory,Object stack,Class<?> mode,float modifier)throws Exception{
-        var config=Class.forName("1596256282",true,loader);
-        Object presentation=NativeMethods.instance(gun,"strictfp",config,stack.getClass()).invoke(factory,stack);
-        int sound=presentation!=null&&(Boolean)config.getMethod("return",int.class).invoke(presentation,-1)?-1:-2;
+        int sound=cosmetics.reloadSoundTimeline(gun,factory,stack);
         if(gun.getField("cs").getBoolean(factory)){
             // Stepwise guns use the per-cartridge timeline and leave magazine animation timings unset.
             var shells=new szserver.inventory.WeaponProfile.ShellReload(

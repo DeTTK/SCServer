@@ -59,7 +59,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
     public UUID creativeCharacter(Session session){return character(session);}
     public void creativeSend(Session session,byte[] packet){enqueueOrRetire(session,packet);}
     public void creativeDeny(Session session,String error){denyNativeGrant(session,error);}
-    private static final class Lane {boolean parsing;int rx,tx;final Map<Integer,byte[]> received=new HashMap<>();final LinkedHashMap<Integer,Sent> sent=new LinkedHashMap<>();final ArrayDeque<byte[]> queued=new ArrayDeque<>();final ReliableInput stream=new ReliableInput();}
+    private static final class Lane {boolean parsing;int rx,tx;long lastAck;final Map<Integer,byte[]> received=new HashMap<>();final LinkedHashMap<Integer,Sent> sent=new LinkedHashMap<>();final ArrayDeque<byte[]> queued=new ArrayDeque<>();final ReliableInput stream=new ReliableInput();}
     private record ScaleChange(Session requester,double[] position,playerscale.ScaleValue scale,CompletableFuture<Integer> query,long deadline){}
     private long scaleRevision;private String lastScaleError="";
     private static final class MedicineUse {
@@ -422,7 +422,13 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
                 if(budget==0)break;
                 Sent sent=entry.getValue();
                 if(now-sent.last<s.retryTiming.timeout(sent.attempts))continue;
-                if(sent.attempts>=40||now-sent.first>=30_000_000_000L)throw new IOException("reliable_stalled");
+                if(sent.attempts>=40||now-sent.first>=30_000_000_000L){
+                    long lastAckMs=outgoing.lastAck==0?-1:(now-outgoing.lastAck)/1_000_000;
+                    throw new IOException("reliable_stalled lane="+lane+" seq="+Integer.toUnsignedString(entry.getKey())
+                            +" ageMs="+(now-sent.first)/1_000_000+" attempts="+sent.attempts+" lastAckMs="+lastAckMs
+                            +" unacked="+outgoing.sent.size()+" queued="+outgoing.queued.size()
+                            +" rtoMs="+s.retryTiming.timeout(sent.attempts)/1_000_000);
+                }
                 reliable(s,lane,129,entry.getKey(),(int)(now/1_000_000),sent.payload);
                 entry.setValue(new Sent(sent.payload,sent.first,now,sent.attempts+1));
                 retries++;
@@ -436,9 +442,11 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
             }
         }
     }
-    private static void observeAck(Session session,Sent packet,long now){
+    private static void observeAck(Session session,Lane lane,Sent packet,long now){
+        if(packet==null)return;
+        lane.lastAck=now;
         // A retransmitted packet's ACK cannot identify which send arrived.
-        if(packet!=null&&packet.attempts==1)session.retryTiming.observe(now-packet.last);
+        if(packet.attempts==1)session.retryTiming.observe(now-packet.last);
     }
     private void receive(InetSocketAddress address,byte[] raw)throws Exception{if(raw.length<5)throw new IOException("datagram_header");ByteBuffer b=ByteBuffer.wrap(raw);int connection=b.getInt(),type=b.get()&255;datagrams.merge(type,1L,Long::sum);Session s=sessions.get(address);
         if(type==20){if(raw.length<6||raw.length>512||b.get()!=1)throw new IOException("hello_version");if(s!=null&&s.clientId==connection){if(!s.accepted)challenge(s);return;}if(s!=null)remove(s,"udp_address_reused");if(sessions.size()>=MAX_SESSIONS)return;long began=System.nanoTime();byte[] cookie=new byte[20];random.nextBytes(cookie);int id=random.nextInt();long cookieEnd=System.nanoTime();s=new Session(address,id,connection,cookie,chunkSettings);sessions.put(address,s);long sessionEnd=System.nanoTime();challenge(s);long challengeEnd=System.nanoTime();maxHelloCookieNanos=Math.max(maxHelloCookieNanos,cookieEnd-began);maxHelloSessionNanos=Math.max(maxHelloSessionNanos,sessionEnd-cookieEnd);maxHelloChallengeNanos=Math.max(maxHelloChallengeNanos,challengeEnd-sessionEnd);return;}
@@ -449,15 +457,18 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
             long now=System.nanoTime();
             var pending=l.sent.entrySet().iterator();
             Sent cumulativeSample=null;
+            boolean cumulativeProgress=false;
             while(pending.hasNext()){
                 var entry=pending.next();
                 int age=peerRx-entry.getKey();
                 if(Integer.compareUnsigned(age,1)<0||Integer.compareUnsigned(age,4096)>=0)continue;
                 if(entry.getValue().attempts==1)cumulativeSample=entry.getValue();
                 pending.remove();
+                cumulativeProgress=true;
             }
-            observeAck(s,cumulativeSample,now);
-            if(kind==2){if(value<0||value>WINDOW)throw new IOException("ack_range");for(int i=0;i<value;i++)observeAck(s,l.sent.remove(seq+i),now);continue;}
+            if(cumulativeProgress)l.lastAck=now;
+            observeAck(s,l,cumulativeSample,now);
+            if(kind==2){if(value<0||value>WINDOW)throw new IOException("ack_range");for(int i=0;i<value;i++)observeAck(s,l,l.sent.remove(seq+i),now);continue;}
             if(kind!=1||value<0||value>b.remaining()||value>8192)throw new IOException("reliable_data");byte[] payload=new byte[value];b.get(payload);
             int distance=seq-l.rx;if(Integer.compareUnsigned(distance,WINDOW)>=0){if(distance<0)reliable(s,type,2,seq,time,new byte[0]);continue;}
             l.received.putIfAbsent(seq,payload);reliable(s,type,2,seq,time,new byte[0]);while(l.received.containsKey(l.rx)){byte[] part=l.received.remove(l.rx++);l.stream.append(part);if(!l.parsing){l.parsing=true;parseReady.addLast(new ParseTarget(s,type));}}
