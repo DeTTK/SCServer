@@ -30,6 +30,7 @@ public record FunnelImpact(UUID zone, float x, float y, float z) {
                 Object packet = Native.ready.newInstance();
                 Native.send.invoke(connection, Native.envelope.newInstance(packet));
                 Native.send.invoke(connection, Native.envelope.newInstance(Native.boltReady.newInstance()));
+                Native.send.invoke(connection, Native.envelope.newInstance(Native.weaponActionReady.newInstance()));
             }
             advertised = connection;
         } catch (ReflectiveOperationException e) {
@@ -63,7 +64,7 @@ public record FunnelImpact(UUID zone, float x, float y, float z) {
 
     private static final class Native {
         static final Method connection, send, registry, find, behaviour, particles, spawn, sound;
-        static final java.lang.reflect.Constructor<?> envelope, ready, boltReady;
+        static final java.lang.reflect.Constructor<?> envelope, ready, boltReady, weaponActionReady;
         static final Class<?> funnel;
         static final Field world, impactEffect;
         static final String impactSound;
@@ -79,6 +80,7 @@ public record FunnelImpact(UUID zone, float x, float y, float z) {
                 envelope = Class.forName("385693344").getConstructor(Class.forName("499058674"));
                 ready = Class.forName("szmods.bridge.FunnelImpactReady").getConstructor();
                 boltReady = Class.forName("szmods.bridge.BoltImpactReady").getConstructor();
+                weaponActionReady = Class.forName("szmods.bridge.WeaponActionReady").getConstructor();
                 world = net.getField("const");
                 registry = scene.getMethod("try", worldBase);
                 find = scene.getMethod("throws", UUID.class);

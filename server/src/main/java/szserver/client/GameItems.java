@@ -281,6 +281,7 @@ public final class GameItems implements AutoCloseable {
     public ClientStateAdapter.Magazine inspectMagazine(byte[] state)throws Exception{return adapter.inspectMagazine(state);}
     private String stateKind(szserver.inventory.ItemStack item){return registry.getAsJsonObject(Integer.toString(item.id())).get("state").getAsString();}
     public UUID identity(szserver.inventory.ItemStack item)throws Exception{return item.state().length==0?new UUID(0,0):adapter.identity(stateKind(item),item.state());}
+    public boolean isHandOverride(int item)throws Exception{return adapter.isHandOverride(item);}
     public szserver.inventory.ItemStack preserveIdentity(szserver.inventory.ItemStack original,szserver.inventory.ItemStack edited)throws Exception{
         if(original.id()!=edited.id())throw new IllegalArgumentException("editor_item_factory_changed");
         if(original.state().length==0)return edited;

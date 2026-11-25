@@ -11,6 +11,7 @@ public final class FpvPackets {
     public static boolean rawCodec(Object packet) {
         String name=packet.getClass().getName();
         if(name.equals("szmods.bridge.FunnelImpact")||name.equals("szmods.bridge.FunnelImpactReady"))return true;
+        if(name.equals("szmods.bridge.WeaponAction")||name.equals("szmods.bridge.WeaponActionReady"))return true;
         if(name.equals("szmods.bridge.VehicleInput")||name.equals("szmods.bridge.VehicleSnapshot"))return true;
         if(name.equals("szmods.bridge.VrWeapon")||name.equals("szmods.bridge.VrWeaponReply"))return true;
         if(name.equals("szmods.bridge.CommandRequest")||name.equals("szmods.bridge.CommandCatalog")||name.equals("szmods.bridge.MedicineUse"))return true;
@@ -56,6 +57,7 @@ public final class FpvPackets {
         AnimationHooks.receive(connection,payload);
     }
     static void drain() {
+        WeaponAction.drain();
         VehiclePackets.drain();
         VrPackets.drain();
         for(int i=0;i<128;i++) {

@@ -3,9 +3,34 @@ import com.google.gson.*;
 import java.util.*;
 
 /** Resource combat parameters. No prototype-wide damage, RPM or magazine constants. */
-public record WeaponProfile(int capacity,List<Integer> ammunition,double damage,double distantDamage,double range,double falloffStart,double falloffEnd,double rpm,double reload,double tacticalReload,double headMultiplier,List<Double> reloadByRounds) {
+public record WeaponProfile(int capacity,List<Integer> ammunition,double damage,double distantDamage,double range,double falloffStart,double falloffEnd,double rpm,double reload,double tacticalReload,double headMultiplier,List<Double> reloadByRounds,ReloadAnimation reloadAnimation) {
+    public record ReloadTiming(float interrupt,float complete,float visual){
+        public ReloadTiming{
+            if(!Float.isFinite(interrupt)||!Float.isFinite(complete)||!Float.isFinite(visual)||interrupt<0||complete<0||visual<0)
+                throw new IllegalArgumentException("invalid_reload_timing");
+        }
+        public static ReloadTiming uniform(float seconds){return new ReloadTiming(seconds,seconds,seconds);}
+    }
+    public record ShellReload(float empty,float tactical,float insertion,float crossing,int threshold,boolean firstIncluded,float modifier){
+        ReloadTiming timing(int loaded,int added){
+            float time=(loaded==0?empty:tactical)-(firstIncluded?insertion:0)+insertion*added;
+            if(loaded<threshold&&loaded+added>threshold)time+=crossing;
+            return ReloadTiming.uniform(time*modifier);
+        }
+    }
+    public record ReloadAnimation(ReloadTiming empty,ReloadTiming tactical,ShellReload shells,int soundTimeline){
+        ReloadTiming timing(int loaded,int added){
+            return shells!=null?shells.timing(loaded,added):loaded==0?empty:tactical;
+        }
+    }
     public WeaponProfile(int capacity,List<Integer> ammunition,double damage,double distantDamage,double range,double falloffStart,double falloffEnd,double rpm,double reload,double tacticalReload,double headMultiplier){this(capacity,ammunition,damage,distantDamage,range,falloffStart,falloffEnd,rpm,reload,tacticalReload,headMultiplier,List.of());}
+    public WeaponProfile(int capacity,List<Integer> ammunition,double damage,double distantDamage,double range,double falloffStart,double falloffEnd,double rpm,double reload,double tacticalReload,double headMultiplier,List<Double> reloadByRounds){this(capacity,ammunition,damage,distantDamage,range,falloffStart,falloffEnd,rpm,reload,tacticalReload,headMultiplier,reloadByRounds,null);}
     public double reloadDuration(int rounds){if(rounds<0||rounds>capacity)throw new IllegalArgumentException("magazine_rounds");return reloadByRounds.isEmpty()?(rounds==0?reload:tacticalReload):reloadByRounds.get(rounds);}
+    public ReloadTiming reloadTiming(int rounds,int added){
+        if(rounds<0||added<=0||rounds+added>capacity)throw new IllegalArgumentException("reload_ammunition_count");
+        return reloadAnimation==null?ReloadTiming.uniform((float)reloadDuration(rounds)):reloadAnimation.timing(rounds,added);
+    }
+    public int reloadSoundTimeline(){return reloadAnimation==null?-2:reloadAnimation.soundTimeline();}
     public WeaponProfile{ammunition=List.copyOf(ammunition);reloadByRounds=List.copyOf(reloadByRounds);if(!reloadByRounds.isEmpty()&&(reloadByRounds.size()!=capacity+1||reloadByRounds.stream().anyMatch(v->!Double.isFinite(v)||v<0)))throw new IllegalArgumentException("invalid_reload_timeline");if(ammunition.isEmpty()||ammunition.stream().anyMatch(id->id<1||id>65535)||java.util.stream.DoubleStream.of(damage,distantDamage,range,falloffStart,falloffEnd,rpm,reload,tacticalReload,headMultiplier).anyMatch(v->!Double.isFinite(v))||capacity<1||capacity>1000||damage<=0||damage>1_000_000||distantDamage<0||distantDamage>1_000_000||rpm<=0||rpm>6000||range<=0||range>1024||reload<0||tacticalReload<0||headMultiplier<0)throw new IllegalArgumentException("invalid_weapon_profile");}
     private static double value(JsonObject p,String name,double fallback){return p.has(name)?p.get(name).getAsDouble():fallback;}
     public static WeaponProfile from(JsonObject p){

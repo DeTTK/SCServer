@@ -1,10 +1,34 @@
 package szserver.client;
 
 import szserver.net.Wire;
+import szserver.net.GamePackets;
+import szserver.inventory.WeaponProfile.ReloadTiming;
 import java.nio.*;
 
 /** Bounded enrichment of the installed movement snapshot and its native remote graph. */
 public final class PlayerAnimationPackets {
+    public enum Action {SWING, STRIKE, THROW_PREPARE, THROW_FINISH}
+    public static byte[] action(int entity,int item,Action action){
+        return Wire.dynamic("szmods.bridge.WeaponAction",Wire.bytes(out->{
+            out.writeInt(entity);
+            out.writeShort(item);
+            out.writeByte(action.ordinal());
+        }));
+    }
+    public static byte[] reload(int entity,ReloadTiming timing,int ammo,int count,boolean empty,int soundTimeline){
+        return Wire.dynamic("1072250159",Wire.bytes(out->{
+            out.writeInt(entity);
+            out.writeFloat(timing.interrupt());
+            out.writeFloat(timing.complete());
+            out.writeFloat(timing.visual());
+            out.write(GamePackets.stack(ammo,count,new byte[0]));
+            out.writeBoolean(empty);
+            out.writeBoolean(!empty);
+            out.writeBoolean(false);
+            out.writeInt(soundTimeline);
+            out.writeUTF("");
+        }));
+    }
     public record Edge(double x1,double y1,double z1,double x2,double y2,double z2,float phase) {
         public Edge { finite(x1,y1,z1,x2,y2,z2,phase); }
     }

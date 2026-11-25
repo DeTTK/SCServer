@@ -10,8 +10,10 @@ public final class InstallFunnelImpact implements Opcodes {
         Path root = Path.of(args[0]);
         writePoint(root, "FunnelImpact");
         writePoint(root, "BoltImpact");
+        writePoint(root, "WeaponAction");
         writeCapability(root, "FunnelImpactReady");
         writeCapability(root, "BoltImpactReady");
+        writeCapability(root, "WeaponActionReady");
     }
 
     private static void writePoint(Path root, String name) throws Exception {

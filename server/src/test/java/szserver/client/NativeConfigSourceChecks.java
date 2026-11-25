@@ -113,6 +113,38 @@ public final class NativeConfigSourceChecks {
         System.out.println("PASS archive overrides and replay for item facts, weapon modules, melee, loot, anomalies, sickness and factions");
     }
 
+    private static void verifyWeaponPresentation(GameItems items, Path runtime) throws Exception {
+        var primary = items.createStack(20051, 1, 0, new JsonObject());
+        var secondary = items.createStack(20401, 1, 0, new JsonObject());
+        var rifle = items.weaponProfile(primary);
+        var pistol = items.weaponProfile(secondary);
+        check(rifle.capacity() == 30 && pistol.capacity() == 8, "primary and secondary capacities");
+        primary = primary.state(items.magazine(primary, rifle.ammunition().get(0), 17));
+        secondary = secondary.state(items.magazine(secondary, pistol.ammunition().get(0), 3));
+        check(items.inspectMagazine(primary).rounds() == 17 && items.inspectMagazine(secondary).rounds() == 3,
+                "independent native magazine stacks");
+        var rifleTiming = rifle.reloadTiming(0, 30);
+        var pistolTiming = pistol.reloadTiming(3, 5);
+        check(rifleTiming.complete() > 0 && pistolTiming.complete() > 0 && !rifleTiming.equals(pistolTiming),
+                "per-weapon and per-magazine-state timing");
+        var ordinary = HandPackets.attributes(HandPackets.SECONDARY, false, null);
+        check(java.nio.ByteBuffer.wrap(ordinary.get(89)).getShort() == 1
+                && ordinary.get(124) == null && ordinary.get(127)[0] == 0, "secondary is not a temporary hand item");
+        var address = new Inventory.Address(1, 0, 23);
+        check(address.equals(HandPackets.readOverride(new byte[]{0, 1, 1, 0, 0, 23})),
+                "native optional temporary hand address");
+        check(HandPackets.readOverride(new byte[]{1}) == null, "clear temporary hand address");
+        try (var packets = new ClientPackets(runtime)) {
+            int ammo = pistol.ammunition().get(0);
+            packets.statelessItem(ammo);
+            var frame = PlayerAnimationPackets.reload(37, pistolTiming, ammo, 5, false, pistol.reloadSoundTimeline());
+            var payload = szserver.net.Wire.input(szserver.net.Wire.readFrame(new java.io.ByteArrayInputStream(frame)));
+            check(payload.readUnsignedByte() == 5 && payload.readUTF().equals("1072250159"), "native reload envelope");
+            byte[] body = payload.readAllBytes();
+            check(java.util.Arrays.equals(body, packets.roundTrip("1072250159", body)), "native observer reload codec");
+        }
+    }
+
     private static void verifyItems(Path server, Path runtime, boolean stock, Path scratch) throws Exception {
         try (var items = new GameItems(runtime, server.resolve("registries/client-current-item-states.json"))) {
             items.warmGameplay(server.resolve("fixtures/item-definitions.json"), server.resolve("fixtures/artifact-settings.json"));
@@ -131,6 +163,7 @@ public final class NativeConfigSourceChecks {
             var knifeOne = items.createStack(9174, 1, 0, new JsonObject());
             var knifeTwo = items.createStack(9174, 1, 0, new JsonObject());
             check(!items.identity(knifeOne).equals(items.identity(knifeTwo)), "fresh identity from native default");
+            if (stock) verifyWeaponPresentation(items, runtime);
             if (!stock) {
                 verifyInventoryFacts(items, catalog, scratch);
                 var gun = NativeCosmeticTests.personalWeapon(items, 20051);

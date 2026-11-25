@@ -2185,6 +2185,36 @@ public final class StandardJvmBootstrap {
         effectiveCallback.accept(null, current);
     }
 
+    /** Apply native curitem updates to the equipment selector used by the actor's renderer. */
+    public static void compatibilityBindSelectedEquipment(Object controller) {
+        Object selector = reflectedField(controller, "extends");
+        Object manager = reflectedField(selector, "interface");
+        Object callbacks = reflectedField(manager, "native");
+        if (selector == null || !(callbacks instanceof java.util.Map<?, ?>)) return;
+        @SuppressWarnings("unchecked")
+        java.util.Map<Object, Object> listeners = (java.util.Map<Object, Object>) callbacks;
+        Object previous = listeners.get(selector);
+        listeners.put(selector, (java.util.function.BiConsumer<Object, Object>) (oldValue, newValue) -> {
+            if (previous instanceof java.util.function.BiConsumer<?, ?>) {
+                @SuppressWarnings("unchecked")
+                java.util.function.BiConsumer<Object, Object> listener =
+                        (java.util.function.BiConsumer<Object, Object>) previous;
+                listener.accept(oldValue, newValue);
+            }
+            applySelectedEquipment(controller);
+        });
+        applySelectedEquipment(controller);
+        compatibilityFinalizeRemoteEquipmentBindings(controller);
+    }
+
+    private static void applySelectedEquipment(Object controller) {
+        try {
+            invokeNoArgReturning(controller, "public", "void");
+        } catch (ReflectiveOperationException error) {
+            throw new IllegalStateException("Cannot apply native equipment selector", error);
+        }
+    }
+
     /** Convert a transport-owned stack into the native visual-container form. */
     private static Object compatibilityEquipmentAggregateValue(Object networkValue) {
         Object stack = reflectedField(networkValue, "switch");

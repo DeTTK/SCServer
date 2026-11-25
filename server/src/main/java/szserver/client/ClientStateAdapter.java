@@ -557,6 +557,12 @@ public final class ClientStateAdapter implements AutoCloseable {
         Object stack=prepareModuleGun(raw);
         return withModuleFactories(()->{Object size=Class.forName("1824362651",true,loader).getMethod("while",stack.getClass()).invoke(null,stack);return new int[]{size.getClass().getField("try").getInt(size),size.getClass().getField("enum").getInt(size)};});
     }
+    boolean isHandOverride(int item)throws Exception{
+        Object factory=cosmetics.factory(item);
+        Class<?> quick=Class.forName("1979736960",true,loader);
+        return quick.isInstance(factory)&&(Boolean)quick.getMethod("do").invoke(factory)
+                &&(Boolean)quick.getMethod("float").invoke(factory);
+    }
     /** Prepared on the inventory worker using the actual equipped state and its module factories. */
     public szserver.inventory.WeaponProfile weaponProfile(byte[] raw)throws Exception{
         int id=new DataInputStream(new ByteArrayInputStream(raw)).readUnsignedShort();String name=moduleFactoryClasses.get(id);Class<?> gun=Class.forName("1745367406",true,loader);if(name==null||!gun.isAssignableFrom(Class.forName(name,true,loader)))return null;
@@ -564,6 +570,7 @@ public final class ClientStateAdapter implements AutoCloseable {
         return withModuleFactories(()->{int capacity=(Integer)NativeMethods.instance(gun,"default",int.class,stack).invoke(factory,value);int[] ammunition=(int[])NativeMethods.instance(gun,"protected",int[].class,stack).invoke(factory,value);if(ammunition.length==0)return null;
             double reload=(Float)NativeMethods.instance(gun,"synchronized",float.class,stack,timing).invoke(factory,value,complete),tactical=(Float)NativeMethods.instance(gun,"switch",float.class,stack,timing).invoke(factory,value,complete);
             double modifier=(Float)NativeMethods.instance(gun,"continue",float.class,stack).invoke(factory,value);if(!Double.isFinite(modifier)||modifier<=0)throw new IOException("weapon_reload_modifier");
+            var animation=reloadAnimation(gun,factory,value,timing,(float)modifier);
             List<Double> reloadByRounds=new ArrayList<>();if(gun.getField("cs").getBoolean(factory)){Class<?> player=Class.forName("200241649",true,loader);Method duration=NativeMethods.instance(gun,"void",float.class,stack,int.class,int.class,timing,player);for(int rounds=0;rounds<=capacity;rounds++)reloadByRounds.add(rounds==capacity?0.0:((Float)duration.invoke(factory,value,rounds,capacity-rounds,complete,null)).doubleValue()*modifier);reload=reloadByRounds.get(0)/modifier;tactical=reloadByRounds.get(Math.min(1,capacity))/modifier;}
 
             float damage=gun.getField("synchronized").getFloat(factory), distant=gun.getField("throw").getFloat(factory),
@@ -575,8 +582,31 @@ public final class ClientStateAdapter implements AutoCloseable {
                 distant*=(Float)factor.invoke(factory,value,stat.getField("DAMAGE_DISTANT").get(null));
                 head*=(Float)factor.invoke(factory,value,stat.getField("HEAD_DAMAGE_MODIFIER").get(null));
             }
-            return new szserver.inventory.WeaponProfile(capacity,Arrays.stream(ammunition).boxed().toList(),damage,distant,(Float)NativeMethods.instance(gun,"import",float.class,stack).invoke(factory,value),(Float)NativeMethods.instance(gun,"float",float.class,stack).invoke(factory,value),(Float)NativeMethods.instance(gun,"throws",float.class,stack).invoke(factory,value),(Float)NativeMethods.instance(gun,"private",float.class,stack).invoke(factory,value),reload*modifier,tactical*modifier,head,reloadByRounds);
+            return new szserver.inventory.WeaponProfile(capacity,Arrays.stream(ammunition).boxed().toList(),damage,distant,(Float)NativeMethods.instance(gun,"import",float.class,stack).invoke(factory,value),(Float)NativeMethods.instance(gun,"float",float.class,stack).invoke(factory,value),(Float)NativeMethods.instance(gun,"throws",float.class,stack).invoke(factory,value),(Float)NativeMethods.instance(gun,"private",float.class,stack).invoke(factory,value),reload*modifier,tactical*modifier,head,reloadByRounds,animation);
         });
+    }
+    private szserver.inventory.WeaponProfile.ReloadAnimation reloadAnimation(Class<?> gun,Object factory,Object stack,Class<?> mode,float modifier)throws Exception{
+        var config=Class.forName("1596256282",true,loader);
+        Object presentation=NativeMethods.instance(gun,"strictfp",config,stack.getClass()).invoke(factory,stack);
+        int sound=presentation!=null&&(Boolean)config.getMethod("return",int.class).invoke(presentation,-1)?-1:-2;
+        var empty=reloadTiming(gun,factory,stack,mode,modifier,"synchronized");
+        var tactical=reloadTiming(gun,factory,stack,mode,modifier,"switch");
+        szserver.inventory.WeaponProfile.ShellReload shells=null;
+        if(gun.getField("cs").getBoolean(factory)){
+            // 1745367406.void with no player uses these config fields for the per-cartridge reload.
+            shells=new szserver.inventory.WeaponProfile.ShellReload(
+                    gun.getField("az").getFloat(factory),gun.getField("ba").getFloat(factory),
+                    gun.getField("bm").getFloat(factory),gun.getField("bo").getFloat(factory),
+                    gun.getField("bn").getInt(factory),gun.getField("h").getBoolean(factory),modifier);
+        }
+        return new szserver.inventory.WeaponProfile.ReloadAnimation(empty,tactical,shells,sound);
+    }
+    private static szserver.inventory.WeaponProfile.ReloadTiming reloadTiming(Class<?> gun,Object factory,Object stack,Class<?> mode,float modifier,String method)throws Exception{
+        Method timing=NativeMethods.instance(gun,method,float.class,stack.getClass(),mode);
+        return new szserver.inventory.WeaponProfile.ReloadTiming(
+                (Float)timing.invoke(factory,stack,mode.getField("RELOAD_INTERRUPT_DURATION").get(null))*modifier,
+                (Float)timing.invoke(factory,stack,mode.getField("RELOAD_COMPLETE_DURATION").get(null))*modifier,
+                (Float)timing.invoke(factory,stack,mode.getField("RELOAD_VISUAL_DURATION").get(null))*modifier);
     }
     Map<Integer,List<List<szserver.net.MeleeProfile>>> meleeProfiles()throws Exception{
         return NativeMeleeProfiles.read(cosmetics);

@@ -1,5 +1,7 @@
 package szserver.net;
 
+import szserver.client.HandPackets;
+
 import szserver.client.GameItems;
 import szserver.client.ClientStateAdapter;
 import szserver.inventory.*;
@@ -225,6 +227,31 @@ public final class GameInventory implements AutoCloseable {
     public Map<String,Integer> statOrdinals(){return items.statOrdinals();}
     public void weapon(UUID id,int container,Consumer<Weapon> ready,Consumer<String> failure){
         weapon(id,container,0,ready,failure);
+    }
+    public void handOverride(UUID id,Inventory.Address address,Consumer<HandPackets.HeldOverride> ready,Consumer<String> failure){
+        Character c=character(id);
+        if(c.busy||c.failed||c.deathClear){failure.accept("inventory_busy");return;}
+        ItemStack item=c.inventory.at(address);
+        if(item==null){ready.accept(null);return;}
+        c.busy=true;
+        try{
+            factories.execute(()->{
+                try{
+                    var selected=items.isHandOverride(item.id())
+                            ?new HandPackets.HeldOverride(address,items.identity(item),item):null;
+                    completion(()->{
+                        c.busy=false;
+                        if(!c.deathClear&&admissionAllowed(id)&&c.inventory.at(address)==item)ready.accept(selected);
+                        else failure.accept("hand_override_changed");
+                    });
+                }catch(Exception|LinkageError error){
+                    completion(()->{c.busy=false;failure.accept(Objects.toString(error.getMessage(),"hand_override_failed"));});
+                }
+            });
+        }catch(RejectedExecutionException error){
+            c.busy=false;
+            failure.accept("inventory_factory_queue_full");
+        }
     }
     public void weapon(UUID id,int container,int requestedAmmo,Consumer<Weapon> ready,Consumer<String> failure){
         Character c=character(id);if(c.busy||c.failed||c.deathClear){failure.accept("inventory_busy");return;}ItemStack stack=c.inventory.at(new Inventory.Address(0,container,0));
