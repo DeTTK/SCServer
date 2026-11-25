@@ -45,7 +45,7 @@ public final class InventoryJournal implements AutoCloseable {
         Inventory.Plan plan=previous.replace(readChanges(event),0);WorldDrop drop=event.has("drop")?WorldDrop.read(event.getAsJsonObject("drop")):null;
         if(drop!=null){validateDropMutation(id,previous,plan,drop);validateDrop(drop);}
         List<WorldDrop> granted=new ArrayList<>();if(event.has("grantedDrops")){if(drop!=null)throw new IllegalArgumentException("mixed_drop_transaction");for(var row:event.getAsJsonArray("grantedDrops"))granted.add(WorldDrop.read(row.getAsJsonObject()));validateGrantedDrops(id,plan,granted);}
-        physicalItems.validate(event,id,previous,plan,catalog);
+        physicalItems.validate(event,id,previous,plan,catalog,true);
         roots.record(event,plan.after(),event.has("gameplay")?event.getAsJsonObject("gameplay"):before.gameplay());
         if(drop!=null)publishDrop(drop);for(WorldDrop grant:granted)publishDrop(grant);physicalItems.apply(event);
     }
@@ -91,7 +91,7 @@ public final class InventoryJournal implements AutoCloseable {
         if(drop!=null)event.add("drop",drop.json());if(spawn!=null)event.add("worldItemSpawn",spawn.json());if(claim!=null)event.addProperty("worldItemClaim",claim.toString());
         JsonObject saved=progress==null?null:progress.deepCopy();if(saved!=null)event.add("gameplay",saved);
         for(var e:plan.changes().entrySet())changes.add(row(e));event.add("changes",changes);
-        long[] bytes={0};return journal.appendPreparedChecked(()->{JsonObject stored=transactions.store(event);bytes[0]=szserver.util.Json.bytes(stored).length;return stored;},()->{Inventory previous=load(id);if(plan.after().revision()!=previous.revision()+1)throw new IllegalArgumentException("inventory_revision_conflict");physicalItems.validate(event,id,previous,plan,catalog);if(drop!=null){validateDropMutation(id,previous,plan,drop);validateDrop(drop);}},()->{roots.record(event,plan.after(),saved==null?roots.get(id).gameplay():saved);if(drop!=null)publishDrop(drop);physicalItems.apply(event);appended(bytes[0]);});
+        long[] bytes={0};return journal.appendPreparedChecked(()->{JsonObject stored=transactions.store(event);bytes[0]=szserver.util.Json.bytes(stored).length;return stored;},()->{Inventory previous=load(id);if(plan.after().revision()!=previous.revision()+1)throw new IllegalArgumentException("inventory_revision_conflict");physicalItems.validate(event,id,previous,plan,catalog,false);if(drop!=null){validateDropMutation(id,previous,plan,drop);validateDrop(drop);}},()->{roots.record(event,plan.after(),saved==null?roots.get(id).gameplay():saved);if(drop!=null)publishDrop(drop);physicalItems.apply(event);appended(bytes[0]);});
     }
     private static void validateDropMutation(UUID id,Inventory previous,Inventory.Plan plan,WorldDrop drop){
         if(!id.equals(drop.character())||plan.changes().size()!=1)throw new IllegalArgumentException("world_drop_inventory_mismatch");
@@ -127,7 +127,7 @@ public final class InventoryJournal implements AutoCloseable {
         },()->{
             Inventory previous=load(id);
             if(plan.after().revision()!=previous.revision()+1)throw new IllegalArgumentException("inventory_revision_conflict");
-            physicalItems.validate(event,id,previous,plan,catalog);
+            physicalItems.validate(event,id,previous,plan,catalog,false);
         },()->{
             roots.record(event,plan.after(),roots.get(id).gameplay());
             physicalItems.apply(event);
