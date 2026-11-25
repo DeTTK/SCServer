@@ -133,7 +133,7 @@ public final class NativeConfigSourceChecks {
             check(!items.identity(knifeOne).equals(items.identity(knifeTwo)), "fresh identity from native default");
             if (!stock) {
                 verifyInventoryFacts(items, catalog, scratch);
-                var gun = items.createStack(20051, 1, 0, new JsonObject());
+                var gun = NativeCosmeticTests.personalWeapon(items, 20051);
                 var mod = NativeCosmeticTests.rolledModule(items, NEW_WEAPON_MODULE);
                 var upgraded = items.weaponModule(gun, mod).weapon();
                 check(items.weaponProfile(upgraded).damage() > items.weaponProfile(gun).damage() * 1.2,

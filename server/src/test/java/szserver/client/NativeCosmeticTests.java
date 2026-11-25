@@ -33,7 +33,7 @@ public final class NativeCosmeticTests {
             verifySightMount(items);
             if(GameResources.mounted(resources.resolve("configs"))){
                 verifyWeaponModule(items);
-                var seedGun=items.createStack(20051,1,0,new JsonObject());
+                var seedGun=personalWeapon(items,20051);
                 journalSeed=new ModuleJournalSeed(seedGun,rolledModule(items,11701),items.weaponProfile(seedGun).damage());
             }
         }
@@ -53,9 +53,18 @@ public final class NativeCosmeticTests {
         return items.createStack(factory,1,0,tags);
     }
 
+    static ItemStack personalWeapon(GameItems items,int factory)throws Exception{
+        var tags=JsonParser.parseString("""
+                {"owner":{"type":"string","value":"ModuleQA"}}
+                """).getAsJsonObject();
+        return items.createStack(factory,1,0,tags);
+    }
+
     private static void verifyWeaponModule(GameItems items)throws Exception{
-        var gun=items.createStack(20051,1,0,new JsonObject());
+        var gun=personalWeapon(items,20051);
         var modifier=rolledModule(items,11701);
+        denied(()->items.weaponModule(items.createStack(20051,1,0,new JsonObject()),modifier),
+                "unpersonalized weapon has a locked module slot");
         var stock=items.weaponProfile(gun);
         var equipped=items.weaponModule(gun,modifier).weapon();
         var changed=items.weaponProfile(equipped);
@@ -76,8 +85,8 @@ public final class NativeCosmeticTests {
         check(removed.removed().size()==1&&Arrays.equals(removed.removed().get(0).state(),modifier.state()),"same module returned");
         check(items.weaponProfile(removed.weapon()).damage()==stock.damage(),"removal restores stock damage");
         var incompatible=items.createStack(21603,1,0,new JsonObject());
-        denied(()->items.weaponModule(items.createStack(20000,1,0,new JsonObject()),incompatible),"native category rejects SMG");
-        denied(()->items.weaponModule(items.createStack(20898,1,0,new JsonObject()),modifier),"disabled slot rejected");
+        denied(()->items.weaponModule(personalWeapon(items,20000),incompatible),"native category rejects SMG");
+        denied(()->items.weaponModule(personalWeapon(items,20898),modifier),"disabled slot rejected");
     }
 
     private record ModuleJournalSeed(ItemStack gun,ItemStack module,double damage){}

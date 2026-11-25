@@ -614,9 +614,13 @@ public final class ClientStateAdapter implements AutoCloseable {
         Object replacement=source==null?null:moduleStack(source);
         Object candidate=replacement==null?null:childFactory(moduleId(replacement));
         return withModuleFactories(()->{
-            Method locked=Class.forName("1391289645",true,loader).getMethod("class",stackType,boolean.class);
-            if((boolean)locked.invoke(null,stack,true)||replacement!=null&&(boolean)locked.invoke(null,replacement,true))
-                throw new IOException("weapon_module_item_locked");
+            Method personalOwner=Class.forName("1391289645",true,loader).getMethod("while",stackType,boolean.class);
+            String owner=(String)personalOwner.invoke(null,stack,true);
+            if(owner==null)throw new IOException("weapon_module_personalization_required");
+            if(replacement!=null){
+                String moduleOwner=(String)personalOwner.invoke(null,replacement,true);
+                if(moduleOwner!=null&&!owner.equals(moduleOwner))throw new IOException("weapon_module_owner_mismatch");
+            }
             if(candidate!=null&&!(boolean)gun.getMethod("interface",stackType,base,keyType)
                     .invoke(factory,stack,candidate,key))throw new IOException("weapon_module_incompatible");
             Method getter=NativeMethods.instance(gun,"continue",stackType,stackType,Object.class);
