@@ -12,17 +12,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
 
-public record NearbyPlayers(int radius, int count, List<String> online, List<Marker> markers) {
+public record NearbyPlayers(List<String> online, List<Marker> markers) {
     record Marker(String name, int x, int z, short yaw, boolean teammate) {}
-    private record View(Object connection, String label, NearbyPlayers data, List<Object> arrows) {}
+    private record View(Object connection, NearbyPlayers data, List<Object> arrows) {}
     private static final Map<Object,List<Object>> renderedMap = new WeakHashMap<>();
     private static volatile View view;
-    private static boolean hudError, mapError, onlineError;
+    private static boolean mapError, onlineError;
 
     public static NearbyPlayers read(DataInput input) throws IOException {
         if (input.readUnsignedByte() != 1) throw new IOException("Unknown nearby players packet version");
         int radius = input.readUnsignedShort();
-        int nearby = count(input);
+        count(input); // Reserved in v1 for clients that drew the old label.
         if (radius < 1 || radius > 512) throw new IOException("Invalid nearby players radius");
         int onlineCount = count(input);
         List<String> online = new ArrayList<>(onlineCount);
@@ -32,7 +32,7 @@ public record NearbyPlayers(int radius, int count, List<String> online, List<Mar
         for (int i = 0; i < markerCount; i++) {
             markers.add(new Marker(input.readUTF(), input.readInt(), input.readInt(), input.readShort(), input.readBoolean()));
         }
-        return new NearbyPlayers(radius, nearby, List.copyOf(online), List.copyOf(markers));
+        return new NearbyPlayers(List.copyOf(online), List.copyOf(markers));
     }
 
     private static int count(DataInput input) throws IOException {
@@ -56,7 +56,7 @@ public record NearbyPlayers(int radius, int count, List<String> online, List<Mar
             if (!mapError) System.err.println("[Map players] Markers unavailable: " + error);
             mapError = true;
         }
-        view = new View(connection, "Игроков рядом: " + count + " · " + radius + " м", this, arrows);
+        view = new View(connection, this, arrows);
     }
 
     static void connected(Object connection) {
@@ -66,17 +66,6 @@ public record NearbyPlayers(int radius, int count, List<String> online, List<Mar
 
     public static boolean localOnline() {
         return view != null && !onlineError;
-    }
-
-    public static void render(Object font, int x, int y) {
-        var current = view;
-        if (current == null || hudError) return;
-        try {
-            NativeFont.DRAW.invoke(font, current.label(), x, y, 0xffe8edf2);
-        } catch (ReflectiveOperationException | LinkageError error) {
-            hudError = true;
-            System.err.println("[Nearby players] HUD unavailable: " + error);
-        }
     }
 
     public static boolean mapChanged(boolean nativeChanged,Object provider,Object renderer) {
@@ -135,16 +124,6 @@ public record NearbyPlayers(int radius, int count, List<String> online, List<Mar
                 }));
         }
         return List.copyOf(arrows);
-    }
-
-    private static final class NativeFont {
-        static final Method DRAW;
-        static {
-            try {
-                DRAW = FunnelImpact.nativeMethod(Class.forName("186969209"), "static", double.class,
-                    CharSequence.class, int.class, int.class, int.class);
-            } catch (ReflectiveOperationException error) { throw new IllegalStateException(error); }
-        }
     }
 
     private static final class NativeMap {

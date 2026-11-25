@@ -87,7 +87,8 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         long joinedNanos,nextNativeSquadPositions;
         PlayerSquads.Roster nativeSquad;
         List<NativeSocialPackets.Position> nativeSquadPositions=List.of();
-        int nearbyRadius=50;
+        int nearbyRadius=50,radarPlayers;
+        long nextRadarRefresh;
         boolean mapSquadOnly;
         PlayerMapSnapshot mapSnapshot;
         long nextNearby;
@@ -2625,7 +2626,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         enqueue(s,0,GamePackets.chat("Игроков рядом: "+countNearby(s)+" · "+s.nearbyRadius+" м"));
     }
     private int countNearby(Session s){
-        int count=0;
+        int count=1; // The radar includes the local player.
         double radiusSquared=(double)s.nearbyRadius*s.nearbyRadius;
         for(Session other:sessions.values())if(other!=s&&other.ready){
             double x=other.pos[0]-s.pos[0],y=other.pos[1]-s.pos[1],z=other.pos[2]-s.pos[2];
@@ -2634,8 +2635,16 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         return count;
     }
     private void advanceNearby(Session s,long now){
-        if(!s.nearbyCapable||now<s.nextNearby||s.lanes[0].queued.size()>32)return;
+        if(now<s.nextNearby||s.lanes[0].queued.size()>32)return;
         s.nextNearby=now+250_000_000L;
+        int nearby=countNearby(s);
+        if(s.radarPlayers!=nearby||now>=s.nextRadarRefresh){
+            enqueue(s,0,NativeSocialPackets.radarPlayers(nearby));
+            s.radarPlayers=nearby;
+            // The stock radar clears the cell after 100 client ticks without a packet.
+            s.nextRadarRefresh=now+2_000_000_000L;
+        }
+        if(!s.nearbyCapable)return;
         var team=squads.members(squadPlayer(s));
         var online=new ArrayList<String>();
         var markers=new ArrayList<MapMarker>();
@@ -2648,12 +2657,15 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         }
         online.sort(String.CASE_INSENSITIVE_ORDER);
         markers.sort(Comparator.comparing(MapMarker::name));
-        var snapshot=new PlayerMapSnapshot(s.nearbyRadius,countNearby(s),online,markers);
+        // Version 1 carries small lists and an old byte-sized count for older clients.
+        var snapshot=new PlayerMapSnapshot(s.nearbyRadius,Math.min(32,nearby),
+            List.copyOf(online.subList(0,Math.min(32,online.size()))),
+            List.copyOf(markers.subList(0,Math.min(32,markers.size()))));
         if(snapshot.equals(s.mapSnapshot))return;
         enqueue(s,0,Wire.dynamic("szmods.bridge.NearbyPlayers",Wire.bytes(out->{
             out.writeByte(1);out.writeShort(snapshot.radius());out.writeByte(snapshot.nearby());
-            out.writeByte(online.size());for(String player:online)out.writeUTF(player);
-            out.writeByte(markers.size());for(var marker:markers){
+            out.writeByte(snapshot.online().size());for(String player:snapshot.online())out.writeUTF(player);
+            out.writeByte(snapshot.markers().size());for(var marker:snapshot.markers()){
                 out.writeUTF(marker.name());out.writeInt(marker.x());out.writeInt(marker.z());
                 out.writeShort(marker.yaw());out.writeBoolean(marker.teammate());
             }

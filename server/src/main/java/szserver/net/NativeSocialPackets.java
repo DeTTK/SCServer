@@ -10,6 +10,8 @@ import szserver.client.ClientPackets;
 
 /** The shipped client's party, notifications, and profile RPC. */
 final class NativeSocialPackets {
+    private static final int RADAR_PLAYER_COUNT = 1065; // 1044953185
+
     record Member(String name, UUID character, int color) {}
     record Position(String name,float x,float z,float yaw,float health) {}
 
@@ -54,6 +56,14 @@ final class NativeSocialPackets {
         }));
     }
 
+    static byte[] radarPlayers(int count) {
+        return Wire.frame(RADAR_PLAYER_COUNT,radarPlayerCountBody(count));
+    }
+
+    private static byte[] radarPlayerCountBody(int count) {
+        return Wire.bytes(out->out.writeInt(count));
+    }
+
     static byte[] equipment(String player,List<String> titles) {
         return Wire.dynamic("szmods.bridge.ProfileEquipment",Wire.bytes(out->{
             out.writeUTF(player);out.writeByte(titles.size());
@@ -66,6 +76,11 @@ final class NativeSocialPackets {
     }
 
     static void verify(ClientPackets client)throws Exception {
+        for(int count:new int[]{1,32,256,Integer.MAX_VALUE}){
+            byte[] body=radarPlayerCountBody(count);
+            if(!Arrays.equals(body,client.roundTrip("1044953185",body)))
+                throw new IOException("invalid_radar_player_count");
+        }
         for(byte[] frame:List.of(
             roster(1,"Player","BSCPCRAFT",List.of(new Member("Player",new UUID(0,1),0)),List.of("Guest")),
             positions(List.of(new Position("Guest",1,2,90,1))),
