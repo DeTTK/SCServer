@@ -19,6 +19,9 @@ public final class WorldItems implements AutoCloseable {
         private World.Vec previousPosition;
         public World.Vec previousPosition(){return previousPosition;}public boolean ground,claiming,expiring,settlePending,settledSaved;public long retry;
         int quiet;
+        public void rebound(World.Vec point,World.Vec newVelocity){
+            position=point;velocity=newVelocity;ground=false;broken=false;quiet=0;
+        }
         Body(WorldItem item,int entity,UUID throwingSession,int prediction,BoltProjectile projectile){this.projectile=projectile;this.item=item;this.entity=entity;this.throwingSession=throwingSession;this.prediction=prediction;position=new World.Vec(item.x(),item.y(),item.z());previousPosition=position;velocity=new World.Vec(item.vx(),item.vy(),item.vz());ground=item.vx()==0&&item.vy()==0&&item.vz()==0;settledSaved=ground;}
     }
     private record Key(int x,int y,int z) {static Key at(World.Vec p){return new Key((int)Math.floor(p.x()/8),(int)Math.floor(p.y()/8),(int)Math.floor(p.z()/8));}World.Vec center(){return new World.Vec(x*8+4,y*8+4,z*8+4);}}
@@ -39,8 +42,7 @@ public final class WorldItems implements AutoCloseable {
         bodies.put(item.id(),new Body(item,ids.getAsInt(),session,prediction,projectile));
         return true;
     }
-    public void sync(Map<UUID,WorldItem> saved){
-        long now=System.currentTimeMillis();
+    public void sync(Map<UUID,WorldItem> saved,long now){
         for(var it=bodies.entrySet().iterator();it.hasNext();){
             var entry=it.next();
             var body=entry.getValue();

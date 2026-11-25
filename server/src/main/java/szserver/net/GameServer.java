@@ -1117,7 +1117,8 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
                 });
     }
     private void advanceWorldItems(){
-        worldItems.sync(inventories.worldItems());
+        long now=System.currentTimeMillis();
+        worldItems.sync(inventories.worldItems(),now);
         for(var gone:worldItems.removed()){
             for(Session s:List.copyOf(sessions.values()))if(s.worldItemsSeen.remove(gone.item.id())){
                 if(gone.broken()&&s.boltImpactEffects){
@@ -1128,7 +1129,6 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
             }
             entityIds.release(gone.entity);
         }
-        long now=System.currentTimeMillis();
         if(tick%20==0){int left=2;for(var saved:inventories.worldItems().values())if(!saved.world().equals(itemWorld)&&now>=saved.expires()&&remoteItemExpiry.add(saved.id())){
             inventories.expireWorldItem(saved.id(),now).whenComplete((v,error)->{try{adminTask(()->{remoteItemExpiry.remove(saved.id());if(error!=null)itemFailures++;});}catch(RejectedExecutionException stopped){}});if(--left==0)break;
         }}
@@ -1239,9 +1239,22 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
             UUID id=body.item.id();
             if(!isBolt(body.item))continue;
             live.add(id);
-            if(boltTriggered.contains(id))continue;
+            boolean triggered=boltTriggered.contains(id);
             World.Vec from=body.previousPosition();
-            var impact=BoltAnomalies.funnelImpact(zones,from,body.position);
+            var impact=triggered?null:BoltAnomalies.funnelImpact(zones,from,body.position);
+            if(impact==null){
+                long contactTick=anomalyClock+1; // Actor contacts later in this same server tick.
+                var trampoline=BoltAnomalies.trampolineImpact(zones,from,body.position,body.velocity,
+                    zone->anomalies.trampolineReady(contactTick,zone));
+                if(trampoline!=null&&anomalies.activateTrampolineBolt(contactTick,trampoline.zone())){
+                    body.rebound(trampoline.point(),trampoline.rebound());
+                    boltTriggered.add(id);
+                    boltTriggers++;
+                    if(!trampoline.zone().disabledEffect())events.add(new BoltEvent(trampoline.zone(),body.entity,null));
+                    continue;
+                }
+            }
+            if(triggered)continue;
             var zone=impact==null?BoltAnomalies.containing(zones,from,body.position):impact.zone();
             if(zone==null||impact==null&&zone.kind().equals("funnel"))continue;
             if(impact!=null){
