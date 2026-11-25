@@ -56,6 +56,7 @@ public final class MeleeInventoryProbe implements Opcodes {
         verifyCancelledStrike();
         verifyDamageLabels();
         verifyMeleeStyleCast();
+        Class.forName("833813734", false, MeleeInventoryProbe.class.getClassLoader()).getDeclaredMethods();
         System.out.println("Melee cancellation and localized item stats: PASS");
     }
 

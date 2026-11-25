@@ -23,6 +23,7 @@ public final class ReloadEventAgent implements Opcodes {
         MeleeBodyAgent.install(instrumentation);
         MeleeInventoryAgent.install(instrumentation);
         MeleeStyleAgent.install(instrumentation);
+        StorageInventoryViewAgent.install(instrumentation);
         installed=true;
         // Older launchers already start this companion. Discover the optional environment
         // companion beside it so a runtime update also upgrades those launchers correctly.
