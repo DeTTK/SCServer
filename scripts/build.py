@@ -64,13 +64,15 @@ def compile_java(name,sources,classpath=()):
     subprocess.run([tool('javac'),'-J-Dfile.encoding=UTF-8','@'+str(argfile)],check=True,cwd=ROOT)
     return output
 
-def jar(name,classes,extra=()):
+def jar(name,classes,extra=(),embedded_classes=None):
     target=B/(name+'.jar')
     with zipfile.ZipFile(target,'w',zipfile.ZIP_DEFLATED) as out:
         for p in sorted(classes.rglob('*.class')):
             entry=zipfile.ZipInfo(p.relative_to(classes).as_posix(),(2020,1,1,0,0,0));entry.compress_type=zipfile.ZIP_DEFLATED;out.writestr(entry,p.read_bytes())
         for path,dest in extra:
             entry=zipfile.ZipInfo(dest,(2020,1,1,0,0,0));entry.compress_type=zipfile.ZIP_DEFLATED;out.writestr(entry,path.read_bytes())
+        for name,contents in sorted((embedded_classes or {}).items()):
+            entry=zipfile.ZipInfo(name,(2020,1,1,0,0,0));entry.compress_type=zipfile.ZIP_DEFLATED;out.writestr(entry,contents)
     return target
 
 def server(private_resources=False):
@@ -81,7 +83,12 @@ def server(private_resources=False):
             path=ROOT/'.local/server-resources'/name
             if not path.is_file() or sha(path)!=digest:raise SystemExit('Missing or changed private resource: '+name+'; run scripts/import_private_resources.py')
             extra.append((path,name))
-    jar('server',classes,extra);return classes,deps
+    # Released launchers use a fixed classpath that does not contain ASM.
+    asm_name=json.loads((ROOT/'dependencies.lock.json').read_text('utf8'))['asm']['file']
+    with zipfile.ZipFile(next(dep for dep in deps if dep.name==asm_name)) as asm:
+        asm_classes={name:asm.read(name) for name in asm.namelist()
+                     if name.startswith('org/objectweb/asm/') and name.endswith('.class')}
+    jar('server',classes,extra,asm_classes);return classes,deps
 
 def sdk():
     classes=compile_java('sdk',(ROOT/'sdk/api').rglob('*.java'));api=jar('mod-api',classes)

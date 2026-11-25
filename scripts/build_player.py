@@ -102,7 +102,9 @@ def build(output):
     item_checks=('NativeBoltFactoryChecks','NativeMedicineResourceChecks','NativeArtifactResourceChecks','NativeConfigSourceChecks')
     item_tests=tools.compile_java('player-item-verify',
         [ROOT/f'server/src/test/java/szserver/client/{name}.java' for name in (*item_checks,'NativeCosmeticTests')],[server_classes,*server_deps])
-    item_test_cp=os.pathsep.join(map(str,[item_tests,server_classes,ROOT/'build/server.jar',*server_deps]))
+    # Use the delivered JARs and the same dependencies as the Windows launcher.
+    item_test_cp=os.pathsep.join(map(str,[item_tests,player/'Server/server.jar',
+        player/'Server/lib/gson-2.13.2.jar',runtime/'dependencies/zstd-jni-1.5.0-5.jar']))
     for name in item_checks:
         subprocess.run([tools.tool('java'),'-Xmx512m','-cp',item_test_cp,
                         'szserver.client.'+name,str(player/'Server'),str(runtime)],check=True)
