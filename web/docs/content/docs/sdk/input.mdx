@@ -1,0 +1,74 @@
+---
+title: "Ввод"
+description: "InputSnapshot: клавиши, мышь и геймпады"
+---
+
+# Ввод
+
+`InputSnapshot` неизменяем и содержит состояние ввода на текущий кадр.
+
+## Клавиши
+
+`keys()` — `Map<Integer, Boolean>` по кодам GLFW. В API `1` заполняется только
+фиксированный набор:
+
+`32, 65, 67, 68, 69, 70, 81, 82, 83, 87, 88, 90, 340, 341, 342, 344, 345`
+
+Это пробел, A, C, D, E, F, Q, R, S, W, X, Z, Shift и Ctrl. Остальные клавиши в
+снимок не попадают, поэтому `input.keyDown(75)` для K всегда вернёт `false`.
+
+```java
+boolean down = input.keyDown(70); // F
+```
+
+Для остальных клавиш используйте хук `input.key.v1` или собственный опрос GLFW на
+игровом потоке.
+
+## Мышь
+
+`mouseButtons()` — кнопки мыши `0..7`. Кнопка вне диапазона возвращает `false` без
+исключения.
+
+## Геймпады
+
+`axes()` / `buttons()` — первый подключённый геймпад:
+
+| Оси | Кнопки |
+| --- | --- |
+| `left-x`, `left-y` | `a`, `b`, `x`, `y` |
+| `right-x`, `right-y` | `left-bumper`, `right-bumper` |
+| `left-trigger`, `right-trigger` | `back`, `start`, `left-stick`, `right-stick`, `dpad-up`, `dpad-right`, `dpad-down`, `dpad-left` |
+
+Оси в `[-1, 1]`, триггеры в `[0, 1]`. Неизвестная ось или кнопка даёт `0` /
+`false`. `gamepads()` возвращает все подключённые геймпады с именами.
+
+## Снимок, а не события
+
+`onInput` вызывается раз в кадр с одним и тем же снимком. Для действия на нажатие
+храните предыдущее состояние:
+
+```java
+private boolean wasDown;
+
+@Override
+public void onInput(InputSnapshot input) {
+    boolean down = input.keyDown(70);
+    if (down && !wasDown) toggle();
+    wasDown = down;
+}
+```
+
+<Callout title="Пример">
+  Как FPV-дрон заменяет снимок своими «сырыми» клавишами, смотрите в
+  `mods/fpv-drones/src/fpv/FpvDroneMod.java`, метод `onInput`.
+</Callout>
+
+## Блокировка ввода и UI
+
+- `input.action-block.v1` — вернуть `Boolean.TRUE`, чтобы заблокировать действия.
+- `input.ui-capture.v1` — вернуть `Boolean.TRUE`, пока интерактивное меню мода
+  владеет указателем.
+- `input.key.v1(int key, boolean original)` — вернуть `Boolean` с новым решением.
+
+Не блокируйте ввод без видимой причины: игрок теряет управление, а ошибку сложно
+заметить.

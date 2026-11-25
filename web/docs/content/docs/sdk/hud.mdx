@@ -1,0 +1,62 @@
+---
+title: "HUD"
+description: "Оверлеи, раскладка и скрытие каналов"
+---
+
+# HUD
+
+`HudRegistry` регистрирует отрисовку и декларативные элементы раскладки.
+
+## Оверлей
+
+```java
+@Override
+public void registerHud(HudRegistry hud) {
+    hud.element("panel", "my-mod/panel", HudRegistry.Anchor.TOP_LEFT, 24, 24, 320, 64);
+
+    hud.register("panel-draw", (renderer, width, height, partialTick) -> {
+        draw(renderer, width, height);
+    });
+}
+```
+
+- `register(id, overlay)` — отрисовка на каждом вызове родного HUD-прохода.
+- Дубликат ID — исключение.
+- `element(id, figmaNode, anchor, x, y, width, height)` — декларативное описание
+  элемента для моста раскладки. Само по себе ничего не рисует.
+- `hide(channel)` / `setVisible(channel, visible)` помечают канал скрытым.
+  Загрузчик отдаёт это через `hudHidden(channel)`; из коробки так работает
+  только канал `crosshair`.
+
+## Рендер
+
+`overlay.render(Object hud, ...)` получает родной объект HUD. Его тип зависит от
+версии клиента, поэтому код должен быть защитным.
+
+<Callout title="Call site">
+  Оверлеи вызываются из того же call site, что и `hud.crosshair.v1`. Если
+  совместимый клиент этот проход не вызывает, HUD мода не появится. В текущем
+  call site `RenderHooks.crosshair` параметр `partialTick` всегда равен `0`.
+</Callout>
+
+## Каналы
+
+Канал — строковый идентификатор группы элементов. Скрытие канала не удаляет
+элемент и не отключает `register`; оно только сообщает клиенту, что канал нужно
+не рисовать.
+
+```java
+hud.setVisible("crosshair", false);
+boolean hidden = hud.hudHidden("crosshair");
+```
+
+Не полагайтесь на скрытие чужих каналов как на стабильный API: набор каналов
+задаёт совместимый клиент.
+
+## Практика
+
+- Делайте отрисовку дешёвой: она выполняется в игровом кадре.
+- Не создавайте ресурсы на каждый кадр — кэшируйте их.
+- Проверяйте `width`, `height` и `partialTick` вместо предположений о разрешении.
+- Для сложной раскладки используйте `element`, но помните, что он не рисует.
+- Все ошибки отрисовки отключают мод, поэтому защищайте внешние вызовы.

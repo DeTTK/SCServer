@@ -1,0 +1,15 @@
+{
+  "title": "SDK",
+  "description": "Моды, хуки и сборка клиента",
+  "root": true,
+  "pages": [
+    "index",
+    "manifest",
+    "lifecycle",
+    "settings",
+    "hud",
+    "input",
+    "hooks",
+    "build"
+  ]
+}

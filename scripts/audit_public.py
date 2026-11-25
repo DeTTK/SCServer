@@ -2,10 +2,10 @@
 from pathlib import Path
 import json,re,sys,os,hashlib
 ROOT=Path(__file__).resolve().parents[1]
-SKIP={'.git','.local','build','dist','__pycache__','target','artifacts'}
+SKIP={'.git','.local','build','dist','__pycache__','target','artifacts','node_modules','.next','.source','out','.turbo','logs'}
 BINARY={'.jar','.class','.dll','.exe','.zip','.7z','.xeon','.szenc','.szr','.szmap','.p12','.pfx','.pem','.key','.cer','.sjournal'}
-TEXT={'.java','.py','.md','.cs','.rs','.slint','.lock','.mf','.bat','.json','.properties','.yml','.yaml','.toml','.xml','.ps1','.sh','.txt','.h','.c','.cpp','.hpp','.def','.svg'}
-SPECIAL={'.gitignore','.gitattributes','.editorconfig','.java-version','LICENSE','NOTICE','Makefile'}
+TEXT={'.java','.py','.md','.mdx','.cs','.rs','.slint','.lock','.mf','.bat','.json','.properties','.yml','.yaml','.toml','.xml','.ps1','.sh','.txt','.h','.c','.cpp','.hpp','.def','.svg','.ts','.tsx','.js','.jsx','.mjs','.cjs','.css','.scss'}
+SPECIAL={'.gitignore','.gitattributes','.editorconfig','.java-version','.nvmrc','.npmrc','LICENSE','NOTICE','Makefile'}
 PATTERNS={
     'private_key':re.compile(r'-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----'),
     'telegram_bot_token':re.compile(r'\b[0-9]{8,12}:[A-Za-z0-9_-]{30,}\b'),

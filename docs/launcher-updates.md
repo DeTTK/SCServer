@@ -1,3 +1,7 @@
+---
+title: "Native launcher updates"
+---
+
 # Native launcher updates
 
 The launtest launcher checks this repository's GitHub Releases at startup, separately from game delivery. Successful checks are cached for one hour. Only `launcher-vX.Y.Z-launtest` releases with an exact `BSCPCRAFT.exe` asset, a GitHub SHA-256 digest and an approved repository download URL qualify. Game releases and old Setup executables are ignored.
