@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
+import java.util.Arrays;
 import java.util.Random;
 import java.util.Set;
 import szserver.inventory.ItemCatalog;
@@ -163,6 +164,12 @@ public final class NativeConfigSourceChecks {
             check(GameplayPacketAliases.registered(NativeAdminPackets.GIVE_CLASS)==1473
                     &&GameplayPacketAliases.registered(NativeAdminPackets.ECHO_CLASS)==1135,
                     "native Item Editor grant and creative echo dispatch");
+            var context=JsonParser.parseString("{\"runID\":{\"type\":\"string\",\"value\":\"qa-run\"}}").getAsJsonObject();
+            var progress=items.createStack(16969,1,0,context);
+            byte[] progressBytes=szserver.net.InventoryPackets.stack(progress);
+            var importedProgress=items.readConfig(items.stackConfig(Arrays.copyOfRange(progressBytes,1,progressBytes.length)));
+            check(importedProgress.id()==16969&&Arrays.equals(progress.state(),importedProgress.state()),
+                    "contextual item round trip without an empty captured state");
             var knifeOne = items.createStack(9174, 1, 0, new JsonObject());
             var knifeTwo = items.createStack(9174, 1, 0, new JsonObject());
             check(!items.identity(knifeOne).equals(items.identity(knifeTwo)), "fresh identity from native default");
