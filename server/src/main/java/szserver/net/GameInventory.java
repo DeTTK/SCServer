@@ -101,6 +101,10 @@ public final class GameInventory implements AutoCloseable {
         return combo<variants.size()?variants.get(combo):null;
     }
     public ItemCatalog catalog(){return catalog;}
+    /** The stock equipment selector (276406255.default) supplies this native stack for an empty bolt slot. */
+    ItemStack defaultBolt() throws Exception {
+        return items.createStack(14987,1,0,new JsonObject());
+    }
     public Map<Integer,GrenadeUse.Rules> warmBolts()throws Exception{return items.warmBolts();}
     public void boltProjectile(ItemStack stack,double vx,double vz,float yaw,float pitch,
                                Consumer<szserver.client.BoltProjectile> success,Consumer<String> failure){

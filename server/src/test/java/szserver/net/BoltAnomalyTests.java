@@ -8,12 +8,17 @@ public final class BoltAnomalyTests {
     static AnomalyZone zone(String kind,float scale){var d=new JsonObject();d.addProperty("remove_target_distance",4.1);d.addProperty("attack_area",5);var definition=new SceneRegistry.Definition(1,"test",kind,"",d);var o=object(matrix(scale));return AnomalyZone.from(new ActorSceneObject(definition,o,AnomalyZone.indexBounds(definition,o)));}
     static void nativeThrow(){
         var bolt=new ItemStack(14987,1,0,new byte[0]);
+        var custom=new ItemStack(14988,1,0,new byte[]{1});
+        check(GrenadeUse.equipped(null,10,bolt)==bolt,"empty bolt slot uses the native selector default");
+        check(GrenadeUse.equipped(custom,10,bolt)==custom,"equipped bolt keeps its own factory and modifiers");
+        check(GrenadeUse.equipped(null,4,bolt)==null,"empty grenade slot never receives a stock bolt");
         var rules=new GrenadeUse.Rules(0,20,0,0,false,true);
         var action=new GrenadeUse();
-        check(action.start(bolt,rules,0,1,10,false,0),"equipped bolt accepts native prepare");
-        check(!action.start(bolt,rules,0,1,10,false,0),"another prepare cannot replace it");
+        check(action.start(GrenadeUse.equipped(null,10,bolt),rules,0,1,10,false,0),"stock bolt accepts native prepare");
+        check(!action.start(GrenadeUse.equipped(null,10,bolt),rules,0,1,10,false,0),"another prepare cannot replace it");
         var held=action.take();
-        check(held.valid(bolt,1,10,false),"release must match the held bolt");
+        check(held.valid(GrenadeUse.equipped(null,10,bolt),1,10,false),"stock bolt persists through prepare and release");
+        check(!held.valid(GrenadeUse.equipped(custom,10,bolt),1,10,false),"equipping a custom bolt cancels the held stock throw");
         check(!held.valid(bolt,1,4,false)&&!held.valid(bolt,2,10,false),"slot and life changes cancel the throw");
         UUID character=UUID.randomUUID(),session=UUID.randomUUID();
         var xyz=new World.Vec(0,0,0);
