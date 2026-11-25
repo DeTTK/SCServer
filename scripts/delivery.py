@@ -117,10 +117,16 @@ def source_is_current(channel,source):
     latest,separator,reported_ref=output.strip().partition('\t')
     if not separator or reported_ref!=ref or not re.fullmatch('[0-9a-f]{40}',latest):
         raise ValueError(f'Invalid remote response for {ref}')
-    if latest!=source:
-        print(f'Skipping publication for {channel}: {source[:12]} was superseded by {latest[:12]}')
-        return False
-    return True
+    if latest==source:
+        return True
+    # Pushes that only change Markdown do not start their own build.
+    run('git','fetch','--no-tags','--depth=1','--filter=blob:none','origin',latest,capture_output=True)
+    changed=run('git','diff','--name-only','--no-renames',source,latest,'--','.',
+                ':(exclude,glob)**/*.md',capture_output=True).stdout
+    if not changed:
+        return True
+    print(f'Skipping publication for {channel}: {source[:12]} was superseded by {latest[:12]}')
+    return False
 
 def publish():
     channel,source=publication_source()
