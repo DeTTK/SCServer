@@ -25,7 +25,7 @@ public record FunnelImpact(UUID zone, float x, float y, float z) {
         try {
             Object connection = Native.connection.invoke(game);
             NearbyPlayers.connected(connection);
-            PlayerProfile.connected(connection);
+            ProfileEquipment.connected(connection);
             if (connection == advertised) return;
             if (connection != null && Native.world.get(connection) == null) return;
             if (connection != null) {
@@ -34,6 +34,7 @@ public record FunnelImpact(UUID zone, float x, float y, float z) {
                 Native.send.invoke(connection, Native.envelope.newInstance(Native.boltReady.newInstance()));
                 Native.send.invoke(connection, Native.envelope.newInstance(Native.weaponActionReady.newInstance()));
                 Native.send.invoke(connection, Native.envelope.newInstance(Native.nearbyReady.newInstance()));
+                Native.send.invoke(connection, Native.envelope.newInstance(Native.profileEquipmentReady.newInstance()));
             }
             advertised = connection;
         } catch (ReflectiveOperationException e) {
@@ -67,7 +68,7 @@ public record FunnelImpact(UUID zone, float x, float y, float z) {
 
     private static final class Native {
         static final Method connection, send, registry, find, behaviour, particles, spawn, sound;
-        static final java.lang.reflect.Constructor<?> envelope, ready, boltReady, weaponActionReady, nearbyReady;
+        static final java.lang.reflect.Constructor<?> envelope, ready, boltReady, weaponActionReady, nearbyReady, profileEquipmentReady;
         static final Class<?> funnel;
         static final Field world, impactEffect;
         static final String impactSound;
@@ -85,6 +86,7 @@ public record FunnelImpact(UUID zone, float x, float y, float z) {
                 boltReady = Class.forName("szmods.bridge.BoltImpactReady").getConstructor();
                 weaponActionReady = Class.forName("szmods.bridge.WeaponActionReady").getConstructor();
                 nearbyReady = Class.forName("szmods.bridge.NearbyPlayersReady").getConstructor();
+                profileEquipmentReady = Class.forName("szmods.bridge.ProfileEquipmentReady").getConstructor();
                 world = net.getField("const");
                 registry = scene.getMethod("try", worldBase);
                 find = scene.getMethod("throws", UUID.class);

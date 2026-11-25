@@ -15,8 +15,9 @@ public final class InstallFunnelImpact implements Opcodes {
         writeCapability(root, "BoltImpactReady");
         writeCapability(root, "WeaponActionReady");
         writePoint(root, "NearbyPlayers");
-        writePoint(root, "PlayerProfile");
         writeCapability(root, "NearbyPlayersReady");
+        writePoint(root, "ProfileEquipment");
+        writeCapability(root, "ProfileEquipmentReady");
     }
 
     private static void writePoint(Path root, String name) throws Exception {

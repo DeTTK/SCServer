@@ -1165,7 +1165,6 @@ public final class StandardJvmBootstrap {
         // lazy renderer repair before any render-path lookup can run.
         controlGame = game;
         szmods.runtime.FunnelImpact.advertise(game);
-        szmods.runtime.PlayerProfile.render();
         szmods.runtime.ModLoader.frame(game);
         szmods.runtime.ModLoader.input(modInputSnapshot());
         synchronizeVisualWorldClock(game);

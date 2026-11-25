@@ -83,7 +83,10 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         final WorldEditChat editor=new WorldEditChat();
         PlayerRules.Mode gameplayMode=PlayerRules.Mode.STALKER;String faction="stalker";
         boolean pointFunnelImpacts, boltImpactEffects, weaponActionEvents;
-        boolean nearbyCapable;
+        boolean nearbyCapable,profileEquipmentCapable;
+        long joinedNanos,nextNativeSquadPositions;
+        PlayerSquads.Roster nativeSquad;
+        List<NativeSocialPackets.Position> nativeSquadPositions=List.of();
         int nearbyRadius=50;
         boolean mapSquadOnly;
         PlayerMapSnapshot mapSnapshot;
@@ -310,6 +313,8 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         if(world.beforeStart())world.bootstrap(w->{w.actorMaps(fpvMap);return true;});else world.submit(w->{w.actorMaps(fpvMap);return true;}).get(5,TimeUnit.SECONDS);
         locations=new CharacterLocations(data,regions==null?"flat:arena-v1":regions.identity());rollback.push(locations);allianceState=new AllianceState(data);rollback.push(allianceState);warps=new szserver.persistence.WarpStore(data);rollback.push(warps);environment=commands.environment();environmentAccess=new EnvironmentAccess(environment,new szserver.persistence.WeatherConfigurations(data,runtime));rollback.push(environmentAccess);
         packets=new GamePackets(root.resolve("fixtures/world-ready.b64"));nativePackets=new ClientPackets(runtime);rollback.push(nativePackets);nativePackets.input(Wire.bytes(o->{o.writeByte(7);o.writeFloat(0);o.writeInt(0);o.write(new byte[8]);o.writeInt(0);o.writeDouble(.5);o.writeDouble(1);o.writeDouble(.5);o.writeFloat(0);o.writeFloat(0);o.writeInt(1);o.writeInt(0);o.writeInt(1);o.writeFloat(.05f);o.writeByte(0);}),false);
+        NativeSocialPackets.verify(nativePackets);
+        nativePackets.roundTrip("306768345",nativePackets.playerProfile("Player","stalkers","BSCPCRAFT",0,0));
         fpvExplosion=new FpvExplosion(root.resolve("fixtures/fpv-fab100.bin"));nativePackets.roundTrip(FpvExplosion.PACKET,fpvExplosion.body(new FpvPackets.Vector(0,64,0)));staminaRules=nativePackets.staminaRules();terrainProjection=new TerrainProjection(world,regions,packets,256);rollback.push(terrainProjection);nativeBlocks=new NativeBlockAccess(world,regions,terrainProjection,commands);rollback.push(nativeBlocks);nativePackets.roundTrip("146340354",new byte[20]);
         chunkManifests=new ChunkManifests(world,regions,packets);rollback.push(chunkManifests);nativePackets.roundTrip("1980173742",ChunkManifestPackets.body(List.of()));nativePackets.roundTrip("297896610",ChunkManifestPackets.body(List.of()));szserver.client.ChunkDistancePackets.warm(nativePackets,chunkSettings.distance());
         // No factory construction/codec cold path in the transport owner.
@@ -548,6 +553,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         }
         if(id==1449){var in=Wire.input(body);int owner=in.readShort(),sequence=in.readShort();Inventory.Address target=nullableAddress(in),source=nullableAddress(in);int selection=in.readInt(),slot=in.readUnsignedByte();if(owner!=0||target==null||target.aggregate()==2||source!=null&&source.aggregate()==2||selection<0||slot>=18||in.available()!=0)throw new IOException("module_request");inventories.module(character(s),target,source,selection,slot,plan->inventoryChanged(s,plan,()->enqueue(s,0,InventoryPackets.ack(owner,sequence))),error->{inventorySnapshot(s,0);enqueue(s,0,InventoryPackets.ack(owner,sequence));enqueue(s,0,GamePackets.chat(error));});return;}
         if(id==1138){var request=inventories.itemSlotRequest(false,body);int owner=request.owner(),sequence=request.sequence(),slot=request.slot();Inventory.Address target=request.target(),source=request.source();if(owner!=0||target==null||!StorageLayout.validAddress(target)||source!=null&&!StorageLayout.validAddress(source))throw new IOException("artifact_socket_request");if(!validInventoryTransfer(s,new InventoryTransfer(id,new InventoryPackets.Request(owner,sequence,target,source==null?List.of():List.of(source),0,false,-1),s.inventoryScreen.page()))){inventorySnapshot(s,owner);enqueue(s,0,InventoryPackets.ack(owner,sequence));return;}inventories.socket(character(s),target,source,slot,plan->inventoryChanged(s,plan,()->enqueue(s,0,InventoryPackets.ack(owner,sequence))),error->{inventorySnapshot(s,0);enqueue(s,0,InventoryPackets.ack(owner,sequence));enqueue(s,0,GamePackets.chat(error));});return;}
+        if(nativeSocial(s,id,body))return;
         if(id==1060){receiveChat(s,body);return;}
         if(id==10203){enqueue(s,0,Wire.frame(10204,body));return;}
         if(id==1345||id==1978){if(s.respawning)return;ClientPackets.Input input=nativePackets.input(body,id==1978);if(input.tick()<s.clientTick)return;s.clientTick=input.tick();if(vehicles.driving(s)!=null){if(input.yaw()!=null){s.yaw=input.yaw();s.pitch=input.pitch();}if(vehicleActions.windowView(s,System.nanoTime())){s.animation.input(input.motion());inputButtons(s,input.buttons());}s.lastInput=System.nanoTime();inputs++;return;}if(!input.blockBatch().deltas().isEmpty())nativeBlockBatch(s,input.blockBatch());boolean acceptedPosition=false;if(input.position()!=null){double[] pos=input.position();if(Math.abs(pos[0])<=30_000_001&&Math.abs(pos[2])<=30_000_001&&Math.abs(pos[1])<=30_000_001){if(!s.scaleSaving&&s.scaleChange==null&&s.teleport==null&&s.teleportGuard.accept(point(pos),System.nanoTime())){s.pos=pos;acceptedPosition=true;requestPortal(s,false);}else staleTeleportInputs++;}}if(input.yaw()!=null){s.yaw=input.yaw();s.pitch=input.pitch();}s.motion.input(input,acceptedPosition);s.posture.input(input,s.motion.ground());if(input.mode()==5&&s.mode!=5&&s.hp>0)s.stamina=staminaRules.enterSprint(s.stamina);s.mode=input.mode();s.lastInput=System.nanoTime();if(input.stamina()!=null){s.reportedStamina=input.stamina();s.observedStamina=input.stamina();}s.speed=s.motion.speed();s.velocity=s.motion.velocity();s.ground=s.motion.ground();s.animation.input(input.motion());inputButtons(s,input.buttons());inputs++;return;}
@@ -561,7 +567,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         if(id==280){if(body.length!=0&&body.length!=5)throw new IOException("reload_request_size");int ammo=body.length==0?0:ByteBuffer.wrap(body).getInt();if(ammo<0||ammo>65535||body.length==5&&(body[4]<0||body[4]>1))throw new IOException("reload_request_ammunition");if(body.length==5&&body[4]==1){queueLauncherReload(s,ammo);return;}queueReload(s,ammo);return;}
         if(id==1013){changeMode(s,body);return;}
         if(id==1661){requestRespawn(s,body);return;}
-        if(id==5){var in=Wire.input(body);String cls=in.readUTF();if(cls.equals("szmods.bridge.NearbyPlayersReady")){if(in.available()!=0)throw new IOException("nearby_capability_size");s.nearbyCapable=true;return;}if(cls.equals("szmods.bridge.WeaponActionReady")){if(in.available()!=0)throw new IOException("weapon_action_capability_size");s.weaponActionEvents=true;return;}if(cls.equals("szmods.bridge.BoltImpactReady")){if(in.available()!=0)throw new IOException("bolt_capability_size");s.boltImpactEffects=true;return;}if(cls.equals("szmods.bridge.FunnelImpactReady")){if(in.available()!=0)throw new IOException("funnel_capability_size");s.pointFunnelImpacts=true;return;}if(cls.equals(playerscale.ScaleProtocol.INPUT)){scaleHello(s,in.readAllBytes());}else if(cls.equals(EnvironmentWire.INPUT)){try{environmentAccess.request(s.environmentClient,in.readAllBytes(),playerRules.editor(character(s),worldEditors));}catch(Exception failure){environmentAccess.disconnect(s.environmentClient);JsonObject reply=EnvironmentWire.message("ack");reply.addProperty("ok",false);reply.addProperty("error",Objects.toString(failure.getMessage(),failure.getClass().getSimpleName()));enqueue(s,0,EnvironmentAccess.frame(reply));}}else if(cls.equals(WeaponJammingPackets.REQUEST)){WeaponJammingPackets.read(in.readAllBytes());queueUnjam(s);}else if(cls.equals(UnderbarrelPackets.UNLOAD_REQUEST)){unloadLauncher(s,UnderbarrelPackets.unload(in.readAllBytes()));}else if(cls.equals(UnderbarrelPackets.REQUEST)){UnderbarrelPackets.read(in.readAllBytes());launchUnderbarrel(s);}else if(cls.equals(LauncherPackets.REQUEST)){LauncherPackets.read(in.readAllBytes());launchPrimary(s);}else if(cls.equals(GrenadePackets.START)){grenadeStart(s,GrenadePackets.start(in.readAllBytes()));}else if(cls.equals(GrenadePackets.THROW)){grenadeThrow(s,GrenadePackets.read(in.readAllBytes()));}else if(szserver.client.HandPackets.selectionClass(cls)){selectHandOverride(s,HandPackets.readOverride(in.readAllBytes()));}else if(cls.equals(PhysicalReload.REQUEST)){physicalRequest(s,in.readAllBytes());}else if(cls.equals(CommandSupport.REQUEST)){completion(s,in.readAllBytes());}else if(cls.equals(Vehicles.INPUT)){vehicle(s,in.readAllBytes());}else if(FpvPackets.inputClass(cls)){fpv(s,in.readAllBytes());}else if(cls.equals("1618367864")){anomalyVelocityEcho(in.readAllBytes());}else if(cls.equals("804507492")){anomalyForceEcho(in.readAllBytes());}else if(cls.equals("1552498486")){anomalyStrengthSave(s,in.readAllBytes());}else if(cls.equals("1019975257")){anomalyConfigurationSave(s,in.readAllBytes());}else if(SceneConfigurationPackets.requestClass(cls)){sceneConfiguration(s,in.readAllBytes());}else if(SceneConfigurationPackets.saveClass(cls)){sceneConfigurationSave(s,in.readAllBytes(),false);}else if(SceneConfigurationPackets.settingsClass(cls)){sceneConfigurationSave(s,in.readAllBytes(),true);}else if(szserver.client.SceneEditPackets.kind(cls)!=null){sceneEdit(s,szserver.client.SceneEditPackets.kind(cls),in.readAllBytes());}else if(cls.equals("146340354")){nativeDestroy(s,in.readAllBytes());}else if(cls.equals("1056067431")){NativeBlockPackets.target(in.readAllBytes(),false);nativeBlockIntents++;}else if(szserver.client.PortalPackets.useClass(cls)){nativeBlockIntents++;szserver.client.PortalPackets.emptyHand(in.readAllBytes());}else if(szserver.client.TeleportPackets.mapClass(cls)){try{teleport(s,TeleportCommands.map(in.readAllBytes()),"Телепортация по карте выполнена.");}catch(IllegalArgumentException error){enqueue(s,0,GamePackets.chat(error.getMessage()));}}else if(szserver.client.PermissionPackets.modeClass(cls)){changeMode(s,in.readAllBytes());}else if(cls.equals("1102124358")){requestRespawn(s,in.readAllBytes());}else if(cls.equals("677917411")){receiveChat(s,in.readAllBytes());}return;}
+        if(id==5){var in=Wire.input(body);String cls=in.readUTF();if(cls.equals("szmods.bridge.ProfileEquipmentReady")){if(in.available()!=0)throw new IOException("profile_equipment_capability_size");s.profileEquipmentCapable=true;return;}if(cls.equals("szmods.bridge.NearbyPlayersReady")){if(in.available()!=0)throw new IOException("nearby_capability_size");s.nearbyCapable=true;return;}if(cls.equals("szmods.bridge.WeaponActionReady")){if(in.available()!=0)throw new IOException("weapon_action_capability_size");s.weaponActionEvents=true;return;}if(cls.equals("szmods.bridge.BoltImpactReady")){if(in.available()!=0)throw new IOException("bolt_capability_size");s.boltImpactEffects=true;return;}if(cls.equals("szmods.bridge.FunnelImpactReady")){if(in.available()!=0)throw new IOException("funnel_capability_size");s.pointFunnelImpacts=true;return;}if(cls.equals(playerscale.ScaleProtocol.INPUT)){scaleHello(s,in.readAllBytes());}else if(cls.equals(EnvironmentWire.INPUT)){try{environmentAccess.request(s.environmentClient,in.readAllBytes(),playerRules.editor(character(s),worldEditors));}catch(Exception failure){environmentAccess.disconnect(s.environmentClient);JsonObject reply=EnvironmentWire.message("ack");reply.addProperty("ok",false);reply.addProperty("error",Objects.toString(failure.getMessage(),failure.getClass().getSimpleName()));enqueue(s,0,EnvironmentAccess.frame(reply));}}else if(cls.equals(WeaponJammingPackets.REQUEST)){WeaponJammingPackets.read(in.readAllBytes());queueUnjam(s);}else if(cls.equals(UnderbarrelPackets.UNLOAD_REQUEST)){unloadLauncher(s,UnderbarrelPackets.unload(in.readAllBytes()));}else if(cls.equals(UnderbarrelPackets.REQUEST)){UnderbarrelPackets.read(in.readAllBytes());launchUnderbarrel(s);}else if(cls.equals(LauncherPackets.REQUEST)){LauncherPackets.read(in.readAllBytes());launchPrimary(s);}else if(cls.equals(GrenadePackets.START)){grenadeStart(s,GrenadePackets.start(in.readAllBytes()));}else if(cls.equals(GrenadePackets.THROW)){grenadeThrow(s,GrenadePackets.read(in.readAllBytes()));}else if(szserver.client.HandPackets.selectionClass(cls)){selectHandOverride(s,HandPackets.readOverride(in.readAllBytes()));}else if(cls.equals(PhysicalReload.REQUEST)){physicalRequest(s,in.readAllBytes());}else if(cls.equals(CommandSupport.REQUEST)){completion(s,in.readAllBytes());}else if(cls.equals(Vehicles.INPUT)){vehicle(s,in.readAllBytes());}else if(FpvPackets.inputClass(cls)){fpv(s,in.readAllBytes());}else if(cls.equals("1618367864")){anomalyVelocityEcho(in.readAllBytes());}else if(cls.equals("804507492")){anomalyForceEcho(in.readAllBytes());}else if(cls.equals("1552498486")){anomalyStrengthSave(s,in.readAllBytes());}else if(cls.equals("1019975257")){anomalyConfigurationSave(s,in.readAllBytes());}else if(SceneConfigurationPackets.requestClass(cls)){sceneConfiguration(s,in.readAllBytes());}else if(SceneConfigurationPackets.saveClass(cls)){sceneConfigurationSave(s,in.readAllBytes(),false);}else if(SceneConfigurationPackets.settingsClass(cls)){sceneConfigurationSave(s,in.readAllBytes(),true);}else if(szserver.client.SceneEditPackets.kind(cls)!=null){sceneEdit(s,szserver.client.SceneEditPackets.kind(cls),in.readAllBytes());}else if(cls.equals("146340354")){nativeDestroy(s,in.readAllBytes());}else if(cls.equals("1056067431")){NativeBlockPackets.target(in.readAllBytes(),false);nativeBlockIntents++;}else if(szserver.client.PortalPackets.useClass(cls)){nativeBlockIntents++;szserver.client.PortalPackets.emptyHand(in.readAllBytes());}else if(szserver.client.TeleportPackets.mapClass(cls)){try{teleport(s,TeleportCommands.map(in.readAllBytes()),"Телепортация по карте выполнена.");}catch(IllegalArgumentException error){enqueue(s,0,GamePackets.chat(error.getMessage()));}}else if(szserver.client.PermissionPackets.modeClass(cls)){changeMode(s,in.readAllBytes());}else if(cls.equals("1102124358")){requestRespawn(s,in.readAllBytes());}else if(cls.equals("677917411")){receiveChat(s,in.readAllBytes());}return;}
         if(unknown.containsKey(id)||unknown.size()<128)unknown.merge(id,1L,Long::sum);if(unknown.size()>256)unknown.clear();
     }
     private void repairNativeBlock(Session s,World.Block p){long key=szserver.world.BlockOverlays.key(Math.floorDiv(p.x(),16),Math.floorDiv(p.z(),16));if(!s.blockRepairs.containsKey(key)&&s.blockRepairs.size()>=9)return;BlockRepair repair=s.blockRepairs.computeIfAbsent(key,k->new BlockRepair());if(repair.points.size()<32)repair.points.add(p);}
@@ -1293,7 +1299,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         enqueue(s,0,GamePackets.attributes(tick,0,equipment(s)));inventorySnapshot(s,0);syncLoadoutHand(s);
         var initialEnvironment=environment.state();enqueue(s,0,EnvironmentPackets.clock(environment.clockAnchor(),System.currentTimeMillis()));
         enqueue(s,0,inventories.quickSlotsFrame(character(s)));sendEffects(s,List.of(),s.effects.active(System.currentTimeMillis()));sendPulseEffects(s,List.of(),s.pulses.effects(System.currentTimeMillis()));sendSickness(s,true);
-        sendPermissions(s,true);enqueue(s,0,GamePackets.attributes(++tick,0,Factions.attributes(s.faction)));enqueue(s,0,allianceState.frame());s.ready=true;sendPulseEffects(s,List.of(),s.pulses.effects(System.currentTimeMillis()));resetPoses(s);for(Session viewer:sessions.values())if(viewer!=s&&viewer.ready&&viewer.scaleCapable)sendScale(viewer,s);for(Session other:sessions.values())if(other!=s&&other.ready){enqueue(other,0,Wire.concat(GamePackets.spawn(s.entity,s.grant.name(),s.pos,s.yaw,s.pitch),GamePackets.attributes(tick,s.entity,equipment(s)),GamePackets.attributes(tick,s.entity,remoteHand(s)),GamePackets.attributes(tick,s.entity,Factions.attributes(s.faction)),GamePackets.vitals(tick,s.entity,s.hp,s.maxHp,s.animation.aiming())));enqueue(s,0,Wire.concat(GamePackets.spawn(other.entity,other.grant.name(),other.pos,other.yaw,other.pitch),GamePackets.attributes(tick,other.entity,equipment(other)),GamePackets.attributes(tick,other.entity,remoteHand(other)),GamePackets.attributes(tick,other.entity,Factions.attributes(other.faction)),GamePackets.vitals(tick,other.entity,visibleHealth(other),other.maxHp,other.animation.aiming())));}
+        sendPermissions(s,true);enqueue(s,0,GamePackets.attributes(++tick,0,Factions.attributes(s.faction)));enqueue(s,0,allianceState.frame());s.ready=true;s.joinedNanos=System.nanoTime();sendPulseEffects(s,List.of(),s.pulses.effects(System.currentTimeMillis()));resetPoses(s);for(Session viewer:sessions.values())if(viewer!=s&&viewer.ready&&viewer.scaleCapable)sendScale(viewer,s);for(Session other:sessions.values())if(other!=s&&other.ready){enqueue(other,0,Wire.concat(GamePackets.spawn(s.entity,s.grant.name(),s.pos,s.yaw,s.pitch),GamePackets.attributes(tick,s.entity,equipment(s)),GamePackets.attributes(tick,s.entity,remoteHand(s)),GamePackets.attributes(tick,s.entity,Factions.attributes(s.faction)),GamePackets.vitals(tick,s.entity,s.hp,s.maxHp,s.animation.aiming())));enqueue(s,0,Wire.concat(GamePackets.spawn(other.entity,other.grant.name(),other.pos,other.yaw,other.pitch),GamePackets.attributes(tick,other.entity,equipment(other)),GamePackets.attributes(tick,other.entity,remoteHand(other)),GamePackets.attributes(tick,other.entity,Factions.attributes(other.faction)),GamePackets.vitals(tick,other.entity,visibleHealth(other),other.maxHp,other.animation.aiming())));}
             chunkWindow(s);System.out.println("Native joined: "+s.grant.name()+" entity="+s.entity);
     }
     private UUID character(Session s){return s.grant.characterId();}
@@ -2067,16 +2073,9 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
     }
     private void chat(Session s,String text){
         if(text.length()>16384)return;if(NpcEditorHooks.chat(this,s,text))return;if(NpcToolsHooks.chat(this,s,text))return;String verb=CommandSupport.verb(text);
-        if(verb.equals("/mapplayers")||verb.equals("/profile")){
+        if(verb.equals("/mapplayers")||verb.equals("/nearby")){
             try{
-                if(verb.equals("/profile"))profileCommand(s,CommandSupport.words(text));
-                else mapPlayersCommand(s,CommandSupport.split(text));
-            }catch(IllegalArgumentException error){enqueue(s,0,GamePackets.chat(error.getMessage()));}
-            return;
-        }
-        if(verb.equals("/squad")||verb.equals("/nearby")){
-            try{
-                if(verb.equals("/squad"))squadCommand(s,CommandSupport.words(text));
+                if(verb.equals("/mapplayers"))mapPlayersCommand(s,CommandSupport.split(text));
                 else nearbyCommand(s,CommandSupport.split(text));
             }catch(IllegalArgumentException error){enqueue(s,0,GamePackets.chat(error.getMessage()));}
             return;
@@ -2482,30 +2481,104 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
     private static PlayerSquads.Player squadPlayer(Session s){
         return new PlayerSquads.Player(s.incarnation,s.grant.name());
     }
-    private void squadMessage(UUID session,String message){
-        for(Session viewer:sessions.values())if(viewer.ready&&viewer.incarnation.equals(session)){
-            enqueue(viewer,0,GamePackets.chat(message));return;
-        }
+    private Session socialTarget(String name){
+        return sessions.values().stream().filter(p->p.ready&&p.grant.name().equalsIgnoreCase(name)).findFirst()
+            .orElseThrow(()->new IllegalArgumentException("Игрок не в сети."));
     }
-    private void squadCommand(Session s,List<String> args){
-        var player=squadPlayer(s);
-        String usage="/squad create | invite <ник> | accept | list | leave";
-        String operation=args.size()==1?"list":args.get(1).toLowerCase(Locale.ROOT);
-        if(args.size()>(operation.equals("invite")?3:2))throw new IllegalArgumentException(usage);
-        switch(operation){
-            case "create"->{squads.create(player);squadMessage(s.incarnation,squads.roster(player));}
-            case "invite"->{
-                if(args.size()!=3)throw new IllegalArgumentException(usage);
-                var target=sessions.values().stream().filter(p->p.ready&&p.grant.name().equalsIgnoreCase(args.get(2)))
-                    .findFirst().orElseThrow(()->new IllegalArgumentException("Игрок не в сети."));
-                squads.invite(player,squadPlayer(target),System.nanoTime());
-                squadMessage(target.incarnation,player.name()+" приглашает вас в отряд. /squad accept (60 секунд)");
-                squadMessage(s.incarnation,"Приглашение отправлено: "+target.grant.name());
+    private boolean nativeSocial(Session s,int id,byte[] body)throws IOException{
+        if(id!=1464&&id!=718&&id!=1927&&id!=490&&id!=1384)return false;
+        var input=Wire.input(body);
+        if(id==1384){
+            String name=input.readUTF();
+            if(input.available()!=0||name.length()>96)throw new IOException("invalid_public_profile");
+            Session target=name.isEmpty()?s:sessions.values().stream()
+                .filter(p->p.ready&&p.grant.name().equalsIgnoreCase(name)).findFirst().orElse(null);
+            if(target==null){
+                enqueue(s,0,GamePackets.chat("Игрок уже вышел с сервера."));
+                return true;
             }
-            case "accept"->{String roster=squads.accept(player,System.nanoTime());for(UUID member:squads.members(player))squadMessage(member,roster);}
-            case "list"->squadMessage(s.incarnation,squads.roster(player));
-            case "leave"->{squads.leave(player,this::squadMessage);squadMessage(s.incarnation,"Вы вне отряда.");}
-            default->throw new IllegalArgumentException(usage);
+            String status=String.format(Locale.ROOT,"На сервере · %s\nЗдоровье %.0f / %.0f",
+                locationName.current(),target.hp,target.maxHp);
+            try{
+                long playedMillis=(System.nanoTime()-target.joinedNanos)/1_000_000L;
+                String requested=name.isEmpty()?s.grant.name():name;
+                byte[] profile=Wire.dynamic("306768345",nativePackets.playerProfile(requested,
+                    Factions.nativeName(target.faction),status,playedMillis,(int)target.deathGeneration));
+                if(s.profileEquipmentCapable)profile=Wire.concat(
+                    NativeSocialPackets.equipment(requested,profileEquipment(target)),profile);
+                enqueue(s,0,profile);
+            }catch(Exception failure){throw new IOException("native_public_profile",failure);}
+            return true;
+        }
+        try{
+            var player=squadPlayer(s);
+            switch(id){
+                case 1464->{
+                    String name=input.readUTF();
+                    if(input.available()!=0)throw new IOException("invalid_squad_invite");
+                    Session target=socialTarget(name);
+                    long squad=squads.invite(player,squadPlayer(target),System.nanoTime());
+                    enqueue(target,0,NativeSocialPackets.invitation(squad,player.name(),System.currentTimeMillis()));
+                }
+                case 718->{
+                    long squad=input.readLong();
+                    if(input.available()!=0)throw new IOException("invalid_squad_accept");
+                    squads.accept(player,squad,System.nanoTime());
+                }
+                case 1927->{if(input.available()!=0)throw new IOException("invalid_squad_leave");squads.leave(player);}
+                case 490->{
+                    String name=input.readUTF();
+                    if(input.available()!=0)throw new IOException("invalid_squad_remove");
+                    squads.kick(player,squadPlayer(name.equalsIgnoreCase(s.grant.name())?s:socialTarget(name)));
+                }
+            }
+        }catch(IllegalArgumentException error){
+            enqueue(s,0,GamePackets.chat(error.getMessage()));
+            if(squads.roster(squadPlayer(s),System.nanoTime())==null)enqueue(s,0,NativeSocialPackets.clear());
+        }
+        return true;
+    }
+    private List<String> profileEquipment(Session target){
+        var titles=new ArrayList<String>();
+        var equipped=inventory(target);
+        for(int slot:new int[]{1,2,3,HandPackets.PRIMARY,HandPackets.SECONDARY,HandPackets.MELEE}){
+            ItemStack item=equipped.at(new Inventory.Address(0,slot,0));
+            if(item==null)continue;
+            var properties=inventories.catalog().get(item.id()).properties();
+            String key=properties.has("name")&&properties.get("name").isJsonPrimitive()
+                ?properties.get("name").getAsString():"";
+            if(key.isBlank()&&properties.has("unlocalized_name")&&properties.get("unlocalized_name").isJsonPrimitive())
+                key="item."+properties.get("unlocalized_name").getAsString()+".name";
+            if(!key.isBlank()&&key.length()<=256)titles.add(key);
+        }
+        return titles;
+    }
+
+    private void advanceNativeSquad(Session s,long now){
+        var roster=squads.roster(squadPlayer(s),now);
+        if(!Objects.equals(s.nativeSquad,roster)){
+            if(roster==null)enqueue(s,0,NativeSocialPackets.clear());
+            else{
+                var members=new ArrayList<NativeSocialPackets.Member>();
+                for(var member:roster.members()){
+                    Session active=socialTarget(member.name());
+                    members.add(new NativeSocialPackets.Member(member.name(),character(active),members.size()));
+                }
+                enqueue(s,0,NativeSocialPackets.roster(roster.id(),roster.leader(),locationName.current(),members,roster.invited()));
+            }
+            s.nativeSquad=roster;
+            s.nativeSquadPositions=List.of();
+            s.nextNativeSquadPositions=0;
+        }
+        if(roster==null||now<s.nextNativeSquadPositions||s.lanes[0].queued.size()>32)return;
+        s.nextNativeSquadPositions=now+250_000_000L;
+        var positions=new ArrayList<NativeSocialPackets.Position>();
+        for(var member:roster.members())if(!member.session().equals(s.incarnation)){
+            Session active=socialTarget(member.name());
+            positions.add(new NativeSocialPackets.Position(member.name(),(float)active.pos[0],(float)active.pos[2],active.yaw,active.maxHp>0?active.hp/active.maxHp:0));
+        }
+        if(!positions.equals(s.nativeSquadPositions)){
+            enqueue(s,0,NativeSocialPackets.positions(positions));s.nativeSquadPositions=positions;
         }
     }
     private void mapPlayersCommand(Session s,List<String> args){
@@ -2517,35 +2590,6 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         };
         s.nextNearby=0;
         enqueue(s,0,GamePackets.chat(s.mapSquadOnly?"На карте показывается только ваш отряд.":"На карте показываются все игроки."));
-    }
-    private void profileCommand(Session s,List<String> args){
-        if(args.size()>2)throw new IllegalArgumentException("/profile [ник]");
-        Session target=args.size()==1?s:sessions.values().stream().filter(p->p.ready&&p.grant.name().equalsIgnoreCase(args.get(1)))
-            .findFirst().orElseThrow(()->new IllegalArgumentException("Игрок не в сети."));
-        List<Integer> equipped=new ArrayList<>();
-        List<String> names=new ArrayList<>();
-        for(int slot=0;slot<12;slot++){
-            ItemStack item=inventory(target).at(new Inventory.Address(0,slot,0));
-            if(item!=null){
-                var props=inventories.catalog().get(item.id()).properties();
-                String key=props.has("name")&&props.get("name").isJsonPrimitive()?props.get("name").getAsString():"";
-                if(key.isBlank()&&props.has("unlocalized_name")&&props.get("unlocalized_name").isJsonPrimitive())
-                    key="item."+props.get("unlocalized_name").getAsString()+".name";
-                if(key.length()>256)key="";
-                equipped.add(item.id());names.add(key);
-            }
-        }
-        int health=Math.max(0,Math.min(65535,Math.round(target.hp)));
-        int maxHealth=Math.max(0,Math.min(65535,Math.round(target.maxHp)));
-        int stamina=Math.max(0,Math.min(100,Math.round(target.stamina*100/Math.max(0.01f,target.maxStamina))));
-        if(s.nearbyCapable)enqueue(s,0,Wire.dynamic("szmods.bridge.PlayerProfile",Wire.bytes(out->{
-            out.writeByte(1);out.writeUTF(target.grant.name());out.writeUTF(target.faction);
-            out.writeShort(health);out.writeShort(maxHealth);out.writeByte(stamina);out.writeByte(equipped.size());
-            for(int index=0;index<equipped.size();index++){out.writeShort(equipped.get(index));out.writeUTF(names.get(index));}
-        })));
-        else enqueue(s,0,GamePackets.chat("Профиль: "+target.grant.name()+" · "+target.faction+
-            " | Здоровье: "+health+"/"+maxHealth+" | Выносливость: "+stamina+"% | Экипировка: "+
-            (equipped.isEmpty()?"пусто":String.join(", ",equipped.stream().map(Object::toString).toList()))));
     }
     private void nearbyCommand(Session s,List<String> args){
         String usage="/nearby <радиус от 1 до 512 м>";
@@ -2604,7 +2648,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         if(sessions.get(requester.address)==requester)
             enqueue(requester,0,GamePackets.chat(failed?"Не удалось сохранить название локации.":"Локация: "+locationName.current()));
     }
-    private void step(long now)throws Exception{tick++;advanceLocationName();advanceMedicines(now);advanceAlliance();advanceWorldItems();zombies.tick(sessions.values().stream().filter(s->s.ready).map(s->new ZombieHorde.Target(character(s),point(s.pos),Math.max(.3,CharacterScale.height(s.posture.locomotion(),s.characterScale)-.15),s.hp>0&&!s.respawning&&s.teleport==null)).toList());advanceHordeCombat(now);advanceVehicles(now);advanceGrenadeUses(now);pollGrenades();for(var change:drones.expire(now))emitFpv(change.drone(),change.event());for(var expired:corpses.expire(now))corpseDespawn(expired);environment.pollExpiry();var globalEnvironment=environment.state();if(environment.settingsRevision()!=environmentRevision||now>=nextEnvironmentClock){environmentRevision=environment.settingsRevision();nextEnvironmentClock=now+5_000_000_000L;byte[] clockFrame=EnvironmentPackets.clock(environment.clockAnchor(),System.currentTimeMillis());for(Session ready:sessions.values())if(ready.ready)enqueue(ready,0,clockFrame);}if(now>=nextLocationFlush){locations.flush();nextLocationFlush=now+1_000_000_000L;}simulationCorpses();for(Session s:new ArrayList<>(sessions.values())){if(sessions.get(s.address)!=s)continue;if(s.ready){advanceNearby(s,now);String editorReply=s.editor.poll();if(editorReply!=null)enqueue(s,0,GamePackets.chat(editorReply));}if(s.environmentSave!=null&&s.environmentSave.isDone()){try{var saved=s.environmentSave.join();enqueue(s,0,GamePackets.chat(s.weatherCommand?"Глобальная погода изменена: "+saved.weather().wireName():"Глобальное время изменено: "+saved.dayTime()+" ticks."));}catch(CompletionException failure){enqueue(s,0,GamePackets.chat("environment_save_failed"));}s.environmentSave=null;}if(s.authentication!=null&&s.authentication.isDone()){
+    private void step(long now)throws Exception{tick++;advanceLocationName();advanceMedicines(now);advanceAlliance();advanceWorldItems();zombies.tick(sessions.values().stream().filter(s->s.ready).map(s->new ZombieHorde.Target(character(s),point(s.pos),Math.max(.3,CharacterScale.height(s.posture.locomotion(),s.characterScale)-.15),s.hp>0&&!s.respawning&&s.teleport==null)).toList());advanceHordeCombat(now);advanceVehicles(now);advanceGrenadeUses(now);pollGrenades();for(var change:drones.expire(now))emitFpv(change.drone(),change.event());for(var expired:corpses.expire(now))corpseDespawn(expired);environment.pollExpiry();var globalEnvironment=environment.state();if(environment.settingsRevision()!=environmentRevision||now>=nextEnvironmentClock){environmentRevision=environment.settingsRevision();nextEnvironmentClock=now+5_000_000_000L;byte[] clockFrame=EnvironmentPackets.clock(environment.clockAnchor(),System.currentTimeMillis());for(Session ready:sessions.values())if(ready.ready)enqueue(ready,0,clockFrame);}if(now>=nextLocationFlush){locations.flush();nextLocationFlush=now+1_000_000_000L;}simulationCorpses();for(Session s:new ArrayList<>(sessions.values())){if(sessions.get(s.address)!=s)continue;if(s.ready){advanceNativeSquad(s,now);advanceNearby(s,now);String editorReply=s.editor.poll();if(editorReply!=null)enqueue(s,0,GamePackets.chat(editorReply));}if(s.environmentSave!=null&&s.environmentSave.isDone()){try{var saved=s.environmentSave.join();enqueue(s,0,GamePackets.chat(s.weatherCommand?"Глобальная погода изменена: "+saved.weather().wireName():"Глобальное время изменено: "+saved.dayTime()+" ticks."));}catch(CompletionException failure){enqueue(s,0,GamePackets.chat("environment_save_failed"));}s.environmentSave=null;}if(s.authentication!=null&&s.authentication.isDone()){
             try{LocalAccounts.Grant grant=s.authentication.join();s.authentication=null;beginWorldJoin(s,grant,s.loginProtocol);}catch(Exception error){rejected++;sessionError(s,"join_preparation_failed",error);continue;}
         }if(sessions.get(s.address)!=s)continue;if(s.accountPreparation!=null&&s.accountPreparation.isDone()){
             try{if(!s.accountPreparation.join())throw new IllegalArgumentException("character_deleted_or_deleting");s.accountPreparation=null;beginInventoryWorldJoin(s);}catch(Exception error){rejected++;sessionError(s,"join_preparation_failed",error);continue;}
@@ -2674,7 +2718,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
     private void observePlayer(Session s){var state=playerState(s);if(s.teleport!=null&&locations.position(character(s))!=null)locations.observeState(character(s),state);else locations.observe(character(s),point(s.pos),state);}
     private void sessionError(Session s,String reason,Throwable failure){if(sessions.get(s.address)!=s)return;System.err.println("[native-session] "+reason+" ready="+s.ready+" peer="+s.address);failure.printStackTrace(System.err);remove(s,reason);}
     private void remove(Session s){remove(s,"session_closed");}
-    private void remove(Session s,String reason){if(s.grant!=null&&s.ready&&sessions.get(s.address)==s)releaseAnomalies(s);inventoryTransfers.discard(s);itemDrops.discard(s);environmentAccess.disconnect(s.environmentClient);if(!sessions.remove(s.address,s))return;if(s.ready)squads.leave(squadPlayer(s),this::squadMessage);disconnectReasons.merge(reason,1L,Long::sum);Map<String,Object> event=Map.of("reason",reason,"tick",tick,"ready",s.ready,"peer",s.address.toString(),"character",s.grant==null?"":s.grant.characterId().toString(),"clientId",s.clientId,"lastReceiveMs",Math.max(0,(System.nanoTime()-s.last)/1_000_000),"queued",s.lanes[0].queued.size()+s.lanes[1].queued.size(),"unacked",s.lanes[0].sent.size()+s.lanes[1].sent.size());if(recentDisconnects.size()==8)recentDisconnects.removeFirst();recentDisconnects.addLast(event);System.err.println("[native-session] disconnected "+event);screenshots.disconnected(s.incarnation);if(s.grant!=null)characterSessions.retire(character(s),s);for(AreaScene area:areaScenes.values())area.recipients.remove(new Recipient(s.address,s.incarnation));s.grenadeUse.cancel();parseReady.removeIf(target->target.session()==s);for(Lane lane:s.lanes)lane.parsing=false;clones.forget(s);s.poses.clear();detachVehicleContact(s);vehicleContacts.forget(s);clearVehicleAction(s);for(var car:vehicles.forget(s))emitVehicle(car,VehicleWire.DESPAWN);recallFpv(s);for(Set<Session> observers:droneObservers.values())observers.remove(s);s.fpvWorldSent.clear();entityIds.release(s.entity);if(s.ready&&!s.respawning&&locations.healthy())try{observePlayer(s);savePlayerState(s);}catch(IllegalArgumentException ignored){}locations.flush();if(s.locationLease!=null){s.locationLease.close();s.locationLease=null;}if(s.inventoryPinned){inventories.deactivate(character(s));s.inventoryPinned=false;}retired++;for(Session other:new ArrayList<>(sessions.values()))if(other.ready&&s.ready){other.poses.remove(s.entity);other.replication.forget(s.entity);if(other.scaleCapable)enqueueOrRetire(other,CharacterScale.remove(s.entity,++scaleRevision));enqueueOrRetire(other,Wire.frame(2028,Wire.bytes(o->o.writeInt(s.entity))));}}
+    private void remove(Session s,String reason){if(s.grant!=null&&s.ready&&sessions.get(s.address)==s)releaseAnomalies(s);inventoryTransfers.discard(s);itemDrops.discard(s);environmentAccess.disconnect(s.environmentClient);if(!sessions.remove(s.address,s))return;if(s.ready)squads.leave(squadPlayer(s));disconnectReasons.merge(reason,1L,Long::sum);Map<String,Object> event=Map.of("reason",reason,"tick",tick,"ready",s.ready,"peer",s.address.toString(),"character",s.grant==null?"":s.grant.characterId().toString(),"clientId",s.clientId,"lastReceiveMs",Math.max(0,(System.nanoTime()-s.last)/1_000_000),"queued",s.lanes[0].queued.size()+s.lanes[1].queued.size(),"unacked",s.lanes[0].sent.size()+s.lanes[1].sent.size());if(recentDisconnects.size()==8)recentDisconnects.removeFirst();recentDisconnects.addLast(event);System.err.println("[native-session] disconnected "+event);screenshots.disconnected(s.incarnation);if(s.grant!=null)characterSessions.retire(character(s),s);for(AreaScene area:areaScenes.values())area.recipients.remove(new Recipient(s.address,s.incarnation));s.grenadeUse.cancel();parseReady.removeIf(target->target.session()==s);for(Lane lane:s.lanes)lane.parsing=false;clones.forget(s);s.poses.clear();detachVehicleContact(s);vehicleContacts.forget(s);clearVehicleAction(s);for(var car:vehicles.forget(s))emitVehicle(car,VehicleWire.DESPAWN);recallFpv(s);for(Set<Session> observers:droneObservers.values())observers.remove(s);s.fpvWorldSent.clear();entityIds.release(s.entity);if(s.ready&&!s.respawning&&locations.healthy())try{observePlayer(s);savePlayerState(s);}catch(IllegalArgumentException ignored){}locations.flush();if(s.locationLease!=null){s.locationLease.close();s.locationLease=null;}if(s.inventoryPinned){inventories.deactivate(character(s));s.inventoryPinned=false;}retired++;for(Session other:new ArrayList<>(sessions.values()))if(other.ready&&s.ready){other.poses.remove(s.entity);other.replication.forget(s.entity);if(other.scaleCapable)enqueueOrRetire(other,CharacterScale.remove(s.entity,++scaleRevision));enqueueOrRetire(other,Wire.frame(2028,Wire.bytes(o->o.writeInt(s.entity))));}}
     @Override public void close()throws Exception{
         NpcEditorHooks.close(this);
         synchronized(this){if(closed)return;closed=true;}commands.unbindPlayerInventories(adminInventories);

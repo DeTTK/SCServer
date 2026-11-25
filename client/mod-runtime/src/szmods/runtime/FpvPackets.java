@@ -11,7 +11,8 @@ public final class FpvPackets {
     public static boolean rawCodec(Object packet) {
         String name=packet.getClass().getName();
         if(name.equals("szmods.bridge.FunnelImpact")||name.equals("szmods.bridge.FunnelImpactReady"))return true;
-        if(name.equals("szmods.bridge.PlayerProfile")||name.equals("szmods.bridge.NearbyPlayers")||name.equals("szmods.bridge.NearbyPlayersReady"))return true;
+        if(name.equals("szmods.bridge.NearbyPlayers")||name.equals("szmods.bridge.NearbyPlayersReady")
+                ||name.equals("szmods.bridge.ProfileEquipment")||name.equals("szmods.bridge.ProfileEquipmentReady"))return true;
         if(name.equals("szmods.bridge.WeaponAction")||name.equals("szmods.bridge.WeaponActionReady"))return true;
         if(name.equals("szmods.bridge.VehicleInput")||name.equals("szmods.bridge.VehicleSnapshot"))return true;
         if(name.equals("szmods.bridge.VrWeapon")||name.equals("szmods.bridge.VrWeaponReply"))return true;
