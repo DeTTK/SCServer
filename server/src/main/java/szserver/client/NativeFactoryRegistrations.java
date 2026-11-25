@@ -37,14 +37,18 @@ final class NativeFactoryRegistrations implements Opcodes {
     }
 
     boolean matches(String type, String expected) throws IOException {
+        return expected.equals(product(type));
+    }
+
+    String product(String type) throws IOException {
         Member function = registrations.get(type);
-        if (function == null) return false;
+        if (function == null) return null;
         Set<String> targets = constructors.get(function.owner());
         if (targets == null) {
             targets = directConstructors(function.owner());
             constructors.put(function.owner(), targets);
         }
-        return targets.equals(Set.of(expected));
+        return targets.size()==1?targets.iterator().next():null;
     }
 
     Object create(String type, Class<?> expected, Object resource) throws Exception {

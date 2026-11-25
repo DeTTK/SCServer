@@ -13,19 +13,37 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class ClientStateAdapter implements AutoCloseable {
     public record DropPolicy(boolean allowed,String pickupOwner){}
-    /** Read the native binding rules on the factory worker, without a client-side replacement. */
-    public DropPolicy dropPolicy(byte[] raw)throws Exception{
+    /** Decode the complete stack with its resource factory installed for the native binding rules. */
+    DropPolicy dropPolicy(int id,byte[] raw,boolean resourceAllowsDrop)throws Exception{
+        if(hasHeadlessArchiveFactory(id)){
+            cosmetics.factory(id);
+            return cosmetics.bound(List.of(id),()->nativeDropPolicy(raw,resourceAllowsDrop));
+        }
+        return nativeDropPolicy(raw,resourceAllowsDrop);
+    }
+    private DropPolicy nativeDropPolicy(byte[] raw,boolean resourceAllowsDrop)throws Exception{
         Class<?> type=Class.forName("211097523",true,loader),bindings=Class.forName("1391289645",true,loader);
-        Object stack=type.getConstructor(DataInput.class).newInstance(new BoundedNativeInput(raw));
+        BoundedNativeInput input=new BoundedNativeInput(raw);
+        Object stack=type.getConstructor(DataInput.class).newInstance(input);
+        if(input.available()!=0)throw new IOException("native_stack_trailing");
         String owner=(String)bindings.getMethod("implements",type).invoke(null,stack);
-        // The active server implements physical drops. The last native rule is
-        // the original realm-wide "drops disabled" switch, not an item's binding.
-        // Keep the native per-item binding rules and their priority unchanged.
-        Object binding=null;Class<?> rule=Class.forName("298994518",true,loader);
+        if(owner!=null)return new DropPolicy(false,owner);
+        Class<?> rule=Class.forName("298994518",true,loader);
         Method resolve=rule.getMethod("goto",type,Class.forName("200241649",true,loader),Class.forName("949164803",true,loader),boolean.class);
-        for(Object candidate:(List<?>)bindings.getField("finally").get(null)){if(candidate.getClass().getName().equals("555438324"))continue;binding=resolve.invoke(candidate,stack,null,null,false);if(binding!=null)break;}
-        String kind=binding==null?"NONE":((Enum<?>)binding).name();boolean allowed=owner==null&&!Set.of("NON_DROP","PERSONAL_UNTIL").contains(kind);
-        return new DropPolicy(allowed,owner);
+        for(Object candidate:(List<?>)bindings.getField("finally").get(null)){
+            String ruleId=candidate.getClass().getName();
+            if(ruleId.equals("555438324"))continue; // Original realm-wide drop switch.
+            Object binding=resolve.invoke(candidate,stack,null,null,false);
+            if(binding==null)continue;
+            String kind=((Enum<?>)binding).name();
+            // The first native rule reads instance NBT. Explicit NONE (non_personal)
+            // takes precedence over the resource defaults; other restrictions still apply.
+            boolean explicitlyUnbound=ruleId.equals("533123470")&&kind.equals("NONE");
+            boolean allowed=!Set.of("NON_DROP","PERSONAL_UNTIL").contains(kind)
+                &&(explicitlyUnbound||resourceAllowsDrop);
+            return new DropPolicy(allowed,null);
+        }
+        return new DropPolicy(resourceAllowsDrop,null);
     }
     private record Codec(Constructor<?> constructor, Method read, Method write,
                          Method exportNbt, Method importNbt) {}
@@ -283,6 +301,21 @@ public final class ClientStateAdapter implements AutoCloseable {
     Stack createNativeStack(int id,int count,int metadata,byte[] tags)throws Exception{
         return itemNbt().create(id,count,metadata,tags,this::readStack);
     }
+    private Object equipmentSlots;
+    private Method equipmentSlot, acceptsEquipment;
+    boolean acceptsEquipment(int container,byte[] raw)throws Exception{
+        if(equipmentSlots==null){
+            Class<?> group=Class.forName("1559281940",true,loader);
+            Class<?> slot=Class.forName("830050478",true,loader);
+            equipmentSlot=group.getMethod("final",int.class);
+            acceptsEquipment=slot.getMethod("for",int.class,cosmetics.stack);
+            // Detached native equipment group runs the factory predicate without a local player or GUI.
+            equipmentSlots=group.getConstructor(Class.forName("200241649",true,loader)).newInstance((Object)null);
+        }
+        Object slot=equipmentSlot.invoke(equipmentSlots,container);
+        if(slot==null)throw new IllegalArgumentException("equipment_slot_unknown:"+container);
+        return itemNbt().inspect(raw,item->(Boolean)acceptsEquipment.invoke(slot,0,item));
+    }
     public byte[] stackConfig(byte[] raw)throws Exception{return itemNbt().config(raw);}
     public Stack readConfig(byte[] raw)throws Exception{return itemNbt().configImport(raw,this::readStack);}
     /** Editor streams may have a different attachment order; semantic stability is mandatory. */
@@ -481,9 +514,16 @@ public final class ClientStateAdapter implements AutoCloseable {
         return new NativeLootTables(cosmetics,configs,catalog);
     }
     public Set<Integer> firearmFactories()throws Exception{Set<Integer> ids=new HashSet<>();Class<?> gun=Class.forName("1745367406",true,loader);for(var entry:moduleFactoryClasses.entrySet())if(gun.isAssignableFrom(Class.forName(entry.getValue(),true,loader)))ids.add(entry.getKey());return Set.copyOf(ids);}
+    private NativeFactoryRegistrations factoryRegistrations;
+    String declaredItemFactory(String type)throws Exception{
+        if(factoryRegistrations==null)factoryRegistrations=new NativeFactoryRegistrations(runtime,loader);
+        return factoryRegistrations.product(type);
+    }
     public void warmCosmetics(Map<Integer,String> classes,Map<Integer,String> definitions,
                               Map<Integer,String> resourceDeclarations)throws Exception{
-        var registrations=resourceDeclarations.isEmpty()?null:new NativeFactoryRegistrations(runtime,loader);
+        if(!resourceDeclarations.isEmpty()&&factoryRegistrations==null)
+            factoryRegistrations=new NativeFactoryRegistrations(runtime,loader);
+        var registrations=resourceDeclarations.isEmpty()?null:factoryRegistrations;
         cosmetics=new NativeCosmetics(loader,definitions,classes,resourceDeclarations,registrations);itemNbt=null;itemSlots=new NativeItemSlots(cosmetics,this::bank);itemSlotPackets=new NativeItemSlotPackets(cosmetics);quickSlots=new NativeQuickSlots(cosmetics);itemNbt();}
     public record QuickBindRequest(int owner,int index,szserver.inventory.Inventory.Address source,String label){}
     public QuickBindRequest quickBindRequest(byte[] raw)throws Exception{return quickSlots.bindRequest(raw);}

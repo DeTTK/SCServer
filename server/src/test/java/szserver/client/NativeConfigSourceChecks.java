@@ -23,7 +23,7 @@ public final class NativeConfigSourceChecks {
     private static final String LOOT = "assets/customitems/loot/lootboxes.json";
     private static final String SHUFFLE = "assets/customitems/shufflebags/newyear25.json";
     private static final String WEAPON_MODULES = "assets/weapons/modules.json";
-    private static final int NEW_WEAPON_MODULE = 31993;
+    private static final int NEW_WEAPON_MODULE = 31993, NEW_WEAPON = 31992, NEW_AMMO = 31991;
     private static final String AMMO = "assets/weapons/items/ammo_inside.json";
     private static final String KNIFE = "assets/weapons/items/game_modes/9150_reich/9174_nr43.json";
     private static final String KEDR = "assets/weapons/items/avtomat/20000_kedr.json";
@@ -68,6 +68,12 @@ public final class NativeConfigSourceChecks {
             bullet.addProperty("slot_size", "2x1");
             bullet.addProperty("stack_size", 7);
             write(overrides.resolve(AMMO), ammunition.toString());
+            write(overrides.resolve("assets/weapons/items/qa_regular_ammo.json"), """
+                    [{"type":"bullet","item_id":31991,"extends_item":12800,"unlocalized_name":"qa.regular_ammo"}]
+                    """);
+            write(overrides.resolve("assets/weapons/items/qa_regular_weapon.json"), """
+                    [{"type":"weapon","item_id":31992,"extends_item":20000,"unlocalized_name":"qa.regular_weapon"}]
+                    """);
             var melee = JsonParser.parseString(GameResources.readString(configs.resolve(KNIFE))).getAsJsonArray();
             var knife = melee.get(0).getAsJsonObject();
             knife.addProperty("damage_strong", "60..70");
@@ -187,9 +193,23 @@ public final class NativeConfigSourceChecks {
             var knifeOne = items.createStack(9174, 1, 0, new JsonObject());
             var knifeTwo = items.createStack(9174, 1, 0, new JsonObject());
             check(!items.identity(knifeOne).equals(items.identity(knifeTwo)), "fresh identity from native default");
-            if (stock) verifyWeaponPresentation(items, runtime);
+            if (stock) {
+                verifyWeaponPresentation(items, runtime);
+                verifyEquipmentFactories(items);
+            }
             if (!stock) {
                 verifyInventoryFacts(items, catalog, scratch);
+                var newAmmo=items.createStack(NEW_AMMO,3,0,new JsonObject());
+                check(catalog.width(newAmmo)==2&&catalog.limit(newAmmo)==7,"new ammo inherits native geometry and cap");
+                var tags=JsonParser.parseString("""
+                        {"non_personal":{"type":"boolean","value":true}}
+                        """).getAsJsonObject();
+                var newGun=items.createStack(NEW_WEAPON,1,32768,tags);
+                var packet=szserver.net.InventoryPackets.stack(newGun);
+                var restored=items.readConfig(items.stackConfig(Arrays.copyOfRange(packet,1,packet.length)));
+                check(restored.id()==NEW_WEAPON&&restored.metadata()==32768&&items.dropPolicy(restored).allowed()
+                        &&items.weaponProfile(restored).capacity()>0&&items.acceptsEquipment(6,restored),
+                        "new factory gun and complete NBT survive config import and equipment admission");
                 var gun = NativeCosmeticTests.personalWeapon(items, 20051);
                 var mod = NativeCosmeticTests.rolledModule(items, NEW_WEAPON_MODULE);
                 var upgraded = items.weaponModule(gun, mod).weapon();
@@ -238,6 +258,19 @@ public final class NativeConfigSourceChecks {
                 }
             }
         }
+    }
+
+    private static void verifyEquipmentFactories(GameItems items)throws Exception{
+        var gun=items.createStack(20000,1,0,new JsonObject());
+        var knife=items.createStack(9174,1,0,new JsonObject());
+        var ammo=items.createStack(12714,1,0,new JsonObject());
+        var armor=items.createStack(25000,1,0,new JsonObject());
+        var container=items.createStack(12000,1,0,new JsonObject());
+        check(items.acceptsEquipment(6,gun)&&!items.acceptsEquipment(1,gun),"native primary weapon slot");
+        check(items.acceptsEquipment(5,knife)&&!items.acceptsEquipment(6,knife),"native melee slot");
+        check(items.acceptsEquipment(1,armor)&&!items.acceptsEquipment(5,armor),"native armor slot");
+        check(items.acceptsEquipment(3,container)&&!items.acceptsEquipment(10,container),"native container slot");
+        check(!items.acceptsEquipment(6,ammo),"native gun slot rejects ammunition");
     }
 
     private static void verifyInventoryFacts(GameItems items, ItemCatalog catalog, Path scratch) throws Exception {

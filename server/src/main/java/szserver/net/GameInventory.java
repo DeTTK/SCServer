@@ -101,6 +101,10 @@ public final class GameInventory implements AutoCloseable {
         return combo<variants.size()?variants.get(combo):null;
     }
     public ItemCatalog catalog(){return catalog;}
+    /** The stock equipment selector (276406255.default) supplies this native stack for an empty bolt slot. */
+    ItemStack defaultBolt() throws Exception {
+        return items.createStack(14987,1,0,new JsonObject());
+    }
     public Map<Integer,GrenadeUse.Rules> warmBolts()throws Exception{return items.warmBolts();}
     public void boltProjectile(ItemStack stack,double vx,double vz,float yaw,float pitch,
                                Consumer<szserver.client.BoltProjectile> success,Consumer<String> failure){
@@ -129,6 +133,7 @@ public final class GameInventory implements AutoCloseable {
             completion(()->{if(c.deathClear||!admissionAllowed(id)){c.busy=false;failure.accept("lootbox_owner_changed");return;}persist(id,c,opened.plan(),progress,plan->success.accept(new LootResult(plan,receipt,opened.rewards())),failure);});
         }catch(Exception|LinkageError error){completion(()->{c.busy=false;denied++;failure.accept(Objects.toString(error.getMessage(),"lootbox_failed"));});}});}catch(RejectedExecutionException error){c.busy=false;failure.accept("inventory_factory_queue_full");}
     }
+    public boolean hasItemFactory(int id){return items.hasItemFactory(id);}
     public boolean hasAppearanceCodec(int id)throws Exception{return items.hasAppearanceCodec(id);}
     public byte[] appearance(UUID id,int container){return character(id).appearances.get(container);}
     public Map<String,Float> stats(UUID id){return character(id).stats;}
@@ -374,6 +379,17 @@ public final class GameInventory implements AutoCloseable {
     }
     public void mutate(UUID id,Function<Inventory,Inventory.Plan> operation,Consumer<Inventory.Plan> success,Consumer<String> failure){
         mutate(id,operation,null,success,failure);
+    }
+    void validateEquipmentTransfer(Inventory.Plan plan){
+        for(var change:plan.changes().entrySet()){
+            var address=change.getKey();
+            var item=change.getValue();
+            if(address.aggregate()!=0||item==null)continue;
+            boolean accepted;
+            try{accepted=items.acceptsEquipment(address.container(),item);}
+            catch(Exception error){throw new IllegalStateException("native_equipment_check_failed:"+item.id()+":"+address.container(),error);}
+            if(!accepted)throw new IllegalArgumentException("equipment_slot_rejected:"+item.id()+":"+address.container());
+        }
     }
     /** Character remains busy until the off-owner plan is durably committed or rejected. */
     public void sort(UUID id,Inventory.Address root,Consumer<Inventory.Plan> success,Consumer<String> failure){mutateAsync(id,before->before.sort(root),success,failure);}

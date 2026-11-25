@@ -12,7 +12,6 @@ import org.objectweb.asm.tree.InsnNode;
 import org.objectweb.asm.tree.JumpInsnNode;
 import org.objectweb.asm.tree.LabelNode;
 import org.objectweb.asm.tree.InsnList;
-import org.objectweb.asm.tree.IntInsnNode;
 import org.objectweb.asm.tree.VarInsnNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.TypeInsnNode;
@@ -117,22 +116,6 @@ final class WorldMapTransformer implements ClassFileTransformer {
                             "suppressMap", "(Z)Z", false));
                         edits++;
                     }
-                    if (radar && method.name.equals("finally") && method.desc.equals("(IIIIF)V")
-                            && instruction instanceof MethodInsnNode call && call.owner.equals("351318308")
-                            && call.name.equals("char") && call.desc.equals("(Ljava/lang/String;III)V")) {
-                        var draw = new InsnList();
-                        draw.add(new FieldInsnNode(Opcodes.GETSTATIC, "747722393", "p", "L186969209;"));
-                        draw.add(new VarInsnNode(Opcodes.ALOAD, 11));
-                        draw.add(new FieldInsnNode(Opcodes.GETFIELD, "1500420601", "class", "I"));
-                        draw.add(new VarInsnNode(Opcodes.ALOAD, 11));
-                        draw.add(new FieldInsnNode(Opcodes.GETFIELD, "1500420601", "abstract", "I"));
-                        draw.add(new IntInsnNode(Opcodes.SIPUSH, 235));
-                        draw.add(new org.objectweb.asm.tree.InsnNode(Opcodes.IADD));
-                        draw.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "szmods/runtime/NearbyPlayers", "render",
-                            "(Ljava/lang/Object;II)V", false));
-                        method.instructions.insert(call, draw);
-                        edits++;
-                    }
                     if (markers && method.name.equals("private") && method.desc.equals("(L1743927504;)L374207088;")
                             && instruction.getOpcode() == Opcodes.ARETURN) {
                         var hook = new InsnList();
@@ -168,7 +151,7 @@ final class WorldMapTransformer implements ClassFileTransformer {
                     }
                 }
             }
-            if (edits != (online ? 6 : map || party ? 3 : markers || radar ? 2 : 1)) throw new IllegalStateException("Unexpected native map seam count: " + edits);
+            if (edits != (online ? 6 : map || party ? 3 : markers ? 2 : 1)) throw new IllegalStateException("Unexpected native map seam count: " + edits);
             var writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
             node.accept(writer);
             return writer.toByteArray();

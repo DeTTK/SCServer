@@ -1,5 +1,6 @@
 package szserver.net;
 
+import szserver.client.HandPackets;
 import szserver.inventory.ItemStack;
 
 /** Transport-owned native throwable clock; disk work starts only when an item is actually used. */
@@ -14,6 +15,9 @@ public final class GrenadeUse {
         public Held {if(item==null||rules==null||!rules.handUse()||mode<0||mode>1||mode==0&&(hand!=4&&hand!=10||holstered))throw new IllegalArgumentException("grenade_use_selection");}
         public int elapsed(long now){return (int)Math.min(12000,Math.max(0,now-started)/50_000_000L);}
         public boolean valid(ItemStack equipped,long currentLife,int currentHand,boolean currentHolstered){return life==currentLife&&item.equals(equipped)&&(mode!=0||currentHand==hand&&currentHolstered==holstered);}
+    }
+    static ItemStack equipped(ItemStack stack,int hand,ItemStack defaultBolt){
+        return stack==null&&hand==HandPackets.BOLT?defaultBolt:stack;
     }
     private Held held;
     public Held held(){return held;}
