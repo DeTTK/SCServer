@@ -11,10 +11,8 @@ public final class NativeAdminPackets {
         public Give {config=config.clone();}
         @Override public byte[] config(){return config.clone();}
     }
-    public static boolean giveClass(String name){return name.equals("1320022935");}
-    public static boolean ammoClass(String name){return name.equals("699951909");}
-    public static boolean addressClass(String name){return name.equals("1749095696");}
-    public static boolean echoClass(String name){return name.equals("187265782");}
+    public static final int GIVE_ID=1473,AMMO_ID=1289,ADDRESS_ID=1437,ECHO_ID=1135;
+    public static final String GIVE_CLASS="1320022935",AMMO_CLASS="699951909",ADDRESS_CLASS="1749095696",ECHO_CLASS="187265782";
     private static boolean bool(DataInputStream in)throws IOException{int value=in.readUnsignedByte();if(value>1)throw new IOException("admin_boolean");return value==1;}
     public static Give give(byte[] body)throws IOException{
         if(body.length<13||body.length>65536)throw new IOException("admin_give_size");

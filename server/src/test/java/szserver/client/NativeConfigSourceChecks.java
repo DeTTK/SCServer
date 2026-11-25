@@ -160,6 +160,9 @@ public final class NativeConfigSourceChecks {
             close(strong.piercing(), stock ? 70 : 29, "native piercing");
             check(items.createStack(5901, 1, 0, new JsonObject()).stateful(),
                     "hideout weather item uses its verified wire state without creating a scene");
+            check(GameplayPacketAliases.registered(NativeAdminPackets.GIVE_CLASS)==1473
+                    &&GameplayPacketAliases.registered(NativeAdminPackets.ECHO_CLASS)==1135,
+                    "native Item Editor grant and creative echo dispatch");
             var knifeOne = items.createStack(9174, 1, 0, new JsonObject());
             var knifeTwo = items.createStack(9174, 1, 0, new JsonObject());
             check(!items.identity(knifeOne).equals(items.identity(knifeTwo)), "fresh identity from native default");

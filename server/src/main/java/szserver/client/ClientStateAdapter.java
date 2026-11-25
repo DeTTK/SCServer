@@ -277,11 +277,14 @@ public final class ClientStateAdapter implements AutoCloseable {
     }
     private NativeItemNbt itemNbt;
     private NativeItemNbt itemNbt()throws Exception{if(itemNbt==null)itemNbt=new NativeItemNbt(loader,cosmetics);return itemNbt;}
-    public Stack applyTags(byte[] raw,byte[] tags)throws Exception{return readStack(itemNbt().apply(raw,tags));}
+    public Stack applyTags(byte[] raw,byte[] tags)throws Exception{return itemNbt().apply(raw,tags,this::readStack);}
+    Stack createNativeStack(int id,int count,int metadata,byte[] tags)throws Exception{
+        return itemNbt().create(id,count,metadata,tags,this::readStack);
+    }
     public byte[] stackConfig(byte[] raw)throws Exception{return itemNbt().config(raw);}
-    public Stack readConfig(byte[] raw)throws Exception{return readStack(itemNbt().configImport(raw));}
+    public Stack readConfig(byte[] raw)throws Exception{return itemNbt().configImport(raw,this::readStack);}
     /** Editor streams may have a different attachment order; semantic stability is mandatory. */
-    public Stack readEditedStack(byte[] raw)throws Exception{return readStack(itemNbt().stream(raw));}
+    public Stack readEditedStack(byte[] raw)throws Exception{return itemNbt().stream(raw,this::readStack);}
     /** Decode a complete native stack on the native worker, preserving its property bank. */
     public int stackPrefixLength(byte[] raw)throws Exception{
         if(raw.length<10||raw.length>8192)throw new IOException("native_stack_size");BoundedNativeInput input=new BoundedNativeInput(raw);Object stack=Class.forName("211097523",true,loader).getConstructor(DataInput.class).newInstance(input);int length=raw.length-input.available();byte[] canonical=szserver.net.Wire.bytes(out->stack.getClass().getMethod("switch",DataOutput.class).invoke(stack,out));if(!Arrays.equals(canonical,Arrays.copyOf(raw,length)))throw new IOException("native_stack_roundtrip");return length;

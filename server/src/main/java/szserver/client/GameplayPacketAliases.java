@@ -10,6 +10,10 @@ public final class GameplayPacketAliases {
     public static final int WEAPON_MODULE=1221;
     private static final Map<String,Integer> IDS=Map.ofEntries(
         Map.entry(AlliancePackets.JOIN,AlliancePackets.JOIN_ID),
+        Map.entry(NativeAdminPackets.GIVE_CLASS,NativeAdminPackets.GIVE_ID),
+        Map.entry(NativeAdminPackets.AMMO_CLASS,NativeAdminPackets.AMMO_ID),
+        Map.entry(NativeAdminPackets.ADDRESS_CLASS,NativeAdminPackets.ADDRESS_ID),
+        Map.entry(NativeAdminPackets.ECHO_CLASS,NativeAdminPackets.ECHO_ID),
         Map.entry(WorldItemPackets.DROP,WorldItemPackets.DROP_ID),
         Map.entry(InventoryPackets.DELETE_REQUEST,InventoryPackets.DELETE_ID),
         Map.entry(PortalPackets.INTERACT_CLASS,PortalPackets.INTERACT_ID),

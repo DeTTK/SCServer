@@ -389,8 +389,22 @@ public final class GameItems implements AutoCloseable {
         List<szserver.inventory.ItemStack> removed=new ArrayList<>();for(byte[] raw:result.removed())removed.add(readStack(raw));return new ModuleBatch(geometry(weapon.state(result.state())),List.copyOf(removed));
     }
     public szserver.inventory.ItemStack createStack(int id,int count,int metadata,JsonObject tags)throws Exception{
-        byte[] state=create(id,new JsonObject());var original=new szserver.inventory.ItemStack(id,count,metadata,state);if(tags.isEmpty())return inventoryFacts(original);
-        byte[] wire=szserver.net.InventoryPackets.stack(original);return validateStack(adapter.applyTags(Arrays.copyOfRange(wire,1,wire.length),NativeTypedNbt.encode(tags)));
+        szserver.inventory.ItemStack original;
+        boolean nativeFactory=itemResourcesMounted&&adapter.hasHeadlessArchiveFactory(id);
+        if(nativeFactory){
+            // Seed stock built-in attachments before accepting explicit firearm changes.
+            byte[] edits=tags.isEmpty()||firearm(id)?null:NativeTypedNbt.encode(tags);
+            original=validateStack(adapter.createNativeStack(id,count,metadata,edits));
+            if(firearm(id))original=initializeBuiltins(original);
+            if(edits!=null) return copyForGrant(original);
+        }else{
+            original=inventoryFacts(new szserver.inventory.ItemStack(id,count,metadata,create(id,new JsonObject())));
+        }
+        if(!tags.isEmpty()){
+            byte[] wire=szserver.net.InventoryPackets.stack(original);
+            original=validateStack(adapter.applyTags(Arrays.copyOfRange(wire,1,wire.length),NativeTypedNbt.encode(tags)));
+        }
+        return nativeFactory?copyForGrant(original):original;
     }
     public szserver.inventory.ItemStack readEditedStack(byte[] raw)throws Exception{return validateStack(adapter.readEditedStack(raw));}
     public szserver.inventory.ItemStack readConfig(byte[] raw)throws Exception{return validateStack(adapter.readConfig(raw));}
