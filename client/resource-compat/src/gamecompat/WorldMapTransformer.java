@@ -51,6 +51,21 @@ final class WorldMapTransformer implements ClassFileTransformer {
                     method.instructions.insert(guard);
                     edits++;
                 }
+                if (radar && method.name.equals("else") && method.desc.equals("()V")) {
+                    var original = new LabelNode();
+                    var selection = new InsnList();
+                    selection.add(new VarInsnNode(Opcodes.ALOAD, 0));
+                    selection.add(new FieldInsnNode(Opcodes.GETFIELD, name, "char", "L1743927504;"));
+                    selection.add(new FieldInsnNode(Opcodes.GETSTATIC, "482650101", "byte", "L508758966;"));
+                    selection.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "gamecompat/WorldMapView",
+                        "selectRadarPage", "(Ljava/lang/Object;Ljava/lang/Object;)Z", false));
+                    selection.add(new JumpInsnNode(Opcodes.IFEQ, original));
+                    selection.add(new InsnNode(Opcodes.RETURN));
+                    selection.add(original);
+                    selection.add(new FrameNode(Opcodes.F_SAME, 0, null, 0, null));
+                    method.instructions.insert(selection);
+                    edits++;
+                }
                 if (markers && method.name.equals("interface") && method.desc.equals("(L1743927504;)Z")) {
                     for (var instruction : method.instructions.toArray()) if (instruction.getOpcode() == Opcodes.IRETURN) {
                         var hook = new InsnList();
@@ -153,7 +168,7 @@ final class WorldMapTransformer implements ClassFileTransformer {
                     }
                 }
             }
-            if (edits != (online ? 6 : map || party ? 3 : markers ? 2 : 1)) throw new IllegalStateException("Unexpected native map seam count: " + edits);
+            if (edits != (online ? 6 : map || party ? 3 : markers || radar ? 2 : 1)) throw new IllegalStateException("Unexpected native map seam count: " + edits);
             var writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
             node.accept(writer);
             return writer.toByteArray();

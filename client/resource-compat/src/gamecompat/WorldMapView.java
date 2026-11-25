@@ -43,12 +43,28 @@ public final class WorldMapView {
     }
 
     public static Object page(Object pages, float x, float z) {
-        if (localWorld()) {
-            var available = (Map<?, ?>) value(MapPages.PAGES, pages);
-            Object configured = available.get(FULL);
-            return configured == null ? MapPages.FULL_PAGE : configured;
-        }
-        return invoke(MapPages.AT_POSITION, pages, x, z);
+        return localWorld() ? fullPage(pages) : invoke(MapPages.AT_POSITION, pages, x, z);
+    }
+
+    public static boolean selectRadarPage(Object renderer, Object pages) {
+        if (!localWorld()) return false;
+        Object page = fullPage(pages);
+        // The radar normally retains a valid regional page even after its selection rules change.
+        if (value(Radar.PAGE, renderer) != page) invoke(Radar.SET_PAGE, renderer, page, false);
+        return true;
+    }
+
+    private static Object fullPage(Object pages) {
+        var available = (Map<?, ?>) value(MapPages.PAGES, pages);
+        Object configured = available.get(FULL);
+        return configured == null ? MapPages.FULL_PAGE : configured;
+    }
+
+    private static final class Radar {
+        private static final Class<?> RENDERER = nativeClass("1743927504");
+        private static final Field PAGE = field(RENDERER, "extends");
+        private static final Method SET_PAGE = method(RENDERER, "instanceof", void.class, false,
+            MapPages.PAGE_TYPE, boolean.class);
     }
 
     private static boolean localWorld() {
