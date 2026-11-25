@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use sha2::Digest;
 use std::{
-    io::Write,
+    io::{Read, Write},
     path::{Path, PathBuf},
     sync::{
         Arc, Mutex,
@@ -1283,18 +1283,19 @@ impl Supervisor {
                         &Owned::default(),
                     );
                 }
-                let exited = r.server.as_ref().is_some_and(|o| !alive(o));
-                if exited {
-                    if let Some(o) = &r.server {
-                        let _=RotatingLog::new(self.layout.at("logs"),"lifecycle").line(&json!({"type":"unexpected-server-exit","pid":o.pid,"session":o.session}).to_string());
-                    }
+                let exited = r.server.as_ref().filter(|o| !alive(o)).cloned();
+                if let Some(o) = &exited {
+                    let _ = RotatingLog::new(self.layout.at("logs"), "lifecycle").line(
+                        &json!({"type":"unexpected-server-exit","pid":o.pid,"session":o.session})
+                            .to_string(),
+                    );
                     r.server = None;
                     r.world_lease = None;
                     r.server_tunnel = None;
                 }
                 (exited, r.server.clone())
             };
-            if exited {
+            if let Some(exited) = exited {
                 if let Some(client) = self.running.lock().unwrap().client.as_ref() {
                     let file = self.layout.at(&client.session).join("native-session.json");
                     if !file.exists() {
@@ -1302,10 +1303,21 @@ impl Supervisor {
                     }
                 }
                 self.view.lock().unwrap()["RelayStatus"] = json!("");
-                self.state(
-                    "Failed",
-                    "Процесс сервера завершился вне команды остановки; проверьте журнал",
-                );
+                let memory_failure =
+                    jvm_native_memory_failure(&self.layout.at(&exited.session), exited.pid);
+                let detail = if memory_failure {
+                    let message = "Windows не смогла выделить память для Java-сервера. Освободите память или уменьшите лимиты игры и сервера в настройках.";
+                    let _ = record_launcher_error(
+                        &self.layout,
+                        "host",
+                        "server-exit",
+                        &anyhow::anyhow!("SERVER_JVM_MEMORY: {message}"),
+                    );
+                    message
+                } else {
+                    "Процесс сервера завершился вне команды остановки; проверьте журнал"
+                };
+                self.state("Failed", detail);
             }
             if let Some(o) = server {
                 let starting = self.status()["State"] == "Starting";
@@ -1729,6 +1741,25 @@ mod log_stream_tests {
     }
 
     #[test]
+    fn server_exit_identifies_native_heap_reservation_failures() {
+        let run = tempfile::tempdir().unwrap();
+        let folder = run.path();
+        std::fs::write(
+            folder.join("server-stderr.log"),
+            "java.lang.OutOfMemoryError: Java heap space",
+        )
+        .unwrap();
+        assert!(!jvm_native_memory_failure(folder, 24));
+        std::fs::write(folder.join("hs_err_pid24.log"),
+            "# Native memory allocation (mmap) failed to map 165675008 bytes. Error detail: G1 virtual space").unwrap();
+        assert!(jvm_native_memory_failure(folder, 24));
+        assert!(!jvm_native_memory_failure(folder, 25));
+        std::fs::write(folder.join("server-stdout.log"),
+            "Error occurred during initialization of VM\nCould not reserve enough space for 4194304KB object heap").unwrap();
+        assert!(jvm_native_memory_failure(folder, 25));
+    }
+
+    #[test]
     fn launch_phase_uses_role_specific_evidence() {
         let temp = tempfile::tempdir().unwrap();
         let folder = temp.path();
@@ -1965,6 +1996,24 @@ fn observed_client_frame(folder: &Path, pid: u32) -> bool {
             .and_then(|message| serde_json::from_str::<Value>(message).ok())
             .is_some_and(|stats| stats["pid"] == pid && stats["frames"].as_u64().unwrap_or(0) > 0)
     })
+}
+
+fn jvm_native_memory_failure(folder: &Path, pid: u32) -> bool {
+    let is_memory_failure = |bytes: &[u8]| {
+        let text = String::from_utf8_lossy(bytes);
+        text.contains("There is insufficient memory for the Java Runtime Environment to continue")
+            || text.contains("Native memory allocation") && text.contains("failed to map")
+            || text.contains("Could not reserve enough space for") && text.contains("object heap")
+    };
+    let mut header = Vec::new();
+    if let Ok(file) = std::fs::File::open(folder.join(format!("hs_err_pid{pid}.log"))) {
+        let _ = file.take(8192).read_to_end(&mut header);
+    }
+    is_memory_failure(&header)
+        || ["stdout", "stderr"].iter().any(|stream| {
+            diagnostic_tail(&folder.join(format!("server-{stream}.log")), 8192)
+                .is_ok_and(|tail| is_memory_failure(&tail))
+        })
 }
 
 fn launch_tail(layout: &Layout, folder: &Path, role: &str, stream: &str) -> String {
