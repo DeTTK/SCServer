@@ -84,6 +84,11 @@ def build(output):
     copy(ROOT/'config/server.template.properties',player/'Server/server.template.properties')
     for dep in tools.dependencies():copy(dep,player/'Server/lib'/dep.name)
     copy(ROOT/'build/command-completion.jar',player/'Client/mods/command-completion.jar')
+    game_exe=player/'Client/compat/bscp-game.exe'
+    game_exe.parent.mkdir(parents=True,exist_ok=True)
+    subprocess.run(['x86_64-w64-mingw32-gcc','-std=c11','-Os','-s',
+                    '-Wl,--no-insert-timestamp',str(ROOT/'client/windows/game-launcher.c'),
+                    '-o',str(game_exe)],check=True)
     lock=json.loads((ROOT/'bootstrap/base.lock.json').read_text('utf8'))
     asm,tree,kotlin=[pinned_input(lock[name]) for name in ('asm','asmTree','kotlin')]
     libraries=[runtime/'game.jar',runtime/'libraries.jar',*sorted((runtime/'dependencies').glob('*.jar'))]

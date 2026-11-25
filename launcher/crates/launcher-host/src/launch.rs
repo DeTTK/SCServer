@@ -254,7 +254,13 @@ pub fn client(
         need(&component_file(source, name)?)?;
     }
     std::fs::create_dir_all(profile.join("game"))?;
-    let mut c = base(java, session)?;
+    let game_exe = component_file(source, "compat/bscp-game.exe")?;
+    let jli = java.with_file_name("jli.dll");
+    let use_game_exe = game_exe.is_file() && jli.is_file();
+    let mut c = base(if use_game_exe { &game_exe } else { java }, session)?;
+    if use_game_exe {
+        c.env("BSCP_GAME_JLI", &jli);
+    }
     c.current_dir(profile.join("game"));
     if let Some(guard) = qa {
         need(guard)?;

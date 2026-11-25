@@ -36,6 +36,7 @@ git push -u origin main
 
 ## Каналы лаунчера
 
+`python scripts/build_player.py` собирает игровой EXE компилятором `x86_64-w64-mingw32-gcc` из `PATH`. GitHub Actions устанавливает его перед сборкой на Ubuntu.
 Лаунчер выбирает канал по имени ветки `build-<channel>`. Доступны `main`, `test` и `launtest`;
 список задан в `SELECTABLE_CHANNELS` (`launcher/crates/launcher-core/src/channels.rs`), а публикация
 разрешена в `publish-game.yml`, `source-checks.yml` и `scripts/delivery.py`.
