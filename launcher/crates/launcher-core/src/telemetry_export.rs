@@ -196,6 +196,26 @@ fn faro_payload(config: &TelemetryConfig, events: &[TelemetryEvent]) -> Value {
                 context[field] = json!(event.payload[key].as_str().unwrap_or(""));
             }
         }
+        if event.kind == "process-exit" {
+            for (field, key) in [
+                ("launch_phase", "phase"),
+                ("exit_code", "exitCode"),
+                ("exit_code_hex", "exitCodeHex"),
+                ("process_exit_time", "exitTime"),
+                ("process_uptime_ms", "uptimeMs"),
+                ("process_pid", "pid"),
+                ("readiness_reached", "readinessReached"),
+            ] {
+                let value = &event.payload["exit"][key];
+                if !value.is_null() {
+                    context[field] = json!(
+                        value
+                            .as_str()
+                            .map_or_else(|| value.to_string(), str::to_owned)
+                    );
+                }
+            }
+        }
         let message = event.payload["text"]
             .as_str()
             .map(str::to_owned)
@@ -221,6 +241,13 @@ fn faro_payload(config: &TelemetryConfig, events: &[TelemetryEvent]) -> Value {
             } else {
                 event.payload["stderr"]
                     .as_str()
+                    .filter(|text| !text.trim().is_empty())
+                    .or_else(|| {
+                        event.payload["stdout"]
+                            .as_str()
+                            .filter(|text| !text.trim().is_empty())
+                    })
+                    .or_else(|| event.payload["exit"]["error"].as_str())
                     .unwrap_or("JVM exited with a nonzero status")
             };
             exceptions.push(json!({"type":if launcher_error{"bscp.LauncherError"}else if event.kind=="launcher-panic"{"bscp.LauncherPanic"}else if event.kind=="native-crash"{"bscp.NativeCrash"}else if fatal{"bscp.ProcessExit"}else{"bscp.JavaException"},"value":value.chars().take(16000).collect::<String>(),"fatal":fatal,"timestamp":event.created,"context":context}));
@@ -644,5 +671,36 @@ mod tests {
         assert_eq!(body["logs"].as_array().unwrap().len(), 1);
         assert_eq!(body["measurements"].as_array().unwrap().len(), 2);
         assert!(body["measurements"][0]["values"]["heapUsed"].is_number());
+    }
+
+    #[test]
+    fn faro_process_exit_uses_correlated_phase_code_and_available_console_tail() {
+        let event = TelemetryEvent {
+            schema_version: 1,
+            id: "exit-1".into(),
+            created: chrono::Utc::now().to_rfc3339(),
+            kind: "process-exit".into(),
+            launcher_version: "0.5".into(),
+            payload: json!({
+                "role": "client",
+                "run": "state/sessions/client-1",
+                "runGroup": "state/sessions/server-1",
+                "exit": {
+                    "success": false, "exitCode": -1073741819, "exitCodeHex": "0xC0000005",
+                    "phase": "jvm-starting", "pid": 42, "readinessReached": false
+                },
+                "stderr": " ",
+                "stdout": "JVM probe"
+            }),
+        };
+        let body = faro_payload(&TelemetryConfig::default(), &[event]);
+        let error = &body["exceptions"][0];
+        assert_eq!(error["value"], "JVM probe");
+        assert_eq!(error["context"]["launch_phase"], "jvm-starting");
+        assert_eq!(error["context"]["exit_code"], "-1073741819");
+        assert_eq!(error["context"]["exit_code_hex"], "0xC0000005");
+        assert_eq!(error["context"]["process_pid"], "42");
+        assert_eq!(error["context"]["readiness_reached"], "false");
+        assert_eq!(error["context"]["run_group"], "state/sessions/server-1");
     }
 }

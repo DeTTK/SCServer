@@ -7,6 +7,7 @@ import szserver.net.InventoryPackets;
  * A dynamic envelope enters the same registered handler, including its bounds,
  * permissions, inventory admission and durable acknowledgements. */
 public final class GameplayPacketAliases {
+    public static final int WEAPON_MODULE=1221;
     private static final Map<String,Integer> IDS=Map.ofEntries(
         Map.entry(AlliancePackets.JOIN,AlliancePackets.JOIN_ID),
         Map.entry(WorldItemPackets.DROP,WorldItemPackets.DROP_ID),
@@ -16,7 +17,7 @@ public final class GameplayPacketAliases {
         Map.entry(szserver.net.SuicideCommand.REQUEST,szserver.net.SuicideCommand.PACKET_ID),
         Map.entry("423821855",1842),Map.entry("1491633278",1628),
         Map.entry("23110596",212),Map.entry("1932940545",1527),
-        Map.entry("1859052360",1449),Map.entry("953021737",366),
+        Map.entry("1859052360",1449),Map.entry("309659025",WEAPON_MODULE),Map.entry("953021737",366),
         Map.entry("446599111",598),Map.entry("1950979903",1138),
         Map.entry("1995052022",271),Map.entry("1732415882",280),
         Map.entry("1603754623",928),Map.entry("1619370828",240),

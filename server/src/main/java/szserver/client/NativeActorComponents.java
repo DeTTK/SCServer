@@ -23,7 +23,7 @@ final class NativeActorComponents {
         ActorDispatcherRelease.verify(runtime);ActorLifeRelease.verify(runtime);this.loader=loader;this.unsafe=unsafe;this.allocate=allocate;
         entity=type("1217489680");player=type("200241649");living=type("820497227");contextType=type("358035993");flagsType=type("769798186");boxType=type("242639986");
         actorType=define.apply("szserver.bridge.ActorLivingProfile",NativeActorBridge.livingActor());life=new NativeActorLife(loader);
-        healthRules=szserver.net.HealthRules.read(com.google.gson.JsonParser.parseString(RuntimeFiles.readString(definitions.resolveSibling("artifact-settings.json"))).getAsJsonObject());
+        healthRules=szserver.net.HealthRules.read(com.google.gson.JsonParser.parseString(szserver.util.ItemResources.gameplaySettings(definitions.resolveSibling("artifact-settings.json"))).getAsJsonObject());
         position=entity.getMethod("throw",double.class,double.class,double.class);box=boxType.getMethod("synchronized",double.class,double.class,double.class,double.class,double.class,double.class);
         type("600030218").getField("volatile").set(null,type("1974661934").getField("RU").get(null));
         Class<?> metadata=type("1993742576");if(metadata.getField("it").get(null)==null)metadata.getMethod("interface").invoke(null);
@@ -37,7 +37,7 @@ final class NativeActorComponents {
     private static void set(Class<?> type,String name,Object owner,Object value)throws Exception{Field f=type.getDeclaredField(name);f.setAccessible(true);f.set(owner,value);}
     private void prepareItems(Path path)throws Exception {
         if(RuntimeFiles.size(path)>32L*1024*1024)throw new IllegalArgumentException("actor_component_definitions_size");
-        var definitions=new com.google.gson.JsonObject();try(var text=Files.newBufferedReader(path);var input=new com.google.gson.stream.JsonReader(text)){input.setLenient(true);input.beginObject();while(input.hasNext()){String key=input.nextName();if(Set.of("14987","21059","21085").contains(key))definitions.add(key,com.google.gson.JsonParser.parseReader(input));else input.skipValue();}input.endObject();}
+        var definitions=szserver.inventory.CatalogDefinitions.read(path);
         Class<?> parserType=type("com.google.gson.JsonParser"),json=type("com.google.gson.JsonObject"),descriptor=type("1422486348");
         Object parser=parserType.getConstructor().newInstance();Object[] factories=(Object[])type("1366800141").getField("import").get(null);
         for(int id:new int[]{14987,21059,21085}) {

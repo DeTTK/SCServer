@@ -156,7 +156,7 @@ public final class CinematicCamera implements ClientMod {
         Set<Integer> current=new HashSet<>();
         Set<Integer> watched=new HashSet<>(List.of(256,342,346));
         for(String id:DEFAULT_KEYS.keySet())watched.add(binding(id));
-        for(int k:watched)if(editing?EditorNavigation.held(org.lwjgl.glfw.GLFW.glfwGetCurrentContext(),k):key(k))current.add(k);
+        for(int k:watched)if(key(k))current.add(k);
         Set<Integer> pressed=new HashSet<>(current);pressed.removeAll(down);down.clear();down.addAll(current);
         monitorInteract=active&&fixedMode&&pilotView.get()&&usable&&(current.contains(342)||current.contains(346));
         if(!available.get()&&active)stop();
@@ -212,7 +212,7 @@ public final class CinematicCamera implements ClientMod {
             case "camera.native-view.v1" -> ownView(args[0])?(!active&&replayFp?replayView(args[1]):view(args[1])):null;
             case "camera.fov.v1" -> {
                 if(!ownView(args[0])||!prepared||active&&fixedMode&&pilotPass)yield null;
-                yield !active&&replayFp?replayFov():fixedMode?editing&&inspectScene.get()?70.:stationary.fov:editing&&inspectScene.get()&&!previewPass?70.:rig.fov;
+                yield projectionFov();
             }
             case "input.key.v1" -> usable&&editing&&!replayWorld?Boolean.FALSE:null;
             case "input.action-block.v1" -> usable&&(editing||monitorInteract)&&!replayWorld?Boolean.TRUE:null;
@@ -224,6 +224,11 @@ public final class CinematicCamera implements ClientMod {
             case "scene.drones.v1" -> {try{fpScene.render(this,args[0]);}catch(Exception e){if(fpError.isEmpty())context.log("FP world renderer: "+e);fpError=e.toString();}yield null;}
             default -> null;
         };
+    }
+    double projectionFov()throws Exception {
+        if(!active&&replayFp)return replayFov();
+        if(editing&&inspectScene.get()&&(fixedMode||!previewPass))return 70.;
+        return fixedMode?stationary.fov:rig.fov;
     }
     double replayFov()throws Exception {
         Object value=Native.runtimeHook("replay.fp-fov.v1");return value instanceof Number n?n.doubleValue():70.;
@@ -245,7 +250,7 @@ public final class CinematicCamera implements ClientMod {
                 last=stationary.pose;anchor=stationary.pose;
                 if(editing&&inspectScene.get()&&editor.navigation.pose==null)editor.navigation.frameCamera(last);
                 renderPose=editing&&inspectScene.get()&&!previewPass?editor.navigation.pose:pilotPass?new Pose(vector(get(camera,"assert")).mul(-1),look(player)):last;
-                if(!pilotPass||editing)Native.apply(camera,matrix,renderPose,editing&&inspectScene.get()&&!previewPass?70:stationary.fov);
+                if(!pilotPass||editing)Native.apply(camera,matrix,renderPose,projectionFov());
                 prepared=true;
                 if(editing&&(!inspectScene.get()||!previewPass)){displayPose=renderPose;displayProjection=new float[16];call(get(camera,"throws"),"void","[F",(Object)displayProjection);}
                 status="Статичная камера в мире";return Boolean.TRUE;
@@ -275,7 +280,7 @@ public final class CinematicCamera implements ClientMod {
             last=result;
             if(editing&&inspectScene.get()&&editor.navigation.pose==null)editor.navigation.reset(result,anchor.p());
             renderPose=editing&&inspectScene.get()&&!previewPass?editor.navigation.pose:result;
-            Native.apply(camera,matrix,renderPose,editing&&inspectScene.get()&&!previewPass?70:rig.fov);prepared=true;
+            Native.apply(camera,matrix,renderPose,projectionFov());prepared=true;
             // Keep the scene camera snapshot before the HUD changes render state.
             if(editing&&(!inspectScene.get()||!previewPass)){
                 displayPose=renderPose;displayProjection=new float[16];

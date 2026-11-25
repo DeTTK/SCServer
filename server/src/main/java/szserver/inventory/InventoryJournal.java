@@ -117,7 +117,7 @@ public final class InventoryJournal implements AutoCloseable {
     }
     private void validateGrantedDrops(UUID id,Inventory.Plan plan,List<WorldDrop> granted){
         if(!plan.changes().isEmpty()||granted.isEmpty()||granted.size()>160)throw new IllegalArgumentException("admin_drop_transaction");
-        Set<UUID> seen=new HashSet<>();long bytes=0;for(WorldDrop drop:granted){if(!id.equals(drop.character())||!seen.add(drop.id())||drop.stack().count()>catalog.get(drop.stack().id()).stackLimit())throw new IllegalArgumentException("admin_drop_stack");validateDrop(drop);bytes+=szserver.util.Json.bytes(drop.json()).length;}
+        Set<UUID> seen=new HashSet<>();long bytes=0;for(WorldDrop drop:granted){if(!id.equals(drop.character())||!seen.add(drop.id())||drop.stack().count()>catalog.limit(drop.stack()))throw new IllegalArgumentException("admin_drop_stack");validateDrop(drop);bytes+=szserver.util.Json.bytes(drop.json()).length;}
         validateCapacity(granted.size(),bytes);
     }
     private static JsonObject row(Map.Entry<Inventory.Address,ItemStack> e){JsonObject row=new JsonObject();row.addProperty("aggregate",e.getKey().aggregate());row.addProperty("container",e.getKey().container());row.addProperty("slot",e.getKey().slot());row.addProperty("deleted",e.getValue()==null);if(e.getValue()!=null)row.add("stack",e.getValue().json());return row;}

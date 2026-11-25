@@ -1,6 +1,7 @@
 package szserver.net;
 
 import szserver.client.GameItems;
+import szserver.client.ClientStateAdapter;
 import szserver.inventory.*;
 import szserver.util.Workers;
 import com.google.gson.JsonObject;
@@ -21,7 +22,7 @@ public final class GameInventory implements AutoCloseable {
     private final LootboxCatalog lootboxes;
     private final Path equipmentRoot;
     private final InventoryJournal journal;
-    private final GameItems items;private Map<Integer,List<GrenadeAreaProfile>> pulseProfiles=Map.of();private boolean pulseProfilesPrepared;
+    private final GameItems items;private final Map<Integer,List<List<MeleeProfile>>> meleeProfiles;private Map<Integer,List<GrenadeAreaProfile>> pulseProfiles=Map.of();private boolean pulseProfilesPrepared;
     private final Map<Integer,PhysicalReload.Mechanism> physicalMechanisms;
     private final Map<Integer,byte[]> defaultAppearances=new HashMap<>();
     private final Map<UUID,Character> characters=new LinkedHashMap<>(256,.75f,true);
@@ -51,7 +52,7 @@ public final class GameInventory implements AutoCloseable {
     public void bindCreativeGrants(CreativeGrants bridge){if(creativeGrants!=null)throw new IllegalStateException("creative_grants_already_bound");creativeGrants=Objects.requireNonNull(bridge);}
     private boolean creative(UUID id){return creativeGrants!=null&&creativeGrants.active(id);}
     private List<ItemStack> creativeCopies(ItemStack template,int count)throws Exception{
-        int limit=catalog.get(template.id()).stackLimit(),pieces=(int)((count+(long)limit-1)/limit);if(pieces>84)throw new IllegalArgumentException("creative_inventory_full");
+        int limit=catalog.limit(template),pieces=(int)((count+(long)limit-1)/limit);if(pieces>84)throw new IllegalArgumentException("creative_inventory_full");
         List<ItemStack> stacks=new ArrayList<>(pieces);for(int remaining=count;remaining>0;remaining-=Math.min(limit,remaining))stacks.add(items.copyForGrant(template.count(Math.min(limit,remaining))));return List.copyOf(stacks);
     }
     private void finishCreative(UUID id,Character c,Inventory before,List<ItemStack> stacks,int count,Integer slot,AdminGive request,String fingerprint,Consumer<Inventory.Plan> success,Consumer<String> failure){
@@ -70,9 +71,18 @@ public final class GameInventory implements AutoCloseable {
     /** Isolated test fault injection, never set from the live configuration. */
     public GameInventory(Path root,Path data,Path runtime,Path registry,long testDelayMillis)throws Exception {
         equipmentRoot=root;
-        catalog=new ItemCatalog(root.resolve("fixtures/item-definitions.json"));lootboxes=new LootboxCatalog(catalog,root);journal=new InventoryJournal(data.resolve("characters.sjournal"),catalog,testDelayMillis);items=new GameItems(runtime,registry);
+        catalog=new ItemCatalog(root.resolve("fixtures/item-definitions.json"));
+        items=new GameItems(runtime,registry);
         physicalMechanisms=PhysicalReload.catalogue(root.resolve("fixtures/vr-weapon-catalog.json"));
-        items.warmGameplay(root.resolve("fixtures/item-definitions.json"),root.resolve("fixtures/artifact-settings.json"));
+        try {
+            items.warmGameplay(root.resolve("fixtures/item-definitions.json"),root.resolve("fixtures/artifact-settings.json"));
+            lootboxes=items.lootboxes(root,catalog);
+            meleeProfiles=items.meleeProfiles();
+            journal=new InventoryJournal(data.resolve("characters.sjournal"),catalog,testDelayMillis);
+        } catch(Exception | LinkageError failure) {
+            try {items.close();} catch(Exception closeFailure) {failure.addSuppressed(closeFailure);}
+            throw failure;
+        }
         for(var entry:JsonParser.parseString(java.nio.file.Files.readString(root.resolve("fixtures/equipment-appearances.json"))).getAsJsonObject().entrySet())defaultAppearances.put(Integer.parseInt(entry.getKey()),HexFormat.of().parseHex(entry.getValue().getAsString()));
         for(int id=1;id<65536;id++){ItemCatalog.Definition definition;try{definition=catalog.get(id);}catch(IllegalArgumentException absent){continue;}if(definition.type().equals("bullet"))items.registerStateless(id);}
     }
@@ -82,7 +92,27 @@ public final class GameInventory implements AutoCloseable {
         if(closed)return CompletableFuture.failedFuture(new IllegalStateException("inventory_closed"));List<Integer> copy=List.copyOf(worn);var future=new CompletableFuture<szserver.world.ActorEquipment>();
         try{factories.execute(()->{try{future.complete(items.actorEquipment(equipmentRoot,copy,held,encumbered));}catch(Throwable failure){future.completeExceptionally(failure);}});}catch(RejectedExecutionException failure){future.completeExceptionally(failure);}return future.copy();
     }
+    public MeleeProfile melee(int id,int kind,int combo){
+        List<List<MeleeProfile>> attacks=meleeProfiles.get(id);
+        if(attacks==null||kind<0||kind>=attacks.size()||combo<0)return null;
+        List<MeleeProfile> variants=attacks.get(kind);
+        return combo<variants.size()?variants.get(combo):null;
+    }
     public ItemCatalog catalog(){return catalog;}
+    public Map<Integer,GrenadeUse.Rules> warmBolts()throws Exception{return items.warmBolts();}
+    public void boltProjectile(ItemStack stack,double vx,double vz,float yaw,float pitch,
+                               Consumer<szserver.client.BoltProjectile> success,Consumer<String> failure){
+        try{
+            factories.execute(()->{
+                try{
+                    var projectile=items.boltProjectile(stack,vx,vz,yaw,pitch);
+                    completion(()->success.accept(projectile));
+                }catch(Exception|LinkageError error){
+                    completion(()->failure.accept(Objects.toString(error.getMessage(),"native_bolt_factory")));
+                }
+            });
+        }catch(RejectedExecutionException full){failure.accept("inventory_factory_queue_full");}
+    }
     public LootboxCatalog lootboxes(){return lootboxes;}
     public record LootResult(Inventory.Plan plan,UUID receipt,List<ItemStack> rewards){}
     public void openLootboxes(UUID id,int box,int count,Consumer<LootResult> success,Consumer<String> failure){
@@ -160,12 +190,12 @@ public final class GameInventory implements AutoCloseable {
     /** Resolve actual ammo compatibility on the factory worker, including creative native state. */
     public void giveAmmunition(UUID id,ItemStack weapon,int factory,byte[] nativeHint,Consumer<Inventory.Plan> success,Consumer<String> failure){
         Character c=character(id);if(c.busy||c.failed||c.deathClear){failure.accept("inventory_busy");return;}byte[] hint=nativeHint==null?null:nativeHint.clone();c.busy=true;
-        try{factories.execute(()->{try{ItemStack selected=weapon!=null?weapon:hint!=null?items.readStack(Arrays.copyOfRange(hint,1,hint.length)):items.createStack(factory,1,0,new JsonObject());WeaponProfile profile=items.weaponProfile(selected);if(profile==null||profile.ammunition().isEmpty())throw new IllegalArgumentException("admin_ammo_weapon_missing");int ammo=profile.ammunition().get(0),count=catalog.get(ammo).stackLimit();completion(()->{c.busy=false;give(id,ammo,count,0,new JsonObject(),success,failure);});}catch(Exception|LinkageError error){completion(()->{c.busy=false;denied++;failure.accept(Objects.toString(error.getMessage(),"admin_ammo_weapon_missing"));});}});}catch(RejectedExecutionException error){c.busy=false;failure.accept("inventory_factory_queue_full");}
+        try{factories.execute(()->{try{ItemStack selected=weapon!=null?weapon:hint!=null?items.readStack(Arrays.copyOfRange(hint,1,hint.length)):items.createStack(factory,1,0,new JsonObject());WeaponProfile profile=items.weaponProfile(selected);if(profile==null||profile.ammunition().isEmpty())throw new IllegalArgumentException("admin_ammo_weapon_missing");int ammo=profile.ammunition().get(0),count=catalog.limit(items.createStack(ammo,1,0,new JsonObject()));completion(()->{c.busy=false;give(id,ammo,count,0,new JsonObject(),success,failure);});}catch(Exception|LinkageError error){completion(()->{c.busy=false;denied++;failure.accept(Objects.toString(error.getMessage(),"admin_ammo_weapon_missing"));});}});}catch(RejectedExecutionException error){c.busy=false;failure.accept("inventory_factory_queue_full");}
     }
     public Map<Integer,GameItems.Medicine> medicines(){return items.medicines();}
     public InventoryPackets.MedicineRequest medicineRequest(byte[] body,int page)throws Exception{var request=items.medicineRequest(body);return InventoryPackets.medicine(request.owner(),request.sequence(),request.address(),page);}
     public Map<String,Float> medicineStats(Collection<Map<String,Float>> banks){try{return items.medicineStats(banks);}catch(Exception error){throw new IllegalStateException("medicine_native_stats",error);}}
-    public byte[] medicineEffects(int tick,List<CharacterEffects.Effect> removed,Collection<CharacterEffects.Effect> added,long now){try{return GamePackets.effectRecords(tick,items.medicineEffects(removed.stream().map(CharacterEffects.Effect::id).toList(),added.stream().map(e->new GameItems.MedicineEffect(e.id(),e.until(),e.definition(items.medicines()))).toList(),now));}catch(Exception error){throw new IllegalStateException("medicine_native_effects",error);}}
+    public byte[] medicineEffects(int tick,List<CharacterEffects.Effect> removed,Collection<CharacterEffects.Effect> added,Set<Integer> suppressed,long now){try{return GamePackets.effectRecords(tick,items.medicineEffects(removed.stream().map(CharacterEffects.Effect::id).toList(),added.stream().map(e->new GameItems.MedicineEffect(e.id(),e.until(),e.definition(items.medicines()))).toList(),suppressed,now));}catch(Exception error){throw new IllegalStateException("medicine_native_effects",error);}}
     public boolean medicineAllowed(int item,String mode,String location){try{return items.medicineAllowed(item,mode,location);}catch(Exception error){throw new IllegalStateException("medicine_native_admission",error);}}
     public Map<Integer,ExplosiveProfile> explosives(){return items.explosives();}
     public PhysicalReload.Mechanism physicalMechanism(int factory){return physicalMechanisms.get(factory);}
@@ -491,9 +521,20 @@ public final class GameInventory implements AutoCloseable {
     public void edit(UUID id,Inventory.Address address,byte[] raw,Consumer<Inventory.Plan> success,Consumer<String> failure){
         edit(id,address,raw,false,success,failure);
     }
+    public ClientStateAdapter.WeaponModuleRequest weaponModuleRequest(byte[] body)throws Exception{return items.weaponModuleRequest(body);}
+    public void weaponModule(UUID id,Inventory.Address target,Inventory.Address source,Consumer<Inventory.Plan> success,Consumer<String> failure){
+        editModule(id,target,source,items::weaponModule,success,failure);
+    }
     public void module(UUID id,Inventory.Address target,Inventory.Address source,int selection,int slot,Consumer<Inventory.Plan> success,Consumer<String> failure){
+        editModule(id,target,source,(weapon,attachment)->items.moduleBatch(weapon,slot,attachment,selection),success,failure);
+    }
+    @FunctionalInterface private interface ModuleEdit {
+        GameItems.ModuleBatch apply(ItemStack weapon,ItemStack attachment)throws Exception;
+    }
+    private void editModule(UUID id,Inventory.Address target,Inventory.Address source,ModuleEdit operation,
+            Consumer<Inventory.Plan> success,Consumer<String> failure){
         Character c=character(id);if(c.busy||c.failed||c.deathClear){denied++;failure.accept("inventory_busy");return;}Inventory before=c.inventory;ItemStack weapon=before.at(target),attached=source==null?null:before.at(source);if(weapon==null||source!=null&&(source.equals(target)||attached==null)){failure.accept("module_inventory_address");return;}c.busy=true;
-        try{factories.execute(()->{try{var edit=items.moduleBatch(weapon,slot,attached,selection);Map<Inventory.Address,ItemStack> changes=new LinkedHashMap<>();changes.put(target,edit.weapon());if(source!=null)changes.put(source,attached.count(attached.count()-1));Inventory after=before.replace(changes,0).after();for(ItemStack removed:edit.removed())after=after.give(removed).after();var info=items.inspectMagazine(edit.weapon());WeaponProfile profile=items.weaponProfile(edit.weapon());if(profile!=null){if(info.rounds()>profile.capacity())throw new IllegalArgumentException("module_loaded_magazine_capacity");}Map<Inventory.Address,ItemStack> delta=new LinkedHashMap<>();Set<Inventory.Address> addresses=new TreeSet<>(before.items().keySet());addresses.addAll(after.items().keySet());for(Inventory.Address address:addresses)if(before.at(address)!=after.at(address))delta.put(address,after.at(address));Inventory.Plan plan=before.replace(delta,0);completion(()->persist(id,c,plan,success,failure));}catch(Exception | LinkageError error){completion(()->{c.busy=false;denied++;failure.accept(Objects.toString(error.getMessage(),"module_failed"));});}});}catch(RejectedExecutionException error){c.busy=false;failure.accept("inventory_factory_queue_full");}
+        try{factories.execute(()->{try{var edit=operation.apply(weapon,attached);Map<Inventory.Address,ItemStack> changes=new LinkedHashMap<>();changes.put(target,edit.weapon());if(source!=null)changes.put(source,attached.count(attached.count()-1));Inventory after=before.replace(changes,0).after();for(ItemStack removed:edit.removed())after=after.give(removed).after();var info=items.inspectMagazine(edit.weapon());WeaponProfile profile=items.weaponProfile(edit.weapon());if(profile!=null){if(info.rounds()>profile.capacity())throw new IllegalArgumentException("module_loaded_magazine_capacity");}Map<Inventory.Address,ItemStack> delta=new LinkedHashMap<>();Set<Inventory.Address> addresses=new TreeSet<>(before.items().keySet());addresses.addAll(after.items().keySet());for(Inventory.Address address:addresses)if(before.at(address)!=after.at(address))delta.put(address,after.at(address));Inventory.Plan plan=before.replace(delta,0);completion(()->persist(id,c,plan,success,failure));}catch(Exception | LinkageError error){completion(()->{c.busy=false;denied++;failure.accept(Objects.toString(error.getMessage(),"module_failed"));});}});}catch(RejectedExecutionException error){c.busy=false;failure.accept("inventory_factory_queue_full");}
     }
     public void bolt(UUID id,Inventory.Address target,Inventory.Address source,Consumer<Inventory.Plan> success,Consumer<String> failure){
         Character c=character(id);if(c.busy||c.failed||c.deathClear){denied++;failure.accept("inventory_busy");return;}Inventory before=c.inventory;c.busy=true;
@@ -531,7 +572,7 @@ public final class GameInventory implements AutoCloseable {
         Character c=character(id);if(c.busy||c.failed||c.deathClear){denied++;failure.accept("inventory_busy");return;}
         if(destination<0||destination>3){failure.accept("admin_destination");return;}boolean toCreative=destination<2&&creative(id);byte[] config=raw.clone();double[] location=position==null?null:position.clone();Inventory before=c.inventory;c.busy=true;
         try{factories.execute(()->{try{
-            ItemStack template=items.readConfig(config);int count=template.count(),limit=catalog.get(template.id()).stackLimit();if(count<1||count>10000)throw new IllegalArgumentException("give_count");
+            ItemStack template=items.readConfig(config);int count=template.count(),limit=catalog.limit(template);if(count<1||count>10000)throw new IllegalArgumentException("give_count");
             WeaponProfile profile=items.weaponProfile(template);if(profile!=null){var magazine=items.inspectMagazine(template);if(magazine.ammo()!=0&&!profile.ammunition().contains(magazine.ammo()))throw new IllegalArgumentException("weapon_ammunition_type");if(magazine.rounds()<0||magazine.rounds()>profile.capacity())throw new IllegalArgumentException("magazine_rounds");}
             if(toCreative){List<ItemStack> copies=creativeCopies(template,count);completion(()->finishCreative(id,c,before,copies,count,null,null,null,success,failure));return;}
             int pieces=template.stateful()||destination==3?(int)((count+(long)limit-1)/limit):1;if(pieces>160)throw new IllegalArgumentException("give_native_copy_limit");
@@ -566,7 +607,7 @@ public final class GameInventory implements AutoCloseable {
             ItemStack created=items.createStack(factory,1,metadata,safeTags);byte[] state=created.state();Inventory.Plan plan;
             if(toCreative){List<ItemStack> copies=creativeCopies(created,count);completion(()->finishCreative(id,c,before,copies,count,slot,request,fingerprint,success,failure));return;}
             if(slot!=null){Inventory.Address address=new Inventory.Address(1,0,slot);if(before.at(address)!=null)throw new IllegalArgumentException("inventory_slot_occupied_or_full");plan=before.replace(Map.of(address,created.count(count)),count);}
-            else if(state.length==0||catalog.get(factory).stackLimit()>1)plan=before.give(created.count(count));
+            else if(state.length==0||catalog.limit(created)>1)plan=before.give(created.count(count));
             else {if(count>160)throw new IllegalArgumentException("inventory_full");Inventory after=before;Map<Inventory.Address,ItemStack> changes=new LinkedHashMap<>();
                 for(int n=0;n<count;n++){Inventory.Plan part=after.give(n==0?created:items.createStack(factory,1,metadata,safeTags));changes.putAll(part.changes());after=part.after();}
                 plan=before.replace(changes,count);

@@ -10,8 +10,11 @@ use sha2::Digest;
 use std::{
     io::Write,
     path::{Path, PathBuf},
-    sync::{Arc, Mutex},
-    time::Duration,
+    sync::{
+        Arc, Mutex,
+        atomic::{AtomicBool, Ordering},
+    },
+    time::{Duration, Instant},
 };
 use tokio::{
     io::{AsyncBufReadExt, BufReader},
@@ -29,6 +32,8 @@ struct Owned {
     proxy_port: u16,
     pending_client: bool,
     server_release: String,
+    #[serde(skip)]
+    ready: Arc<AtomicBool>,
 }
 #[derive(Default)]
 struct Running {
@@ -91,6 +96,25 @@ pub fn process_time(_: u32) -> Option<u64> {
 }
 fn alive(o: &Owned) -> bool {
     process_time(o.pid) == Some(o.started)
+}
+#[cfg(windows)]
+fn child_start_time(child: &tokio::process::Child) -> Option<u64> {
+    use windows_sys::Win32::{Foundation::FILETIME, System::Threading::GetProcessTimes};
+
+    // The original handle remains valid after exit and cannot refer to a recycled PID.
+    let handle = child.raw_handle()?;
+    let mut creation = FILETIME::default();
+    let mut exit = FILETIME::default();
+    let mut kernel = FILETIME::default();
+    let mut user = FILETIME::default();
+    let success =
+        unsafe { GetProcessTimes(handle, &mut creation, &mut exit, &mut kernel, &mut user) };
+    (success != 0)
+        .then_some(((creation.dwHighDateTime as u64) << 32) | creation.dwLowDateTime as u64)
+}
+#[cfg(not(windows))]
+fn child_start_time(child: &tokio::process::Child) -> Option<u64> {
+    child.id().and_then(process_time)
 }
 impl Supervisor {
     pub fn new(
@@ -848,7 +872,8 @@ impl Supervisor {
         .spawn()
         .context("SERVER_JAVA_SPAWN: start the JVM")?;
         let pid = child.id().unwrap();
-        pump(
+        let started = child_start_time(&child);
+        let ready = pump(
             child,
             &session,
             "server",
@@ -857,7 +882,7 @@ impl Supervisor {
         );
         let o = Owned {
             pid,
-            started: process_time(pid).ok_or_else(|| anyhow::anyhow!("PROCESS_TIME"))?,
+            started: started.context("SERVER_PROCESS_TIME: read the JVM creation time")?,
             session: session
                 .strip_prefix(&self.layout.root)?
                 .to_string_lossy()
@@ -866,6 +891,7 @@ impl Supervisor {
             admin_port: s.base_port as u16 + 100,
             pending_client: false,
             server_release: server_digest,
+            ready,
             ..Default::default()
         };
         write_json(
@@ -998,6 +1024,7 @@ impl Supervisor {
             .unwrap()
             .server
             .as_ref()
+            .filter(|_| local_starting)
             .map(|s| s.session.clone())
             .unwrap_or_else(|| relative(&self.layout.root, &folder));
         self.write_run_context(&folder, &group).await;
@@ -1013,9 +1040,12 @@ impl Supervisor {
             &self.game_agent()?,
             &java,
             self.qa.as_deref(),
-        )?
-        .spawn()?;
+        )
+        .context("CLIENT_RUNTIME: prepare the JVM command")?
+        .spawn()
+        .context("CLIENT_JAVA_SPAWN: start the JVM")?;
         let pid = child.id().unwrap();
+        let started = child_start_time(&child);
         pump(
             child,
             &folder,
@@ -1025,7 +1055,7 @@ impl Supervisor {
         );
         let o = Owned {
             pid,
-            started: process_time(pid).ok_or_else(|| anyhow::anyhow!("PROCESS_TIME"))?,
+            started: started.context("CLIENT_PROCESS_TIME: read the JVM creation time")?,
             session: folder
                 .strip_prefix(&self.layout.root)?
                 .to_string_lossy()
@@ -1298,6 +1328,7 @@ impl Supervisor {
                                     let _ = worlds.save(&world);
                                 }
                             }
+                            o.ready.store(true, Ordering::Release);
                             self.state("Ready", "Мир запущен");
                             if o.pending_client {
                                 let result: Result<()> = async {
@@ -1612,12 +1643,15 @@ mod log_stream_tests {
                 "-NoProfile",
                 "-NonInteractive",
                 "-Command",
-                "[Console]::Error.WriteLine('TEST-CRASH');exit 7",
+                "[Console]::Out.WriteLine('TEST-START token=private-stdout');[Console]::Error.WriteLine('TEST-CRASH Bearer private-stderr');exit 7",
             ])
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped())
             .creation_flags(0x08000000);
         let deliveries = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let host = Supervisor::new(layout.clone(), None, None).unwrap();
+        host.write_run_context(&folder, "state/sessions/server-test")
+            .await;
         pump(
             command.spawn().unwrap(),
             &folder,
@@ -1643,11 +1677,91 @@ mod log_stream_tests {
             .find(|event| event.kind == "process-exit")
             .unwrap();
         assert_eq!(exit.payload["exit"]["exitCode"], 7);
+        assert_eq!(exit.payload["exit"]["exitCodeHex"], "0x00000007");
+        assert_eq!(exit.payload["exit"]["phase"], "jvm-starting");
+        assert_eq!(exit.payload["exit"]["readinessReached"], false);
+        assert_eq!(exit.payload["runGroup"], "state/sessions/server-test");
+        assert_eq!(exit.payload["role"], "client");
+        assert!(exit.payload["exit"]["exitTime"].as_str().is_some());
+        assert!(exit.payload["exit"]["uptimeMs"].as_u64().is_some());
+        assert!(
+            exit.payload["stdout"]
+                .as_str()
+                .unwrap()
+                .contains("TEST-START")
+        );
         assert!(
             exit.payload["stderr"]
                 .as_str()
                 .unwrap()
                 .contains("TEST-CRASH")
+        );
+        assert!(!exit.payload.to_string().contains("private-"));
+        let local = std::fs::read_to_string(folder.join("client-exit.jsonl")).unwrap();
+        let line: Value = serde_json::from_str(local.trim()).unwrap();
+        let report: Value = serde_json::from_str(line["message"].as_str().unwrap()).unwrap();
+        assert_eq!(report["exit"], exit.payload["exit"]);
+        assert_eq!(report["stderr"], exit.payload["stderr"]);
+        assert_eq!(report["stdout"], exit.payload["stdout"]);
+        assert!(!local.contains("private-"));
+    }
+
+    #[cfg(windows)]
+    #[tokio::test]
+    async fn fast_exit_preserves_creation_time_through_child_handle() {
+        let mut child = tokio::process::Command::new("cmd.exe")
+            .args(["/D", "/C", "exit 7"])
+            .creation_flags(0x08000000)
+            .spawn()
+            .unwrap();
+        let pid = child.id().unwrap();
+        let creation = child_start_time(&child).unwrap();
+        tokio::time::timeout(Duration::from_secs(5), async {
+            while process_time(pid).is_some() {
+                tokio::time::sleep(Duration::from_millis(10)).await;
+            }
+        })
+        .await
+        .unwrap();
+        assert_eq!(child_start_time(&child), Some(creation));
+        assert_eq!(child.wait().await.unwrap().code(), Some(7));
+    }
+
+    #[test]
+    fn launch_phase_uses_role_specific_evidence() {
+        let temp = tempfile::tempdir().unwrap();
+        let folder = temp.path();
+        assert_eq!(
+            launch_phase(folder, "client", Some(42), false),
+            "jvm-starting"
+        );
+        write_json(
+            &folder.join("agent-status.json"),
+            &json!({"pid":42,"kind":"client"}),
+        )
+        .unwrap();
+        assert_eq!(
+            launch_phase(folder, "client", Some(42), false),
+            "bridge-listening"
+        );
+        assert_eq!(
+            launch_phase(folder, "client", Some(41), false),
+            "jvm-starting"
+        );
+        let metrics = json!({"type":"metrics","message":json!({"pid":42,"frames":3}).to_string()});
+        std::fs::write(folder.join("bridge.jsonl"), metrics.to_string()).unwrap();
+        assert_eq!(
+            launch_phase(folder, "client", Some(42), false),
+            "client-frame-observed"
+        );
+        std::fs::write(folder.join("server-patches.ok"), "").unwrap();
+        assert_eq!(
+            launch_phase(folder, "server", Some(42), false),
+            "server-patches-loaded"
+        );
+        assert_eq!(
+            launch_phase(folder, "server", Some(42), true),
+            "server-ready"
         );
     }
     #[test]
@@ -1697,7 +1811,7 @@ fn pump(
     name: &str,
     layout: &Layout,
     deliveries: Arc<std::sync::atomic::AtomicUsize>,
-) {
+) -> Arc<AtomicBool> {
     fn reader<R: tokio::io::AsyncRead + Unpin + Send + 'static>(
         input: R,
         path: PathBuf,
@@ -1742,39 +1856,61 @@ fn pump(
     }
     let logger = RotatingLog::new(folder, &format!("{name}-exit"));
     let outbox = TelemetryOutbox::new(layout);
-    let stderr = folder.join(format!("{name}-stderr.log"));
     let layout = layout.clone();
     let folder = folder.to_path_buf();
     let role = name.to_owned();
+    let pid = child.id();
+    let started = Instant::now();
+    let ready = Arc::new(AtomicBool::new(false));
+    let readiness = ready.clone();
     deliveries.fetch_add(1, std::sync::atomic::Ordering::AcqRel);
     tokio::spawn(async move {
         let _activity = DeliveryActivity(deliveries);
         let result = child.wait().await;
-        let entry = match result {
+        let time = chrono::Utc::now().to_rfc3339();
+        let elapsed_ms = started.elapsed().as_millis() as u64;
+        let ready = readiness.load(Ordering::Acquire);
+        let phase = launch_phase(&folder, &role, pid, ready);
+        let mut entry = match result {
             Ok(status) => {
-                json!({"type":"process-exit","success":status.success(),"exitCode":status.code()})
+                let code = status.code();
+                json!({"type":"process-exit","success":status.success(),"exitCode":code,"exitCodeHex":code.map(|code| format!("0x{:08X}", code as u32))})
             }
             Err(error) => json!({"type":"wait-error","error":error.to_string()}),
         };
+        entry["pid"] = json!(pid);
+        entry["exitTime"] = json!(time);
+        entry["uptimeMs"] = json!(elapsed_ms);
+        entry["phase"] = json!(phase);
+        entry["readinessReached"] = json!(ready || phase == "client-frame-observed");
         let _ = tokio::time::timeout(Duration::from_secs(2), async {
             for task in readers {
                 let _ = task.await;
             }
         })
         .await;
-        let _ = logger.line(&entry.to_string());
+        let context = telemetry_context(&layout, &folder);
+        let mut report = json!({
+            "role": role,
+            "run": relative(&layout.root, &folder),
+            "runGroup": context["runGroup"],
+            "context": context,
+            "exit": entry
+        });
         if entry["success"] != true {
-            let tail = diagnostic_tail(&stderr, 32768).unwrap_or_default();
             let native_crash = std::fs::read_dir(&folder).ok().is_some_and(|files| {
                 files.filter_map(Result::ok).any(|f| {
                     f.file_name().to_string_lossy().starts_with("hs_err_")
                         && f.metadata().is_ok_and(|m| m.len() > 0)
                 })
             });
-            let _ = outbox.enqueue(
-                "process-exit",
-                {let context=telemetry_context(&layout,&folder);json!({"run":relative(&layout.root,&folder),"runGroup":context["runGroup"],"context":context,"role":role,"exit":entry,"hasNativeCrash":native_crash,"stderr":String::from_utf8_lossy(&tail)})},
-            );
+            report["hasNativeCrash"] = json!(native_crash);
+            report["stderr"] = json!(launch_tail(&layout, &folder, &role, "stderr"));
+            report["stdout"] = json!(launch_tail(&layout, &folder, &role, "stdout"));
+        }
+        let _ = logger.line(&report.to_string());
+        if entry["success"] != true {
+            let _ = outbox.enqueue("process-exit", report);
         }
         let _ = queue_session_logs(&layout, &folder, &role, entry);
         let upload_layout = layout.clone();
@@ -1788,6 +1924,57 @@ fn pump(
         };
         let _ = RotatingLog::new(layout.at("logs"), "delivery").line(&message);
     });
+    ready
+}
+
+fn launch_phase(folder: &Path, role: &str, pid: Option<u32>, ready: bool) -> &'static str {
+    if ready {
+        return "server-ready";
+    }
+    if role == "server" && folder.join("server-patches.ok").is_file() {
+        return "server-patches-loaded";
+    }
+    if role == "client" && pid.is_some_and(|pid| observed_client_frame(folder, pid)) {
+        return "client-frame-observed";
+    }
+    let path = folder.join("agent-status.json");
+    if let Some(pid) = pid {
+        if no_links(&path).is_ok() && std::fs::metadata(&path).is_ok_and(|m| m.len() <= 16384) {
+            if let Ok(status) = read_json::<Value>(&path) {
+                if status["pid"] == pid && status["kind"] == role {
+                    return "bridge-listening";
+                }
+            }
+        }
+    }
+    "jvm-starting"
+}
+
+fn observed_client_frame(folder: &Path, pid: u32) -> bool {
+    let tail = diagnostic_tail(&folder.join("bridge.jsonl"), 64 * 1024).unwrap_or_default();
+    tail.rsplit(|byte| *byte == b'\n').any(|line| {
+        let Ok(event) = serde_json::from_slice::<Value>(line) else {
+            return false;
+        };
+        if event["type"] != "metrics" {
+            return false;
+        }
+        event["message"]
+            .as_str()
+            .and_then(|message| serde_json::from_str::<Value>(message).ok())
+            .is_some_and(|stats| stats["pid"] == pid && stats["frames"].as_u64().unwrap_or(0) > 0)
+    })
+}
+
+fn launch_tail(layout: &Layout, folder: &Path, role: &str, stream: &str) -> String {
+    let path = folder.join(format!("{role}-{stream}.log"));
+    let bytes = diagnostic_tail(&path, 4096).unwrap_or_default();
+    let root = layout.root.to_string_lossy();
+    redact(&String::from_utf8_lossy(&bytes))
+        .replace(root.as_ref(), "%LAUNCHER_ROOT%")
+        .chars()
+        .filter(|c| !c.is_control() || matches!(c, '\n' | '\t'))
+        .collect()
 }
 struct DeliveryActivity(Arc<std::sync::atomic::AtomicUsize>);
 impl Drop for DeliveryActivity {
@@ -1994,7 +2181,7 @@ mod metrics_tests {
         std::fs::remove_dir_all(root).unwrap();
     }
     #[tokio::test]
-    async fn session_logs_are_uploaded_after_process_exit_and_idle_activity_is_released() {
+    async fn failed_process_is_uploaded_after_exit_and_idle_activity_is_released() {
         let temp = tempfile::tempdir().unwrap();
         let layout = Layout::new(temp.path());
         offline_test_layout(&layout);
@@ -2038,7 +2225,7 @@ mod metrics_tests {
             serde_json::from_slice::<Value>(&body).unwrap()
         });
         let mut command = tokio::process::Command::new("powershell.exe");
-        command.args(["-NoProfile","-NonInteractive","-Command","[Console]::Out.WriteLine('SESSION-END-PROBE');Start-Sleep -Milliseconds 1500;exit 0"])
+        command.args(["-NoProfile","-NonInteractive","-Command","[Console]::Out.WriteLine('SESSION-END-PROBE');Start-Sleep -Milliseconds 1500;exit 7"])
             .stdout(std::process::Stdio::piped()).stderr(std::process::Stdio::piped()).creation_flags(0x08000000);
         let activity = Arc::new(std::sync::atomic::AtomicUsize::new(0));
         pump(
@@ -2059,6 +2246,16 @@ mod metrics_tests {
         .unwrap();
         let body = receiver.await.unwrap();
         assert!(body.to_string().contains("SESSION-END-PROBE"));
+        let exception = body["exceptions"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|event| event["type"] == "bscp.ProcessExit")
+            .unwrap();
+        assert_eq!(exception["context"]["role"], "client");
+        assert_eq!(exception["context"]["exit_code"], "7");
+        assert_eq!(exception["context"]["launch_phase"], "jvm-starting");
+        assert_eq!(exception["value"], "SESSION-END-PROBE\n");
         assert!(TelemetryOutbox::new(&layout).pending().unwrap().is_empty());
     }
     #[tokio::test]

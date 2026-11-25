@@ -181,8 +181,13 @@ public final class ClientSceneCodec implements AutoCloseable {
     public ClientSceneCodec(Path runtime)throws Exception{this(runtime,null);}
     /** Optional captured resource root for native default factories; no rendering or launcher initialization. */
     public ClientSceneCodec(Path runtime,Path resources)throws Exception{
+        this(runtime,resources,new Path[0]);
+    }
+    public ClientSceneCodec(Path runtime,Path resources,Path... fallbacks)throws Exception{
         runtimeRoot=runtime.toRealPath();
-        List<URL> urls=new ArrayList<>();for(String folder:List.of("classes","bootstrap"))urls.add(RuntimeFiles.location(runtime.resolve(folder)).toUri().toURL());try(var files=Files.list(runtime.resolve("dependencies"))){for(Path p:files.filter(p->p.toString().endsWith(".jar")).sorted().toList())urls.add(p.toUri().toURL());}urls.add(RuntimeFiles.location(runtime.resolve("libs")).toUri().toURL());if(resources!=null)urls.add(szserver.util.GameResources.url(resources));loader=new Loader(urls.toArray(URL[]::new));
+        List<URL> urls=new ArrayList<>();for(String folder:List.of("classes","bootstrap"))urls.add(RuntimeFiles.location(runtime.resolve(folder)).toUri().toURL());try(var files=Files.list(runtime.resolve("dependencies"))){for(Path p:files.filter(p->p.toString().endsWith(".jar")).sorted().toList())urls.add(p.toUri().toURL());}urls.add(RuntimeFiles.location(runtime.resolve("libs")).toUri().toURL());if(resources!=null)urls.add(szserver.util.GameResources.url(resources));
+        for(Path fallback:fallbacks)if(szserver.util.GameResources.exists(fallback))urls.add(szserver.util.GameResources.url(fallback));
+        loader=new Loader(urls.toArray(URL[]::new));
         factoryType=Class.forName("1814125595",true,loader);worldType=Class.forName("1886271463",true,loader);json=Class.forName("com.google.gson.JsonObject",true,loader);descriptor=Class.forName("1422486348",true,loader);Class<?> sync=Class.forName("1886848284",true,loader);context=sync.getField("PLAYER_SYNC_PROD").get(null);read=worldType.getMethod("char",DataInput.class);write=worldType.getMethod("try",sync,DataOutput.class);
     }
     public Decoded readDefault(SceneRegistry.Definition definition,byte[] record)throws Exception{

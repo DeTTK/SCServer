@@ -89,7 +89,7 @@ def build(output):
     libraries=[runtime/'game.jar',runtime/'libraries.jar',*sorted((runtime/'dependencies').glob('*.jar'))]
     boot=tools.compile_java('player-bootstrap',[*(ROOT/'client/bootstrap').glob('*.java'),*(ROOT/'client/bootstrap-compat').rglob('*.java'),*(ROOT/'client/mod-runtime/src').rglob('*.java')],libraries)
     generators=tools.compile_java('player-bootstrap-generators',(ROOT/'client/bootstrap-tools').glob('*.java'),[asm])
-    for generator in ('GenerateLegacyAdapter','GenerateCommandPackets','InstallFpvPackets','InstallVehiclePackets'):
+    for generator in ('GenerateLegacyAdapter','GenerateCommandPackets','InstallFpvPackets','InstallVehiclePackets','InstallFunnelImpact'):
         subprocess.run([tools.tool('java'),'-cp',os.pathsep.join(map(str,[generators,asm])),generator,str(boot)],check=True)
     bootstrap = entries(boot)
     bootstrap['szcustom/loading.gif'] = (ROOT/'client/bootstrap/resources/szcustom/loading.gif').read_bytes()
@@ -99,6 +99,17 @@ def build(output):
     jar(runtime/'bootstrap.jar',bootstrap)
     verify=tools.compile_java('player-bootstrap-verify',[ROOT/'client/bootstrap-tools/tests/BootstrapAbiTest.java'],[runtime/'bootstrap.jar',*libraries])
     subprocess.run([tools.tool('java'),'-cp',os.pathsep.join(map(str,[verify,runtime/'bootstrap.jar',*libraries])),'BootstrapAbiTest'],check=True)
+    item_checks=('NativeBoltFactoryChecks','NativeMedicineResourceChecks','NativeArtifactResourceChecks','NativeConfigSourceChecks')
+    item_tests=tools.compile_java('player-item-verify',
+        [ROOT/f'server/src/test/java/szserver/client/{name}.java' for name in (*item_checks,'NativeCosmeticTests')],[server_classes,*server_deps])
+    # Use the delivered JARs and the same dependencies as the Windows launcher.
+    item_test_cp=os.pathsep.join(map(str,[item_tests,player/'Server/server.jar',
+        player/'Server/lib/gson-2.13.2.jar',runtime/'dependencies/zstd-jni-1.5.0-5.jar']))
+    for name in item_checks:
+        subprocess.run([tools.tool('java'),'-Xmx512m','-cp',item_test_cp,
+                        'szserver.client.'+name,str(player/'Server'),str(runtime)],check=True)
+    subprocess.run([tools.tool('java'),'-Xmx512m','-cp',item_test_cp,
+                    'szserver.client.NativeCosmeticTests',str(runtime),str(player/'Server')],check=True)
     imgui={}
     for dependency in (runtime/'dependencies').glob('imgui-java-*-1.82.2.jar'):
         with zipfile.ZipFile(dependency) as z:

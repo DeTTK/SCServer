@@ -26,10 +26,13 @@ public final class ServerMain {
         var automaticCheckpointSettings=szserver.persistence.AutomaticCheckpoint.Settings.configured(p);
         Path root=configPath.toAbsolutePath().getParent();
         Path runtime=Path.of(p.getProperty("client.runtime")),registry=Path.of(p.getProperty("item.registry"));
-        if(p.containsKey("assets.configs")){
+        Path bundledConfigs=root.resolve("resources/configs.xeon");
+        if(p.containsKey("assets.configs")||Files.isRegularFile(bundledConfigs)){
             Path overrides=Path.of(p.getProperty("assets.overrides",root.resolve("resources/overrides").toString()));
-            Path configs=Path.of(p.getProperty("assets.configs"));
+            Path configs=Path.of(p.getProperty("assets.configs",bundledConfigs.toString()));
             for(String key:List.of("world.objectResources","world.actorResources"))if(p.containsKey(key))szserver.util.GameResources.mount(Path.of(p.getProperty(key)),configs,overrides.resolve("configs"));
+            Path itemConfigs=root.resolve("resources/configs");
+            if(!szserver.util.GameResources.mounted(itemConfigs))szserver.util.GameResources.mount(itemConfigs,configs,overrides.resolve("configs"));
             if(p.containsKey("assets.boxes"))szserver.util.GameResources.mount(Path.of(p.getProperty("world.collisionBoxesRoot")),Path.of(p.getProperty("assets.boxes")),overrides.resolve("boxes"));
         }
 

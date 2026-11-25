@@ -111,7 +111,7 @@ final class Native {
     static void apply(Object camera,Object matrix,Pose pose,double fov)throws Exception {
         call(matrix,"interface","1102042093",(Object)pose.view());
         call(get(camera,"assert"),"enum","153304200",pose.p().x(),pose.p().y(),pose.p().z());
-        // Apply after BTF's FOV callback; the native camera then rebuilds its derived matrices.
+        // Update the projection and its derived matrix for this render pass.
         Object projection=get(camera,"throws");call(projection,"native","447252483");
         call(get(type("981501872"),"implements"),"interface","void",projection,(float)fov);
         call(projection,"instanceof","447252483",get(camera,"transient"));

@@ -8,14 +8,21 @@ use std::{
     sync::{LazyLock, Mutex},
 };
 pub fn redact(text: &str) -> String {
-    let bearer = Regex::new(r#"(?i)(Bearer\s+)[^\s\"<>]+"#).unwrap();
-    let fields=Regex::new(r#"(?i)([\"']?(?:token|password|secret|privateKey|session)[\"']?\s*[:=]\s*[\"']?)[^\s,\"'<>}]+"#).unwrap();
-    let mut s = fields
-        .replace_all(
-            &bearer.replace_all(text, "${1}[redacted]"),
-            "${1}[redacted]",
-        )
-        .into_owned();
+    static AUTH: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r#"(?i)((?:Bearer|Basic)\s+)(?:\[redacted\]|[^\s"<>]+)"#).unwrap()
+    });
+    static QUOTED_FIELDS: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r#"(?i)(["']?(?:authorization|apiKey|token|password|secret|privateKey|session)["']?\s*[:=]\s*)(?:"(?:[^"\\\r\n]|\\.)*"|'(?:[^'\\\r\n]|\\.)*')"#).unwrap()
+    });
+    static FIELDS: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r#"(?i)(["']?(?:authorization|apiKey|token|password|secret|privateKey|session)["']?\s*[:=]\s*["']?)(?:\[redacted\]|[^\s,"'<>}]+)"#).unwrap()
+    });
+    static INLINE_TOKEN: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"\b(?:glc_|gh[pousr]_|github_pat_)[A-Za-z0-9_-]{16,}\b").unwrap()
+    });
+    let auth = AUTH.replace_all(text, "${1}[redacted]");
+    let quoted = QUOTED_FIELDS.replace_all(&auth, "${1}\"[redacted]\"");
+    let mut s = FIELDS.replace_all(&quoted, "${1}[redacted]").into_owned();
     if let Ok(home) = std::env::var("USERPROFILE") {
         if !home.is_empty() {
             s = Regex::new(&format!("(?i){}", regex::escape(&home)))
@@ -29,6 +36,7 @@ pub fn redact(text: &str) -> String {
         .unwrap()
         .replace_all(&s, "[invitation redacted]")
         .into_owned();
+    let s = INLINE_TOKEN.replace_all(&s, "[token redacted]");
     private_key
         .replace_all(&s, "[private key redacted]")
         .into_owned()
@@ -471,6 +479,17 @@ mod panic_tests {
         assert!(!log.contains(&invite));
         assert!(!log.contains(&alias));
         assert!(log.contains("Connecting to"));
+    }
+    #[test]
+    fn diagnostic_scrubbing_removes_embedded_keys_and_quoted_credentials() {
+        let grafana = format!("glc_{}", "A".repeat(32));
+        let log = redact(&format!(
+            "collector {grafana}\nAuthorization: Basic private-basic\npassword=\"private two words\"\nmessage preserved"
+        ));
+        for secret in [&grafana, "private-basic", "private two words"] {
+            assert!(!log.contains(secret));
+        }
+        assert!(log.contains("message preserved"));
     }
     #[test]
     fn panic_hook_preserves_redacted_diagnostics_before_process_exit() {

@@ -37,12 +37,23 @@ final class NativeActorEquipment {
         var result=new JsonObject();Map<String,JsonPrimitive> names=new HashMap<>();
         try(var text=Files.newBufferedReader(path);var in=new com.google.gson.stream.JsonReader(text)){in.setLenient(true);in.beginObject();while(in.hasNext()){String id=in.nextName();var row=new JsonObject();in.beginObject();while(in.hasNext()){String key=in.nextName();if(key.equals("definition")||key.equals("state")){String name=in.nextString();row.add(key,names.computeIfAbsent(name,JsonPrimitive::new));}else in.skipValue();}in.endObject();result.add(id,row);}in.endObject();}return result;
     }
-    /** Only weapons and attachments are used in this loader. Stream past armor, food and unrelated resources. */
+    /** Only the factories used by native held-item movement need to stay resident here. */
     private JsonObject movementDefinitions(Path path)throws Exception{
-        var result=new JsonObject();Map<String,Boolean> classes=new HashMap<>();
-        try(var text=Files.newBufferedReader(path);var in=new com.google.gson.stream.JsonReader(text)){in.setLenient(true);in.beginObject();while(in.hasNext()){String id=in.nextName();var row=registry.getAsJsonObject(id);boolean keep=false;
-            if(row!=null&&row.has("definition")){String name=row.get("definition").getAsString();Boolean active=classes.get(name);if(active==null){Class<?> type=Class.forName(name,false,loader);active=gun.isAssignableFrom(type)||module.isAssignableFrom(type);classes.put(name,active);}keep=active;}
-            if(keep)result.add(id,JsonParser.parseReader(in));else in.skipValue();}in.endObject();}return result;
+        var result=new JsonObject();
+        Map<String,Boolean> classes=new HashMap<>();
+        for(var entry:szserver.inventory.CatalogDefinitions.read(path).entrySet()){
+            var row=registry.getAsJsonObject(entry.getKey());
+            if(row==null||!row.has("definition"))continue;
+            String name=row.get("definition").getAsString();
+            Boolean active=classes.get(name);
+            if(active==null){
+                Class<?> type=Class.forName(name,false,loader);
+                active=gun.isAssignableFrom(type)||module.isAssignableFrom(type);
+                classes.put(name,active);
+            }
+            if(active)result.add(entry.getKey(),entry.getValue());
+        }
+        return result;
     }
     private static void worker(){if(Set.of("world-tick","native-game-owner").contains(Thread.currentThread().getName()))throw new IllegalStateException("actor_equipment_prepare_on_owner");}
     private void factory(int id,boolean required)throws Exception{

@@ -15,8 +15,8 @@ public final class GrenadePackets {
     public static void verifyRelease(Path root,Path runtime)throws Exception {prepareDirected(root);for(String fixture:List.of("native-grenades.json","native-grenade-cooking.json","native-grenade-areas.json","native-grenade-fire.json","native-grenade-continuous.json","native-grenade-fast.json")){var manifest=com.google.gson.JsonParser.parseString(RuntimeFiles.readString(root.resolve("fixtures/"+fixture))).getAsJsonObject();for(var entry:manifest.getAsJsonObject("classHashes").entrySet()){String name=entry.getKey();if(!name.matches("[0-9]+"))throw new IOException("grenade_release_class");String digest=HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(RuntimeFiles.read(runtime.resolve("classes").resolve(name+".class"))));if(!digest.equals(entry.getValue().getAsString()))throw new IOException("grenade_native_release_changed:"+name);}}}
     private static volatile Set<Integer> directedItems=Set.of();
     /** Native launcher ammunition uses the directed renderer; hand grenades retain their tumble. */
-    private static void prepareDirected(Path root)throws IOException {
-        var definitions=com.google.gson.JsonParser.parseString(RuntimeFiles.readString(root.resolve("fixtures/item-definitions.json"))).getAsJsonObject();Set<Integer> result=new HashSet<>();
+    private static void prepareDirected(Path root)throws Exception {
+        var definitions=CatalogDefinitions.read(root.resolve("fixtures/item-definitions.json"));Set<Integer> result=new HashSet<>();
         for(var entry:definitions.entrySet()){var value=entry.getValue().getAsJsonObject();if(value.has("hand_use")&&!value.get("hand_use").getAsBoolean()&&value.has("type")&&Set.of("grenade","explosive").contains(value.get("type").getAsString()))result.add(Integer.parseInt(entry.getKey()));}
         directedItems=Set.copyOf(result);
     }
@@ -41,11 +41,25 @@ public final class GrenadePackets {
     public static byte[] spawn(int entity,int item,World.Vec p,Profile profile){return spawn(entity,item,p,profile,null);}
     public static byte[] spawn(int entity,int item,World.Vec p,Profile profile,World.Vec velocity){byte[] subtype=subtype(item,profile);float[] direction=directed(item)?heading(velocity):new float[]{0,0};return Wire.dynamic(SPAWN,Wire.bytes(out->{out.writeByte(PROJECTILE_TYPE);out.writeByte(angle(direction[0])^26);out.writeInt(coord(p.y())-(int)2315843772L);out.writeInt((coord(p.z())+716018694)^0xc7a787d8);out.writeInt(Integer.rotateRight(coord(p.x()),15)-1385050365);out.writeInt(entity-1630978953);out.writeByte(((angle(direction[1])>>>3)|(angle(direction[1])<<5))+211);Wire.varint(out,subtype.length);out.write(subtype);out.write(new byte[2]);}));}
 
+    /** Native bolt subtype includes the item's modifier and presentation flags. */
+    public static byte[] bolt(int entity,World.Vec p,BoltProjectile profile){
+        byte[] subtype=profile.subtype();
+        return Wire.dynamic(SPAWN,Wire.bytes(out->{
+            out.writeByte(profile.actorType());out.writeByte(26);out.writeInt(coord(p.y())-(int)2315843772L);
+            out.writeInt((coord(p.z())+716018694)^0xc7a787d8);out.writeInt(Integer.rotateRight(coord(p.x()),15)-1385050365);
+            out.writeInt(entity-1630978953);out.writeByte(211);Wire.varint(out,subtype.length);out.write(subtype);out.write(new byte[2]);
+        }));
+    }
     public static byte[] update(int entity,World.Vec p,World.Vec v){return Wire.dynamic(UPDATE,Wire.bytes(out->{out.writeInt(entity);out.writeFloat((float)p.x());out.writeFloat((float)p.y());out.writeFloat((float)p.z());out.writeFloat((float)v.x()/20);out.writeFloat((float)v.y()/20);out.writeFloat((float)v.z()/20);}));}
     /** Native projectile tick owns frame interpolation and derives directed heading from velocity.
      * Feeding its actor into the player spline creates a second position writer and visible rewinds. */
     public static byte[] update(int entity,World.Vec p,World.Vec v,int tick){return update(entity,p,v);}
     public static byte[] update(int entity,World.Vec p,World.Vec v,int tick,int item){return update(entity,p,v);}
+    public static byte[] boltImpact(int entity,World.Vec p,boolean predicted){
+        return Wire.dynamic("szmods.bridge.BoltImpact",Wire.bytes(out->{
+            out.writeInt(entity);out.writeFloat((float)p.x());out.writeFloat((float)p.y());out.writeFloat((float)p.z());out.writeBoolean(predicted);
+        }));
+    }
     public static byte[] prediction(int entity,int prediction){return Wire.dynamic(PREDICTION,Wire.bytes(out->{out.writeInt(entity);out.writeInt(prediction);}));}
     public static byte[] remove(int entity){return Wire.frame(2028,Wire.bytes(out->out.writeInt(entity)));}
     public static float damage(ExplosiveProfile profile,World.Vec origin,double[] feet,Map<String,Float> stats){if(!profile.kind().equals("FRAG"))return 0;double dx=feet[0]-origin.x(),dy=feet[1]+.9-origin.y(),dz=feet[2]-origin.z(),d=Math.sqrt(dx*dx+dy*dy+dz*dz);if(d>=profile.radius()||profile.radius()==0)return 0;double fraction=Math.max(0,Math.min(1,(d-profile.minimumRadius())/Math.max(.001,profile.radius()-profile.minimumRadius())));double raw=profile.strength()+(profile.minimumStrength()-profile.strength())*fraction;return (float)(Math.max(0,raw)*100/(100+Math.max(-95,stats.getOrDefault("explosion_dmg_factor",0f)))*CombatModifiers.received(stats));}
