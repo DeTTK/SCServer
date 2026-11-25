@@ -2,7 +2,9 @@ name: Source checks
 on:
   push:
     branches-ignore: ['build-*']
+    paths-ignore: ['**/*.md']
   pull_request:
+    paths-ignore: ['**/*.md']
   workflow_dispatch:
 permissions:
   contents: read

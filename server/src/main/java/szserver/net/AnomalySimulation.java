@@ -51,6 +51,23 @@ public final class AnomalySimulation {
         }
         return List.copyOf(events);
     }
+    boolean trampolineReady(long tick,AnomalyZone zone){
+        State state=states.get(zone.id());
+        return state==null||state.zone.revision()!=zone.revision()||tick>=state.next;
+    }
+
+    boolean activateTrampolineBolt(long tick,AnomalyZone zone){
+        if(!trampolineReady(tick,zone))return false;
+        State state=states.get(zone.id());
+        if(state==null||state.zone.revision()!=zone.revision()){
+            state=new State(zone);
+            states.put(zone.id(),state);
+        }
+        state.next=tick+zone.cooldown();
+        activations++;
+        return true;
+    }
+
     private int between(int minimum,int maximum){return minimum+random.nextInt(Math.max(minimum,maximum)-minimum+1);}
     private static double distance(World.Vec a,World.Vec b){return Math.sqrt(Math.pow(a.x()-b.x(),2)+Math.pow(a.y()-b.y(),2)+Math.pow(a.z()-b.z(),2));}
     private void hit(AnomalyZone z,Target t,float value,List<Event> events){if(z.disabledDamage()||value<=0)return;float amount=(float)(value*BlastRules.factor(z.channel(),t.stats())*szserver.inventory.CombatModifiers.received(t.stats()));if(amount>0&&Float.isFinite(amount)){events.add(event("damage",z,t,amount));hits++;}}

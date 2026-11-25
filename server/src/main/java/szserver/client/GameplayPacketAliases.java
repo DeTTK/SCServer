@@ -26,6 +26,8 @@ public final class GameplayPacketAliases {
         Map.entry("1995052022",271),Map.entry("1732415882",280),
         Map.entry("1603754623",928),Map.entry("1619370828",240),
         Map.entry("1308160046",1022),Map.entry("365897350",1435),
+        Map.entry("1689493828",1464),Map.entry("1960490407",718),
+        Map.entry("548323788",1927),Map.entry("1996782385",490),Map.entry("1005083822",1384),
         Map.entry("1166767938",693),Map.entry("1980213750",1741),Map.entry("1615909539",695),Map.entry("1048773550",466),
         Map.entry("1879366252",2060),Map.entry("1945580517",562),Map.entry("1174074903",ScreenshotPackets.RESPONSE));
     public static int registered(String name){return IDS.getOrDefault(name,0);}
