@@ -11,10 +11,11 @@ import java.util.*;
 /** Live native serializers, not Python ports. All calls on the command worker. */
 public final class GameItems implements AutoCloseable {
     public ClientStateAdapter.DropPolicy dropPolicy(szserver.inventory.ItemStack stack)throws Exception{
-        byte[] raw=szserver.net.InventoryPackets.stack(stack);var policy=adapter.dropPolicy(Arrays.copyOfRange(raw,1,raw.length));
         JsonObject definition=definitions.getAsJsonObject(Integer.toString(stack.id()));
-        if(definition.has("can_drop_manually")&&!definition.get("can_drop_manually").getAsBoolean()||definition.has("bind_state")&&Set.of("no_drop","non_drop").contains(definition.get("bind_state").getAsString().toLowerCase(Locale.ROOT)))return new ClientStateAdapter.DropPolicy(false,policy.pickupOwner());
-        return policy;
+        boolean resourceAllowsDrop=(!definition.has("can_drop_manually")||definition.get("can_drop_manually").getAsBoolean())
+            &&(!definition.has("bind_state")||!Set.of("no_drop","non_drop").contains(definition.get("bind_state").getAsString().toLowerCase(Locale.ROOT)));
+        byte[] raw=szserver.net.InventoryPackets.stack(stack);
+        return adapter.dropPolicy(stack.id(),Arrays.copyOfRange(raw,1,raw.length),resourceAllowsDrop);
     }
     private final Map<Integer,byte[]> factoryDefaults=new HashMap<>();
     private final Set<String> verified=new HashSet<>();
