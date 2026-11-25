@@ -10,7 +10,7 @@ use rsa::{
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{
-    collections::HashSet,
+    collections::{BTreeMap, HashSet},
     fs,
     io::Read,
     path::{Path, PathBuf},
@@ -169,6 +169,55 @@ impl ChannelManifest {
         Ok(())
     }
 }
+fn next_git_packet<'a>(body: &mut &'a [u8]) -> Result<Option<&'a [u8]>> {
+    let header = body.get(..4).context("CHANNEL_GIT_TRUNCATED")?;
+    ensure!(
+        header.iter().all(u8::is_ascii_hexdigit),
+        "CHANNEL_GIT_PACKET_HEADER"
+    );
+    let size = usize::from_str_radix(std::str::from_utf8(header)?, 16)?;
+    if size == 0 {
+        *body = &body[4..];
+        return Ok(None);
+    }
+    ensure!(size >= 4 && size <= body.len(), "CHANNEL_GIT_PACKET_SIZE");
+    let (packet, remaining) = body.split_at(size);
+    *body = remaining;
+    Ok(Some(&packet[4..]))
+}
+
+fn game_refs(mut body: &[u8]) -> Result<BTreeMap<String, String>> {
+    ensure!(
+        matches!(
+            next_git_packet(&mut body)?,
+            Some(b"# service=git-upload-pack" | b"# service=git-upload-pack\n")
+        ) && next_git_packet(&mut body)?.is_none(),
+        "CHANNEL_GIT_SERVICE"
+    );
+    let mut result = BTreeMap::new();
+    while let Some(packet) = next_git_packet(&mut body)? {
+        let reference = packet.split(|byte| *byte == 0).next().unwrap_or_default();
+        let Ok(line) = std::str::from_utf8(reference) else {
+            continue;
+        };
+        let Some((sha, name)) = line.trim_end().split_once(' ') else {
+            continue;
+        };
+        let Some(branch) = name.strip_prefix("refs/heads/build-") else {
+            continue;
+        };
+        if SELECTABLE_CHANNELS.contains(&branch) {
+            ensure!(hex_valid(sha, 40), "CHANNEL_COMMIT");
+            ensure!(
+                result.insert(branch.to_owned(), sha.to_owned()).is_none(),
+                "CHANNEL_GIT_DUPLICATE_REF"
+            );
+        }
+    }
+    ensure!(body.is_empty(), "CHANNEL_GIT_TRAILING_DATA");
+    Ok(result)
+}
+
 pub struct RepositoryChannel {
     pub layout: Layout,
     http: reqwest::blocking::Client,
@@ -229,37 +278,23 @@ impl RepositoryChannel {
         manifest.validate(branch)?;
         Ok(manifest)
     }
-    pub fn list(&self) -> Result<Vec<String>> {
+    fn refs(&self) -> Result<BTreeMap<String, String>> {
         let raw = self.small(
-            &format!("https://api.github.com/repos/{GAME_REPOSITORY}/branches?per_page=100"),
+            &format!("https://github.com/{GAME_REPOSITORY}.git/info/refs?service=git-upload-pack"),
             256 * 1024,
         )?;
-        let branches: Vec<serde_json::Value> = serde_json::from_slice(&raw)?;
-        let mut result = branches
-            .into_iter()
-            .filter_map(|v| v["name"].as_str()?.strip_prefix("build-").map(String::from))
-            .filter(|v| SELECTABLE_CHANNELS.contains(&v.as_str()))
-            .collect::<Vec<_>>();
-        result.sort();
-        result.dedup();
-        Ok(result)
+        game_refs(&raw)
+    }
+
+    pub fn list(&self) -> Result<Vec<String>> {
+        Ok(self.refs()?.into_keys().collect())
     }
     pub fn check(&self, branch: &str) -> Result<ChannelAvailable> {
         validate_branch(branch)?;
-        let mut url = reqwest::Url::parse(&format!(
-            "https://api.github.com/repos/{GAME_REPOSITORY}/branches/"
-        ))?;
-        url.path_segments_mut()
-            .map_err(|_| anyhow::anyhow!("CHANNEL_URL"))?
-            .pop_if_empty()
-            .push(&format!("build-{branch}"));
-        let reference: serde_json::Value =
-            serde_json::from_slice(&self.small(url.as_str(), 65536)?)?;
-        let commit = reference["commit"]["sha"]
-            .as_str()
-            .context("CHANNEL_COMMIT")?
-            .to_string();
-        ensure!(hex_valid(&commit, 40), "CHANNEL_COMMIT");
+        let commit = self
+            .refs()?
+            .remove(branch)
+            .context("CHANNEL_UNAVAILABLE: готовая сборка ветки ещё не опубликована")?;
         let raw = self.small(&raw_url(&commit, "delivery.json")?, 2 * 1024 * 1024)?;
         let sig = self.small(&raw_url(&commit, "delivery.json.sig")?, 8192)?;
         let manifest = self.authenticate(&raw, &sig, branch)?;
@@ -707,6 +742,27 @@ pub fn runtime_part(runtime: &Path, directory: &str) -> PathBuf {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn git_advertisement_selects_only_delivery_branches() {
+        let sha = "a".repeat(40);
+        let packet = |data: &str| format!("{:04x}{data}", data.len() + 4);
+        let refs = format!(
+            "{}0000{}{}{}0000",
+            packet("# service=git-upload-pack\n"),
+            packet(&format!(
+                "{sha} refs/heads/build-test\0object-format=sha1\n"
+            )),
+            packet(&format!("{sha} refs/tags/build-main\n")),
+            packet(&format!("{sha} refs/heads/build-unknown\n")),
+        );
+        assert_eq!(
+            game_refs(refs.as_bytes()).unwrap(),
+            BTreeMap::from([("test".to_owned(), sha)])
+        );
+        assert!(game_refs(&refs.as_bytes()[..refs.len() - 2]).is_err());
+        assert!(game_refs(b"001e# service=git-upload-pack\n00000003").is_err());
+    }
+
     #[test]
     fn authentic_manifest_fixture_rejects_tamper_and_wrong_branch() {
         use base64::Engine;

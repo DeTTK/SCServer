@@ -9,7 +9,7 @@ fn main() -> Result<()> {
     let args: Vec<_> = std::env::args().collect();
     if args.len() < 4 {
         bail!(
-            "channel_probe <portable-root> <branch> <check|install|rollback|setup> [installed-game]"
+            "channel_probe <portable-root> <branch> <list|check|install|rollback|setup> [installed-game]"
         )
     }
     let layout = Layout::new(&args[1]);
@@ -35,6 +35,7 @@ fn main() -> Result<()> {
         }
     };
     let value = match args[3].as_str() {
+        "list" => serde_json::to_value(service.list()?)?,
         "check" => serde_json::to_value(service.check(&args[2])?)?,
         "install" | "install-cancel" => {
             serde_json::to_value(service.install(&args[2], Some(&progress))?)?
