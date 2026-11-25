@@ -1,13 +1,14 @@
 package szserver.net;
 
 import java.util.*;
+import szserver.world.SceneHashWire;
 
 /** Transport-owner allocation. Positive actor/corpse ranges never overlap, including cursor wrap. */
 public final class NativeEntityIds {
     private final int actorFirst,actorLast,corpseFirst,corpseLast;
     private int nextActor,nextCorpse,actors,corpses;
     private final Set<Integer> live=new HashSet<>();
-    public NativeEntityIds(){this(2,999_999,1_000_000,Integer.MAX_VALUE);}
+    public NativeEntityIds(){this(2,999_999,1_000_000,SceneHashWire.FIRST_SCENE_HANDLE-1);}
     /** Small ranges for deterministic wrap/exhaustion tests; not configured by the server. */
     public NativeEntityIds(int actorFirst,int actorLast,int corpseFirst,int corpseLast){
         if(actorFirst<2||actorLast<actorFirst||corpseFirst<=actorLast||corpseLast<corpseFirst)throw new IllegalArgumentException("entity_id_ranges");
