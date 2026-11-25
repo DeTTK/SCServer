@@ -9,6 +9,9 @@ import static jdk.internal.org.objectweb.asm.Opcodes.*;
 
 /** Exact-version native adapters. Original class files on disk remain intact. */
 public final class ScaleAgent {
+    private static final String CAMERA = "1389510037";
+    // PerspectivePolicyTransformer runs first. Only its verified F5 output is also accepted.
+    private static final String F5_CAMERA_HASH = "501110d0c9d0a2ce39e7f4b3d1686fc87cc15841dd0adaadf5057ead9aff29b7";
     public static volatile boolean installed,healthy;
     public static final Set<String> transformed=Collections.synchronizedSet(new HashSet<>());
     public static void premain(String ignored,Instrumentation instrumentation)throws Exception {
@@ -22,7 +25,9 @@ public final class ScaleAgent {
         healthy=true;instrumentation.addTransformer(new ClassFileTransformer(){
             public byte[] transform(ClassLoader loader,String name,Class<?> type,ProtectionDomain domain,byte[] raw){
                 if(!hashes.containsKey(name)&&!name.equals("szmods/runtime/ModLoader"))return null;
-                try{String digest=HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(raw));if(hashes.containsKey(name)&&!digest.equals(hashes.getProperty(name)))throw new IOException("character_scale_transform_chain:"+name);
+                try{String digest=HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(raw));boolean f5Camera = CAMERA.equals(name) && F5_CAMERA_HASH.equals(digest);
+                    if(hashes.containsKey(name)&&!digest.equals(hashes.getProperty(name))&&!f5Camera)
+                        throw new IOException("character_scale_transform_chain:"+name);
                     byte[] result=patch(name,raw);transformed.add(name);return result;
                 }catch(Throwable failure){healthy=false;System.err.println("[CharacterScale] adapter disabled: "+failure);return null;}
             }
@@ -47,7 +52,7 @@ public final class ScaleAgent {
                     }
                     public void visitFieldInsn(int opcode,String owner,String field,String fieldDesc){
                         super.visitFieldInsn(opcode,owner,field,fieldDesc);
-                        if(name.equals("1389510037")&&method.equals("szmods$flight$enum")&&opcode==GETFIELD&&owner.equals("1987590071")&&Set.of("assert","byte","catch").contains(field)&&fieldDesc.equals("F")){
+                        if(name.equals(CAMERA)&&method.equals("szmods$flight$enum")&&opcode==GETFIELD&&owner.equals("1987590071")&&Set.of("assert","byte","catch").contains(field)&&fieldDesc.equals("F")){
                             visitVarInsn(ALOAD,0);visitMethodInsn(INVOKESTATIC,"playerscale/ScaleRuntime","camera","(FLjava/lang/Object;)F",false);changes[0]++;
                         }
                     }
@@ -75,7 +80,7 @@ public final class ScaleAgent {
             }
             public void visitEnd(){if(name.equals("175605189"))renderWrapper(cv);super.visitEnd();}
         },0);
-        int expected=switch(name){case "175605189","803707421","981501872","656386660","szmods/runtime/ModLoader"->1;case "873944585"->2;case "1943200621","1389510037"->3;default->throw new IllegalArgumentException(name);};
+        int expected=switch(name){case "175605189","803707421","981501872","656386660","szmods/runtime/ModLoader"->1;case "873944585"->2;case "1943200621",CAMERA->3;default->throw new IllegalArgumentException(name);};
         if(changes[0]!=expected)throw new IllegalStateException("character_scale_hook_count:"+name+":"+changes[0]);return writer.toByteArray();
     }
     private static void renderWrapper(ClassVisitor visitor){

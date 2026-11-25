@@ -138,7 +138,15 @@ def build(output):
                 if n.startswith('org/objectweb/asm/') and n.endswith('.class'):values[n.replace('org/objectweb/asm','gamecompat/shaded/asm')]=compat.shade(z.read(n))
     values['META-INF/MANIFEST.MF']=b'Manifest-Version: 1.0\nPremain-Class: gamecompat.ResourceCompatibilityAgent\n\n'
     values['META-INF/LICENSE-ASM.txt']=(ROOT/'client/resource-compat/ASM-LICENSE.txt').read_bytes()
-    jar(player/'Client/compat/game-resource-compat.jar',values)
+    resource_compat=player/'Client/compat/game-resource-compat.jar'
+    scale_agent=player/'Client/compat/character-scale.jar'
+    jar(resource_compat,values)
+    camera_check=tools.compile_java('player-camera-chain',
+        [ROOT/'client-compat/character-scale/tools/CameraAgentChainCheck.java'],[scale_agent])
+    subprocess.run([tools.tool('java'),EXPORT,'-Xverify:all',
+                    f'-javaagent:{resource_compat}',f'-javaagent:{scale_agent}',
+                    '-cp',os.pathsep.join(map(str,[camera_check,runtime/'bootstrap.jar',*libraries])),
+                    'playerscale.CameraAgentChainCheck'],check=True)
     weapon=compile_internal('player-weapon-events',(ROOT/'client/weapon-events/src').glob('*.java'),output);values=entries(weapon)
     values['META-INF/MANIFEST.MF']=b'Manifest-Version: 1.0\nPremain-Class: ReloadEventAgent\nAgent-Class: MeleeBodyAgent\nCan-Retransform-Classes: true\n\n'
     weapon_agent=player/'Client/compat/weapon-events.jar'
