@@ -36,6 +36,20 @@ public final class WorldItemTests {
    UUID d=UUID.randomUUID(),recipient=UUID.randomUUID();ItemStack decorated=new ItemStack(2,1,4095,new byte[]{1,7,0,-1},new byte[]{3,4,5},1<<8);WorldItem preserved=item(d,decorated);
    try(var journal=new InventoryJournal(file,catalog)){journal.commit(d,new Inventory(catalog).give(decorated)).get();journal.commitWorldItem(d,journal.load(d).remove(0,1),preserved,null).get();journal.compact().get();}
    try(var journal=new InventoryJournal(file,catalog)){check(journal.physicalItems().get(preserved.id()).stack().json().equals(decorated.json()),"identity, attachments, paint, metadata and equipment eligibility preserved as original bytes");journal.commitWorldItem(recipient,new Inventory(catalog).give(decorated),null,preserved.id()).get();check(journal.load(recipient).at(bag(0)).json().equals(decorated.json()),"pickup never reconstructs decorated item from factory defaults");}
+   var firstGrant=item(recipient,decorated);
+   var secondGrant=item(recipient,stack.count(5));
+   try(var journal=new InventoryJournal(file,catalog)){
+    var before=journal.load(recipient);
+    var plan=before.replace(Map.of(),0);
+    rejected(journal.grantWorldItems(recipient,plan,List.of(firstGrant,firstGrant)));
+    check(journal.physicalItems().isEmpty()&&journal.load(recipient).revision()==before.revision(),"failed grant spawns nothing");
+    journal.grantWorldItems(recipient,plan,List.of(firstGrant,secondGrant)).get();
+    check(journal.physicalItems().size()==2&&journal.load(recipient).at(bag(0)).json().equals(decorated.json()),"ground grant is visible without an inventory debit");
+   }
+   try(var journal=new InventoryJournal(file,catalog)){
+    check(journal.physicalItems().get(firstGrant.id()).stack().json().equals(decorated.json()),"ground grant preserves configuration on restart");
+    check(journal.physicalItems().get(secondGrant.id()).stack().count()==5,"complete ground batch survives restart");
+   }
    for(float yaw:new float[]{0,90,180,-90}){var v=WorldItems.throwVelocity(yaw,0,1.62,new Random(1));check(Math.abs(Math.hypot(v.x(),v.z())-6)<.5&&v.y()>0,"stock drop speed and spread");}check(WorldItems.throwVelocity(0,0,.2,new Random(1)).y()==(double).2f*20,"small character native upward throw");
    System.out.println("PASS physical item ledger checks="+checks);
   }finally{try(var files=Files.walk(root)){for(var p:files.sorted(Comparator.reverseOrder()).toList())Files.delete(p);}}

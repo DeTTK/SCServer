@@ -25,10 +25,12 @@ final class InventoryTransactionArchive {
     private void checkDirectory()throws IOException{if(Files.isSymbolicLink(directory)||!Files.isDirectory(directory,LinkOption.NOFOLLOW_LINKS))throw new IOException("inventory_archive_directory");}
     private static String hash(byte[] bytes){try{return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));}catch(NoSuchAlgorithmException impossible){throw new AssertionError(impossible);}}
     private static void validate(JsonObject event){
-        if(!Set.of("character","revision","changes","gameplay","drop","grantedDrops","worldItemSpawn","worldItemClaim").containsAll(event.keySet())||!event.has("changes")||!event.get("changes").isJsonArray()||event.getAsJsonArray("changes").size()>MAX_ROWS)throw new IllegalArgumentException("inventory_archive_schema");
+        if(!Set.of("character","revision","changes","gameplay","drop","grantedDrops","worldItemSpawn","worldItemClaim","worldItemGrants").containsAll(event.keySet())||!event.has("changes")||!event.get("changes").isJsonArray()||event.getAsJsonArray("changes").size()>MAX_ROWS)throw new IllegalArgumentException("inventory_archive_schema");
         UUID.fromString(Json.text(event,"character",36));if(event.get("revision").getAsBigDecimal().longValueExact()<1)throw new IllegalArgumentException("inventory_archive_revision");
         Set<Inventory.Address> ids=new HashSet<>();for(var value:event.getAsJsonArray("changes")){var row=value.getAsJsonObject();var address=new Inventory.Address(row.get("aggregate").getAsInt(),row.get("container").getAsInt(),row.get("slot").getAsInt());if(!ids.add(address))throw new IllegalArgumentException("inventory_archive_duplicate_address");}
-        if(event.has("grantedDrops")&&(!event.get("grantedDrops").isJsonArray()||event.getAsJsonArray("grantedDrops").size()>160))throw new IllegalArgumentException("inventory_archive_drop_limit");
+        for(String field:List.of("grantedDrops","worldItemGrants"))
+            if(event.has(field)&&(!event.get(field).isJsonArray()||event.getAsJsonArray(field).size()>160))
+                throw new IllegalArgumentException("inventory_archive_drop_limit");
     }
     JsonObject store(JsonObject event)throws IOException{
         worker();byte[] raw=Json.bytes(event);

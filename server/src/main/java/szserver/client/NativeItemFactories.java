@@ -9,6 +9,7 @@ import java.util.*;
 class NativeItemFactories {
     private final NativeFactoryRegistrations registrations;
     private final Map<Integer,String> resourceTypes = new HashMap<>();
+    private final Map<String,Boolean> resourceConstructors = new HashMap<>();
     protected final ClassLoader loader;protected final Map<Integer,String> definitions,classes;
     protected final Map<Integer,Object> descriptors=new HashMap<>(),factories=new LinkedHashMap<>();
     protected final Class<?> resource,json,base,skin,style,stack;protected final Object[] registry;
@@ -64,8 +65,20 @@ class NativeItemFactories {
     }
     boolean hasHeadlessArchiveFactory(int id) throws IOException {
         String kind=resourceTypes.get(id), factory=classes.get(id);
-        // Weather presets initialize a full hideout scene in their constructors.
-        return kind!=null&&!kind.equals("hideout/weather_preset")&&factory!=null&&registrations.matches(kind,factory);
+        if(kind==null||factory==null||kind.equals("hideout/weather_preset")||kind.equals("game_object"))return false;
+        if(registrations.matches(kind,factory))return true;
+        // Some item classes are registered outside the declarative callback modules.
+        // Their pinned native resource constructor still owns creation and validation.
+        Boolean available=resourceConstructors.get(factory);
+        if(available==null){
+            try{
+                Class.forName(factory,false,loader).getConstructor(resource);
+                available=true;
+            }catch(NoSuchMethodException missing){available=false;}
+            catch(ClassNotFoundException missing){throw new IOException("native_item_factory_missing:"+id,missing);}
+            resourceConstructors.put(factory,available);
+        }
+        return available;
     }
 
     Object factory(int id)throws Exception{

@@ -277,10 +277,15 @@ public final class GameItems implements AutoCloseable {
         int mask=stack.equipmentMask();result[4]=(byte)((mask&(1<<8))!=0?1:0);result[5]=(byte)((mask&(1<<9))!=0?1:0);result[6]=(byte)((mask&(1<<11))!=0?1:0);return result;
     }
     public szserver.inventory.WeaponProfile weaponProfile(szserver.inventory.ItemStack item)throws Exception{if(item==null)return null;byte[] raw=szserver.net.InventoryPackets.stack(item);return adapter.weaponProfile(Arrays.copyOfRange(raw,1,raw.length));}
+    public ClientStateAdapter.WeaponMagazineRules weaponMagazineRules(szserver.inventory.ItemStack item)throws Exception{
+        byte[] raw=szserver.net.InventoryPackets.stack(item);
+        return adapter.weaponMagazineRules(Arrays.copyOfRange(raw,1,raw.length));
+    }
     public byte[] magazine(byte[] state,int ammo,int rounds)throws Exception{return adapter.magazine(state,ammo,rounds);}
     public ClientStateAdapter.Magazine inspectMagazine(byte[] state)throws Exception{return adapter.inspectMagazine(state);}
     private String stateKind(szserver.inventory.ItemStack item){return registry.getAsJsonObject(Integer.toString(item.id())).get("state").getAsString();}
     public UUID identity(szserver.inventory.ItemStack item)throws Exception{return item.state().length==0?new UUID(0,0):adapter.identity(stateKind(item),item.state());}
+    public boolean isHandOverride(int item)throws Exception{return adapter.isHandOverride(item);}
     public szserver.inventory.ItemStack preserveIdentity(szserver.inventory.ItemStack original,szserver.inventory.ItemStack edited)throws Exception{
         if(original.id()!=edited.id())throw new IllegalArgumentException("editor_item_factory_changed");
         if(original.state().length==0)return edited;
@@ -388,21 +393,45 @@ public final class GameItems implements AutoCloseable {
         List<szserver.inventory.ItemStack> removed=new ArrayList<>();for(byte[] raw:result.removed())removed.add(readStack(raw));return new ModuleBatch(geometry(weapon.state(result.state())),List.copyOf(removed));
     }
     public szserver.inventory.ItemStack createStack(int id,int count,int metadata,JsonObject tags)throws Exception{
-        byte[] state=create(id,new JsonObject());var original=new szserver.inventory.ItemStack(id,count,metadata,state);if(tags.isEmpty())return inventoryFacts(original);
-        byte[] wire=szserver.net.InventoryPackets.stack(original);return validateStack(adapter.applyTags(Arrays.copyOfRange(wire,1,wire.length),NativeTypedNbt.encode(tags)));
+        szserver.inventory.ItemStack original;
+        boolean nativeFactory=itemResourcesMounted&&adapter.hasHeadlessArchiveFactory(id);
+        if(nativeFactory){
+            // Seed stock built-in attachments before accepting explicit firearm changes.
+            byte[] edits=tags.isEmpty()||firearm(id)?null:NativeTypedNbt.encode(tags);
+            original=validateStack(adapter.createNativeStack(id,count,metadata,edits),true);
+            if(firearm(id))original=initializeBuiltins(original);
+            if(edits!=null) return copyForGrant(original);
+        }else{
+            original=inventoryFacts(new szserver.inventory.ItemStack(id,count,metadata,create(id,new JsonObject())));
+        }
+        if(!tags.isEmpty()){
+            byte[] wire=szserver.net.InventoryPackets.stack(original);
+            original=validateStack(adapter.applyTags(Arrays.copyOfRange(wire,1,wire.length),NativeTypedNbt.encode(tags)),nativeFactory);
+        }
+        return nativeFactory?copyForGrant(original):original;
     }
-    public szserver.inventory.ItemStack readEditedStack(byte[] raw)throws Exception{return validateStack(adapter.readEditedStack(raw));}
-    public szserver.inventory.ItemStack readConfig(byte[] raw)throws Exception{return validateStack(adapter.readConfig(raw));}
+    public szserver.inventory.ItemStack readEditedStack(byte[] raw)throws Exception{return validateStack(adapter.readEditedStack(raw),true);}
+    public szserver.inventory.ItemStack readConfig(byte[] raw)throws Exception{return validateStack(adapter.readConfig(raw),true);}
     /** Granting a saved configuration creates fresh outer and attached identities. Editing does not. */
     public szserver.inventory.ItemStack copyForGrant(szserver.inventory.ItemStack template)throws Exception{
         if(!template.stateful())return template;
         return template.state(adapter.freshTreeIdentity(stateKind(template),template.state()));
     }
     private szserver.inventory.ItemStack validateStack(ClientStateAdapter.Stack decoded)throws Exception{
+        return validateStack(decoded,false);
+    }
+    private szserver.inventory.ItemStack validateStack(ClientStateAdapter.Stack decoded,boolean factoryRoundTrip)throws Exception{
         JsonElement definition=registry.get(Integer.toString(decoded.id()));if(definition==null)throw new IllegalArgumentException("unknown_item_id");JsonObject row=definition.getAsJsonObject();
         String expected=row.has("state")?row.get("state").getAsString():null;
         if(!Objects.equals(expected,decoded.kind()))throw new IllegalArgumentException("item_state_factory_mismatch");
-        if(expected!=null&&!verified.contains(expected))throw new IllegalArgumentException("state_codec_not_verified");
+        if(expected!=null&&!verified.contains(expected)){
+            // Contextual states do not always have a serializable empty default.
+            // Their first valid complete round trip is verified under the original factory.
+            if(!factoryRoundTrip||!itemResourcesMounted||!adapter.hasHeadlessArchiveFactory(decoded.id()))
+                throw new IllegalArgumentException("state_codec_not_verified");
+            verified.add(expected);
+            codecFailures.remove(expected);
+        }
         return inventoryFacts(new szserver.inventory.ItemStack(decoded.id(),decoded.count(),decoded.metadata(),decoded.state(),decoded.properties(),decoded.equipmentMask()));
     }
     /** Journal the native creation-time facts, with no changes to the client wire format. */

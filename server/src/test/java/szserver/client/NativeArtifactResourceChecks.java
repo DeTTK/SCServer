@@ -38,6 +38,19 @@ public final class NativeArtifactResourceChecks {
             denied(()->items.socket(empty,1,crystal),"artifact_socket_capacity");
 
             var nativeStats=items.artifactStats(crystal);
+            byte[] packed=szserver.net.InventoryPackets.stack(crystal);
+            byte[] wire=Arrays.copyOfRange(packed,1,packed.length);
+            var edited=items.readEditedStack(wire);
+            check(items.artifactStats(edited).equals(nativeStats)&&items.identity(edited).equals(items.identity(crystal)),
+                    "ordinary artifact editor packet preserves stats and UUID");
+            var fromFile=items.readConfig(items.stackConfig(wire));
+            var granted=items.copyForGrant(fromFile);
+            check(items.artifactStats(granted).equals(nativeStats)&&!items.identity(granted).equals(items.identity(crystal)),
+                    "saved artifact config preserves stats and creates a fresh grant UUID");
+            var unknown=new JsonObject();
+            var tag=new JsonObject();tag.addProperty("type","string");tag.addProperty("value","value");
+            unknown.add("qa_unsupported_editor_field",tag);
+            denied(()->items.createStack(CRYSTAL,1,0,unknown),"item_editor_field_not_applied:qa_unsupported_editor_field");
             check(items.equipmentSummary(List.of(crystal)).artifacts().equals(nativeStats),"directly equipped artifact bank");
             var inserted=items.socket(empty,0,crystal);
             var effective=items.equipmentSummary(List.of(inserted.weapon())).artifacts();
