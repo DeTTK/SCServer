@@ -1,5 +1,7 @@
 package szserver;
 
+import szserver.client.GameplayPacketAliases;
+import szserver.client.WorldItemPackets;
 import szserver.inventory.*;import szserver.world.*;import com.google.gson.*;import java.nio.file.*;import java.util.*;import java.util.concurrent.*;
 
 public final class WorldItemTests {
@@ -35,6 +37,12 @@ public final class WorldItemTests {
   }
  }
  public static void main(String[] args)throws Exception {
+  check(GameplayPacketAliases.registered(WorldItemPackets.PICKUP)==WorldItemPackets.PICKUP_ID,"stock F pickup alias");
+  check(WorldItemPackets.pickup(java.nio.ByteBuffer.allocate(4).putInt(52).array())==52,"pickup reads the actor ID");
+  for(int length:new int[]{0,3,5,16}){
+   try{WorldItemPackets.pickup(new byte[length]);throw new AssertionError("accepted invalid pickup payload");}
+   catch(java.io.IOException expected){check(expected.getMessage().equals("world_item_pickup_size"),"bounded pickup packet");}
+  }
   Path root=Files.createTempDirectory("physical-items-");
   try {
    replayPickupAcrossCatalogs(root);

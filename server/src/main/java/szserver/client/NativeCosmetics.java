@@ -8,11 +8,41 @@ import java.util.*;
 /** Original cosmetic compatibility and slot operations on the shared item-factory host. */
 final class NativeCosmetics extends NativeItemFactories {
     private final Class<?> target,kind;
+    private final Map<Long,Integer> reloadTimelines=new HashMap<>();
     NativeCosmetics(ClassLoader loader,Map<Integer,String> definitions,Map<Integer,String> classes,
                     Map<Integer,String> resourceDeclarations,NativeFactoryRegistrations registrations)throws Exception{
         super(loader,definitions,classes,resourceDeclarations,registrations);target=type("714221946");kind=type("1847365303");
         for(int id:new TreeSet<>(classes.keySet())){Class<?> c=type(classes.get(id));if(skin.isAssignableFrom(c)||style.isAssignableFrom(c))factory(id);}
     }
+    int reloadSoundTimeline(Class<?> gun,Object factory,Object item)throws Exception{
+        Class<?> styleFactory=type("1839416702"), presentation=type("1596256282");
+        Class<?> category=type("1695012753");
+        Object selected=NativeMethods.instance(gun,"interface",base,stack,Object.class)
+                .invoke(factory,item,category.getField("abstract").get(null));
+        if(!styleFactory.isInstance(selected)){
+            return soundTimeline(presentation,NativeMethods.instance(gun,"else",presentation).invoke(factory));
+        }
+        Method id=NativeMethods.instance(base,"static",int.class);
+        int styleId=(Integer)id.invoke(selected), weaponId=(Integer)id.invoke(factory);
+        long key=((long)styleId<<32)|Integer.toUnsignedLong(weaponId);
+        Integer cached=reloadTimelines.get(key);
+        if(cached!=null)return cached;
+
+        // The stock client builds these overrides after registering its gun factories.
+        // Headless factories register lazily, so initialize the selected style with the gun bound here.
+        Object definition=descriptors.get(styleId);
+        if(definition==null)throw new IOException("native_reload_style_definition:"+styleId);
+        styleFactory.getMethod("implements",resource).invoke(selected,definition);
+        Object selectedPresentation=NativeMethods.instance(gun,"strictfp",presentation,stack).invoke(factory,item);
+        int timeline=soundTimeline(presentation,selectedPresentation);
+        reloadTimelines.put(key,timeline);
+        return timeline;
+    }
+
+    private static int soundTimeline(Class<?> presentation,Object value)throws Exception{
+        return value!=null&&(Boolean)presentation.getMethod("return",int.class).invoke(value,-1)?-1:-2;
+    }
+
     record Skin(Object state,int previous,boolean unchanged){}
     Skin skin(int item,Object state,int selected)throws Exception{
         Class<?> visual=type("865153858");if(!visual.isInstance(state))throw new IOException("item_has_no_visual_name");if((Boolean)visual.getMethod("abstract").invoke(state))throw new IOException("visual_name_locked");

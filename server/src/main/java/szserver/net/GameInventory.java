@@ -502,7 +502,6 @@ public final class GameInventory implements AutoCloseable {
     public Map<UUID,WorldItem> worldItems(){return journal.physicalItems();}
     public CompletableFuture<Void> settleWorldItem(UUID id,double x,double y,double z){return journal.settleWorldItem(id,x,y,z);}
     public CompletableFuture<Void> expireWorldItem(UUID id,long now){return journal.expireWorldItem(id,now);}
-    public boolean canCollect(UUID id,ItemStack item){Character c=character(id);if(c.busy||c.failed||c.deathClear)return false;try{c.inventory.give(item);return true;}catch(IllegalArgumentException full){return false;}}
     public void collectWorldItem(UUID id,UUID itemId,String world,Consumer<Inventory.Plan> success,Consumer<String> failure){
         Character c=character(id);if(c.busy||c.failed||c.deathClear){failure.accept("inventory_busy");return;}
         WorldItem item=journal.physicalItems().get(itemId);if(item==null||!item.world().equals(world)){failure.accept("world_item_already_claimed");return;}

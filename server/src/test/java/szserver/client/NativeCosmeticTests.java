@@ -33,6 +33,8 @@ public final class NativeCosmeticTests {
             verifySightMount(items);
             if(GameResources.mounted(resources.resolve("configs"))){
                 verifyWeaponModule(items);
+                verifyStyledReloadProfile(items);
+                verifyStyledSidearms(items);
                 var seedGun=personalWeapon(items,20051);
                 journalSeed=new ModuleJournalSeed(seedGun,rolledModule(items,11701),items.weaponProfile(seedGun).damage());
             }
@@ -58,6 +60,33 @@ public final class NativeCosmeticTests {
                 {"owner":{"type":"string","value":"ModuleQA"}}
                 """).getAsJsonObject();
         return items.createStack(factory,1,0,tags);
+    }
+
+    private static void verifyStyledReloadProfile(GameItems items)throws Exception{
+        var gun=items.createStack(20175,1,0,new JsonObject());
+        var style=items.createStack(17554,1,0,new JsonObject());
+        var styled=items.paint(gun,0,style,0).weapon();
+        var profile=items.weaponProfile(styled);
+        check(profile!=null&&profile.capacity()==100,"styled PKP retains its native magazine");
+        check(profile.reloadTiming(0,profile.capacity()).complete()>0,"styled PKP can reload headlessly");
+        var raw=szserver.net.InventoryPackets.stack(styled);
+        var restored=items.readStack(Arrays.copyOfRange(raw,1,raw.length));
+        check(items.weaponProfile(restored).equals(profile),"rejoining with a saved styled PKP retains its native profile");
+    }
+
+    private static void verifyStyledSidearms(GameItems items)throws Exception{
+        // Deagle XIX, Golden and Modified use the same native style family.
+        for(int gunId:new int[]{20477,20485,20839})for(int styleId:new int[]{17518,17533,17559}){
+            var gun=items.initializeBuiltins(items.createStack(gunId,1,0,new JsonObject()));
+            var style=items.createStack(styleId,1,0,new JsonObject());
+            var styled=items.paint(gun,0,style,0).weapon();
+            String combination=gunId+"/"+styleId;
+            var profile=items.weaponProfile(styled);
+            check(profile.capacity()==items.weaponProfile(gun).capacity(),"styled Deagle magazine "+combination);
+            var raw=szserver.net.InventoryPackets.stack(styled);
+            var restored=items.readStack(Arrays.copyOfRange(raw,1,raw.length));
+            check(items.weaponProfile(restored).equals(profile),"saved styled Deagle profile "+combination);
+        }
     }
 
     private static void verifyWeaponModule(GameItems items)throws Exception{

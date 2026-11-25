@@ -91,7 +91,18 @@ def build(output):
                     '-o',str(game_exe)],check=True)
     lock=json.loads((ROOT/'bootstrap/base.lock.json').read_text('utf8'))
     asm,tree,kotlin=[pinned_input(lock[name]) for name in ('asm','asmTree','kotlin')]
-    libraries=[runtime/'game.jar',runtime/'libraries.jar',*sorted((runtime/'dependencies').glob('*.jar'))]
+    imgui={}
+    for dependency in (runtime/'dependencies').glob('imgui-java-*-1.82.2.jar'):
+        with zipfile.ZipFile(dependency) as z:
+            for name in z.namelist():
+                if name.startswith('imgui/') and name.endswith('.class'):imgui[name]=z.read(name)
+    if not imgui:raise ValueError('Missing pinned ImGui ABI')
+    jar(runtime/'imgui-compat.jar',imgui)
+    dependencies=sorted((runtime/'dependencies').glob('*.jar'))
+    # Match the launcher: choose the pinned ImGui binding ahead of the game's fork.
+    libraries=[runtime/'game.jar',runtime/'imgui-compat.jar',
+               *(p for p in dependencies if not p.name.startswith('imgui-java-binding-')),
+               runtime/'libraries.jar']
     boot=tools.compile_java('player-bootstrap',[*(ROOT/'client/bootstrap').glob('*.java'),*(ROOT/'client/bootstrap-compat').rglob('*.java'),*(ROOT/'client/mod-runtime/src').rglob('*.java')],libraries)
     generators=tools.compile_java('player-bootstrap-generators',(ROOT/'client/bootstrap-tools').glob('*.java'),[asm])
     for generator in ('GenerateLegacyAdapter','GenerateCommandPackets','InstallFpvPackets','InstallVehiclePackets','InstallFunnelImpact'):
@@ -102,6 +113,10 @@ def build(output):
         if asset.is_file():
             bootstrap['assets/'+asset.relative_to(inputs/'client-assets').as_posix()] = asset.read_bytes()
     jar(runtime/'bootstrap.jar',bootstrap)
+    code=subprocess.check_output([tools.tool('javap'),'-c','-classpath',
+                                  str(runtime/'bootstrap.jar'),'StandardJvmBootstrap'],text=True)
+    if 'imgui/ImGui.getFontSize:()I' not in code:
+        raise ValueError('Bootstrap must call the packaged ImGui font size ABI')
     verify=tools.compile_java('player-bootstrap-verify',[ROOT/'client/bootstrap-tools/tests/BootstrapAbiTest.java'],[runtime/'bootstrap.jar',*libraries])
     subprocess.run([tools.tool('java'),'-cp',os.pathsep.join(map(str,[verify,runtime/'bootstrap.jar',*libraries])),'BootstrapAbiTest'],check=True)
     item_checks=('NativeBoltFactoryChecks','NativeMedicineResourceChecks','NativeArtifactResourceChecks','NativeConfigSourceChecks')
@@ -115,13 +130,6 @@ def build(output):
                         'szserver.client.'+name,str(player/'Server'),str(runtime)],check=True)
     subprocess.run([tools.tool('java'),'-Xmx512m','-cp',item_test_cp,
                     'szserver.client.NativeCosmeticTests',str(runtime),str(player/'Server')],check=True)
-    imgui={}
-    for dependency in (runtime/'dependencies').glob('imgui-java-*-1.82.2.jar'):
-        with zipfile.ZipFile(dependency) as z:
-            for name in z.namelist():
-                if name.startswith('imgui/') and name.endswith('.class'):imgui[name]=z.read(name)
-    if not imgui:raise ValueError('Missing pinned ImGui ABI')
-    jar(runtime/'imgui-compat.jar',imgui)
     subprocess.run([sys.executable,str(ROOT/'client/startup/build.py'),'--asm',str(asm)],check=True)
     subprocess.run([sys.executable,str(ROOT/'client-compat/character-scale/build.py')],check=True)
     for name in ('startup-guard','character-scale'):copy(ROOT/'build'/(name+'.jar'),player/'Client/compat'/(name+'.jar'))
@@ -138,7 +146,15 @@ def build(output):
                 if n.startswith('org/objectweb/asm/') and n.endswith('.class'):values[n.replace('org/objectweb/asm','gamecompat/shaded/asm')]=compat.shade(z.read(n))
     values['META-INF/MANIFEST.MF']=b'Manifest-Version: 1.0\nPremain-Class: gamecompat.ResourceCompatibilityAgent\n\n'
     values['META-INF/LICENSE-ASM.txt']=(ROOT/'client/resource-compat/ASM-LICENSE.txt').read_bytes()
-    jar(player/'Client/compat/game-resource-compat.jar',values)
+    resource_compat=player/'Client/compat/game-resource-compat.jar'
+    scale_agent=player/'Client/compat/character-scale.jar'
+    jar(resource_compat,values)
+    camera_check=tools.compile_java('player-camera-chain',
+        [ROOT/'client-compat/character-scale/tools/CameraAgentChainCheck.java'],[scale_agent])
+    subprocess.run([tools.tool('java'),EXPORT,'-Xverify:all',
+                    f'-javaagent:{resource_compat}',f'-javaagent:{scale_agent}',
+                    '-cp',os.pathsep.join(map(str,[camera_check,runtime/'bootstrap.jar',*libraries])),
+                    'playerscale.CameraAgentChainCheck'],check=True)
     weapon=compile_internal('player-weapon-events',(ROOT/'client/weapon-events/src').glob('*.java'),output);values=entries(weapon)
     values['META-INF/MANIFEST.MF']=b'Manifest-Version: 1.0\nPremain-Class: ReloadEventAgent\nAgent-Class: MeleeBodyAgent\nCan-Retransform-Classes: true\n\n'
     weapon_agent=player/'Client/compat/weapon-events.jar'

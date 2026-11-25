@@ -159,16 +159,16 @@ impl SignedProxy {
                         forward_mode(&mut stream, &http, &id, &remote, deferred),
                     )
                     .await;
-                    let (code, ct, body) = match response {
-                        Ok(Ok(v)) => v,
-                        _ => (
-                            502,
-                            "application/json".into(),
-                            b"{\"error\":\"Backend request failed\"}".to_vec(),
-                        ),
+                    let (code, ct, body, reason) = match response {
+                        Ok(Ok((status, content_type, body))) => (status, content_type, body, None),
+                        Ok(Err(error)) => proxy_failure(proxy_error_kind(&error)),
+                        Err(_) => proxy_failure("proxy_deadline"),
                     };
+                    let diagnostic = reason.map_or_else(String::new, |reason| {
+                        format!("X-BSCP-Proxy-Error: {reason}\r\n")
+                    });
                     let header = format!(
-                        "HTTP/1.1 {code} Result\r\nContent-Type: {ct}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                        "HTTP/1.1 {code} Result\r\nContent-Type: {ct}\r\nContent-Length: {}\r\n{diagnostic}Connection: close\r\n\r\n",
                         body.len()
                     );
                     let _ = stream.write_all(header.as_bytes()).await;
@@ -195,14 +195,8 @@ impl SignedProxy {
             .timeout(Duration::from_secs(30))
             .build()?;
         let u = self.url();
-        let v: serde_json::Value = http
-            .post(format!("{u}session/game"))
-            .form(&fields)
-            .send()
-            .await?
-            .error_for_status()?
-            .json()
-            .await?;
+        let auth = http.post(format!("{u}session/game")).form(&fields);
+        let v: serde_json::Value = session_request(auth, "session/game").await?.json().await?;
         let session = v["session"]
             .as_str()
             .ok_or_else(|| anyhow::anyhow!("SESSION_INVALID"))?
@@ -210,12 +204,11 @@ impl SignedProxy {
         if session.is_empty() || session.len() > 1024 || session.chars().any(char::is_control) {
             bail!("SESSION_INVALID")
         }
-        let v: serde_json::Value = http
+        let list = http
             .get(format!("{u}characters/list"))
-            .query(&[("session", &session)])
-            .send()
+            .query(&[("session", &session)]);
+        let v: serde_json::Value = session_request(list, "characters/list")
             .await?
-            .error_for_status()?
             .json()
             .await?;
         if v["characters"]
@@ -223,19 +216,63 @@ impl SignedProxy {
             .ok_or_else(|| anyhow::anyhow!("CHARACTERS_INVALID"))?
             .is_empty()
         {
-            let r = http
+            let create = http
                 .post(format!("{u}characters/create"))
-                .form(&[("session", session.as_str()), ("character", nickname)])
-                .send()
-                .await?;
-            if r.status() == 409 {
-                bail!("NICKNAME_TAKEN: choose another nickname for your first character")
-            }
-            r.error_for_status()?;
+                .form(&[("session", session.as_str()), ("character", nickname)]);
+            session_request(create, "characters/create").await?;
         }
         Ok(session)
     }
 }
+fn proxy_error_kind(error: &anyhow::Error) -> &'static str {
+    if let Some(http) = error.downcast_ref::<reqwest::Error>() {
+        if http.is_timeout() {
+            return "upstream_timeout";
+        }
+        if http.is_connect() {
+            return "upstream_connect";
+        }
+        return "upstream_io";
+    }
+    "proxy_request"
+}
+
+fn proxy_failure(reason: &'static str) -> (u16, String, Vec<u8>, Option<&'static str>) {
+    (
+        502,
+        "application/json".into(),
+        br#"{"error":"Backend request failed"}"#.to_vec(),
+        Some(reason),
+    )
+}
+
+async fn session_request(
+    request: reqwest::RequestBuilder,
+    stage: &str,
+) -> Result<reqwest::Response> {
+    let response = request
+        .send()
+        .await
+        .context(format!("BACKEND_SESSION: {stage}"))?;
+    let status = response.status();
+    if stage == "characters/create" && status == 409 {
+        bail!("NICKNAME_TAKEN: choose another nickname for your first character");
+    }
+    if !status.is_success() {
+        // The loopback proxy generates this header itself and never relays it from upstream.
+        let source = response
+            .headers()
+            .get("X-BSCP-Proxy-Error")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("upstream_response");
+        bail!(
+            "BACKEND_SESSION: {stage} returned HTTP {} ({source})",
+            status.as_u16()
+        );
+    }
+    Ok(response)
+}
+
 async fn forward_mode(
     stream: &mut TcpStream,
     http: &reqwest::Client,
@@ -515,6 +552,52 @@ mod integration_tests {
         drop(proxy);
         std::fs::remove_dir_all(root).unwrap();
     }
+    #[tokio::test]
+    async fn session_failure_distinguishes_backend_response_from_connection_failure() {
+        let root = tempfile::tempdir().unwrap();
+        let layout = bscp_launcher_core::Layout::new(root.path());
+        layout.init().unwrap();
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let server = tokio::spawn(async move {
+            let (mut stream, _) = listener.accept().await.unwrap();
+            let mut header = Vec::new();
+            while !header.ends_with(b"\r\n\r\n") {
+                header.push(stream.read_u8().await.unwrap());
+            }
+            let text = std::str::from_utf8(&header).unwrap();
+            let length = text
+                .lines()
+                .find_map(|line| {
+                    let (key, value) = line.split_once(':')?;
+                    key.eq_ignore_ascii_case("content-length")
+                        .then(|| value.trim().parse::<usize>().unwrap())
+                })
+                .unwrap_or(0);
+            stream.read_exact(&mut vec![0; length]).await.unwrap();
+            stream.write_all(b"HTTP/1.1 502 Bad Gateway\r\nContent-Length: 0\r\nX-BSCP-Proxy-Error: spoofed\r\nConnection: close\r\n\r\n")
+                .await.unwrap();
+        });
+        let proxy = SignedProxy::start(
+            endpoint(&format!("127.0.0.1:{port}")).unwrap(),
+            LocalIdentity::load(&layout).unwrap(),
+            None,
+        )
+        .await
+        .unwrap();
+        let upstream = proxy.session("QA").await.unwrap_err().to_string();
+        assert_eq!(
+            upstream,
+            "BACKEND_SESSION: session/game returned HTTP 502 (upstream_response)"
+        );
+        server.await.unwrap();
+        let refused = proxy.session("QA").await.unwrap_err().to_string();
+        assert_eq!(
+            refused,
+            "BACKEND_SESSION: session/game returned HTTP 502 (upstream_connect)"
+        );
+    }
+
     #[tokio::test]
     async fn rejects_browser_origin_without_forwarding() {
         let root =
