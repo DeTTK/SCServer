@@ -1158,6 +1158,8 @@ public final class StandardJvmBootstrap {
                 + owner.getClass().getName() + "." + name);
     }
 
+    private static boolean graphicsAdapterLogged;
+
     /** Called once per real game frame by the normalized client. */
     public static void headlessControlTick(Object game) {
         // Compatibility initialization is required by both visible and hidden
@@ -1172,6 +1174,13 @@ public final class StandardJvmBootstrap {
         ensureCoreEcsListeners();
         restoreCurrentFrontendAfterDisconnect(game);
         long window = org.lwjgl.glfw.GLFW.glfwGetCurrentContext();
+        if (!graphicsAdapterLogged && window != 0L) {
+            graphicsAdapterLogged = true;
+            System.out.println("[graphics] renderer="
+                    + org.lwjgl.opengl.GL11.glGetString(org.lwjgl.opengl.GL11.GL_RENDERER)
+                    + " vendor=" + org.lwjgl.opengl.GL11.glGetString(org.lwjgl.opengl.GL11.GL_VENDOR)
+                    + " version=" + org.lwjgl.opengl.GL11.glGetString(org.lwjgl.opengl.GL11.GL_VERSION));
+        }
         restoreWorldMouseCapture(game, window);
         if (!Boolean.getBoolean("standard.jvm.headless.control")) return;
         if (window != 0L) {
