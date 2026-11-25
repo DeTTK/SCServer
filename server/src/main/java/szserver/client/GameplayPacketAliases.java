@@ -15,6 +15,7 @@ public final class GameplayPacketAliases {
         Map.entry(NativeAdminPackets.ADDRESS_CLASS,NativeAdminPackets.ADDRESS_ID),
         Map.entry(NativeAdminPackets.ECHO_CLASS,NativeAdminPackets.ECHO_ID),
         Map.entry(WorldItemPackets.DROP,WorldItemPackets.DROP_ID),
+        Map.entry(WorldItemPackets.PICKUP,WorldItemPackets.PICKUP_ID),
         Map.entry(InventoryPackets.DELETE_REQUEST,InventoryPackets.DELETE_ID),
         Map.entry(PortalPackets.INTERACT_CLASS,PortalPackets.INTERACT_ID),
         Map.entry(PortalPackets.STATUS_CLASS,PortalPackets.STATUS_ID),

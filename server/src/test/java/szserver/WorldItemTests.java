@@ -1,5 +1,7 @@
 package szserver;
 
+import szserver.client.GameplayPacketAliases;
+import szserver.client.WorldItemPackets;
 import szserver.inventory.*;import szserver.world.*;import com.google.gson.*;import java.nio.file.*;import java.util.*;import java.util.concurrent.*;
 
 public final class WorldItemTests {
@@ -8,6 +10,12 @@ public final class WorldItemTests {
  static void rejected(CompletableFuture<?> operation)throws Exception{try{operation.get();throw new AssertionError("operation should fail");}catch(ExecutionException e){check(e.getCause() instanceof IllegalArgumentException,"bounded rejection");}}
  static WorldItem item(UUID owner,ItemStack stack){long now=System.currentTimeMillis();return new WorldItem(UUID.randomUUID(),owner,"test-map",stack,1,5,2,0,2,6,now,now+300000,null);}
  public static void main(String[] args)throws Exception {
+  check(GameplayPacketAliases.registered(WorldItemPackets.PICKUP)==WorldItemPackets.PICKUP_ID,"stock F pickup alias");
+  check(WorldItemPackets.pickup(java.nio.ByteBuffer.allocate(4).putInt(52).array())==52,"pickup reads the actor ID");
+  for(int length:new int[]{0,3,5,16}){
+   try{WorldItemPackets.pickup(new byte[length]);throw new AssertionError("accepted invalid pickup payload");}
+   catch(java.io.IOException expected){check(expected.getMessage().equals("world_item_pickup_size"),"bounded pickup packet");}
+  }
   Path root=Files.createTempDirectory("physical-items-");
   try {
    Path defs=root.resolve("items.json");Files.writeString(defs,"{\"1\":{\"type\":\"misc\",\"stack_size\":100},\"2\":{\"type\":\"misc\",\"stack_size\":1}}");ItemCatalog catalog=new ItemCatalog(defs);Path file=root.resolve("inventory.sjournal");UUID a=UUID.randomUUID(),b=UUID.randomUUID(),c=UUID.randomUUID();ItemStack stack=new ItemStack(1,10,7,new byte[0],new byte[]{0});WorldItem drop=item(a,stack.count(3));

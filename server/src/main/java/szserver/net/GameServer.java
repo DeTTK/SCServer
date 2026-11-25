@@ -107,7 +107,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         final WeaponActions weaponActions=new WeaponActions();LauncherReload launcherReload;
         Inventory.Address adminSelected;int creativeSelected;final Map<Integer,Integer> creativeHints=new HashMap<>();
         final ArrayDeque<NativeGrant> nativeGrants=new ArrayDeque<>();int nativeGrantBytes;boolean nativeGrantPending;
-        final Set<UUID> worldItemsSeen=new HashSet<>();int dropSequence=-1;long lastItemDrop;
+        final Set<UUID> worldItemsSeen=new HashSet<>();int dropSequence=-1;long lastItemDrop,lastItemPickup;
         int lootboxItem=-1,lootSequence;final LinkedHashMap<Integer,LootReply> lootReplies=new LinkedHashMap<>();
     }
     private static final class BlockRepair {final Set<World.Block> points=new LinkedHashSet<>();CompletableFuture<NativeBlockAccess.Repair> future;}
@@ -522,6 +522,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         if(id==1435){meleeHit(s,body);return;}
         if(id==SuicideCommand.PACKET_ID){if(body.length!=0)throw new IOException("suicide_request_size");suicide(s);return;}
         if(id==WorldItemPackets.DROP_ID){dropItem(s,WorldItemPackets.drop(body));return;}
+        if(id==WorldItemPackets.PICKUP_ID){pickupItem(s,WorldItemPackets.pickup(body));return;}
         if(id==InventoryPackets.DELETE_ID){inventoryDelete(s,body);return;}
         if(id==1842){var request=inventories.quickBindRequest(body);if(request.owner()!=0||request.source()!=null&&(request.source().aggregate()>1||!StorageLayout.validAddress(request.source())))throw new IOException("quick_binding_owner_or_address");queueQuick(s,new QuickIntent(request,null,request.source()==null?null:inventory(s).at(request.source())));return;}
         if(id==1628){queueQuick(s,new QuickIntent(null,inventories.quickUseRequest(body),null));return;}
@@ -1061,6 +1062,33 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         inventorySnapshot(s,0);
         ackDrop(s,sequence);
     }
+    private static final double ITEM_PICKUP_REACH=4;
+    private void pickupItem(Session player,int entity){
+        long monotonic=System.nanoTime();
+        if(player.hp<=0||player.respawning||player.teleport!=null
+                ||monotonic-player.lastItemPickup<100_000_000L)return;
+        player.lastItemPickup=monotonic;
+        var body=worldItems.byEntity(entity);
+        if(body==null||body.throwingSession!=null||body.claiming||body.expiring
+                ||!player.worldItemsSeen.contains(body.item.id()))return;
+        if(body.item.pickupOwner()!=null&&!body.item.pickupOwner().equals(player.grant.name()))return;
+        if(System.currentTimeMillis()>=body.item.expires()||inventories.busy(character(player)))return;
+        var at=body.position;
+        double[] eye=CharacterScale.eye(player.pos,player.posture.locomotion(),player.characterScale);
+        double x=at.x()-eye[0],y=at.y()-eye[1],z=at.z()-eye[2];
+        if(x*x+y*y+z*z>ITEM_PICKUP_REACH*ITEM_PICKUP_REACH)return;
+
+        body.claiming=true;
+        inventories.collectWorldItem(character(player),body.item.id(),itemWorld,plan->{
+            itemCollected++;
+            if(sessions.get(player.address)==player)inventoryChanged(player,plan,()->{});
+        },error->{
+            body.claiming=false;
+            itemFailures++;
+            lastItemFailure=error;
+        });
+    }
+
     private void dropItem(Session s,WorldItemPackets.Drop request){
         itemRequests++;
         int sequence=request.sequence();
@@ -1145,7 +1173,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         List<Session> players=sessions.values().stream().filter(s->s.ready&&!s.respawning&&s.hp>0&&s.teleport==null).toList();
         worldItems.step(players.stream().map(s->point(s.pos)).toList());
         var boltEvents=resolveBoltImpacts();
-        int settlements=2,expirations=2,pickups=4,pickupChecks=16;
+        int settlements=2,expirations=2;
         var bodies=new ArrayList<>(worldItems.all());
         for(int index=0;index<bodies.size();index++){var body=bodies.get((int)Math.floorMod((long)tick*17+index,bodies.size()));
             if(body.throwingSession!=null||body.claiming||body.expiring)continue;
@@ -1154,14 +1182,6 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
             }
             if(body.ground&&body.velocity.x()==0&&body.velocity.y()==0&&body.velocity.z()==0&&!body.settledSaved&&!body.settlePending&&settlements-->0&&now>=body.retry){
                 body.settlePending=true;var p=body.position;inventories.settleWorldItem(body.item.id(),p.x(),p.y(),p.z()).whenComplete((v,error)->{try{adminTask(()->{body.settlePending=false;if(error==null)body.settledSaved=true;else{body.retry=System.currentTimeMillis()+1000;itemFailures++;}});}catch(RejectedExecutionException stopped){}});
-            }
-            if(pickups<=0||pickupChecks<=0||now-body.item.created()<2000||now<body.retry)continue;
-            for(int pi=0;pi<players.size()&&pickupChecks>0;pi++){Session player=players.get((int)Math.floorMod((long)tick+pi,players.size()));
-                if(body.item.pickupOwner()!=null&&!body.item.pickupOwner().equals(player.grant.name()))continue;
-                double[] p=player.pos;var at=body.position;double radius=Math.max(.6,.6*player.characterScale);
-                if(Math.abs(at.x()-p[0])>radius||Math.abs(at.z()-p[2])>radius||at.y()<p[1]-.25||at.y()>p[1]+CharacterScale.height(player.posture.locomotion(),player.characterScale)+.25)continue;
-                pickupChecks--;if(!inventories.canCollect(character(player),body.item.stack()))continue;
-                body.claiming=true;pickups--;inventories.collectWorldItem(character(player),body.item.id(),itemWorld,plan->{itemCollected++;if(sessions.get(player.address)==player)inventoryChanged(player,plan,()->{});},error->{body.claiming=false;body.retry=System.currentTimeMillis()+500;itemFailures++;});break;
             }
         }
         for(Session s:List.copyOf(sessions.values()))if(s.ready){

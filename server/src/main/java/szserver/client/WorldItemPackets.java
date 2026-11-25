@@ -5,6 +5,14 @@ import szserver.inventory.*;import szserver.net.*;import szserver.world.*;import
 public final class WorldItemPackets {
     public static final String DROP="607962944";
     public static final int DROP_ID=1629;
+    /** F on a native item actor targets its current network entity, not a scene UUID. */
+    public static final String PICKUP="36161193";
+    public static final int PICKUP_ID=1583;
+
+    public static int pickup(byte[] body)throws IOException{
+        if(body.length!=Integer.BYTES)throw new IOException("world_item_pickup_size");
+        return Wire.input(body).readInt();
+    }
     public record Drop(int owner,int sequence,Inventory.Address address){}
     public static Drop drop(byte[] body)throws IOException{var in=Wire.input(body);int owner=in.readShort(),sequence=in.readUnsignedShort();int present=in.readUnsignedByte();if(present>1)throw new IOException("drop_address_presence");Inventory.Address address=present==1?new Inventory.Address(in.readUnsignedByte(),in.readUnsignedByte(),in.readUnsignedShort()):null;if(owner!=0||in.available()!=0)throw new IOException("drop_request");return new Drop(owner,sequence,address);}
     public static byte[] spawn(int entity,World.Vec p,ItemStack stack){
