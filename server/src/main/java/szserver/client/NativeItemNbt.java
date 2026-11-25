@@ -124,6 +124,11 @@ final class NativeItemNbt {
         // validation with every discovered factory installed in the native registry.
         return bound(root(decode(raw)),()->reader.read(canonical(decode(raw))));
     }
+    <T>T inspect(byte[] raw,Assessment<T> rule)throws Exception{
+        return bound(root(decode(raw)),()->rule.evaluate(decode(raw)));
+    }
+    @FunctionalInterface interface Assessment<T>{ T evaluate(Object item)throws Exception; }
+
     byte[] config(byte[] raw)throws Exception{
         return bound(root(decode(raw)),()->{
             var output=new ByteArrayOutputStream();

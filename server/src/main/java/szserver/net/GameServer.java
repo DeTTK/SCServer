@@ -1754,7 +1754,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         if(batch.stream().anyMatch(entry->now-entry.at()>15_000_000_000L||!validInventoryTransfer(s,entry.value()))){rejected.run();return;}
         // Native bulk actions send several predicted requests in one frame. Publish one final journal revision.
         inventories.mutateAsync(character(s),before->{Inventory working=before;Map<Inventory.Address,ItemStack> changes=new LinkedHashMap<>();int moved=0;
-            for(var entry:batch){var step=transferPlan(working,entry.value());working=step.after();changes.putAll(step.changes());moved=Math.addExact(moved,step.moved());}
+            for(var entry:batch){var step=transferPlan(working,entry.value());inventories.validateEquipmentTransfer(step);working=step.after();changes.putAll(step.changes());moved=Math.addExact(moved,step.moved());}
             return before.replace(changes,moved);
         },plan->{
             if(closed||sessions.get(s.address)!=s){inventoryTransfers.discard(s);return;}

@@ -301,6 +301,21 @@ public final class ClientStateAdapter implements AutoCloseable {
     Stack createNativeStack(int id,int count,int metadata,byte[] tags)throws Exception{
         return itemNbt().create(id,count,metadata,tags,this::readStack);
     }
+    private Object equipmentSlots;
+    private Method equipmentSlot, acceptsEquipment;
+    boolean acceptsEquipment(int container,byte[] raw)throws Exception{
+        if(equipmentSlots==null){
+            Class<?> group=Class.forName("1559281940",true,loader);
+            Class<?> slot=Class.forName("830050478",true,loader);
+            equipmentSlot=group.getMethod("final",int.class);
+            acceptsEquipment=slot.getMethod("for",int.class,cosmetics.stack);
+            // Detached native equipment group runs the factory predicate without a local player or GUI.
+            equipmentSlots=group.getConstructor(Class.forName("200241649",true,loader)).newInstance((Object)null);
+        }
+        Object slot=equipmentSlot.invoke(equipmentSlots,container);
+        if(slot==null)throw new IllegalArgumentException("equipment_slot_unknown:"+container);
+        return itemNbt().inspect(raw,item->(Boolean)acceptsEquipment.invoke(slot,0,item));
+    }
     public byte[] stackConfig(byte[] raw)throws Exception{return itemNbt().config(raw);}
     public Stack readConfig(byte[] raw)throws Exception{return itemNbt().configImport(raw,this::readStack);}
     /** Editor streams may have a different attachment order; semantic stability is mandatory. */
@@ -499,9 +514,16 @@ public final class ClientStateAdapter implements AutoCloseable {
         return new NativeLootTables(cosmetics,configs,catalog);
     }
     public Set<Integer> firearmFactories()throws Exception{Set<Integer> ids=new HashSet<>();Class<?> gun=Class.forName("1745367406",true,loader);for(var entry:moduleFactoryClasses.entrySet())if(gun.isAssignableFrom(Class.forName(entry.getValue(),true,loader)))ids.add(entry.getKey());return Set.copyOf(ids);}
+    private NativeFactoryRegistrations factoryRegistrations;
+    String declaredItemFactory(String type)throws Exception{
+        if(factoryRegistrations==null)factoryRegistrations=new NativeFactoryRegistrations(runtime,loader);
+        return factoryRegistrations.product(type);
+    }
     public void warmCosmetics(Map<Integer,String> classes,Map<Integer,String> definitions,
                               Map<Integer,String> resourceDeclarations)throws Exception{
-        var registrations=resourceDeclarations.isEmpty()?null:new NativeFactoryRegistrations(runtime,loader);
+        if(!resourceDeclarations.isEmpty()&&factoryRegistrations==null)
+            factoryRegistrations=new NativeFactoryRegistrations(runtime,loader);
+        var registrations=resourceDeclarations.isEmpty()?null:factoryRegistrations;
         cosmetics=new NativeCosmetics(loader,definitions,classes,resourceDeclarations,registrations);itemNbt=null;itemSlots=new NativeItemSlots(cosmetics,this::bank);itemSlotPackets=new NativeItemSlotPackets(cosmetics);quickSlots=new NativeQuickSlots(cosmetics);itemNbt();}
     public record QuickBindRequest(int owner,int index,szserver.inventory.Inventory.Address source,String label){}
     public QuickBindRequest quickBindRequest(byte[] raw)throws Exception{return quickSlots.bindRequest(raw);}

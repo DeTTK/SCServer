@@ -379,6 +379,17 @@ public final class GameInventory implements AutoCloseable {
     public void mutate(UUID id,Function<Inventory,Inventory.Plan> operation,Consumer<Inventory.Plan> success,Consumer<String> failure){
         mutate(id,operation,null,success,failure);
     }
+    void validateEquipmentTransfer(Inventory.Plan plan){
+        for(var change:plan.changes().entrySet()){
+            var address=change.getKey();
+            var item=change.getValue();
+            if(address.aggregate()!=0||item==null)continue;
+            boolean accepted;
+            try{accepted=items.acceptsEquipment(address.container(),item);}
+            catch(Exception error){throw new IllegalStateException("native_equipment_check_failed:"+item.id()+":"+address.container(),error);}
+            if(!accepted)throw new IllegalArgumentException("equipment_slot_rejected:"+item.id()+":"+address.container());
+        }
+    }
     /** Character remains busy until the off-owner plan is durably committed or rejected. */
     public void sort(UUID id,Inventory.Address root,Consumer<Inventory.Plan> success,Consumer<String> failure){mutateAsync(id,before->before.sort(root),success,failure);}
     public void mutateAsync(UUID id,Function<Inventory,Inventory.Plan> operation,Consumer<Inventory.Plan> success,Consumer<String> failure){
