@@ -30,5 +30,13 @@
     "side": "client",
     "required": false,
     "source": "mods/fpv-drones"
+  },
+  {
+    "id": "stalcraft-vr",
+    "name": "STALCRAFT VR",
+    "description": "VR для Windows x64 через OpenXR. Подключите шлем и контроллеры, войдите в игру и нажмите F12.",
+    "side": "client",
+    "required": false,
+    "source": "mods/stalcraft-vr"
   }
 ]
