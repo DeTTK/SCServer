@@ -714,8 +714,8 @@ impl Supervisor {
         native: Option<&str>,
         world: &str,
     ) -> Result<()> {
-        std::fs::create_dir_all(folder)?;
-        owner_only(folder, true)?;
+        std::fs::create_dir_all(folder).context("AGENT_SESSION_CREATE: создание папки запуска")?;
+        owner_only(folder, true).context("AGENT_SESSION_ACCESS: защита папки запуска")?;
         let s = self.layout.load()?;
         let mut p = std::collections::BTreeMap::<String, String>::from([
             ("kind".into(), kind.into()),
@@ -767,7 +767,8 @@ impl Supervisor {
             p.iter()
                 .map(|(k, v)| format!("{k}={}\n", launch::prop(v)))
                 .collect::<String>(),
-        )?;
+        )
+        .context("AGENT_CONFIG_WRITE: запись конфигурации Java")?;
         Ok(())
     }
     async fn start(&self, id: &str, with_client: bool) -> Result<()> {

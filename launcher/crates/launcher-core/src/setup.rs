@@ -1,5 +1,5 @@
 use crate::*;
-use anyhow::{Result, bail};
+use anyhow::{Context, Result, bail};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::BTreeMap,
@@ -240,11 +240,15 @@ impl LocalIdentity {
         use sha2::{Digest, Sha256};
         let path = layout.at("config/identity/profile.json");
         no_links(&path)?;
-        fs::create_dir_all(path.parent().unwrap())?;
-        owner_only(path.parent().unwrap(), true)?;
-        if path.exists() {
-            owner_only(&path, false)?;
-            let identity: Self = read_json(&path)?;
+        let directory = path.parent().unwrap();
+        let access =
+            "IDENTITY_ACCESS: не удалось получить доступ к существующей папке или файлу профиля";
+        fs::create_dir_all(directory).context(access)?;
+        owner_only(directory, true).context(access)?;
+        if path.try_exists().context(access)? {
+            owner_only(&path, false).context(access)?;
+            let identity: Self =
+                read_json(&path).context("IDENTITY_READ: чтение профиля игрока")?;
             identity.validate()?;
             return Ok(identity);
         }
@@ -261,7 +265,6 @@ impl LocalIdentity {
         Ok(value)
     }
     pub fn validate(&self) -> Result<()> {
-        use anyhow::Context;
         let validate = || -> Result<()> {
             use base64::Engine;
             use p256::pkcs8::{DecodePrivateKey, DecodePublicKey, EncodePublicKey};
@@ -390,4 +393,71 @@ pub fn native_parallel_start_supported(source: &std::path::Path) -> anyhow::Resu
     Ok(bytes
         .windows(b"bscp-start-".len())
         .any(|part| part == b"bscp-start-"))
+}
+
+#[cfg(all(test, windows))]
+mod windows_identity_tests {
+    use super::*;
+    use std::os::windows::ffi::OsStrExt;
+    use windows_sys::Win32::{
+        Foundation::LocalFree,
+        Security::{
+            Authorization::ConvertSecurityDescriptorToStringSecurityDescriptorW,
+            DACL_SECURITY_INFORMATION, GetFileSecurityW,
+        },
+    };
+
+    #[test]
+    fn windows_profile_acl_names_the_account_and_reopening_keeps_the_key() {
+        let temp = tempfile::tempdir().unwrap();
+        let layout = Layout::new(temp.path());
+        let identity = LocalIdentity::load(&layout).unwrap();
+        let key = layout.at("config/identity/profile.json");
+        let sid = current_user_sid().unwrap();
+        for path in [key.parent().unwrap(), key.as_path()] {
+            let path: Vec<u16> = path.as_os_str().encode_wide().chain(Some(0)).collect();
+            let mut length = 0;
+            unsafe {
+                GetFileSecurityW(
+                    path.as_ptr(),
+                    DACL_SECURITY_INFORMATION,
+                    std::ptr::null_mut(),
+                    0,
+                    &mut length,
+                );
+                assert!(length > 0);
+                let mut descriptor = vec![0usize; (length as usize).div_ceil(size_of::<usize>())];
+                let descriptor = descriptor.as_mut_ptr().cast();
+                assert_ne!(
+                    GetFileSecurityW(
+                        path.as_ptr(),
+                        DACL_SECURITY_INFORMATION,
+                        descriptor,
+                        length,
+                        &mut length
+                    ),
+                    0
+                );
+                let mut raw = std::ptr::null_mut();
+                assert_ne!(
+                    ConvertSecurityDescriptorToStringSecurityDescriptorW(
+                        descriptor,
+                        1,
+                        DACL_SECURITY_INFORMATION,
+                        &mut raw,
+                        &mut length,
+                    ),
+                    0
+                );
+                let sddl =
+                    String::from_utf16_lossy(std::slice::from_raw_parts(raw, length as usize));
+                LocalFree(raw.cast());
+                assert!(sddl.contains(&format!(";;;{sid})")), "{sddl}");
+                assert!(!sddl.contains(";;;OW)"), "{sddl}");
+            }
+        }
+        let reopened = LocalIdentity::load(&layout).unwrap();
+        assert_eq!(reopened.id, identity.id);
+        assert!(reopened.private_key == identity.private_key);
+    }
 }
