@@ -402,8 +402,8 @@ mod windows_identity_tests {
     use windows_sys::Win32::{
         Foundation::LocalFree,
         Security::{
-            Authorization::ConvertSecurityDescriptorToStringSecurityDescriptorW,
-            DACL_SECURITY_INFORMATION, GetFileSecurityW,
+            ACCESS_ALLOWED_ACE, Authorization::ConvertStringSidToSidW, DACL_SECURITY_INFORMATION,
+            EqualSid, GetAce, GetFileSecurityW, GetSecurityDescriptorDacl,
         },
     };
 
@@ -413,7 +413,11 @@ mod windows_identity_tests {
         let layout = Layout::new(temp.path());
         let identity = LocalIdentity::load(&layout).unwrap();
         let key = layout.at("config/identity/profile.json");
-        let sid = current_user_sid().unwrap();
+        let sid: Vec<u16> = current_user_sid()
+            .unwrap()
+            .encode_utf16()
+            .chain(Some(0))
+            .collect();
         for path in [key.parent().unwrap(), key.as_path()] {
             let path: Vec<u16> = path.as_os_str().encode_wide().chain(Some(0)).collect();
             let mut length = 0;
@@ -438,22 +442,24 @@ mod windows_identity_tests {
                     ),
                     0
                 );
-                let mut raw = std::ptr::null_mut();
+                let mut present = 0;
+                let mut dacl = std::ptr::null_mut();
+                let mut defaulted = 0;
                 assert_ne!(
-                    ConvertSecurityDescriptorToStringSecurityDescriptorW(
-                        descriptor,
-                        1,
-                        DACL_SECURITY_INFORMATION,
-                        &mut raw,
-                        &mut length,
-                    ),
+                    GetSecurityDescriptorDacl(descriptor, &mut present, &mut dacl, &mut defaulted),
                     0
                 );
-                let sddl =
-                    String::from_utf16_lossy(std::slice::from_raw_parts(raw, length as usize));
-                LocalFree(raw.cast());
-                assert!(sddl.contains(&format!(";;;{sid})")), "{sddl}");
-                assert!(!sddl.contains(";;;OW)"), "{sddl}");
+                assert!(present != 0 && !dacl.is_null());
+                assert_eq!((*dacl).AceCount, 1);
+                let mut ace = std::ptr::null_mut();
+                assert_ne!(GetAce(dacl, 0, &mut ace), 0);
+                let ace = ace.cast::<ACCESS_ALLOWED_ACE>();
+                assert_eq!((*ace).Header.AceType, 0); // ACCESS_ALLOWED_ACE_TYPE
+                let mut expected_sid = std::ptr::null_mut();
+                assert_ne!(ConvertStringSidToSidW(sid.as_ptr(), &mut expected_sid), 0);
+                let same = EqualSid(std::ptr::addr_of_mut!((*ace).SidStart).cast(), expected_sid);
+                LocalFree(expected_sid);
+                assert_ne!(same, 0);
             }
         }
         let reopened = LocalIdentity::load(&layout).unwrap();
