@@ -4,13 +4,15 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 final class PlayerSquads {
     private static final int CAPACITY = 5;
     private static final long INVITE_NANOS = 60_000_000_000L;
     private final Map<UUID, Squad> memberships = new LinkedHashMap<>();
     private final Map<UUID, Invitation> invitations = new LinkedHashMap<>();
-    private long nextId;
+    // Grenade areas can preserve the owner's squad across a restart.
+    private long nextId=ThreadLocalRandom.current().nextLong(1L<<50);
 
     record Player(UUID session, String name) {}
     private record Invitation(Squad squad, Player inviter, Player target, long deadline) {}
@@ -63,6 +65,10 @@ final class PlayerSquads {
     List<UUID> members(Player player) {
         Squad squad = memberships.get(player.session());
         return squad == null ? List.of() : List.copyOf(squad.players.keySet());
+    }
+    Long id(UUID session) {
+        Squad squad=memberships.get(session);
+        return squad==null?null:squad.id;
     }
 
     Roster roster(Player player,long now) {

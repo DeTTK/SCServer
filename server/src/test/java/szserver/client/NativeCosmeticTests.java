@@ -17,6 +17,7 @@ public final class NativeCosmeticTests {
             if(Files.isRegularFile(archive))GameResources.mount(resources.resolve(name),archive,resources.resolve("overrides").resolve(name));
         }
         ModuleJournalSeed journalSeed=null;
+        List<EditorSeed> editorSeeds=new ArrayList<>();
         try(var items=new GameItems(Path.of(args[0]),root.resolve("registries/client-current-item-states.json"))){items.warmGameplay(root.resolve("fixtures/item-definitions.json"),root.resolve("fixtures/artifact-settings.json"));
             // These are regression fixtures, never compatibility tables: every decision is made by native factories.
             for(int[] pair:new int[][]{{20866,13200},{20000,13200},{25000,13600}}){
@@ -34,12 +35,26 @@ public final class NativeCosmeticTests {
             if(GameResources.mounted(resources.resolve("configs"))){
                 verifyWeaponModule(items);
                 verifyStyledReloadProfile(items);
+                verifySavedRailAndSpark(items);
                 verifyStyledSidearms(items);
+                for(int id:new int[]{11000,25078,20175})editorSeeds.add(editorSeed(items,id));
                 var seedGun=personalWeapon(items,20051);
-                journalSeed=new ModuleJournalSeed(seedGun,rolledModule(items,11701),items.weaponProfile(seedGun).damage());
+                var firearm=items.createStack(20004,1,7,new JsonObject());
+                int ammo=items.weaponMagazineRules(firearm).ammunition().get(0);
+                var loaded=firearm.state(items.magazine(firearm,ammo,12));
+                var unload=items.unloadWeapon(loaded);
+                check(unload.ammo().id()==ammo&&unload.ammo().count()==12,"unload returns the original ammunition");
+                check(items.inspectMagazine(unload.weapon()).rounds()==0,"native magazine is empty");
+                check(items.identity(unload.weapon()).equals(items.identity(loaded))&&unload.weapon().metadata()==7,
+                        "unloading keeps the weapon identity and metadata");
+                journalSeed=new ModuleJournalSeed(seedGun,rolledModule(items,11701),items.weaponProfile(seedGun).damage(),loaded,unload.ammo());
             }
         }
-        if(journalSeed!=null)verifyWeaponModuleJournal(journalSeed,Path.of(args[0]),root);
+        if(journalSeed!=null){
+            Path runtime=Path.of(args[0]);
+            verifyUnloadPacket(runtime);
+            verifyWeaponModuleJournal(journalSeed,editorSeeds,runtime,root);
+        }
         System.out.println("NativeCosmeticTests: "+checks+" checks passed");
     }
 
@@ -89,6 +104,67 @@ public final class NativeCosmeticTests {
         }
     }
 
+    private static byte[] stackBytes(ItemStack item){
+        byte[] wire=szserver.net.InventoryPackets.stack(item);
+        return Arrays.copyOfRange(wire,1,wire.length);
+    }
+
+    private static void verifySavedRailAndSpark(GameItems items)throws Exception{
+        for(int id:new int[]{20155,20175}){
+            for(boolean styled:new boolean[]{false,true}){
+                if(styled&&id!=20175)continue;
+                ItemStack gun=items.createStack(id,1,0,new JsonObject());
+                if(styled)gun=items.paint(gun,0,items.createStack(17554,1,0,new JsonObject()),0).weapon();
+                ItemStack rail=items.createStack(22903,1,0,new JsonObject());
+                ItemStack attached=items.moduleBatch(gun,11,rail,0).weapon();
+                ItemStack restored=items.readStack(stackBytes(attached));
+                check(items.modules(restored).stream().anyMatch(m->m.slot()==11&&m.item()==rail.id()),
+                        "recovered PKP retains the native rail");
+                check(items.weaponProfile(restored).equals(items.weaponProfile(attached)),
+                        "recovered PKP rail and style resolve the original weapon profile");
+            }
+        }
+        ItemStack gauss=items.createStack(20580,1,0,new JsonObject());
+        ItemStack spark=items.createStack(17561,1,0,new JsonObject());
+        ItemStack styled=items.paint(gauss,0,spark,0).weapon();
+        ItemStack restored=items.readStack(stackBytes(styled));
+        check(items.weaponProfile(restored).equals(items.weaponProfile(styled)),"saved Spark resolves the equipped profile");
+        check(items.paint(restored,0,null,0).removed().id()==spark.id(),"saved Gauss retains the Spark style");
+    }
+
+    private record EditorSeed(ItemStack original,ItemStack other,byte[] config,byte[] wire){}
+    private static EditorSeed editorSeed(GameItems items,int id)throws Exception{
+        ItemStack original=items.createStack(id,1,0,new JsonObject());
+        ItemStack other=items.copyForGrant(original);
+        ItemStack edited=items.preserveIdentity(original,items.createStack(id,1,7,new JsonObject()));
+        byte[] wire=stackBytes(edited);
+        return new EditorSeed(original,other,items.stackConfig(wire),wire);
+    }
+
+    private static void verifyMovedEditor(GameInventory inventory,EditorSeed seed)throws Exception{
+        var character=UUID.randomUUID();
+        var opening=new Inventory.Address(1,0,0);
+        var moved=new Inventory.Address(1,0,56);
+        var initial=new CompletableFuture<Inventory.Plan>();
+        inventory.mutate(character,before->before.replace(Map.of(opening,seed.original(),moved,seed.other()),0),null,
+                initial::complete,error->initial.completeExceptionally(new AssertionError(error)));
+        await(inventory,initial);
+        var move=new CompletableFuture<Inventory.Plan>();
+        inventory.mutate(character,before->before.move(opening,moved,0,false),null,
+                move::complete,error->move.completeExceptionally(new AssertionError(error)));
+        await(inventory,move);
+        for(boolean config:new boolean[]{true,false}){
+            var result=new CompletableFuture<Inventory.Plan>();
+            inventory.edit(character,opening,config?seed.config():seed.wire(),config,
+                    result::complete,error->result.completeExceptionally(new AssertionError(error)));
+            var plan=await(inventory,result);
+            check(plan.changes().keySet().equals(Set.of(moved)),"editor follows the moved item for "+seed.original().id());
+            check(plan.after().at(moved).metadata()==7,"edited state reaches the moved item");
+            check(Arrays.equals(stackBytes(plan.after().at(opening)),stackBytes(seed.other())),
+                    "editor leaves the same-type stack in the old cell alone");
+        }
+    }
+
     private static void verifyWeaponModule(GameItems items)throws Exception{
         var gun=personalWeapon(items,20051);
         var modifier=rolledModule(items,11701);
@@ -118,8 +194,52 @@ public final class NativeCosmeticTests {
         denied(()->items.weaponModule(personalWeapon(items,20898),modifier),"disabled slot rejected");
     }
 
-    private record ModuleJournalSeed(ItemStack gun,ItemStack module,double damage){}
-    private static void verifyWeaponModuleJournal(ModuleJournalSeed seed,Path runtime,Path root)throws Exception{
+    private static void verifyUnloadPacket(Path runtime)throws Exception{
+        var packets=new ClientPackets(runtime);
+        byte[] raw={-1,-1,0,24,1,0,0,0,10};
+        check(Arrays.equals(packets.roundTrip(szserver.net.InventoryPackets.WEAPON_UNLOAD_REQUEST,raw),raw),
+                "unload framing matches the native context-menu packet");
+        var request=szserver.net.InventoryPackets.weaponUnload(raw,3);
+        check(request.owner()==-1&&request.sequence()==24&&request.address().equals(new Inventory.Address(2,3,10)),
+                "unload resolves the currently visible storage page");
+    }
+
+    private record ModuleJournalSeed(ItemStack gun,ItemStack module,double damage,ItemStack loaded,ItemStack ammo){}
+    private static void verifyUnloadJournal(GameInventory inventory,ModuleJournalSeed seed)throws Exception{
+        for(var address:List.of(new Inventory.Address(0,6,0),new Inventory.Address(1,0,8),new Inventory.Address(2,1,0))){
+            var character=UUID.randomUUID();
+            var initial=new CompletableFuture<Inventory.Plan>();
+            inventory.mutate(character,before->before.replace(Map.of(address,seed.loaded()),0),null,
+                    initial::complete,error->initial.completeExceptionally(new AssertionError(error)));
+            var before=await(inventory,initial).after();
+            var result=new CompletableFuture<Inventory.Plan>();
+            inventory.unloadWeapon(character,address,result::complete,error->result.completeExceptionally(new AssertionError(error)));
+            var plan=await(inventory,result);
+            check(plan.after().revision()==before.revision()+1&&plan.moved()==seed.ammo().count(),"one durable unload commit");
+            check(plan.after().at(address).id()==seed.loaded().id(),"weapon remains in its original cell");
+            check(plan.after().items().entrySet().stream().anyMatch(e->e.getKey().aggregate()==1&&
+                    e.getValue().id()==seed.ammo().id()&&e.getValue().count()==seed.ammo().count()),"ammo goes into the backpack");
+            var empty=new CompletableFuture<String>();
+            inventory.unloadWeapon(character,address,ignored->empty.completeExceptionally(new AssertionError("already unloaded")),
+                    empty::complete);
+            check(await(inventory,empty).contains("нет патронов"),"repeated unload cannot return more ammo");
+        }
+        var character=UUID.randomUUID();
+        var weapon=new Inventory.Address(0,6,0);
+        var contents=new LinkedHashMap<Inventory.Address,ItemStack>();
+        contents.put(weapon,seed.loaded());
+        var fullStack=seed.ammo().count(inventory.catalog().limit(seed.ammo()));
+        for(int i=0;i<StorageLayout.BAG;i++)contents.put(new Inventory.Address(1,0,i),fullStack);
+        var initial=new CompletableFuture<Inventory.Plan>();
+        inventory.mutate(character,before->before.replace(contents,0),null,
+                initial::complete,error->initial.completeExceptionally(new AssertionError(error)));
+        var before=await(inventory,initial).after();
+        var full=new CompletableFuture<String>();
+        inventory.unloadWeapon(character,weapon,ignored->full.completeExceptionally(new AssertionError("bag full")),full::complete);
+        check(await(inventory,full).contains("нет места")&&inventory.inventory(character)==before,
+                "full backpack leaves the loaded weapon and all ammunition intact");
+    }
+    private static void verifyWeaponModuleJournal(ModuleJournalSeed seed,List<EditorSeed> editorSeeds,Path runtime,Path root)throws Exception{
         Path data=Files.createTempDirectory("native-weapon-module-journal");
         Path registry=root.resolve("registries/client-current-item-states.json");
         var id=UUID.randomUUID();
@@ -127,6 +247,8 @@ public final class NativeCosmeticTests {
         var source=new Inventory.Address(1,0,0);
         try{
             try(var inventory=new GameInventory(root,data,runtime,registry)){
+                for(EditorSeed editorSeed:editorSeeds)verifyMovedEditor(inventory,editorSeed);
+                verifyUnloadJournal(inventory,seed);
                 var initial=new CompletableFuture<Inventory.Plan>();
                 inventory.mutate(id,before->before.replace(Map.of(weapon,seed.gun(),source,seed.module()),0),null,
                         initial::complete,error->initial.completeExceptionally(new AssertionError(error)));

@@ -57,6 +57,26 @@ final class SpatialMenuDraw implements AutoCloseable {
             toggle(GL_FRAMEBUFFER_SRGB,srgb);toggle(GL_DEPTH_TEST,depth);toggle(GL_BLEND,blend);toggle(GL_CULL_FACE,cull);toggle(GL_SCISSOR_TEST,scissor);toggle(GL_STENCIL_TEST,stencil);glDepthMask(mask);glBlendFuncSeparate(srcRGB,dstRGB,srcAlpha,dstAlpha);glBlendEquationSeparate(eqRGB,eqAlpha);glPointSize(point);glLineWidth(line);
         }
     }
+    void laser(V start,V end,Pose eye,Fov fov){
+        int oldProgram=glGetInteger(GL_CURRENT_PROGRAM),oldVao=glGetInteger(GL_VERTEX_ARRAY_BINDING);
+        int oldBuffer=glGetInteger(GL_ARRAY_BUFFER_BINDING);
+        int oldTexture=glGetInteger(GL_TEXTURE_BINDING_2D);
+        boolean depth=glIsEnabled(GL_DEPTH_TEST);
+        try{
+            init();glUseProgram(program);glBindVertexArray(vao);glBindBuffer(GL_ARRAY_BUFFER,vbo);
+            glDisable(GL_DEPTH_TEST);
+            glUniformMatrix4fv(glGetUniformLocation(program,"projection"),false,fov.projection(.03,1500));
+            glUniformMatrix4fv(glGetUniformLocation(program,"view"),false,eye.view());
+            glUniformMatrix4fv(glGetUniformLocation(program,"model"),false,Pose.matrix(Pose.ID));
+            glUniform1i(glGetUniformLocation(program,"textured"),-1);
+            vertices(new float[]{(float)start.x(),(float)start.y(),(float)start.z(),0,0,(float)end.x(),(float)end.y(),(float)end.z(),0,0});
+            glDrawArrays(GL_LINES,0,2);
+        }finally{
+            glUseProgram(oldProgram);glBindVertexArray(oldVao);glBindBuffer(GL_ARRAY_BUFFER,oldBuffer);
+            glBindTexture(GL_TEXTURE_2D,oldTexture);
+            toggle(GL_DEPTH_TEST,depth);
+        }
+    }
     private void upload(SpatialMenu menu,GameSession game,VrFrameStats timings){
         String key=menu.hovered+":"+game.turnDegrees+":"+game.status+":"+game.nativeAmmo+":"+game.headBlocked+(timings==null?"":timings.summary+timings.phases);if(key.equals(uploaded))return;
         BufferedImage image=new BufferedImage(640,384,BufferedImage.TYPE_INT_ARGB);Graphics2D g=image.createGraphics();
@@ -74,7 +94,7 @@ final class SpatialMenuDraw implements AutoCloseable {
     }
     private void init(){if(program!=0)return;
         int v=shader(GL_VERTEX_SHADER,"#version 330 core\nlayout(location=0)in vec3 position;layout(location=1)in vec2 uv;uniform mat4 projection,view,model;out vec2 tex;void main(){tex=uv;gl_Position=projection*view*model*vec4(position,1);}");
-        int f=shader(GL_FRAGMENT_SHADER,"#version 330 core\nin vec2 tex;uniform sampler2D image;uniform int textured;out vec4 color;void main(){color=textured>0?texture(image,textured==2?vec2(tex.x,1-tex.y):tex):vec4(.2,.8,1,1);}");
+        int f=shader(GL_FRAGMENT_SHADER,"#version 330 core\nin vec2 tex;uniform sampler2D image;uniform int textured;out vec4 color;void main(){color=textured>0?texture(image,textured==2?vec2(tex.x,1-tex.y):tex):(textured<0?vec4(1,.12,.08,1):vec4(.2,.8,1,1));}");
         program=glCreateProgram();glAttachShader(program,v);glAttachShader(program,f);glLinkProgram(program);glDeleteShader(v);glDeleteShader(f);if(glGetProgrami(program,GL_LINK_STATUS)==0)throw new IllegalStateException(glGetProgramInfoLog(program));
         vao=glGenVertexArrays();vbo=glGenBuffers();glBindVertexArray(vao);glBindBuffer(GL_ARRAY_BUFFER,vbo);glEnableVertexAttribArray(0);glVertexAttribPointer(0,3,GL_FLOAT,false,20,0L);glEnableVertexAttribArray(1);glVertexAttribPointer(1,2,GL_FLOAT,false,20,12L);
         texture=glGenTextures();glBindTexture(GL_TEXTURE_2D,texture);glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);

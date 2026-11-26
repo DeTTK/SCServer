@@ -24,16 +24,33 @@ public final class AllianceState implements AutoCloseable {
     private record Row(int fee,List<Float> bonuses){}
     private record Snapshot(Map<String,Row> rows,long revision,byte[] frame){}
     @FunctionalInterface interface Save {void write(Path file,byte[] bytes)throws IOException;}
-    private final Path file;private final Save save;private final ThreadPoolExecutor worker;private final Object admission=new Object();
+    private final Path file,friendlyFireFile;private final Save save;private final ThreadPoolExecutor worker;private final Object admission=new Object();
+    private volatile boolean friendlyFire;
     private volatile Snapshot snapshot;private boolean closing;
     public AllianceState(Path data)throws IOException{this(data,AllianceState::store);}
     AllianceState(Path data,Save save)throws IOException{
         offOwner();file=Objects.requireNonNull(data).resolve("alliance-settings.json");this.save=Objects.requireNonNull(save);
+        friendlyFireFile=data.resolve("friendly-fire.txt");
+        if(Files.exists(friendlyFireFile)){
+            try(var in=Files.newInputStream(friendlyFireFile)){
+                byte[] raw=in.readNBytes(8);
+                String value=new String(raw,StandardCharsets.US_ASCII).strip();
+                if(raw.length>7||!value.equals("true")&&!value.equals("false"))throw new IOException("invalid_friendly_fire");
+                friendlyFire=Boolean.parseBoolean(value);
+            }
+        }
         Map<String,Row> rows;if(Files.exists(file))rows=read();else{rows=defaults();save.write(file,encode(rows));}
         snapshot=new Snapshot(rows,1,frame(rows));worker=Workers.pool("alliance-storage",1,32);
     }
     private static void offOwner(){String name=Thread.currentThread().getName();if(name.equals("native-game-owner")||name.equals("world-tick"))throw new IllegalStateException("alliance_blocking_on_owner");}
     public Path file(){return file;}
+    public boolean friendlyFire(){return friendlyFire;}
+    CompletableFuture<String> friendlyFire(boolean enabled){return submit(()->{
+        save.write(friendlyFireFile,(Boolean.toString(enabled)+"\n").getBytes(StandardCharsets.US_ASCII));
+        friendlyFire=enabled;
+        return friendlyFireStatus();
+    });}
+    String friendlyFireStatus(){return "Урон по союзникам "+(friendlyFire?"включён.":"выключен.");}
     public long revision(){return snapshot.revision();}
     public byte[] frame(){return snapshot.frame().clone();}
     private static Map<String,Row> defaults(){Map<String,Row> rows=new LinkedHashMap<>();for(String id:ALLIANCES)rows.put(id,new Row(DEFAULT_FEE,List.of(10f,10f,10f,10f,10f,5f)));return Map.copyOf(rows);}

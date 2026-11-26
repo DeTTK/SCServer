@@ -5,6 +5,7 @@ import static vr.NativeAccess.*;
 /** Dispatch controller buttons through native bindings, including press/release and cooldowns. */
 final class NativeControls {
     private Object dispatcher;
+    private final Map<String,Object> bindings=new HashMap<>();
     private Object fireComponent,fireHandler,fireConfig;
     private boolean firing;
     private final Map<Object,Integer> pressed=new LinkedHashMap<>();
@@ -31,9 +32,42 @@ final class NativeControls {
         set(intent,"long",get(original,"long"));
         return intent;
     }
-    void binding(Object game,Object binding,boolean down)throws Exception {
+    private void selectDispatcher(Object game)throws Exception {
         Object next=call(call(game,"transient","1855282131"),"package","1822220185");
-        if(dispatcher!=null&&dispatcher!=next)release();dispatcher=next;
+        if(dispatcher!=null&&dispatcher!=next)release();
+        dispatcher=next;
+    }
+    Object namedBinding(Object game,String name)throws Exception {
+        selectDispatcher(game);
+        Object known=bindings.get(name);
+        if(known!=null)return known;
+        for(Object key:((Map<?,?>)get(dispatcher,"const")).keySet()){
+            if(type("1726668630").isInstance(key)&&name.equals(get(key,"for"))){
+                bindings.put(name,key);
+                return key;
+            }
+        }
+        return null;
+    }
+    boolean pulse(Object game,String... names)throws Exception {
+        for(String name:names){
+            Object key=namedBinding(game,name);
+            if(key==null)continue;
+            binding(game,key,true);
+            binding(game,key,false);
+            return true;
+        }
+        return false;
+    }
+    void throwBolt(Object game,VrBoltGesture.Throw intent)throws Exception {
+        Object connection=call(game,"transient","1219970978");
+        if(connection==null)return;
+        Object packet=type("szmods.bridge.VrBolt").getConstructor(byte[].class).newInstance((Object)intent.bytes());
+        Object envelope=type("385693344").getConstructor(type("499058674")).newInstance(packet);
+        call(connection,"else","void",envelope);
+    }
+    void binding(Object game,Object binding,boolean down)throws Exception {
+        selectDispatcher(game);
         boolean was=pressed.containsKey(binding);if(was==down)return;
         Object state=((Map<?,?>)get(dispatcher,"const")).get(binding);if(state==null)throw new IllegalStateException("Native binding not registered");
         int code=was?pressed.get(binding):((Number)call(binding,"void","int")).intValue();
@@ -70,6 +104,6 @@ final class NativeControls {
         for(var entry:new ArrayList<>(pressed.entrySet()))try{
             Object state=((Map<?,?>)get(dispatcher,"const")).get(entry.getKey());if(state!=null)call(dispatcher,"szmods$vr$float","void",state,entry.getValue(),0,true);
         }catch(Exception e){failure=e;}
-        pressed.clear();dispatcher=null;if(failure!=null)throw failure;
+        pressed.clear();bindings.clear();dispatcher=null;if(failure!=null)throw failure;
     }
 }

@@ -4,6 +4,18 @@ import java.util.*;import java.util.concurrent.*;
 public final class AllianceCommands {
     public static final String USAGE="/alliance [reload | list | help] | <фракция> <fee|farm|delivery|quest|discount|buyer|ffa> <значение> | <фракция> add <бонус> [значение] | <фракция> remove <бонус> | <фракция> list";
     private AllianceCommands(){}
+    public static CompletableFuture<String> friendlyFire(AllianceState state,String text){
+        List<String> words=CommandSupport.split(text);
+        String usage="/friendlyfire [on | off | status]";
+        if(words.size()==1)return CompletableFuture.completedFuture(state.friendlyFireStatus());
+        if(words.size()!=2)throw new IllegalArgumentException(usage);
+        return switch(words.get(1).toLowerCase(Locale.ROOT)){
+            case "on"->state.friendlyFire(true);
+            case "off"->state.friendlyFire(false);
+            case "status"->CompletableFuture.completedFuture(state.friendlyFireStatus());
+            default->throw new IllegalArgumentException(usage);
+        };
+    }
     public static CompletableFuture<String> execute(AllianceState state,String text){
         List<String> words=CommandSupport.split(text);
         if(words.size()==1)return CompletableFuture.completedFuture(state.describe());

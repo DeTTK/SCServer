@@ -757,7 +757,6 @@ impl Supervisor {
         }
         if let Some(n) = native {
             p.insert("nativeSession".into(), n.into());
-            p.insert("autoJoin".into(), "true".into());
             p.insert(
                 "clientLease".into(),
                 launch::path(

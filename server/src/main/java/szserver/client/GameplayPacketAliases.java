@@ -17,6 +17,7 @@ public final class GameplayPacketAliases {
         Map.entry(WorldItemPackets.DROP,WorldItemPackets.DROP_ID),
         Map.entry(WorldItemPackets.PICKUP,WorldItemPackets.PICKUP_ID),
         Map.entry(InventoryPackets.DELETE_REQUEST,InventoryPackets.DELETE_ID),
+        Map.entry(InventoryPackets.WEAPON_UNLOAD_REQUEST,InventoryPackets.WEAPON_UNLOAD_ID),
         Map.entry(PortalPackets.INTERACT_CLASS,PortalPackets.INTERACT_ID),
         Map.entry(PortalPackets.STATUS_CLASS,PortalPackets.STATUS_ID),
         Map.entry(szserver.net.SuicideCommand.REQUEST,szserver.net.SuicideCommand.PACKET_ID),

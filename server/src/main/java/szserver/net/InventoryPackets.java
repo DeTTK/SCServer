@@ -8,6 +8,8 @@ import com.github.luben.zstd.Zstd;
 /** Current native inventory wire formats, kept outside the inventory domain. */
 public final class InventoryPackets {
     public static final int SORT_ID=1506,DELETE_ID=523;public static final String DELETE_REQUEST="749436561";
+    public static final int WEAPON_UNLOAD_ID=1322;
+    public static final String WEAPON_UNLOAD_REQUEST="899800535";
     public record Request(int owner,int sequence,Inventory.Address source,List<Inventory.Address> destinations,int count,boolean split,int targetAggregate) {
         public Request{Objects.requireNonNull(source);destinations=List.copyOf(destinations);}
     }
@@ -24,6 +26,17 @@ public final class InventoryPackets {
         return normalizeAddress(new Inventory.Address(aggregate,container,slot),owner,page);
     }
     private static Inventory.Address normalizeAddress(Inventory.Address address,int owner,int page){return owner==-1&&address.aggregate()==0&&address.container()==0?new Inventory.Address(2,page,address.slot()):address;}
+    public record WeaponUnload(int owner,int sequence,Inventory.Address address){}
+    public static WeaponUnload weaponUnload(byte[] body,int page)throws IOException{
+        if(body.length!=9||body[4]!=1)throw new IOException("weapon_unload_layout");
+        var in=Wire.input(body);
+        int owner=in.readShort(),sequence=in.readShort();
+        in.readByte();
+        if(owner!=0&&owner!=-1)throw new IOException("weapon_unload_owner");
+        var target=address(in,owner,page);
+        if(!StorageLayout.validAddress(target))throw new IOException("weapon_unload_address");
+        return new WeaponUnload(owner,sequence,target);
+    }
     public record MedicineRequest(int owner,int sequence,Inventory.Address address){}
     public static MedicineRequest medicine(int owner,int sequence,Inventory.Address raw,int page)throws IOException{
         if(owner!=0&&owner!=-1)throw new IOException("medicine_inventory_request");Inventory.Address source=raw==null?null:normalizeAddress(raw,owner,page);

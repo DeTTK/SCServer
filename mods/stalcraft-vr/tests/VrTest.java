@@ -116,6 +116,46 @@ public final class VrTest {
         near(constraints.leftWrist(hand(farSupport,0,1,false)).p().sub(supportResult.weapon().transform(m.support())).length(),0);
         V beforeKick=supportResult.weapon().forward();constraints.recoil(.06);supportResult=constraints.update(snapshot(hand(farSupport,0,1,false),hand(right,0,1,false),true),belt,false);
         check(supportResult.weapon().forward().sub(beforeKick).length()>.02,"Two-hand solver preserves recoil impulse");near(constraints.leftWrist(hand(farSupport,0,1,false)).p().sub(supportResult.weapon().transform(m.support())).length(),0);
+        Pose rolledLeft=new Pose(farSupport.p(),Q.axis(new V(0,0,1),1.1));
+        Tracking.Hand leftTracked=hand(rolledLeft,0,1,false);
+        constraints.update(snapshot(leftTracked,hand(right,0,1,false),true),belt,false);
+        near(constraints.leftWrist(leftTracked).forward().sub(ControllerHands.wrist(leftTracked).forward()).length(),0);
+        Ak15.Mounts authored=new Ak15.Mounts(m.handToWeapon(),m.support(),m.magazine(),m.bolt(),m.muzzle(),m.boltStroke(),m.action(),m.magazineAxis(),Pose.ID);
+        Ak15 dominant=new Ak15(authored);dominant.held=true;
+        Tracking.Hand rightTracked=new Tracking.Hand(new Pose(right.p(),Q.axis(new V(0,0,1),1.1)),right,true,0,1,0,0,false,false,false,false);
+        dominant.update(snapshot(neutral,rightTracked,true),belt,false);
+        near(dominant.rightWrist(rightTracked).forward().sub(ControllerHands.wrist(rightTracked).forward()).length(),0);
+        near(GameSession.recoilDegrees(4.0,2),4);
+        near(GameSession.recoilDegrees(Double.NaN,2),2);
+
+        for(UiRegion viewRegion:new UiRegion[]{UiRegion.full(3440,1440),UiRegion.full(1920,1080),UiRegion.full(1080,1920),new UiRegion(40,25,1900,850)}){
+            double scale=viewRegion.scaleToFit(1.12,.74);
+            double width=viewRegion.width()*scale,height=viewRegion.height()*scale;
+            check(width<=1.120001&&height<=.740001,"Full UI stays within the panel");
+            near(width/height,(double)viewRegion.width()/viewRegion.height());
+            double[] edge=NativeScreen.intersect(new Pose(new V(0,0,-1.1),Q.ID),new Pose(new V(width*.499,-height*.499,0),Q.ID),width,height);
+            check(edge!=null&&viewRegion.nativeX(edge[0])>=viewRegion.x()+viewRegion.width()-4&&viewRegion.nativeY(edge[1])>=viewRegion.y()+viewRegion.height()-3,"Visible UI corner has matching pointer coordinates");
+        }
+        WeaponHolsters mounts=new WeaponHolsters();
+        mounts.waistHeight=.22;mounts.shoulderHeight=.5;mounts.pouchHeight=-.13;
+        near(mounts.pouch(belt).y(),belt.p().y()-.13);
+        check("WEAPON_SECONDARY".equals(mounts.selectedZone(belt,belt.transform(new V(.43,.27,.23)))),"Nearest configured holster wins when zones overlap");
+        check("WEAPON_PRIMARY".equals(mounts.selectedZone(belt,belt.transform(new V(.43,.45,.23)))),"Primary selection follows its height");
+        check("WEAPON_MELEE".equals(mounts.selectedZone(belt,belt.transform(new V(.03,.42,-.17)))),"Left chest is a separate knife slot");
+        VrBoltGesture boltGesture=new VrBoltGesture();
+        check(boltGesture.update(1,V.ZERO,true,true,Q.ID)==null,"Held A is not a new throw after tracking resumes");
+        boltGesture.update(2,V.ZERO,false,true,Q.ID);
+        boltGesture.update(10_000_000,V.ZERO,true,true,Q.ID);
+        boltGesture.update(40_000_000,new V(0,.05,-.12),true,true,Q.ID);
+        var throwIntent=boltGesture.update(70_000_000,new V(0,.1,-.24),false,true,Q.ID);
+        check(throwIntent!=null&&throwIntent.strength()>.9&&throwIntent.pitch()<0,"Motion sets bolt direction and strength");
+        check(throwIntent.bytes().length==16,"Fixed bolt wire size");
+        boltGesture.update(80_000_000,V.ZERO,true,true,Q.ID);
+        boltGesture.update(100_000_000,new V(0,0,-.8),true,false,Q.ID);
+        check(boltGesture.update(130_000_000,new V(0,0,-1.2),false,true,Q.ID)==null,"Loss of focus discards an unfinished throw");
+        boltGesture.update(140_000_000,V.ZERO,true,true,Q.ID);
+        check(boltGesture.update(210_000_000,new V(0,0,-.005),false,true,Q.ID)==null,"Stationary click does not throw a bolt");
+        near(snapshot(leftTracked,rightTracked,true).withoutLeftTrigger().right().squeeze(),rightTracked.squeeze());
         constraints.reset();
         Pose opticalLens=new Pose(new V(0,0,-.1),Q.ID);for(double power:new double[]{1,1.5,2.4,4,8}){
             OpticMath.View optics=OpticMath.view(opticalLens,.02,.02,power,Pose.ID);check(optics!=null,"Aligned scope camera exists");

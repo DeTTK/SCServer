@@ -357,6 +357,16 @@ public final class GameItems implements AutoCloseable {
     }
     public ClientStateAdapter.Magazine inspectMagazine(szserver.inventory.ItemStack item)throws Exception{return adapter.inspectMagazine(stateKind(item),item.state());}
     public byte[] magazine(szserver.inventory.ItemStack item,int ammo,int rounds)throws Exception{return adapter.magazine(stateKind(item),item.state(),ammo,rounds);}
+    public record UnloadedWeapon(szserver.inventory.ItemStack weapon,szserver.inventory.ItemStack ammo){}
+    public UnloadedWeapon unloadWeapon(szserver.inventory.ItemStack item)throws Exception{
+        if(!firearm(item.id())||item.count()!=1)throw new IllegalArgumentException("weapon_unload_target");
+        var unloaded=adapter.unloadMagazine(stateKind(item),item.state());
+        var ammo=readStack(unloaded.ammunition());
+        var rules=weaponMagazineRules(item);
+        if(rules==null||!rules.ammunition().contains(ammo.id())||ammo.count()>rules.capacity())
+            throw new IllegalArgumentException("weapon_unload_ammunition");
+        return new UnloadedWeapon(item.state(unloaded.state()),ammo);
+    }
     public record Jamming(boolean jammed,double duration){}
     public Jamming jamming(szserver.inventory.ItemStack item)throws Exception{return new Jamming(adapter.jammed(stateKind(item),item.state()),adapter.unjammingDuration(item.id()));}
     public szserver.inventory.ItemStack jamming(szserver.inventory.ItemStack item,boolean value)throws Exception{return item.state(adapter.jamming(stateKind(item),item.state(),value));}

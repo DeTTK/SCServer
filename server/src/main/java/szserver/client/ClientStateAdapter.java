@@ -423,6 +423,24 @@ public final class ClientStateAdapter implements AutoCloseable {
     }
 
     public record Magazine(UUID identity,int ammo,int rounds,int magazineFactory) {}
+    record UnloadedMagazine(byte[] state,byte[] ammunition){}
+    UnloadedMagazine unloadMagazine(String kind,byte[] input)throws Exception{
+        if(!Set.of("1535556086","259689215").contains(kind))throw new IOException("magazine_state_kind");
+        Codec codec=codec(kind);
+        Object state=decode(codec,input);
+        var loaded=state.getClass().getField("void");
+        Object ammunition=loaded.get(state);
+        if(ammunition==null)throw new IOException("В оружии нет патронов.");
+        int ammoId=moduleId(ammunition);
+        String definition=moduleFactoryClasses.get(ammoId);
+        Class<?> magazine=Class.forName("657970419",true,loader);
+        if(definition!=null&&magazine.isAssignableFrom(Class.forName(definition,false,loader))
+                &&magazine.getField("package").getBoolean(cosmetics.factory(ammoId)))
+            throw new IOException("Из этого магазина нельзя извлечь патроны.");
+        byte[] stack=moduleWire(ammunition);
+        loaded.set(state,null);
+        return new UnloadedMagazine(encode(codec,state),stack);
+    }
     public boolean jammed(String kind,byte[] raw)throws Exception{
         if(!Set.of("1535556086","259689215").contains(kind))throw new IOException("jamming_state_kind");
         return Class.forName("1535556086",true,loader).getField("instanceof").getBoolean(decode(codec(kind),raw));

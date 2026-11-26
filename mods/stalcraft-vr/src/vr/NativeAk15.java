@@ -58,5 +58,9 @@ final class NativeAk15 {
         if(spec.pistol&&spec.mechanism!=WeaponSpec.Mechanism.REVOLVER){double travel=Math.max(0,game.gun.slideTravel()-(game.result==null?0:game.result.boltTravel()));if(travel>0)pose.translate(spec.boltBone,new V(0,0,travel));}
         return pose;
     }
+    Ak15.Mounts withSupport(V support){
+        return new Ak15.Mounts(mounts.handToWeapon(),support,mounts.magazine(),mounts.bolt(),mounts.muzzle(),
+            mounts.boltStroke(),mounts.action(),mounts.magazineAxis(),mounts.mainWrist(),mounts.chambers(),mounts.leverPivot());
+    }
     NativePose magazine()throws Exception {NativePose pose=new NativePose(skeleton,rest.pose);pose.only(spec.magazineBone);if(spec.singleRounds()){Pose shell=rest.sample(spec.magazineBone);pose.transform(spec.magazineBone,new Pose(mounts.magazine(),shell.q()));}return pose;}
 }

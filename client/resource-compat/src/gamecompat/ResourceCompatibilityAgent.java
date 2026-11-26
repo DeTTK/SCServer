@@ -11,6 +11,7 @@ public final class ResourceCompatibilityAgent {
   agent.addTransformer(new OptionalResourceTransformer());
   agent.addTransformer(new UiStabilityTransformer());
   agent.addTransformer(new WorldMapTransformer());
+  agent.addTransformer(new PlayerRelationsTransformer());
   agent.addTransformer(new ArtifactSlotTransformer());
   agent.addTransformer(new UdpPolicyTransformer());
   agent.addTransformer(new PerspectivePolicyTransformer());

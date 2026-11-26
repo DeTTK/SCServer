@@ -13,6 +13,7 @@ public final class VrMod implements ClientMod {
     private SettingsRegistry.BooleanSetting mirrorEnabled;
     private SettingsRegistry.BooleanSetting reducedScope;
     private SettingsRegistry.BooleanSetting performance;
+    private SettingsRegistry.NumberSetting recoilScale,holsterShoulder,holsterWaist,holsterSide,magazinePouch,knifeHolster;
     private long nextPerformanceLog;
     private SettingsRegistry.ChoiceSetting mirrorEye;
     private SettingsRegistry.ChoiceSetting eyeResolution;
@@ -32,6 +33,13 @@ public final class VrMod implements ClientMod {
         mirrorEye=tab.choiceSetting("desktop-eye","Глаз для записи","Авто (прицел)",java.util.List.of("Авто (прицел)","Правый","Левый"));
         eyeResolution=tab.choiceSetting("eye-resolution","Мир VR: ширина изображения одного глаза","1280",java.util.List.of("Штатное","960","1280","1600","По шлему"));
         reducedScope=tab.booleanSetting("reduced-scope","Экономить ресурсы на оптике (картинка 512×512)",false);
+        recoilScale=tab.numberSetting("recoil-scale","Сила отдачи в VR",1.35,.5,2.5);
+        tab.section("holsters","Кобуры и подсумок · положение относительно пояса, м");
+        holsterShoulder=tab.numberSetting("holster-shoulder","Высота кобуры основного оружия",.65,.38,.9);
+        holsterWaist=tab.numberSetting("holster-waist","Высота кобуры вторичного оружия",0,-.2,.25);
+        holsterSide=tab.numberSetting("holster-side","Смещение правых кобур",.43,.3,.6);
+        knifeHolster=tab.numberSetting("knife-holster","Высота кобуры ножа на груди",.42,.25,.65);
+        magazinePouch=tab.numberSetting("magazine-pouch","Высота левого подсумка",0,-.2,.25);
         performance=tab.booleanSetting("performance","Измерять время VR-кадра (меню / журнал)",false);
     }
     public void onFrame(ClientFrame frame){renderThread=Thread.currentThread();game=frame.game();frameNumber=frame.number();long window=glfwGetCurrentContext();if(window==0)return;
@@ -41,6 +49,14 @@ public final class VrMod implements ClientMod {
         if(xr==null)return;
         xr.timings.enabled(performance!=null&&performance.get());xr.timings.refresh(System.nanoTime());
         if(xr.timings.enabled&&System.nanoTime()>=nextPerformanceLog){nextPerformanceLog=System.nanoTime()+5_000_000_000L;context.log(xr.timings.report);}
+        if(recoilScale!=null){
+            gameplay.gun.recoilScale=recoilScale.get();
+            gameplay.holsters.shoulderHeight=holsterShoulder.get();
+            gameplay.holsters.waistHeight=holsterWaist.get();
+            gameplay.holsters.lateralOffset=holsterSide.get();
+            gameplay.holsters.pouchHeight=magazinePouch.get();
+            gameplay.holsters.knifeHeight=knifeHolster.get();
+        }
         try{if(!xr.poll()){stop();reconnect.disconnected(System.nanoTime());status=startupNotice="Связь со SteamVR потеряна. Ожидаю шлем; F12 — отменить подключение.";}else if(worldEnabled!=null&&worldEnabled.get()&&xr.running()){System.setProperty("sz.vr.active","true");gameplay.frame(game,xr.focused());}else{System.clearProperty("sz.vr.active");gameplay.close();}}catch(Throwable e){fail(e);}
     }
     private void start(long window){
@@ -59,14 +75,9 @@ public final class VrMod implements ClientMod {
         if(hook.equals("network.vr.weapon.v1")){gameplay.reload.receive(args[0],(byte[])args[1]);return null;}
         if(world==null)return null;
         if(hook.equals("vr.action-focus.v1"))return Boolean.getBoolean("sz.vr.active")&&xr!=null&&xr.focused()&&gameplay.actionFocus(game);
-        if(hook.equals("vr.desktop-ui.v1")){world.screen.capture(game);submitFallback();
-            if(world!=null&&Boolean.getBoolean("sz.vr.active")&&submitted==frameNumber&&world.mirrorEnabled&&NativeAccess.call(game,"float","622415611")==null){
-                long window=glfwGetCurrentContext();int[] w={0},h={0};glfwGetFramebufferSize(window,w,h);
-                // Native world colour was copied before the scope overlay.
-                // Recorders reading that target must receive the completed eye too.
-                Object nativeWrapper=NativeFramebuffer.current();try{world.mirror.publishNative(world.color,world.sourceFbo,world.sourceViewport[2],world.sourceViewport[3]);world.mirror.present(0,org.lwjgl.opengl.GL33.GL_BACK,w[0],h[0]);}
-                finally{NativeFramebuffer.restore(nativeWrapper);}
-            }
+        if(hook.equals("vr.desktop-ui.v1")){
+            world.screen.capture(game);
+            submitFallback();
             return null;
         }
         if(Boolean.getBoolean("sz.vr.active")){

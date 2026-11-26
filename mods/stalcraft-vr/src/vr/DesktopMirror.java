@@ -28,25 +28,6 @@ final class DesktopMirror implements AutoCloseable {
             toggle(GL_SCISSOR_TEST,scissor);toggle(GL_FRAMEBUFFER_SRGB,srgb);
         }
     }
-    boolean present(int target,int targetBuffer,int w,int h){
-        if(!ready||w<=0||h<=0)return false;
-        int read=glGetInteger(GL_READ_FRAMEBUFFER_BINDING),draw=glGetInteger(GL_DRAW_FRAMEBUFFER_BINDING);
-        boolean scissor=glIsEnabled(GL_SCISSOR_TEST),srgb=glIsEnabled(GL_FRAMEBUFFER_SRGB);
-        float[] clear=new float[4];glGetFloatv(GL_COLOR_CLEAR_VALUE,clear);var mask=org.lwjgl.BufferUtils.createByteBuffer(4);glGetBooleanv(GL_COLOR_WRITEMASK,mask);
-        glBindFramebuffer(GL_DRAW_FRAMEBUFFER,target);int buffer=glGetInteger(GL_DRAW_BUFFER0);
-        try{
-            glDrawBuffer(targetBuffer);glDisable(GL_SCISSOR_TEST);glDisable(GL_FRAMEBUFFER_SRGB);glColorMask(true,true,true,true);
-            glClearColor(0,0,0,1);glClear(GL_COLOR_BUFFER_BIT);
-            double scale=Math.min((double)w/width,(double)h/height);int pw=Math.max(1,(int)Math.round(width*scale)),ph=Math.max(1,(int)Math.round(height*scale)),x=(w-pw)/2,y=(h-ph)/2;
-            glBindFramebuffer(GL_READ_FRAMEBUFFER,fbo);glReadBuffer(GL_COLOR_ATTACHMENT0);
-            // Fit the full eye without stretching or clipping an off-centre optic.
-            glBlitFramebuffer(0,0,width,height,x,y,x+pw,y+ph,GL_COLOR_BUFFER_BIT,GL_LINEAR);return true;
-        }finally{
-            glDrawBuffer(buffer);glBindFramebuffer(GL_READ_FRAMEBUFFER,read);glBindFramebuffer(GL_DRAW_FRAMEBUFFER,draw);
-            glClearColor(clear[0],clear[1],clear[2],clear[3]);glColorMask(mask.get(0)!=0,mask.get(1)!=0,mask.get(2)!=0,mask.get(3)!=0);
-            toggle(GL_SCISSOR_TEST,scissor);toggle(GL_FRAMEBUFFER_SRGB,srgb);
-        }
-    }
     /** Publish the same completed composition into the game's native capture target. */
     boolean publishNative(ColorTransfer transfer,int target,int w,int h){
         if(!ready||target<=0||target==fbo||w<=0||h<=0)return false;

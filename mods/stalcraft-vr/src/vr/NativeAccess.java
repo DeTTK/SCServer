@@ -56,8 +56,17 @@ final class NativeAccess {
     }
     static boolean clearLine(Object player,V a,V b)throws Exception {
         if(!a.finite()||!b.finite())return false;if(a.sub(b).length()<1e-5)return true;
-        Class<?> vector=type("153304200");Object start=vector.getConstructor(double.class,double.class,double.class).newInstance(a.x(),a.y(),a.z()),end=vector.getConstructor(double.class,double.class,double.class).newInstance(b.x(),b.y(),b.z());
-        return call(type("94534399"),"synchronized","1473643318",false,player,start,end)==null;
+        return castLine(player,a,b)==null;
+    }
+    static V lineEnd(Object player,V a,V b)throws Exception {
+        Object hit=castLine(player,a,b);
+        return hit==null?b:vector(call(hit,"while","153304200"));
+    }
+    private static Object castLine(Object player,V a,V b)throws Exception {
+        Class<?> vector=type("153304200");
+        var constructor=vector.getConstructor(double.class,double.class,double.class);
+        Object start=constructor.newInstance(a.x(),a.y(),a.z()),end=constructor.newInstance(b.x(),b.y(),b.z());
+        return call(type("94534399"),"synchronized","1473643318",false,player,start,end);
     }
     /** Solid swept volume, using the same voxel/scene OBB solver as native movement. */
     static boolean clearProp(Object player,V edgeFrom,V edgeTo,double radius)throws Exception {

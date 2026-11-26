@@ -149,6 +149,11 @@ def build(output):
     resource_compat=player/'Client/compat/game-resource-compat.jar'
     scale_agent=player/'Client/compat/character-scale.jar'
     jar(resource_compat,values)
+    relations_check=tools.compile_java('player-relations',
+        [ROOT/'client/resource-compat/tests/PlayerRelationsProbe.java'])
+    subprocess.run([tools.tool('java'),'-Xverify:all',f'-javaagent:{resource_compat}',
+                    '-cp',os.pathsep.join(map(str,[relations_check,*libraries])),
+                    'PlayerRelationsProbe'],check=True)
     camera_check=tools.compile_java('player-camera-chain',
         [ROOT/'client-compat/character-scale/tools/CameraAgentChainCheck.java'],[scale_agent])
     subprocess.run([tools.tool('java'),EXPORT,'-Xverify:all',

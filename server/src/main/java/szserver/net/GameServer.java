@@ -93,7 +93,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         PlayerMapSnapshot mapSnapshot;
         long nextNearby;
         int visualHand=-1;long visualHandUntil;
-        final GrenadeUse grenadeUse=new GrenadeUse();int grenadePrediction=-1;
+        final GrenadeUse grenadeUse=new GrenadeUse();int grenadePrediction=-1;long nextVrBolt;
         UUID grenadeDeath;long reviveCheckAt;CorpseLifecycle.Corpse<Recipient> lastCorpse;Swing swing;long nextAttack,life,deathGeneration,drawUntil;Integer lastShotClientTick;
         CompletableFuture<LocalAccounts.Grant> authentication;UUID loginProtocol;CompletableFuture<Integer> placement;CompletableFuture<Void> spawnSave;CompletableFuture<Integer> spawnCheck;long spawnDeadline,nextSpawnCheck;World.Vec requestedSpawn;UUID spawnScope;double[][] candidates;int candidate;long placementDeadline,nextPlacement;boolean positioned,inventoryReady,respawning;long last=System.nanoTime();boolean accepted,ready;final InventoryScreen inventoryScreen=new InventoryScreen();int handContainer=HandPackets.PRIMARY;HandPackets.HeldOverride handOverride;GameInventory.Weapon weapon;LocalAccounts.Grant grant;int entity,clientTick,sequence,rounds,reserve,reloadCount;long lastShot,reloadAt;Unjamming unjamming;boolean unjammingPending;float hp=100,maxHp=100,yaw,pitch;double[] pos;byte[][] magazines;final PlayerPosture posture=new PlayerPosture();int mode;double speed;boolean ground=true,holstered;UUID firearm;final ChunkSubscriptions chunks=new ChunkSubscriptions();final Map<Long,Long> chunkRevisions=new HashMap<>();TerrainProjection.Prepared deltas;long deltaChunk;int deltaAt;final Set<Long> pendingChunks=new LinkedHashSet<>();int chunkX=Integer.MIN_VALUE,chunkZ=Integer.MIN_VALUE;final Map<ShotKey,Long> seenShots=new LinkedHashMap<>();
         Session(InetSocketAddress address,int id,int clientId,byte[] cookie,ChunkStreamingSettings settings){this.address=address;this.id=id;this.clientId=clientId;this.cookie=cookie;window=new ChunkWindow(settings.distance(),settings.outstandingLimit());}
@@ -139,6 +139,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
     private long nextLocationFlush;
     private final GameInventory inventories;
     private final AllianceState allianceState;private long allianceRevision;
+    private final Path serverOwnerProfile=Optional.ofNullable(System.getProperty("bscp.serverOwnerProfile")).map(Path::of).orElse(null);
     private static final class VitalsTask {final UUID id;final Session session;final Runnable finished;CompletableFuture<Void> save;boolean held=true;VitalsTask(UUID id,Session session,Runnable finished){this.id=id;this.session=session;this.finished=finished;}}
     private record ReviveCheck(Session target,GrenadeAreaStore.Activation source,int profile,UUID death,long life,double[] position,CompletableFuture<Integer> placement){}
     private final Map<UUID,ReviveCheck> reviveChecks=new LinkedHashMap<>();private long revives,reviveDenied,reviveErrors;
@@ -616,6 +617,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
             if(id==366&&source==null&&selection>0&&!playerRules.entitled(character(s))){inventorySnapshot(s,0);enqueue(s,0,InventoryPackets.ack(owner,sequence));enqueue(s,0,GamePackets.chat("paint_editor_requires_admin"));return;}
             inventories.cosmetic(character(s),target,source,selection,slot,id==598,plan->inventoryChanged(s,plan,()->enqueue(s,0,InventoryPackets.ack(owner,sequence))),error->{inventorySnapshot(s,0);enqueue(s,0,InventoryPackets.ack(owner,sequence));enqueue(s,0,GamePackets.chat(error));});return;}
         if(id==UnderbarrelPackets.UNLOAD_ID){unloadLauncher(s,UnderbarrelPackets.unload(body));return;}
+        if(id==InventoryPackets.WEAPON_UNLOAD_ID){unloadWeapon(s,InventoryPackets.weaponUnload(body,s.inventoryScreen.page()));return;}
         if(id==GameplayPacketAliases.WEAPON_MODULE){
             var request=inventories.weaponModuleRequest(body);
             Inventory.Address target=request.target(),source=request.source();
@@ -643,7 +645,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         if(id==280){if(body.length!=0&&body.length!=5)throw new IOException("reload_request_size");int ammo=body.length==0?0:ByteBuffer.wrap(body).getInt();if(ammo<0||ammo>65535||body.length==5&&(body[4]<0||body[4]>1))throw new IOException("reload_request_ammunition");if(body.length==5&&body[4]==1){queueLauncherReload(s,ammo);return;}queueReload(s,ammo);return;}
         if(id==1013){changeMode(s,body);return;}
         if(id==1661){requestRespawn(s,body);return;}
-        if(id==5){var in=Wire.input(body);String cls=in.readUTF();if(cls.equals("szmods.bridge.ProfileEquipmentReady")){if(in.available()!=0)throw new IOException("profile_equipment_capability_size");s.profileEquipmentCapable=true;return;}if(cls.equals("szmods.bridge.NearbyPlayersReady")){if(in.available()!=0)throw new IOException("nearby_capability_size");s.nearbyCapable=true;return;}if(cls.equals("szmods.bridge.WeaponActionReady")){if(in.available()!=0)throw new IOException("weapon_action_capability_size");s.weaponActionEvents=true;return;}if(cls.equals("szmods.bridge.BoltImpactReady")){if(in.available()!=0)throw new IOException("bolt_capability_size");s.boltImpactEffects=true;return;}if(cls.equals("szmods.bridge.FunnelImpactReady")){if(in.available()!=0)throw new IOException("funnel_capability_size");s.pointFunnelImpacts=true;return;}if(cls.equals(playerscale.ScaleProtocol.INPUT)){scaleHello(s,in.readAllBytes());}else if(cls.equals(EnvironmentWire.INPUT)){try{environmentAccess.request(s.environmentClient,in.readAllBytes(),playerRules.editor(character(s),worldEditors));}catch(Exception failure){environmentAccess.disconnect(s.environmentClient);JsonObject reply=EnvironmentWire.message("ack");reply.addProperty("ok",false);reply.addProperty("error",Objects.toString(failure.getMessage(),failure.getClass().getSimpleName()));enqueue(s,0,EnvironmentAccess.frame(reply));}}else if(cls.equals(WeaponJammingPackets.REQUEST)){WeaponJammingPackets.read(in.readAllBytes());queueUnjam(s);}else if(cls.equals(UnderbarrelPackets.UNLOAD_REQUEST)){unloadLauncher(s,UnderbarrelPackets.unload(in.readAllBytes()));}else if(cls.equals(UnderbarrelPackets.REQUEST)){UnderbarrelPackets.read(in.readAllBytes());launchUnderbarrel(s);}else if(cls.equals(LauncherPackets.REQUEST)){LauncherPackets.read(in.readAllBytes());launchPrimary(s);}else if(cls.equals(GrenadePackets.START)){grenadeStart(s,GrenadePackets.start(in.readAllBytes()));}else if(cls.equals(GrenadePackets.THROW)){grenadeThrow(s,GrenadePackets.read(in.readAllBytes()));}else if(szserver.client.HandPackets.selectionClass(cls)){selectHandOverride(s,HandPackets.readOverride(in.readAllBytes()));}else if(cls.equals(PhysicalReload.REQUEST)){physicalRequest(s,in.readAllBytes());}else if(cls.equals(CommandSupport.REQUEST)){completion(s,in.readAllBytes());}else if(cls.equals(Vehicles.INPUT)){vehicle(s,in.readAllBytes());}else if(FpvPackets.inputClass(cls)){fpv(s,in.readAllBytes());}else if(cls.equals("1618367864")){anomalyVelocityEcho(in.readAllBytes());}else if(cls.equals("804507492")){anomalyForceEcho(in.readAllBytes());}else if(cls.equals("1552498486")){anomalyStrengthSave(s,in.readAllBytes());}else if(cls.equals("1019975257")){anomalyConfigurationSave(s,in.readAllBytes());}else if(SceneConfigurationPackets.requestClass(cls)){sceneConfiguration(s,in.readAllBytes());}else if(SceneConfigurationPackets.saveClass(cls)){sceneConfigurationSave(s,in.readAllBytes(),false);}else if(SceneConfigurationPackets.settingsClass(cls)){sceneConfigurationSave(s,in.readAllBytes(),true);}else if(szserver.client.SceneEditPackets.kind(cls)!=null){sceneEdit(s,szserver.client.SceneEditPackets.kind(cls),in.readAllBytes());}else if(cls.equals("146340354")){nativeDestroy(s,in.readAllBytes());}else if(cls.equals("1056067431")){NativeBlockPackets.target(in.readAllBytes(),false);nativeBlockIntents++;}else if(szserver.client.PortalPackets.useClass(cls)){nativeBlockIntents++;szserver.client.PortalPackets.emptyHand(in.readAllBytes());}else if(szserver.client.TeleportPackets.mapClass(cls)){try{teleport(s,TeleportCommands.map(in.readAllBytes()),"Телепортация по карте выполнена.");}catch(IllegalArgumentException error){enqueue(s,0,GamePackets.chat(error.getMessage()));}}else if(szserver.client.PermissionPackets.modeClass(cls)){changeMode(s,in.readAllBytes());}else if(cls.equals("1102124358")){requestRespawn(s,in.readAllBytes());}else if(cls.equals("677917411")){receiveChat(s,in.readAllBytes());}return;}
+        if(id==5){var in=Wire.input(body);String cls=in.readUTF();if(cls.equals("szmods.bridge.ProfileEquipmentReady")){if(in.available()!=0)throw new IOException("profile_equipment_capability_size");s.profileEquipmentCapable=true;return;}if(cls.equals("szmods.bridge.NearbyPlayersReady")){if(in.available()!=0)throw new IOException("nearby_capability_size");s.nearbyCapable=true;return;}if(cls.equals("szmods.bridge.WeaponActionReady")){if(in.available()!=0)throw new IOException("weapon_action_capability_size");s.weaponActionEvents=true;return;}if(cls.equals("szmods.bridge.BoltImpactReady")){if(in.available()!=0)throw new IOException("bolt_capability_size");s.boltImpactEffects=true;return;}if(cls.equals("szmods.bridge.FunnelImpactReady")){if(in.available()!=0)throw new IOException("funnel_capability_size");s.pointFunnelImpacts=true;return;}if(cls.equals(playerscale.ScaleProtocol.INPUT)){scaleHello(s,in.readAllBytes());}else if(cls.equals(EnvironmentWire.INPUT)){try{environmentAccess.request(s.environmentClient,in.readAllBytes(),playerRules.editor(character(s),worldEditors));}catch(Exception failure){environmentAccess.disconnect(s.environmentClient);JsonObject reply=EnvironmentWire.message("ack");reply.addProperty("ok",false);reply.addProperty("error",Objects.toString(failure.getMessage(),failure.getClass().getSimpleName()));enqueue(s,0,EnvironmentAccess.frame(reply));}}else if(cls.equals(WeaponJammingPackets.REQUEST)){WeaponJammingPackets.read(in.readAllBytes());queueUnjam(s);}else if(cls.equals(UnderbarrelPackets.UNLOAD_REQUEST)){unloadLauncher(s,UnderbarrelPackets.unload(in.readAllBytes()));}else if(cls.equals(UnderbarrelPackets.REQUEST)){UnderbarrelPackets.read(in.readAllBytes());launchUnderbarrel(s);}else if(cls.equals(LauncherPackets.REQUEST)){LauncherPackets.read(in.readAllBytes());launchPrimary(s);}else if(cls.equals(GrenadePackets.START)){grenadeStart(s,GrenadePackets.start(in.readAllBytes()));}else if(cls.equals(GrenadePackets.THROW)){grenadeThrow(s,GrenadePackets.read(in.readAllBytes()));}else if(szserver.client.HandPackets.selectionClass(cls)){selectHandOverride(s,HandPackets.readOverride(in.readAllBytes()));}else if(cls.equals(VrBoltIntent.REQUEST)){vrBolt(s,VrBoltIntent.read(in.readAllBytes()));}else if(cls.equals(PhysicalReload.REQUEST)){physicalRequest(s,in.readAllBytes());}else if(cls.equals(CommandSupport.REQUEST)){completion(s,in.readAllBytes());}else if(cls.equals(Vehicles.INPUT)){vehicle(s,in.readAllBytes());}else if(FpvPackets.inputClass(cls)){fpv(s,in.readAllBytes());}else if(cls.equals("1618367864")){anomalyVelocityEcho(in.readAllBytes());}else if(cls.equals("804507492")){anomalyForceEcho(in.readAllBytes());}else if(cls.equals("1552498486")){anomalyStrengthSave(s,in.readAllBytes());}else if(cls.equals("1019975257")){anomalyConfigurationSave(s,in.readAllBytes());}else if(SceneConfigurationPackets.requestClass(cls)){sceneConfiguration(s,in.readAllBytes());}else if(SceneConfigurationPackets.saveClass(cls)){sceneConfigurationSave(s,in.readAllBytes(),false);}else if(SceneConfigurationPackets.settingsClass(cls)){sceneConfigurationSave(s,in.readAllBytes(),true);}else if(szserver.client.SceneEditPackets.kind(cls)!=null){sceneEdit(s,szserver.client.SceneEditPackets.kind(cls),in.readAllBytes());}else if(cls.equals("146340354")){nativeDestroy(s,in.readAllBytes());}else if(cls.equals("1056067431")){NativeBlockPackets.target(in.readAllBytes(),false);nativeBlockIntents++;}else if(szserver.client.PortalPackets.useClass(cls)){nativeBlockIntents++;szserver.client.PortalPackets.emptyHand(in.readAllBytes());}else if(szserver.client.TeleportPackets.mapClass(cls)){try{teleport(s,TeleportCommands.map(in.readAllBytes()),"Телепортация по карте выполнена.");}catch(IllegalArgumentException error){enqueue(s,0,GamePackets.chat(error.getMessage()));}}else if(szserver.client.PermissionPackets.modeClass(cls)){changeMode(s,in.readAllBytes());}else if(cls.equals("1102124358")){requestRespawn(s,in.readAllBytes());}else if(cls.equals("677917411")){receiveChat(s,in.readAllBytes());}return;}
         if(unknown.containsKey(id)||unknown.size()<128)unknown.merge(id,1L,Long::sum);if(unknown.size()>256)unknown.clear();
     }
     private void repairNativeBlock(Session s,World.Block p){long key=szserver.world.BlockOverlays.key(Math.floorDiv(p.x(),16),Math.floorDiv(p.z(),16));if(!s.blockRepairs.containsKey(key)&&s.blockRepairs.size()>=9)return;BlockRepair repair=s.blockRepairs.computeIfAbsent(key,k->new BlockRepair());if(repair.points.size()<32)repair.points.add(p);}
@@ -927,16 +929,32 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         if(held.mode()==0&&held.hand()==10){throwBolt(s,held.item(),request);return;}
         submitGrenade(s,held,request,elapsed,inHand);
     }
+    private void vrBolt(Session s,VrBoltIntent intent){
+        long now=System.nanoTime();
+        if(!grenadeUserAllowed(s)||now<s.nextVrBolt||s.handOverride!=null||s.grenadeUse.held()!=null||inventories.busy(character(s)))return;
+        var item=equippedThrowable(s,HandPackets.BOLT);
+        var rules=item==null?null:boltRules.get(item.id());
+        if(rules==null||!rules.handUse())return;
+        s.nextVrBolt=now+Math.max(7,rules.prepareTicks()+rules.throwTicks())*50_000_000L;
+        visualHand(s,HandPackets.BOLT,now+350_000_000L);
+        throwBolt(s,item,new GrenadePackets.Throw(1,-1,intent.yaw(),intent.pitch()),intent.strength());
+    }
+
     private void throwBolt(Session s,ItemStack item,GrenadePackets.Throw request){
+        throwBolt(s,item,request,1);
+    }
+
+    private void throwBolt(Session s,ItemStack item,GrenadePackets.Throw request,float strength){
         long life=s.life;
         var origin=GrenadePackets.origin(CharacterScale.eye(s.pos,s.posture.locomotion(),s.characterScale),request.yaw(),request.pitch());
         inventories.boltProjectile(item,s.velocity[0],s.velocity[2],request.yaw(),request.pitch(),profile->{
             if(sessions.get(s.address)!=s||s.life!=life)return;
-            if(!worldItems.throwBolt(character(s),s.incarnation,item,origin,profile.velocity(),request.prediction(),
+            var velocity=profile.velocity();
+            if(!worldItems.throwBolt(character(s),s.incarnation,item,origin,new World.Vec(velocity.x()*strength,velocity.y()*strength,velocity.z()*strength),request.prediction(),
                     System.currentTimeMillis(),profile))itemFailures++;
             else{
                 boltThrows++;
-                if(s.handContainer==HandPackets.BOLT&&!s.holstered)
+                if((s.handContainer==HandPackets.BOLT&&!s.holstered)||s.visualHand==HandPackets.BOLT)
                     weaponVisualAction(s,item.id(),PlayerAnimationPackets.Action.THROW_FINISH);
             }
         },error->{itemFailures++;lastItemFailure=error;});
@@ -1017,7 +1035,11 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
                 double[] end={target.position()[0],target.position()[1]+.9,target.position()[2]};
                 combatBarriers.submit(event.id(),origin,end,contact->{double[] closest=grenadeAreaScenes.closestShieldPoint(contact,origin);closest[1]-=.9;return Math.max(.001,grenadeDamage(event.profile(),event.position(),closest,Map.of()));},
                     ()->grenadeTargetLive(target),()->{
-                        if(target.player()!=null){damage(grenadeAttacker(state),state.name,target.player(),amount,origin,null,new double[3],false);grenadeHits++;}
+                        if(target.player()!=null){
+                            Session attacker=grenadeAttacker(state);
+                            var owner=liveAreaOwner(state.character);
+                            if(damage(attacker,state.name,owner==null?state.context:owner,target.player(),amount,origin,null,new double[3],false))grenadeHits++;
+                        }
                         else if(target.cloneTarget()!=null){damageClone(grenadeAttacker(state),state.name,target.cloneTarget(),amount,origin,new double[3],false);grenadeHits++;}
                         else {damageBot(grenadeAttacker(state),target.bot(),amount,false);grenadeHits++;}
                     },contact->{});
@@ -1072,7 +1094,12 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
             int owner=areaOwnerEntity(state.activation.character(),viewer);Integer sentOwner=state.recipients.get(recipient);if((sentOwner==null||state.scene.targeted()&&sentOwner!=owner)&&dx*dx+dz*dz<=256*256&&viewer.lanes[0].queued.size()<128){if(budget--==0)return;if(sentOwner!=null){enqueueOrRetire(viewer,GrenadeAreaPackets.remove(state.handle));areaSceneRemovals++;}state.recipients.put(recipient,owner);enqueueOrRetire(viewer,GrenadeAreaScenes.spawnFor(state.scene,owner));areaSceneSpawns++;}
         }
     }
-    private AreaRelations.Actor areaActor(Session s){return areaRelations.actor(character(s),s.faction);}
+    private AreaRelations.Actor areaActor(Session s){return areaRelations.actor(character(s),s.faction,squads.id(s.incarnation));}
+    private Map<Integer,byte[]> playerRelations(Session s){
+        var attributes=Factions.attributes(s.faction);
+        attributes.put(Factions.PARTY_ATTRIBUTE,Factions.partyAttribute(squads.id(s.incarnation)));
+        return attributes;
+    }
     private AreaRelations.Actor liveAreaOwner(UUID id){for(Session s:sessions.values())if(s.ready&&id.equals(character(s)))return areaActor(s);return null;}
     private int areaOwnerEntity(UUID id,Session viewer){for(Session s:sessions.values())if(s.ready&&id.equals(character(s)))return s==viewer?0:s.entity;return -1;}
     private boolean grenadeSelected(ThrownGrenade state,int item,Session target){var areas=enabledAreaProfiles.get(item);if(areas==null||areas.isEmpty())return true;var owner=liveAreaOwner(state.character);return areaRelations.selected(areas.get(0).target(),owner==null?state.context:owner,areaActor(target),AreaRelations.Mode.DEFAULT);}
@@ -1433,7 +1460,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         enqueue(s,0,GamePackets.attributes(tick,0,equipment(s)));inventorySnapshot(s,0);syncLoadoutHand(s);
         var initialEnvironment=environment.state();enqueue(s,0,EnvironmentPackets.clock(environment.clockAnchor(),System.currentTimeMillis()));
         enqueue(s,0,inventories.quickSlotsFrame(character(s)));sendEffects(s,List.of(),s.effects.active(System.currentTimeMillis()));sendPulseEffects(s,List.of(),s.pulses.effects(System.currentTimeMillis()));sendSickness(s,true);
-        sendPermissions(s,true);enqueue(s,0,GamePackets.attributes(++tick,0,Factions.attributes(s.faction)));enqueue(s,0,allianceState.frame());s.ready=true;s.joinedNanos=System.nanoTime();sendPulseEffects(s,List.of(),s.pulses.effects(System.currentTimeMillis()));resetPoses(s);for(Session viewer:sessions.values())if(viewer!=s&&viewer.ready&&viewer.scaleCapable)sendScale(viewer,s);for(Session other:sessions.values())if(other!=s&&other.ready){enqueue(other,0,Wire.concat(GamePackets.spawn(s.entity,s.grant.name(),s.pos,s.yaw,s.pitch),GamePackets.attributes(tick,s.entity,equipment(s)),GamePackets.attributes(tick,s.entity,remoteHand(s)),GamePackets.attributes(tick,s.entity,Factions.attributes(s.faction)),GamePackets.vitals(tick,s.entity,s.hp,s.maxHp,s.animation.aiming())));enqueue(s,0,Wire.concat(GamePackets.spawn(other.entity,other.grant.name(),other.pos,other.yaw,other.pitch),GamePackets.attributes(tick,other.entity,equipment(other)),GamePackets.attributes(tick,other.entity,remoteHand(other)),GamePackets.attributes(tick,other.entity,Factions.attributes(other.faction)),GamePackets.vitals(tick,other.entity,visibleHealth(other),other.maxHp,other.animation.aiming())));}
+        sendPermissions(s,true);enqueue(s,0,GamePackets.attributes(++tick,0,playerRelations(s)));enqueue(s,0,allianceState.frame());s.ready=true;s.joinedNanos=System.nanoTime();sendPulseEffects(s,List.of(),s.pulses.effects(System.currentTimeMillis()));resetPoses(s);for(Session viewer:sessions.values())if(viewer!=s&&viewer.ready&&viewer.scaleCapable)sendScale(viewer,s);for(Session other:sessions.values())if(other!=s&&other.ready){enqueue(other,0,Wire.concat(GamePackets.spawn(s.entity,s.grant.name(),s.pos,s.yaw,s.pitch),GamePackets.attributes(tick,s.entity,equipment(s)),GamePackets.attributes(tick,s.entity,remoteHand(s)),GamePackets.attributes(tick,s.entity,playerRelations(s)),GamePackets.vitals(tick,s.entity,s.hp,s.maxHp,s.animation.aiming())));enqueue(s,0,Wire.concat(GamePackets.spawn(other.entity,other.grant.name(),other.pos,other.yaw,other.pitch),GamePackets.attributes(tick,other.entity,equipment(other)),GamePackets.attributes(tick,other.entity,remoteHand(other)),GamePackets.attributes(tick,other.entity,playerRelations(other)),GamePackets.vitals(tick,other.entity,visibleHealth(other),other.maxHp,other.animation.aiming())));}
             chunkWindow(s);System.out.println("Native joined: "+s.grant.name()+" entity="+s.entity);
     }
     private UUID character(Session s){return s.grant.characterId();}
@@ -1484,10 +1511,16 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
     }
     private void suicide(Session s){if(s.hp<=0||s.respawning||s.teleport!=null)return;damage(null,"Самоубийство",s,s.hp,s.pos,null,new double[3],false);}
     private void damage(Session attacker,Session victim,float amount){damage(attacker,victim,amount,attacker.pos,null,new double[3],false);}
-    private void damage(Session attacker,Session victim,float amount,double[] source,double[] impact,double[] impulse,boolean head){damage(attacker,attacker.grant.name(),victim,amount,source,impact,impulse,head);}
-    private void damage(Session attacker,String killerName,Session victim,float amount,double[] source,double[] impact,double[] impulse,boolean head){
-        if(attacker!=null&&attacker.gameplayMode!=PlayerRules.Mode.STALKER||victim.gameplayMode!=PlayerRules.Mode.STALKER||victim.hp<=0||!Float.isFinite(amount)||amount<=0)return;enqueueOrRetire(victim,GamePackets.receivedDamage(source));float applied=Math.min(victim.hp,amount);victim.hp=Math.max(0,victim.hp-amount);victim.lastDamage=System.nanoTime();victim.damageWall=System.currentTimeMillis();if(victim.hp==0)playerDeath(victim,attacker,killerName,impact,impulse);vitals(victim);
+    private boolean damage(Session attacker,Session victim,float amount,double[] source,double[] impact,double[] impulse,boolean head){return damage(attacker,attacker.grant.name(),victim,amount,source,impact,impulse,head);}
+    private boolean damage(Session attacker,String killerName,Session victim,float amount,double[] source,double[] impact,double[] impulse,boolean head){
+        return damage(attacker,killerName,attacker==null?null:areaActor(attacker),victim,amount,source,impact,impulse,head);
+    }
+    private boolean damage(Session attacker,String killerName,AreaRelations.Actor owner,Session victim,float amount,double[] source,double[] impact,double[] impulse,boolean head){
+        if(attacker!=null&&attacker.gameplayMode!=PlayerRules.Mode.STALKER||victim.gameplayMode!=PlayerRules.Mode.STALKER||victim.hp<=0||!Float.isFinite(amount)||amount<=0)return false;
+        if(owner!=null&&!areaRelations.allowsPlayerDamage(allianceState.friendlyFire(),owner,areaActor(victim)))return false;
+        enqueueOrRetire(victim,GamePackets.receivedDamage(source));float applied=Math.min(victim.hp,amount);victim.hp=Math.max(0,victim.hp-amount);victim.lastDamage=System.nanoTime();victim.damageWall=System.currentTimeMillis();if(victim.hp==0)playerDeath(victim,attacker,killerName,impact,impulse);vitals(victim);
         if(attacker!=null&&sessions.get(attacker.address)==attacker)enqueueOrRetire(attacker,Wire.dynamic("207064166",Wire.bytes(o->{o.writeBoolean(false);o.writeInt(head?4:3);o.writeBoolean(true);o.writeFloat(applied);o.writeFloat(0);o.writeBoolean(false);o.writeBoolean(false);o.writeBoolean(victim.hp==0);o.writeBoolean(false);o.writeBoolean(false);o.writeFloat(0);o.writeFloat(0);o.writeInt(5);o.writeBoolean(false);o.writeBoolean(false);})));
+        return true;
     }
     private boolean vitalsPending(UUID id){return medicineCommits.containsKey(id)||deathCommits.containsKey(id)||areaHealCommits.containsKey(id)||pulseCommits.containsKey(id)||reviveCommits.containsKey(id)||reviveChecks.containsKey(id);}
     private void publishVitals(VitalsTask task,VitalsReceipt receipt,CharacterLocations.PlayerState state){task.save=locations.commitVitals(task.id,receipt,state);locations.releaseVitals(task.id);task.held=false;}
@@ -1704,7 +1737,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
                 if(target.life!=check.life()||!Objects.equals(target.grenadeDeath,check.death())){reviveErrors++;completeVitals(task,reviveCommits);return;}
                 target.hp=expected.health();target.stamina=expected.stamina();target.damageWall=0;target.lastDamage=0;target.deadUntil=0;target.grenadeDeath=null;target.life++;target.velocity=new double[3];target.motion.reset();target.posture.reset();target.animation.reset();target.mode=0;target.speed=0;target.ground=true;target.reloadAt=0;target.swing=null;revives++;publishVitals(task,result.receipt(),expected);
                 corpseDespawn(corpses.retire(target.lastCorpse));target.lastCorpse=null;
-                if(!closed&&sessions.get(target.address)==target){enqueue(target,0,Wire.concat(packets.respawn(target.pos),packets.ready(target.pos,++tick,target.yaw,target.pitch,movementConfiguration(target)),GamePackets.velocityReset()));loadout(target);sendPermissions(target,true);enqueue(target,0,GamePackets.attributes(++tick,0,Factions.attributes(target.faction)));sendEffects(target,List.of(),target.effects.active(System.currentTimeMillis()));sendPulseEffects(target,List.of(),target.pulses.effects(System.currentTimeMillis()));sendSickness(target,true);resetPoses(target);vitals(target);}
+                if(!closed&&sessions.get(target.address)==target){enqueue(target,0,Wire.concat(packets.respawn(target.pos),packets.ready(target.pos,++tick,target.yaw,target.pitch,movementConfiguration(target)),GamePackets.velocityReset()));loadout(target);sendPermissions(target,true);enqueue(target,0,GamePackets.attributes(++tick,0,playerRelations(target)));sendEffects(target,List.of(),target.effects.active(System.currentTimeMillis()));sendPulseEffects(target,List.of(),target.pulses.effects(System.currentTimeMillis()));sendSickness(target,true);resetPoses(target);vitals(target);}
             },error->{reviveDenied++;target.reviveCheckAt=check.source().until();completeVitals(task,reviveCommits);});
         }
         if(reviveChecks.size()>=32)return;
@@ -1819,7 +1852,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
                 inventorySnapshot(s,0);
                 for(Session viewer:sessions.values())if(viewer!=s&&viewer.ready)enqueue(viewer,0,Wire.concat(
                         GamePackets.attributes(tick,s.entity,equipment(s)),
-                        GamePackets.attributes(tick,s.entity,Factions.attributes(s.faction))));
+                        GamePackets.attributes(tick,s.entity,playerRelations(s))));
                 syncLoadoutHand(s);
                 vitals(s);
                 done.run();
@@ -1914,7 +1947,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         if(s.respawnStateSave==null||!s.respawnStateSave.isDone())return;
         try{s.respawnStateSave.join();}catch(CompletionException failure){s.respawnStateSave=null;remove(s);return;}
         s.respawnStateSave=null;
-        s.respawning=false;s.deadUntil=0;s.velocity=new double[3];s.motion.reset();respawns++;s.worldItemsSeen.clear();s.lastMovementConfigurationSent=null;s.chunks.clear();s.chunkRevisions.clear();s.cachedRequests.clear();s.deliveries.clear();s.faults.clear();s.manifestRetryAt=0;s.deltas=null;s.completeTiles=null;s.completeTileAt=0;s.pendingChunks.clear();s.chunkX=Integer.MIN_VALUE;s.window.reset();s.windowEpoch++;enqueue(s,0,packets.respawn(s.pos));enqueue(s,0,scaledReady(s));loadout(s);sendPermissions(s,true);enqueue(s,0,GamePackets.attributes(++tick,0,Factions.attributes(s.faction)));for(Session other:sessions.values())if(other!=s&&other.ready)enqueue(other,0,GamePackets.vitals(tick,s.entity,s.hp,s.maxHp,s.animation.aiming()));
+        s.respawning=false;s.deadUntil=0;s.velocity=new double[3];s.motion.reset();respawns++;s.worldItemsSeen.clear();s.lastMovementConfigurationSent=null;s.chunks.clear();s.chunkRevisions.clear();s.cachedRequests.clear();s.deliveries.clear();s.faults.clear();s.manifestRetryAt=0;s.deltas=null;s.completeTiles=null;s.completeTileAt=0;s.pendingChunks.clear();s.chunkX=Integer.MIN_VALUE;s.window.reset();s.windowEpoch++;enqueue(s,0,packets.respawn(s.pos));enqueue(s,0,scaledReady(s));loadout(s);sendPermissions(s,true);enqueue(s,0,GamePackets.attributes(++tick,0,playerRelations(s)));for(Session other:sessions.values())if(other!=s&&other.ready)enqueue(other,0,GamePackets.vitals(tick,s.entity,s.hp,s.maxHp,s.animation.aiming()));
     }
     private void advancePlacement(Session s,long now){
         if(s.candidates==null)return;
@@ -2084,8 +2117,8 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
             s.worldItemsSeen.clear();s.lastMovementConfigurationSent=null;
             s.chunks.clear();s.chunkRevisions.clear();s.cachedRequests.clear();s.deliveries.clear();s.faults.clear();s.manifestRetryAt=0;s.deltas=null;s.completeTiles=null;s.completeTileAt=0;s.pendingChunks.clear();s.chunkX=Integer.MIN_VALUE;s.window.reset();s.windowEpoch++;
             long key=chunkKey((int)Math.floor(op.target.x()/16),(int)Math.floor(op.target.z()/16));s.chunks.add(key);s.chunkRevisions.put(key,op.center.revision());s.bots.clear();s.botHealth.clear();s.botMaximum.clear();s.botAppearances.clear();s.botReplication.reset();
-            s.velocity=new double[3];s.motion.reset();enqueue(s,0,Wire.concat(scaledReady(s),GamePackets.velocityReset()));loadout(s);sendPermissions(s,true);enqueue(s,0,GamePackets.attributes(++tick,0,Factions.attributes(s.faction)));enqueue(s,0,inventories.quickSlotsFrame(character(s)));sendEffects(s,List.of(),s.effects.active(System.currentTimeMillis()));sendPulseEffects(s,List.of(),s.pulses.effects(System.currentTimeMillis()));sendSickness(s,true);
-            for(Session other:sessions.values())if(other!=s&&other.ready){enqueue(other,0,GamePackets.teleportMovement(tick,s.entity,s.pos,s.yaw,s.pitch));enqueue(s,0,Wire.concat(Wire.frame(2028,Wire.bytes(out->out.writeInt(other.entity))),GamePackets.spawn(other.entity,other.grant.name(),other.pos,other.yaw,other.pitch),GamePackets.attributes(tick,other.entity,equipment(other)),GamePackets.attributes(tick,other.entity,remoteHand(other)),GamePackets.attributes(tick,other.entity,Factions.attributes(other.faction)),GamePackets.vitals(tick,other.entity,visibleHealth(other),other.maxHp,other.animation.aiming())));}
+            s.velocity=new double[3];s.motion.reset();enqueue(s,0,Wire.concat(scaledReady(s),GamePackets.velocityReset()));loadout(s);sendPermissions(s,true);enqueue(s,0,GamePackets.attributes(++tick,0,playerRelations(s)));enqueue(s,0,inventories.quickSlotsFrame(character(s)));sendEffects(s,List.of(),s.effects.active(System.currentTimeMillis()));sendPulseEffects(s,List.of(),s.pulses.effects(System.currentTimeMillis()));sendSickness(s,true);
+            for(Session other:sessions.values())if(other!=s&&other.ready){enqueue(other,0,GamePackets.teleportMovement(tick,s.entity,s.pos,s.yaw,s.pitch));enqueue(s,0,Wire.concat(Wire.frame(2028,Wire.bytes(out->out.writeInt(other.entity))),GamePackets.spawn(other.entity,other.grant.name(),other.pos,other.yaw,other.pitch),GamePackets.attributes(tick,other.entity,equipment(other)),GamePackets.attributes(tick,other.entity,remoteHand(other)),GamePackets.attributes(tick,other.entity,playerRelations(other)),GamePackets.vitals(tick,other.entity,visibleHealth(other),other.maxHp,other.animation.aiming())));}
             resetPoses(s);s.teleport=null;teleports++;chunkWindow(s);enqueue(s,0,GamePackets.chat(op.reply));if(op.respawnRequested&&s.hp<=0)beginRespawn(s);
         }catch(Exception error){s.teleport=null;teleportErrors++;enqueue(s,0,GamePackets.chat(Objects.toString(error.getMessage(),"teleport_failed")));if(op.respawnRequested&&s.hp<=0)beginRespawn(s);}
     }
@@ -2202,7 +2235,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         if(s.factionChanging){enqueueOrRetire(s,GamePackets.chat("Переход во фракцию ещё сохраняется"));return;}
         if(s.faction.equals(faction)){enqueueOrRetire(s,allianceState.frame());return;}
         s.factionChanging=true;
-        inventories.faction(character(s),faction,()->{s.factionChanging=false;if(sessions.get(s.address)!=s)return;s.faction=inventories.faction(character(s));int revision=++tick;enqueueOrRetire(s,GamePackets.attributes(revision,0,Factions.attributes(s.faction)));enqueueOrRetire(s,allianceState.frame());for(Session viewer:new ArrayList<>(sessions.values()))if(viewer!=s&&viewer.ready)enqueueOrRetire(viewer,GamePackets.attributes(revision,s.entity,Factions.attributes(s.faction)));enqueueOrRetire(s,GamePackets.chat("Фракция изменена: "+s.faction));},error->{s.factionChanging=false;if(sessions.get(s.address)==s)enqueueOrRetire(s,GamePackets.chat(error));});
+        inventories.faction(character(s),faction,()->{s.factionChanging=false;if(sessions.get(s.address)!=s)return;s.faction=inventories.faction(character(s));int revision=++tick;enqueueOrRetire(s,GamePackets.attributes(revision,0,playerRelations(s)));enqueueOrRetire(s,allianceState.frame());for(Session viewer:new ArrayList<>(sessions.values()))if(viewer!=s&&viewer.ready)enqueueOrRetire(viewer,GamePackets.attributes(revision,s.entity,playerRelations(s)));enqueueOrRetire(s,GamePackets.chat("Фракция изменена: "+s.faction));},error->{s.factionChanging=false;if(sessions.get(s.address)==s)enqueueOrRetire(s,GamePackets.chat(error));});
     }
     private void advanceAlliance(){
         long revision=allianceState.revision();if(revision!=allianceRevision){byte[] frame=allianceState.frame();for(Session viewer:new ArrayList<>(sessions.values()))if(viewer.ready)enqueueOrRetire(viewer,frame);allianceRevision=revision;}
@@ -2235,8 +2268,26 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
             try{if(!playerRules.entitled(character(s)))throw new IllegalArgumentException("zombies_requires_admin");var words=CommandSupport.split(text);if(words.size()>2)throw new IllegalArgumentException("/zombies start|stop|status");String operation=words.size()==1?"start":words.get(1).toLowerCase(Locale.ROOT);String reply=switch(operation){case "start"->zombies.start(character(s));case "stop"->zombies.stop();case "status"->zombies.status().toString();default->throw new IllegalArgumentException("/zombies start|stop|status");};enqueue(s,0,GamePackets.chat(reply));}catch(IllegalArgumentException error){enqueue(s,0,GamePackets.chat(error.getMessage()));}return;
         }
         if(commandRuntime(s,text))return;
+        if(verb.equals("/friendlyfire")){
+            try{
+                if(s.allianceChange!=null)throw new IllegalArgumentException("Предыдущая команда фракций ещё выполняется");
+                UUID character=character(s);
+                if(playerRules.configuredAdministrator(character))s.allianceChange=AllianceCommands.friendlyFire(allianceState,text);
+                else if(serverOwnerProfile!=null)s.allianceChange=accounts.launcherOwnsCharacter(character,serverOwnerProfile).thenCompose(owns->{
+                    if(!owns)throw new IllegalArgumentException("Команда доступна администратору");
+                    return AllianceCommands.friendlyFire(allianceState,text);
+                });
+                else throw new IllegalArgumentException("Команда доступна администратору");
+            }catch(IllegalArgumentException error){enqueueOrRetire(s,GamePackets.chat(error.getMessage()));}
+            return;
+        }
         if(verb.equals("/alliance")||verb.equals("/фракции")){
-            try{if(!playerRules.entitled(character(s)))throw new IllegalArgumentException("Команда доступна администратору");if(s.allianceChange!=null)throw new IllegalArgumentException("Предыдущая команда фракций ещё выполняется");s.allianceChange=AllianceCommands.execute(allianceState,text);}catch(IllegalArgumentException error){enqueueOrRetire(s,GamePackets.chat(error.getMessage()));}return;
+            try{
+                if(!playerRules.entitled(character(s)))throw new IllegalArgumentException("Команда доступна администратору");
+                if(s.allianceChange!=null)throw new IllegalArgumentException("Предыдущая команда фракций ещё выполняется");
+                s.allianceChange=AllianceCommands.execute(allianceState,text);
+            }catch(IllegalArgumentException error){enqueueOrRetire(s,GamePackets.chat(error.getMessage()));}
+            return;
         }
         if(verb.equals("/drone")){try{if(CommandSupport.split(text).size()!=1)throw new IllegalArgumentException("usage_drone");toggleFpv(s);}catch(IllegalArgumentException error){enqueueOrRetire(s,GamePackets.chat(error.getMessage()));}return;}
         if(ChunkDistanceCommands.matches(text)){try{int distance=ChunkDistanceCommands.parse(text),previous=s.window.radius();if(s.window.distance(distance)){s.windowEpoch++;pruneChunkWindow(s);}enqueue(s,0,szserver.client.ChunkDistancePackets.frame(distance));enqueue(s,0,GamePackets.chat("Дальность чанков: "+previous+" -> "+distance));}catch(IllegalArgumentException error){enqueue(s,0,GamePackets.chat(error.getMessage()));}return;}
@@ -2463,6 +2514,23 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         s.launcherReload=null;
         inventories.reloadLauncher(character(s),pending.hand(),pending.expected(),pending.launcher(),pending.ammo(),administrator(s),plan->{underbarrelReloads++;if(sessions.get(s.address)==s){enqueue(s,0,UnderbarrelPackets.finished());inventoryChanged(s,plan,()->{});}},error->{underbarrelDenied++;if(sessions.get(s.address)==s){enqueue(s,0,UnderbarrelPackets.finished());syncAmmo(s);enqueue(s,0,GamePackets.chat(error));}});
     }
+    private void unloadWeapon(Session s,InventoryPackets.WeaponUnload request){
+        int owner=request.owner();
+        var address=request.address();
+        Runnable ack=()->enqueue(s,0,InventoryPackets.ack(owner,request.sequence()));
+        java.util.function.Consumer<String> reject=error->{inventorySnapshot(s,owner);ack.run();enqueue(s,0,GamePackets.chat(error));};
+        boolean storage=address.aggregate()==2;
+        boolean valid=owner==0?!storage:s.inventoryScreen.storageOpen()&&address.aggregate()!=0
+                &&(!storage||address.container()==s.inventoryScreen.page());
+        if(!valid){reject.accept("inventory_owner");return;}
+        if(!InventoryScreen.available(s.hp,s.respawning)||s.teleport!=null||s.reloadAt!=0
+                ||s.launcherReload!=null||s.unjamming!=null||s.unjammingPending||s.physicalPending||physicalActive(s)
+                ||!s.weaponActions.isEmpty()||grenadeBridge.busy(character(s))||s.grenadeUse.held()!=null){
+            reject.accept("Сейчас разрядить оружие нельзя.");
+            return;
+        }
+        inventories.unloadWeapon(character(s),address,plan->inventoryChanged(s,plan,ack),reject);
+    }
     private void unloadLauncher(Session s,UnderbarrelPackets.Unload request){
         int owner=request.owner();var address=request.address();Runnable ack=()->enqueue(s,0,InventoryPackets.ack(owner,request.sequence()));
         java.util.function.Consumer<String> reject=error->{inventorySnapshot(s,owner);ack.run();enqueue(s,0,GamePackets.chat(error));};
@@ -2538,7 +2606,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         }
         if(!hit)return;boolean head=report.group()==2;Map<String,Float> stats=target.player()!=null?target.player().stats:target.copy()!=null?target.copy().state.stats:world.snapshot().entities().stream().filter(b->botKey(b).equals(botKey(target.bot()))).map(World.View::stats).findFirst().orElse(Map.of());
         float amount=(float)profile.bulletDamage(range,head,accepted.stats(),stats,accepted.ammo());double[] impulse=GamePackets.bulletImpulse(dir,profile.damageAt(range));
-        if(target.player()!=null){hits++;damage(shooter,target.player(),amount,origin,impact,impulse,head);}
+        if(target.player()!=null){if(damage(shooter,target.player(),amount,origin,impact,impulse,head))hits++;}
         else if(target.copy()!=null){hits++;damageClone(shooter,target.copy(),amount,impact,impulse,head);}
         else damageBot(shooter,target.bot(),amount,head,impact,impulse);
     }
@@ -2697,6 +2765,14 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
     private void advanceNativeSquad(Session s,long now){
         var roster=squads.roster(squadPlayer(s),now);
         if(!Objects.equals(s.nativeSquad,roster)){
+            Long previous=s.nativeSquad==null?null:s.nativeSquad.id();
+            Long current=roster==null?null:roster.id();
+            if(!Objects.equals(previous,current)){
+                int revision=++tick;
+                var attributes=Map.of(Factions.PARTY_ATTRIBUTE,Factions.partyAttribute(current));
+                for(Session viewer:new ArrayList<>(sessions.values()))if(viewer.ready)
+                    enqueueOrRetire(viewer,GamePackets.attributes(revision,viewer==s?0:s.entity,attributes));
+            }
             if(roster==null)enqueue(s,0,NativeSocialPackets.clear());
             else{
                 var members=new ArrayList<NativeSocialPackets.Member>();
@@ -2763,6 +2839,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         }
         if(!s.nearbyCapable)return;
         var team=squads.members(squadPlayer(s));
+        String faction=Factions.nativeName(s.faction);
         var online=new ArrayList<String>();
         var markers=new ArrayList<MapMarker>();
         for(Session other:sessions.values())if(other.ready){
@@ -2770,7 +2847,8 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
             if(other==s)continue;
             boolean teammate=team.contains(other.incarnation);
             if(!s.mapSquadOnly||teammate)markers.add(new MapMarker(other.grant.name(),
-                (int)Math.round(other.pos[0]),(int)Math.round(other.pos[2]),(short)Math.round(other.yaw),teammate));
+                (int)Math.round(other.pos[0]),(int)Math.round(other.pos[2]),(short)Math.round(other.yaw),
+                teammate||areaRelations.friendly(faction,Factions.nativeName(other.faction))));
         }
         online.sort(String.CASE_INSENSITIVE_ORDER);
         markers.sort(Comparator.comparing(MapMarker::name));
