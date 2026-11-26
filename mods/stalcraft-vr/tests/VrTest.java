@@ -141,6 +141,21 @@ public final class VrTest {
         near(mounts.pouch(belt).y(),belt.p().y()-.13);
         check("WEAPON_SECONDARY".equals(mounts.selectedZone(belt,belt.transform(new V(.43,.27,.23)))),"Nearest configured holster wins when zones overlap");
         check("WEAPON_PRIMARY".equals(mounts.selectedZone(belt,belt.transform(new V(.43,.45,.23)))),"Primary selection follows its height");
+        check("WEAPON_MELEE".equals(mounts.selectedZone(belt,belt.transform(new V(.03,.42,-.17)))),"Left chest is a separate knife slot");
+        VrBoltGesture boltGesture=new VrBoltGesture();
+        check(boltGesture.update(1,V.ZERO,true,true,Q.ID)==null,"Held A is not a new throw after tracking resumes");
+        boltGesture.update(2,V.ZERO,false,true,Q.ID);
+        boltGesture.update(10_000_000,V.ZERO,true,true,Q.ID);
+        boltGesture.update(40_000_000,new V(0,.05,-.12),true,true,Q.ID);
+        var throwIntent=boltGesture.update(70_000_000,new V(0,.1,-.24),false,true,Q.ID);
+        check(throwIntent!=null&&throwIntent.strength()>.9&&throwIntent.pitch()<0,"Motion sets bolt direction and strength");
+        check(throwIntent.bytes().length==16,"Fixed bolt wire size");
+        boltGesture.update(80_000_000,V.ZERO,true,true,Q.ID);
+        boltGesture.update(100_000_000,new V(0,0,-.8),true,false,Q.ID);
+        check(boltGesture.update(130_000_000,new V(0,0,-1.2),false,true,Q.ID)==null,"Loss of focus discards an unfinished throw");
+        boltGesture.update(140_000_000,V.ZERO,true,true,Q.ID);
+        check(boltGesture.update(210_000_000,new V(0,0,-.005),false,true,Q.ID)==null,"Stationary click does not throw a bolt");
+        near(snapshot(leftTracked,rightTracked,true).withoutLeftTrigger().right().squeeze(),rightTracked.squeeze());
         constraints.reset();
         Pose opticalLens=new Pose(new V(0,0,-.1),Q.ID);for(double power:new double[]{1,1.5,2.4,4,8}){
             OpticMath.View optics=OpticMath.view(opticalLens,.02,.02,power,Pose.ID);check(optics!=null,"Aligned scope camera exists");

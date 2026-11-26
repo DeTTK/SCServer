@@ -4,14 +4,16 @@ import static vr.Math3.*;
 /** Distinct torso-yaw mounts, independent of headset pitch and active native slot. */
 final class WeaponHolsters {
     private boolean down=true;
-    double shoulderHeight=.65,waistHeight=0,lateralOffset=.43,pouchHeight=0;
+    double shoulderHeight=.65,waistHeight=0,lateralOffset=.43,pouchHeight=0,knifeHeight=.42;
 
     V pouch(Pose belt){return belt.transform(new V(0,pouchHeight,0));}
     String selectedZone(Pose belt,V point){
         double primary=point.sub(belt.transform(new V(lateralOffset,shoulderHeight,.23))).length();
         double secondary=point.sub(belt.transform(new V(lateralOffset,waistHeight,.23))).length();
-        if(primary<=secondary&&primary<.22)return "WEAPON_PRIMARY";
-        return secondary<.22?"WEAPON_SECONDARY":null;
+        double knife=point.sub(belt.transform(new V(.03,knifeHeight,-.17))).length();
+        if(primary<=secondary&&primary<=knife&&primary<.22)return "WEAPON_PRIMARY";
+        if(secondary<=knife&&secondary<.22)return "WEAPON_SECONDARY";
+        return knife<.19?"WEAPON_MELEE":null;
     }
     String update(Tracking tracking,Pose belt,boolean blocked,boolean held){
         var hand=tracking.right();boolean next=hand.valid()&&hand.squeeze()>.6;

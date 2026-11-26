@@ -85,6 +85,13 @@ public final class BoltAnomalyTests {
             "replace mode uses the instance transform and strength");
     }
     public static void main(String[] args){
+        byte[] vrBolt=java.nio.ByteBuffer.allocate(16).putInt(0x56524231).putFloat(180).putFloat(-10).putFloat(1.2f).array();
+        var intent=szserver.client.VrBoltIntent.read(vrBolt);
+        if(intent.yaw()!=180||intent.pitch()!=-10||intent.strength()!=1.2f)throw new AssertionError("VR bolt wire changed");
+        java.nio.ByteBuffer.wrap(vrBolt).putFloat(12,Float.NaN);
+        try{szserver.client.VrBoltIntent.read(vrBolt);throw new AssertionError("Invalid VR bolt strength admitted");}
+        catch(java.io.IOException expected){}
+
         funnelContact();
         trampolineContact();
         nativeThrow();

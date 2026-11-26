@@ -21,10 +21,12 @@ public final class InstallFpvPackets implements Opcodes {
         snapshot(Path.of(args[0]));
         animation(Path.of(args[0]));
         medicine(Path.of(args[0]));
-        vrWeapon(Path.of(args[0]),false);vrWeapon(Path.of(args[0]),true);
+        vrWeapon(Path.of(args[0]),"VrWeapon",false);
+        vrWeapon(Path.of(args[0]),"VrWeaponReply",true);
+        vrWeapon(Path.of(args[0]),"VrBolt",false);
     }
-    static void vrWeapon(Path root,boolean reply)throws Exception {
-        String n="szmods/bridge/"+(reply?"VrWeaponReply":"VrWeapon");
+    static void vrWeapon(Path root,String packet,boolean reply)throws Exception {
+        String n="szmods/bridge/"+packet;
         ClassWriter w=new ClassWriter(ClassWriter.COMPUTE_MAXS);w.visit(V17,ACC_PUBLIC|ACC_FINAL,n,null,"499058674",null);
         w.visitField(ACC_PUBLIC,"payload","[B",null,null).visitEnd();
         MethodVisitor m=w.visitMethod(ACC_PUBLIC,"<init>",reply?"()V":"([B)V",null,null);m.visitCode();

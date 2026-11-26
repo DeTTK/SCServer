@@ -48,6 +48,11 @@ public final class NativeContracts {
         contract("447252483","void","[F","[F");contract("1492523895","throw","void");
         contract("495112732","instanceof","void");contract("szmods.runtime.VrRenderHooks","viewReady","void","java.lang.Object");
         contract("sz.animation.fp.N1320579730","szFp_this","void","378545641");
+        contract("1536296909","values","[L1536296909;");
+        contract("1473643318","while","153304200");
+        contract("1810277368","throw","boolean");contract("1810277368","void","void");
+        contract("366373100","interface","void","200241649");
+        contract("szmods.bridge.VrBolt","switch","void","java.io.DataOutput");
         contract("szmods.bridge.VrWeapon","switch","void","java.io.DataOutput");
         contract("szmods.bridge.VrWeaponReply","extends","void","java.io.DataInput");
         if(szmods.runtime.VrFrameHooks.interval(.033)!=.033)throw new AssertionError("Native frame pacing fallback");

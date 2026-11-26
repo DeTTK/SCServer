@@ -13,7 +13,7 @@ public final class VrMod implements ClientMod {
     private SettingsRegistry.BooleanSetting mirrorEnabled;
     private SettingsRegistry.BooleanSetting reducedScope;
     private SettingsRegistry.BooleanSetting performance;
-    private SettingsRegistry.NumberSetting recoilScale,holsterShoulder,holsterWaist,holsterSide,magazinePouch;
+    private SettingsRegistry.NumberSetting recoilScale,holsterShoulder,holsterWaist,holsterSide,magazinePouch,knifeHolster;
     private long nextPerformanceLog;
     private SettingsRegistry.ChoiceSetting mirrorEye;
     private SettingsRegistry.ChoiceSetting eyeResolution;
@@ -38,6 +38,7 @@ public final class VrMod implements ClientMod {
         holsterShoulder=tab.numberSetting("holster-shoulder","Высота кобуры основного оружия",.65,.38,.9);
         holsterWaist=tab.numberSetting("holster-waist","Высота кобуры вторичного оружия",0,-.2,.25);
         holsterSide=tab.numberSetting("holster-side","Смещение правых кобур",.43,.3,.6);
+        knifeHolster=tab.numberSetting("knife-holster","Высота кобуры ножа на груди",.42,.25,.65);
         magazinePouch=tab.numberSetting("magazine-pouch","Высота левого подсумка",0,-.2,.25);
         performance=tab.booleanSetting("performance","Измерять время VR-кадра (меню / журнал)",false);
     }
@@ -54,6 +55,7 @@ public final class VrMod implements ClientMod {
             gameplay.holsters.waistHeight=holsterWaist.get();
             gameplay.holsters.lateralOffset=holsterSide.get();
             gameplay.holsters.pouchHeight=magazinePouch.get();
+            gameplay.holsters.knifeHeight=knifeHolster.get();
         }
         try{if(!xr.poll()){stop();reconnect.disconnected(System.nanoTime());status=startupNotice="Связь со SteamVR потеряна. Ожидаю шлем; F12 — отменить подключение.";}else if(worldEnabled!=null&&worldEnabled.get()&&xr.running()){System.setProperty("sz.vr.active","true");gameplay.frame(game,xr.focused());}else{System.clearProperty("sz.vr.active");gameplay.close();}}catch(Throwable e){fail(e);}
     }

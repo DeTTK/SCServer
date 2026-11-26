@@ -24,7 +24,9 @@ final class GameSession {
     final VrReload reload=new VrReload();
     Ak15 gun=new Ak15(Ak15.Mounts.DEFAULT);
     final WeaponHolsters holsters=new WeaponHolsters();
-    private Object drawIdentity;
+    private Object drawIdentity,meleeItem;
+    private boolean drawKnife,knifeHeld,knifeTriggerDown=true,leftTriggerDown=true,launcherTriggerDown=true,leftAction;
+    private final VrBoltGesture boltGesture=new VrBoltGesture();
     private long drawUntil;
     GameSession(){gun.localHolster=false;}
     Tracking tracking;
@@ -49,7 +51,17 @@ final class GameSession {
         Object current=get(game,"e");
         Object held=current==null?null:call(type("764970879"),"short","211097523",current);
         WeaponSpec selected=held==null?null:WeaponSpec.find(((Number)call(held,"continue","int")).intValue());
-        if(selected==null){controls.fire(game,false);reload.close();player=current;item=null;weaponIdentity=null;result=null;gun.reset();status="Экипируйте мастерский ствол или винтовку Гаусса";return;}
+        Object equipment=current==null?null:call(type("276406255"),"implements","276406255",current);
+        boolean selectedKnife=equipment!=null&&call(equipment,"try","920235447")==get(type("920235447"),"WEAPON_MELEE")&&held!=null;
+        if(player!=current||!selectedKnife)knifeHeld=false;
+        meleeItem=selectedKnife?held:null;
+        if(selected==null){
+            controls.fire(game,false);
+            reload.close();
+            player=current;item=null;weaponIdentity=null;result=null;gun.reset();
+            if(meleeItem!=null&&!knifeHeld)status="Нож в кобуре на груди";
+            return;
+        }
         Object state=call(held,"static","java.lang.Object",type("1535556086")),identity=state==null?null:get(state,"package");
         // Native ammo/attachment updates clone item objects. Compare the durable
         // firearm UUID, not object identity, when reopening server reload state.
@@ -97,26 +109,26 @@ final class GameSession {
         debris.tick(System.nanoTime(),actor,tracking,gun.offHand());
         boolean blocked=menu||headBlocked||call(game,"float","622415611")!=null;
         gun.magazinePouch=holsters.pouch(belt);
-        String draw=holsters.update(tracking,belt,blocked,gun.held);
-        if(draw!=null&&actor!=null){
-            Object equipment=call(type("276406255"),"implements","276406255",actor),slot=get(type("920235447"),draw);
-            Object holder=call(get(equipment,"class"),"boolean","849613593",slot);
-            Object target=holder==null?null:call(holder,"else","211097523");
-            WeaponSpec targetSpec=target==null?null:WeaponSpec.find(((Number)call(target,"continue","int")).intValue());
-            if(targetSpec==null)status=target==null?"Этот слот пуст":"Для оружия в этом слоте ещё нет VR-профиля";
-            else{
-                drawIdentity=get(call(target,"static","java.lang.Object",type("1535556086")),"package");drawUntil=System.nanoTime()+3_000_000_000L;
-                controls.fire(game,false);reload.close();controls.selectWeapon(game,equipment,slot);
+        boolean handsActive=!blocked&&actionFocus(game);
+        if(!tracking.right().valid()||tracking.right().squeeze()<.25)knifeHeld=false;
+        String draw=holsters.update(tracking,belt,!handsActive,gun.held||knifeHeld);
+        if(draw!=null)drawWeapon(game,actor,draw);
+        if(drawIdentity!=null||drawKnife){
+            if(!handsActive||!tracking.right().valid()||tracking.right().squeeze()<.25||System.nanoTime()>drawUntil){
+                drawIdentity=null;drawKnife=false;
+            }else if(drawKnife&&meleeItem!=null){
+                knifeHeld=true;drawKnife=false;
+                status="Нож в правой руке · спуск для удара";
+            }else if(drawIdentity!=null&&item!=null&&java.util.Objects.equals(drawIdentity,weaponIdentity)){
+                gun.draw();drawIdentity=null;
             }
         }
-        if(drawIdentity!=null){
-            if(blocked||!tracking.focused()||!tracking.right().valid()||tracking.right().squeeze()<.25||System.nanoTime()>drawUntil)drawIdentity=null;
-            else if(item!=null&&java.util.Objects.equals(drawIdentity,weaponIdentity)){gun.draw();drawIdentity=null;}
-        }
+        updateActions(game,t,space,handsActive);
         if(item==null){result=null;return;}
         Ak15.Magazine beforeMagazine=gun.magazine;boolean beforeSupported=gun.supported;Pose previousMagazine=gun.magazinePose();
         gun.authorityPending=reload.pending!=0;
-        result=gun.update(tracking,belt,blocked);
+        result=gun.update(leftAction?tracking.withoutLeftTrigger():tracking,belt,blocked);
+        attachments.updateVisuals(this);
         if(queuedChamberEjection!=0&&gun.actionProgress()>.65){
             for(int slot=0;slot<gun.chambers.count();slot++){int bit=1<<slot;if((queuedChamberEjection&bit)!=0)debris.chamber(profile,result.weapon(),gun.gateTransform(),slot,false,System.nanoTime());if((queuedChamberEjection&(bit<<2))!=0)debris.chamber(profile,result.weapon(),gun.gateTransform(),slot,true,System.nanoTime());}
             queuedChamberEjection=0;
@@ -151,8 +163,63 @@ final class GameSession {
         if(gun.held&&gun.mainHand()==0&&result.event()==Ak15.Event.NONE)status="Оружие в левой руке — магазин и затвор правой";
         // Native shot admission, aim hook and this pose now share one snapshot.
         // Frame stalls do not create UP/DOWN edges (or extra semi-auto shots).
-        controls.fire(game,t.focused()&&!menu&&!headBlocked&&result.fire()&&gun.magazine==Ak15.Magazine.INSERTED&&gun.chambered&&clearMuzzle());
+        boolean launcher=Boolean.TRUE.equals(call(component,"throw","boolean"));
+        boolean launcherTrigger=tracking.right().trigger()>.65;
+        boolean wantsFire=launcher?gun.mainHand()==1&&launcherTrigger&&!launcherTriggerDown
+            :result.fire()&&gun.magazine==Ak15.Magazine.INSERTED&&gun.chambered;
+        controls.fire(game,handsActive&&gun.held&&wantsFire&&clearMuzzle());
+        launcherTriggerDown=!handsActive||launcherTrigger;
     }
+    private void drawWeapon(Object game,Object actor,String name)throws Exception {
+        Object equipment=call(type("276406255"),"implements","276406255",actor);
+        Object slot=get(type("920235447"),name);
+        Object holder=call(get(equipment,"class"),"boolean","849613593",slot);
+        Object target=holder==null?null:call(holder,"else","211097523");
+        if(target==null){status="Этот слот пуст";return;}
+        boolean knife=name.equals("WEAPON_MELEE");
+        Object state=knife?null:call(target,"static","java.lang.Object",type("1535556086"));
+        if(!knife&&(state==null||WeaponSpec.find(((Number)call(target,"continue","int")).intValue())==null)){
+            status="Для оружия в этом слоте ещё нет VR-профиля";
+            return;
+        }
+        drawIdentity=knife?null:get(state,"package");
+        drawKnife=knife;drawUntil=System.nanoTime()+3_000_000_000L;
+        controls.fire(game,false);reload.close();
+        controls.selectWeapon(game,equipment,slot);
+    }
+
+    private void updateActions(Object game,Tracking raw,VrSpace space,boolean active)throws Exception {
+        var right=tracking.right();
+        boolean rightUsable=active&&right.valid();
+        boolean knifeTrigger=right.trigger()>.65;
+        if(rightUsable&&knifeHeld&&knifeTrigger&&!knifeTriggerDown)controls.pulse(game,"key.attack");
+        knifeTriggerDown=!rightUsable||knifeTrigger;
+
+        var left=tracking.left();
+        boolean leftUsable=active&&left.valid();
+        boolean leftTrigger=left.trigger()>.65;
+        if(!leftUsable||!leftTrigger)leftAction=false;
+        if(leftUsable&&leftTrigger&&!leftTriggerDown&&gun.offHand()==0){
+            if(gun.held&&!gun.magazineInHand()&&left.squeeze()>.55&&result!=null){
+                leftAction=attachments.toggle(this,left.grip().p());
+            }else if(left.squeeze()<.25&&(!gun.held||!gun.leftConstrained()
+                &&!gun.magazineInHand()&&left.grip().p().sub(gun.magazinePouch).length()>.22)){
+                controls.pulse(game,"key.nvd");
+            }
+        }
+        leftTriggerDown=!leftUsable||leftTrigger;
+
+        var hand=raw.right();
+        var intent=boltGesture.update(raw.time(),hand.grip().p(),hand.primary(),
+            rightUsable&&!knifeHeld&&!drawKnife&&drawIdentity==null
+                &&(!gun.held||gun.mainHand()==0&&!gun.magazineInHand()&&!gun.leftConstrained())
+                &&right.squeeze()<.25,
+            space.world(Pose.ID).q());
+        if(intent!=null){controls.throwBolt(game,intent);status="Болт брошен";}
+    }
+
+    Object heldKnife(){return knifeHeld?meleeItem:null;}
+    Pose knifePose(){return ControllerHands.wrist(tracking.right());}
     boolean fresh(){return tracking!=null&&tracking.focused()&&System.nanoTime()-received<=150_000_000L;}
     boolean actionFocus(Object game)throws Exception {
         if(!fresh()||menu||headBlocked||player==null||get(game,"e")!=player||call(game,"float","622415611")!=null)return false;
@@ -174,8 +241,14 @@ final class GameSession {
         return controls.movement(move,original);
     }
     double[] aim(Object actor)throws Exception {
-        if(actor!=player||item==null||result==null||!fresh()||menu||headBlocked)return null;
-        V muzzle=gun.muzzle(result.weapon()),head=tracking.head().p();
+        if(actor!=player||!fresh()||menu||headBlocked)return null;
+        V head=tracking.head().p();
+        if(heldKnife()!=null){
+            V end=head.add(tracking.right().aim().forward().mul(5));
+            return new double[]{head.x(),head.y(),head.z(),end.x(),end.y(),end.z()};
+        }
+        if(item==null||result==null)return null;
+        V muzzle=gun.muzzle(result.weapon());
         if(!muzzle.finite()||muzzle.sub(head).length()>2.5)return null;
         if(!clearMuzzle())muzzle=head;
         V end=muzzle.add(result.weapon().forward().mul(1500));return new double[]{muzzle.x(),muzzle.y(),muzzle.z(),end.x(),end.y(),end.z()};
@@ -184,7 +257,7 @@ final class GameSession {
         V head=tracking.head().p(),muzzle=gun.muzzle(result.weapon());if(!muzzle.finite()||muzzle.sub(head).length()>2.5)return false;
         return clearLine(player,head,muzzle);
     }
-    void close()throws Exception {try{try{controls.release();}finally{reload.close();}}finally{cylinderCases.clear();controller.reset();roomscale.reset();holsters.reset();drawIdentity=null;drawUntil=0;tracking=null;result=null;item=player=component=weaponIdentity=null;received=insertRequested=0;menu=physicalCrouch=shotHaptic=headBlocked=false;standingHeadHeight=Double.NaN;}}
+    void close()throws Exception {try{try{controls.release();}finally{reload.close();}}finally{cylinderCases.clear();controller.reset();roomscale.reset();holsters.reset();boltGesture.reset();drawKnife=knifeHeld=false;knifeTriggerDown=leftTriggerDown=launcherTriggerDown=true;leftAction=false;meleeItem=null;drawIdentity=null;drawUntil=0;tracking=null;result=null;item=player=component=weaponIdentity=null;received=insertRequested=0;menu=physicalCrouch=shotHaptic=headBlocked=false;standingHeadHeight=Double.NaN;}}
     static Tracking world(Tracking t,VrSpace space){return new Tracking(t.time(),t.focused(),space.world(t.head()),new Tracking.Eye(space.world(t.leftEye().pose()),t.leftEye().fov()),new Tracking.Eye(space.world(t.rightEye().pose()),t.rightEye().fov()),hand(t.left(),space),hand(t.right(),space));}
     private static Tracking.Hand hand(Tracking.Hand h,VrSpace space){return new Tracking.Hand(space.world(h.grip()),space.world(h.aim()),h.valid(),h.trigger(),h.squeeze(),h.stickX(),h.stickY(),h.primary(),h.secondary(),h.stickClick(),h.menu());}
 }

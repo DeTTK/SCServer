@@ -167,7 +167,10 @@ final class StereoWorld implements OpenXr.Renderer {
             float[] clear=new float[4];glGetFloatv(GL_COLOR_CLEAR_VALUE,clear);boolean scissor=glIsEnabled(GL_SCISSOR_TEST);var mask=org.lwjgl.BufferUtils.createByteBuffer(4);glGetBooleanv(GL_COLOR_WRITEMASK,mask);
             try{glDisable(GL_SCISSOR_TEST);glColorMask(true,true,true,true);glClearColor(0,0,0,1);glClear(GL_COLOR_BUFFER_BIT);}finally{glColorMask(mask.get(0)!=0,mask.get(1)!=0,mask.get(2)!=0,mask.get(3)!=0);glClearColor(clear[0],clear[1],clear[2],clear[3]);if(scissor)glEnable(GL_SCISSOR_TEST);}
         }
-        try{Fov fov=(eye==0?t.leftEye():t.rightEye()).fov();screen.draw(eyePose(),fov);menuDraw.draw(menu,gameplay,eyePose(),fov,gameplay.tracking.right(),timings.enabled?timings:null);
+        try{Fov fov=(eye==0?t.leftEye():t.rightEye()).fov();
+            if(!gameplay.menu&&!gameplay.headBlocked&&gameplay.gun.held&&gameplay.attachments.beamStart!=null)
+                menuDraw.laser(gameplay.attachments.beamStart,gameplay.attachments.beamEnd,eyePose(),fov);
+            screen.draw(eyePose(),fov);menuDraw.draw(menu,gameplay,eyePose(),fov,gameplay.tracking.right(),timings.enabled?timings:null);
             if(mirrorEnabled){
                 // Both eye poses and the lens belong to this same snapshot.
                 // Select before capture instead of copying left then overwriting it.

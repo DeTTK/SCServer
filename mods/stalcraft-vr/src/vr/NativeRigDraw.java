@@ -10,6 +10,7 @@ final class NativeRigDraw {
     private Object renderer,context,proxy;
     private Object handsModel,handsPlayer,handsSkin;
     private boolean handsVisible;
+    private Pose knife;
     private NativePose hands,sleeves,weapon,magazine;
     private Pose body;
     private boolean scope;
@@ -25,14 +26,25 @@ final class NativeRigDraw {
         debris=game.debris;
         torso.prepare(game);
         optic.clear();
-        hands=sleeves=weapon=magazine=null;context=proxy=null;
-        if(game.item==null||game.result==null||game.headBlocked||!game.fresh()||!game.profile.load())return;
+        hands=sleeves=weapon=magazine=null;context=proxy=null;knife=null;
+        if(game.headBlocked||!game.fresh())return;
+        Object item=game.heldKnife();
+        boolean melee=item!=null;
+        if(!melee){
+            item=game.item;
+            if(item==null||game.result==null||!game.profile.load())return;
+        }
         Object component=call(type("1638940636"),"public","1638940636",game.player);context=call(component,"volatile","1382318679");if(context==null)return;
         call(context,"protected","void");call(context,"try","void");if(!(boolean)call(context,"szFp_enum","boolean"))return;
         Object data=call(get(context,"double"),"byte","java.lang.Object");if(data==null)return;
-        hands=rig(data,"instanceof");sleeves=rig(data,"for");weapon=game.profile.weapon(game);
-        if(game.gun.magazinePose()!=null&&game.gun.interactionHand(game.tracking).valid())magazine=game.profile.magazine();
+        hands=rig(data,"instanceof");sleeves=rig(data,"for");
+        if(!melee){
+            weapon=game.profile.weapon(game);
+            game.attachments.stock(weapon);
+            if(game.gun.magazinePose()!=null&&game.gun.interactionHand(game.tracking).valid())magazine=game.profile.magazine();
+        }
         if(hands==null)return;
+        if(melee&&hands.index.containsKey("RightHand"))knife=game.knifePose().compose(hands.sample("RightHand").inverse());
         V forward=game.tracking.head().forward();Q yaw=Q.axis(new V(0,1,0),Math.atan2(-forward.x(),-forward.z()));
         Object cameraBone=call(type("137379477"),"native","470347082");String name=(String)get(cameraBone,"this");
         V centre=hands.sample(name).p();body=new Pose(game.tracking.head().p().sub(yaw.rotate(centre)),yaw);
@@ -48,9 +60,9 @@ final class NativeRigDraw {
         }
         // Preserve both native hand-visibility gates from szFp_final.
         Object visibility=call(type("916325480"),"double","916325480",game.player);
-        handsVisible=(visibility==null||!(boolean)get(visibility,"private"))&&(boolean)call(call(context,"szFp_this","168071319"),"szFp_handsEnabled","boolean",game.item);
-        proxy=FpContext.create(context,hands.pose,sleeves==null?null:sleeves.pose,weapon.pose,game.attachments.weaponItem(game));
-        optic.prepare(game,context,weapon);
+        handsVisible=(visibility==null||!(boolean)get(visibility,"private"))&&(boolean)call(call(context,"szFp_this","168071319"),"szFp_handsEnabled","boolean",item);
+        proxy=FpContext.create(context,hands.pose,sleeves==null?null:sleeves.pose,weapon==null?null:weapon.pose,melee?item:game.attachments.weaponItem(game));
+        if(!melee)optic.prepare(game,context,weapon);
     }
     private NativePose rig(Object data,String name)throws Exception {
         Object rig=call(data,name,"387875964");if(rig==null)return null;
@@ -74,7 +86,7 @@ final class NativeRigDraw {
         else pose.hide("LeftArm");
     }
     void draw(StereoWorld world)throws Exception {
-        GameSession game=world.gameplay;boolean rigReady=hands!=null&&proxy!=null&&game.result!=null;if(!rigReady&&torso.parts.isEmpty()&&(debris==null||debris.items.isEmpty()))return;
+        GameSession game=world.gameplay;boolean rigReady=hands!=null&&proxy!=null&&(game.result!=null||knife!=null);if(!rigReady&&torso.parts.isEmpty()&&(debris==null||debris.items.isEmpty()))return;
         if(renderer==null)renderer=type("sz.animation.fp.N1320579730").getConstructor().newInstance();
         Pose eye=world.eyePose();
         int program=glGetInteger(GL_CURRENT_PROGRAM),vao=glGetInteger(GL_VERTEX_ARRAY_BINDING),buffer=glGetInteger(GL_ARRAY_BUFFER_BINDING);
@@ -99,7 +111,8 @@ final class NativeRigDraw {
                         call(renderer,"szFp_extends","void");
                     }
                     if(rigReady){matrix(body,eye);if(handsVisible)call(call(handsModel,"public","631538241"),"for","void",hands.pose);if(sleeves!=null)call(renderer,"szFp_extends","void",game.player,proxy);
-                    if(game.gun.held){matrix(game.result.weapon(),eye);meshes=0;call(renderer,"szFp_throw","void",proxy);
+                    if(knife!=null){matrix(knife,eye);call(renderer,"szFp_throw","void",proxy);}
+                    if(game.gun.held&&game.result!=null){matrix(game.result.weapon(),eye);meshes=0;call(renderer,"szFp_throw","void",proxy);
                     // A native non-firearm/no-op provider cannot silently erase the rifle.
                     if(meshes==0)call(call(game.profile.model,"public","631538241"),"for","void",weapon.pose);}
                     if(magazine!=null&&game.gun.magazinePose()!=null){matrix(game.gun.magazinePose(),eye);if(!game.attachments.drawMagazine(game))call(call(game.profile.model,"public","631538241"),"for","void",magazine.pose);}
