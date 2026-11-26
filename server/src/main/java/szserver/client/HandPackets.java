@@ -19,10 +19,8 @@ public final class HandPackets {
     }
     public record HeldOverride(Inventory.Address address,UUID identity,ItemStack item) {}
     public static boolean selectionClass(String name){return name.equals("753855485");}
-    public static Selection readLegacySelection(byte[] body)throws IOException{
-        Inventory.Address address=readOverride(body);
-        if(address==null)return new Selection(0,true);
-        if(address.aggregate()!=0||!equipped(address.container()))throw new IOException("hand_equipped_address");
+    public static Selection equippedSelection(Inventory.Address address){
+        if(address==null||address.aggregate()!=0||address.slot()!=0||!equipped(address.container()))return null;
         return new Selection(address.container(),false);
     }
     public static Inventory.Address readOverride(byte[] body)throws IOException {

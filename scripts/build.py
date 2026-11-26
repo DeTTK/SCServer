@@ -108,6 +108,7 @@ def tests():
     test_classes=compile_java('tests',(ROOT/'server/src/test/java').rglob('*.java'),[classes]+deps)
     cp=os.pathsep.join(map(str,[test_classes,classes]+deps));results=[]
     subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.net.ReliableRetryTimingTests'],check=True)
+    subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.client.HandPacketTests'],check=True)
     subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.EquipmentPlacementTests'],check=True)
     with tempfile.TemporaryDirectory(prefix='inventory-sort-',dir=B/'scratch' if (B/'scratch').exists() else B) as directory:
         subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.inventory.InventorySortTests',directory],check=True)
