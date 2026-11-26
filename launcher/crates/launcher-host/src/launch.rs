@@ -138,6 +138,7 @@ pub fn server_config(source: &Path, map: &Path, data: &Path, s: &Settings) -> Re
         ("development.enabled", "false".into()),
         ("launcher.enabled", "false".into()),
         ("game.playerPermission", "stalker".into()),
+        ("game.friendlyFire", s.friendly_fire.to_string()),
         ("game.administratorCharacters", "".into()),
     ] {
         values.insert(k.into(), v);
@@ -425,6 +426,14 @@ mod tests {
         assert!(config.contains("game.advertisedHosts=127.0.0.1\n"));
         assert!(!config.contains("@HOST@"));
         assert!(config.contains("game.playerPermission=stalker\n"));
+        assert!(config.contains("game.friendlyFire=false\n"));
+        let enabled = server_config(
+            &root,
+            &root.join("map"),
+            &root.join("managed"),
+            &Settings { friendly_fire: true, ..Settings::default() },
+        ).unwrap();
+        assert!(enabled.contains("game.friendlyFire=true\n"));
         assert!(config.contains("http.port=29545\n"));
         assert!(config.contains("development.enabled=false\n"));
         assert!(config.contains(&format!(

@@ -34,5 +34,46 @@ public final class AllianceStateTests {
         try(AllianceState state=new AllianceState(root.resolve("queue"),(file,bytes)->{thread.set(Thread.currentThread().getName());if(block.get()){entered.countDown();try{if(!release.await(5,TimeUnit.SECONDS))throw new IOException("test_timeout");}catch(InterruptedException e){Thread.currentThread().interrupt();throw new IOException(e);}}AllianceState.store(file,bytes);})){block.set(true);String old=Thread.currentThread().getName();CompletableFuture<String> first;try{Thread.currentThread().setName("native-game-owner");first=state.set("duty","fee",1);}finally{Thread.currentThread().setName(old);}check(entered.await(2,TimeUnit.SECONDS)&&!first.isDone(),"owner admission never waits for storage");check(thread.get().startsWith("alliance-storage-"),"disk IO is on dedicated worker");check(state.describe().contains("duty — 100000 ₽"),"readers retain old snapshot during write");List<CompletableFuture<String>> pending=new ArrayList<>();for(int i=0;i<32;i++)pending.add(state.set("duty","fee",i+2));reject(state.set("duty","fee",999));release.countDown();await(first);for(var item:pending)await(item);check(state.describe().contains("duty — 33 ₽"),"bounded FIFO preserves accepted command order");}finally{release.countDown();}
         AllianceState closed=new AllianceState(root.resolve("closed"));closed.close();reject(closed.set("duty","fee",1));
     }
-    public static void main(String[] args)throws Exception{Path base=Path.of(args[0]);Files.createDirectories(base);Path root=Files.createTempDirectory(base,"alliances-");try{test(root);}finally{try(var walk=Files.walk(root)){for(Path path:walk.sorted(Comparator.reverseOrder()).toList())Files.delete(path);}}System.out.println("PASS "+checks+" alliance validation, native framing, async owner admission, FIFO/backpressure, transactional saves and restart checks");}
+    static void playerRelations(){
+        var settings=new Properties();
+        check(!PlayerRules.configured(settings).friendlyFire(),"friendly fire defaults off for old servers");
+        settings.setProperty("game.friendlyFire","true");
+        check(PlayerRules.configured(settings).friendlyFire(),"server explicitly enables friendly fire");
+        var factions=AllianceState.ALLIANCES;
+        // Include a directed alliance so server rules use the configured matrix, not just faction equality.
+        var relations=new AreaRelations(factions.stream().map(name->
+                new AreaRelations.Alliance(name,name,name.equals("stalkers")?Set.of("duty"):Set.of())).toList());
+        var mode=AreaRelations.Mode.DEFAULT;
+        var squads=new PlayerSquads();
+        var a=new PlayerSquads.Player(UUID.randomUUID(),"TesterA");
+        var b=new PlayerSquads.Player(UUID.randomUUID(),"TesterB");
+        var idA=UUID.randomUUID();
+        var idB=UUID.randomUUID();
+        long party=squads.invite(a,b,1);
+        check(squads.id(b.session())==null,"a pending invite gives no protection");
+        squads.accept(b,party,2);
+        check(squads.id(a.session()).equals(squads.id(b.session())),"accepted squad is shared");
+        check(ByteBuffer.wrap(Factions.partyAttribute(squads.id(b.session()))).getLong()==party,"native party attribute is a long");
+        for(String left:factions)for(String right:factions){
+            var attacker=new AreaRelations.Actor(idA,left,left,null,null,false);
+            var victim=new AreaRelations.Actor(idB,right,right,null,null,false);
+            boolean allied=left.equals(right)||left.equals("stalkers")&&right.equals("duty");
+            check(relations.allied(attacker,victim,mode)==allied,"alliance without a squad follows the native matrix");
+            check(relations.allowsPlayerDamage(false,attacker,victim)!=allied,"default damage follows faction relations");
+            check(relations.allowsPlayerDamage(true,attacker,victim),"friendly fire allows damage without changing relations");
+            var squadOwner=new AreaRelations.Actor(idA,left,left,null,squads.id(a.session()),false);
+            var squadVictim=new AreaRelations.Actor(idB,right,right,null,squads.id(b.session()),false);
+            check(relations.selected("ALLIES",squadOwner,squadVictim,mode),"shared squad overrides different factions");
+            check(!relations.allowsPlayerDamage(false,squadOwner,squadVictim),"default protects squad members");
+            check(relations.allowsPlayerDamage(true,squadOwner,squadVictim),"friendly fire allows damage to squad members");
+        }
+        squads.leave(b);
+        check(ByteBuffer.wrap(Factions.partyAttribute(squads.id(b.session()))).getLong()==-1L,"leave clears the native party id");
+        check(!relations.allied(relations.actor(idA,"duty",-1L),relations.actor(idB,"freedom",-1L),mode),
+                "native no-party sentinel is not a squad");
+        var player=relations.actor(idA,"duty");
+        check(relations.allowsPlayerDamage(false,player,player),"own explosives retain their damage");
+        check(relations.allowsPlayerDamage(false,null,player),"world damage is unaffected");
+    }
+    public static void main(String[] args)throws Exception{Path base=Path.of(args[0]);Files.createDirectories(base);Path root=Files.createTempDirectory(base,"alliances-");try{test(root);playerRelations();}finally{try(var walk=Files.walk(root)){for(Path path:walk.sorted(Comparator.reverseOrder()).toList())Files.delete(path);}}System.out.println("PASS "+checks+" alliance settings, native framing, party relations, friendly fire and persistence checks");}
 }

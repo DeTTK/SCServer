@@ -26,7 +26,8 @@ public final class AreaRelations {
     public AreaRelations(Collection<Alliance> values){Map<String,Alliance> result=new TreeMap<>();for(var value:values)if(result.put(value.id(),value)!=null)throw new IllegalArgumentException("area_alliance_duplicate");if(result.isEmpty()||result.size()>128)throw new IllegalArgumentException("area_alliance_budget");for(var value:result.values())if(!result.containsKey(value.origin())||!result.keySet().containsAll(value.friendly()))throw new IllegalArgumentException("area_alliance_unresolved");alliances=Map.copyOf(result);}
     public Collection<Alliance> alliances(){return alliances.values();}
     public Alliance get(String id){var value=alliances.get(id);if(value==null)throw new IllegalArgumentException("area_alliance_unknown:"+id);return value;}
-    public Actor actor(UUID character,String faction){var value=get(Factions.nativeName(faction));return new Actor(character,value.id(),value.origin(),null,null,false);}
+    public Actor actor(UUID character,String faction){return actor(character,faction,null);}
+    public Actor actor(UUID character,String faction,Long party){var value=get(Factions.nativeName(faction));return new Actor(character,value.id(),value.origin(),null,party,false);}
     /** Native510 return(String) is directed, friendly with self and hostile by default. */
     public boolean friendly(String from,String to){var source=get(from);get(to);return from.equals(to)||source.friendly().contains(to);}
     public boolean allied(Actor owner,Actor target,Mode mode){
@@ -34,6 +35,9 @@ public final class AreaRelations {
         if(owner.hunter()||target.hunter())return owner.hunter()&&target.hunter();
         boolean truce=switch(mode){case DEFAULT->friendly(owner.faction(),target.faction());case WILD->!Set.of("stalkers","bandits").contains(owner.faction())&&owner.faction().equals(target.faction());case SUPER_WILD->false;case SAME_ORIGIN_TRUCE->owner.origin().equals(target.origin());case FULL_TRUCE->true;};
         return truce||owner.party()!=null&&owner.party()!=-1L&&owner.party().equals(target.party())||owner.clan()!=null&&owner.clan().equals(target.clan());
+    }
+    boolean allowsPlayerDamage(boolean friendlyFire,Actor attacker,Actor victim){
+        return friendlyFire||attacker==null||attacker.character().equals(victim.character())||!allied(attacker,victim,Mode.DEFAULT);
     }
     public boolean selected(String selector,Actor owner,Actor target,Mode mode){return switch(selector){case "ALL"->true;case "SELF"->owner!=null&&owner.character().equals(target.character());case "ALLIES"->owner!=null&&allied(owner,target,mode);case "ENEMIES"->owner!=null&&!allied(owner,target,mode);default->throw new IllegalArgumentException("area_target_selector");};}
 }

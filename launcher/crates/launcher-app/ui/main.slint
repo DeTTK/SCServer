@@ -42,6 +42,7 @@ export component AppWindow inherits Window {
     in property <string> relay-invite;
     in property <string> relay-status;
     in-out property <bool> relay-enabled;
+    in-out property <bool> friendly-fire;
     in property <string> server-uptime;
     in property <string> server-memory;
     in property <[string]> players;
@@ -213,6 +214,7 @@ export component AppWindow inherits Window {
                     game-path <=> root.game-path; data-path <=> root.data-path; nickname <=> root.nickname; bundle-path <=> root.bundle-path;
                     client-path <=> root.client-path; server-path <=> root.server-path; client-memory <=> root.client-memory;
                     server-memory-setting <=> root.server-memory-setting; port <=> root.port; relay-enabled <=> root.relay-enabled;
+                    friendly-fire <=> root.friendly-fire;
                     feed-url <=> root.feed-url; game-branch <=> root.game-branch; branches: root.branches; first-world-name <=> root.first-world-name; desktop-shortcut <=> root.desktop-shortcut;
                     transfer-view: root.transfer-view;
                     busy: root.busy; error: root.error; error-field: root.error-field; progress: root.progress; progress-text: root.progress-text; status: root.status;
