@@ -33,6 +33,7 @@ public final class NativeCosmeticTests {
             denied(()->items.nativeSkin(gun,armorColor),"original factory rejects incompatible color");denied(()->items.paint(container,1,containerMotif,0),"original kind rejects backpack motif in wrong slot");denied(()->items.paint(gun,2,null,0),"invalid slot rejected before mutation");
             verifySightMount(items);
             if(GameResources.mounted(resources.resolve("configs"))){
+                verifySelectableAttachments(items);
                 verifyWeaponModule(items);
                 verifyStyledReloadProfile(items);
                 verifySavedRailAndSpark(items);
@@ -306,5 +307,30 @@ public final class NativeCosmeticTests {
         check(stockProfile.reload()!=changedProfile.reload(),"native magazine reload duration");
         var painted=items.nativeSkin(loaded,color);
         check(!painted.unchanged()&&items.modules(painted.item()).equals(items.modules(loaded)),"color keeps attached modules");
+    }
+
+    private static void verifySelectableAttachments(GameItems items)throws Exception{
+        int sight=11,magazine=13;
+        var stock=items.createStack(9575,1,0,new JsonObject());
+        var mounted=items.moduleBatch(stock,sight,null,22201);
+        check(mounted.removed().isEmpty(),"free preset consumes no bag item");
+        check(items.modules(mounted.weapon()).stream().anyMatch(m->m.slot()==sight&&m.item()==22201&&!m.builtin()&&!m.locked()),
+                "selectable optic is serialized as a removable default");
+        var wire=szserver.net.InventoryPackets.stack(mounted.weapon());
+        var restored=items.initializeBuiltins(items.readStack(Arrays.copyOfRange(wire,1,wire.length)));
+        var alternate=items.moduleBatch(restored,sight,null,22308);
+        check(alternate.removed().isEmpty(),"switching presets grants no free attachment");
+        check(items.modules(alternate.weapon()).stream().anyMatch(m->m.slot()==sight&&m.item()==22308),
+                "saved selectable optic can be switched");
+        var detached=items.moduleBatch(alternate.weapon(),sight,null,0);
+        check(detached.removed().isEmpty()&&items.modules(detached.weapon()).stream().noneMatch(m->m.slot()==sight),
+                "removing a selectable default never returns it to inventory");
+        denied(()->items.moduleBatch(detached.weapon(),magazine,null,0),"permanent stock magazine remains fixed");
+        var purchased=items.createStack(22200,1,0,new JsonObject());
+        var swapped=items.moduleBatch(mounted.weapon(),sight,purchased,0);
+        check(swapped.removed().isEmpty(),"purchased optic replaces preset without credit");
+        var restoredPreset=items.moduleBatch(swapped.weapon(),sight,null,22201);
+        check(restoredPreset.removed().size()==1&&restoredPreset.removed().get(0).id()==22200,
+                "replacing a purchased optic with a preset returns the real optic");
     }
 }

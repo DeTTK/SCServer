@@ -580,7 +580,12 @@ public final class ClientStateAdapter implements AutoCloseable {
         return encode(codec(kind),value);
     }
     public GameItems.EquipmentStats containerStats(byte[] raw)throws Exception{return itemSlots.container(raw);}
-    public byte[] builtinModule(String kind,byte[] raw)throws Exception{Object state=decode(codec(kind),raw);state.getClass().getField("instanceof").setBoolean(state,true);return encode(codec(kind),state);}
+    public byte[] selectableModule(String kind,byte[] raw)throws Exception{
+        Object state=decode(codec(kind),raw);
+        // The native customization screen uses DEFAULT for a selectable preset.
+        state.getClass().getField("static").setBoolean(state,true);
+        return encode(codec(kind),state);
+    }
     public Attachment attachment(String kind,byte[] raw,int slot,byte[] attached)throws Exception{
         if(slot<0||slot>=18)throw new IOException("module_slot");Object state=decode(codec(kind),raw);Object[] slots=(Object[])Class.forName("1536296909",true,loader).getField("slots").get(null);Map<Object,Object> modules=(Map<Object,Object>)state.getClass().getField("abstract").get(state);Object key=slots[slot],old=modules.get(key);boolean builtin=false;
         if(old!=null){Class<?> base=Class.forName("154675812",true,loader);Object module=null;for(Method method:old.getClass().getMethods())if(method.getName().equals("finally")&&method.getParameterCount()==0&&method.getReturnType()==base){module=method.invoke(old);break;}if(module!=null){try{if(module.getClass().getField("throw").getBoolean(module))throw new IOException("module_locked");builtin=module.getClass().getField("instanceof").getBoolean(module);}catch(NoSuchFieldException ignored){}}}
@@ -698,10 +703,12 @@ public final class ClientStateAdapter implements AutoCloseable {
     public byte[] initialModules(int id,String kind,byte[] state)throws Exception{
         Object factory=moduleFactory(id);Class<?> gun=Class.forName("1745367406",true,loader);
         Map<?,?> builtins=(Map<?,?>)gun.getField("n").get(factory);
-        if(builtins.isEmpty())return state;
+        int[] selectable=(int[])gun.getField("do").get(factory);
+        if(builtins.isEmpty()&&selectable.length==0)return state;
         for(Object value:builtins.values())moduleFactory((Integer)value);
         byte[] raw=szserver.net.Wire.bytes(out->{out.writeShort(id);out.writeInt(1);out.writeShort(0);out.writeBoolean(true);out.write(state);out.writeByte(0);});
         Object stack=prepareModuleGun(raw);Object initialized=withModuleFactories(()->{
+            restoreSelectableModules(moduleMap(stack),builtins,selectable);
             Map<Object,Object> existing=new LinkedHashMap<>(moduleMap(stack));Arrays.stream(gun.getMethods()).filter(method->method.getName().equals("try")&&method.getReturnType()==void.class&&Arrays.equals(method.getParameterTypes(),new Class<?>[]{stack.getClass()})).findFirst().orElseThrow(()->new IOException("native_builtin_initializer_missing")).invoke(factory,stack);
             Map<Object,Object> current=moduleMap(stack);current.putAll(existing);for(var entry:current.entrySet())if(!existing.containsKey(entry.getKey())){
                 Object nested=entry.getValue().getClass().getMethod("for",Class.class).invoke(entry.getValue(),Class.forName("1806321611",true,loader));freshItemState(nested,0,Collections.newSetFromMap(new IdentityHashMap<>()));
@@ -746,23 +753,42 @@ public final class ClientStateAdapter implements AutoCloseable {
     private record NativeModuleChange(Object state,List<Object> removed){}
     /** Native factory/parent-slot/bitset/category rule; all mutations are still tentative until journal publication. */
     public ModuleChange nativeModule(byte[] weapon,String kind,int slot,byte[] attached)throws Exception{
-        Object stack=prepareModuleGun(weapon),factory=moduleFactory(moduleId(stack));Class<?> gun=Class.forName("1745367406",true,loader),base=Class.forName("1366800141",true,loader),keyType=Class.forName("1173269411",true,loader),stateType=Class.forName("1806321611",true,loader),module=Class.forName("62393481",true,loader);
+        Object stack=prepareModuleGun(weapon),factory=moduleFactory(moduleId(stack));Class<?> gun=Class.forName("1745367406",true,loader),base=Class.forName("1366800141",true,loader),keyType=Class.forName("1173269411",true,loader),module=Class.forName("62393481",true,loader);
+        Method moduleMode=module.getMethod("extends",stack.getClass());
+        Method canDetach=moduleMode.getReturnType().getMethod("super");
+        Method returnsToBag=moduleMode.getReturnType().getMethod("abstract");
         Object replacement=null,candidate=null;if(attached!=null){int id=new DataInputStream(new ByteArrayInputStream(attached)).readUnsignedShort();candidate=moduleFactory(id);replacement=moduleStack(attached);}
         Object next=replacement,definition=candidate;NativeModuleChange nativeChange=withModuleFactories(()->{
             Object[] slots=(Object[])Class.forName("1536296909",true,loader).getField("slots").get(null);if(slot<0||slot>=slots.length)throw new IOException("module_slot");Object key=slots[slot];Map<Object,Object> map=moduleMap(stack);Object old=map.get(key);
-            if(old!=null){Object mode=module.getMethod("extends",stack.getClass()).invoke(null,old);if(!(Boolean)mode.getClass().getMethod("super").invoke(mode))throw new IOException("module_locked");}
+            restoreSelectableModules(map,(Map<?,?>)gun.getField("n").get(factory),(int[])gun.getField("do").get(factory));
+            Object oldMode=old==null?null:moduleMode.invoke(null,old);
+            if(oldMode!=null&&!(Boolean)canDetach.invoke(oldMode))throw new IOException("module_locked");
             if(next!=null&&!(Boolean)gun.getMethod("interface",stack.getClass(),base,keyType).invoke(factory,stack,definition,key))throw new IOException("module_mount_incompatible");
-            List<Object> removed=new ArrayList<>();if(old!=null)addRemovedModule(old,stateType,removed);Method setter=NativeMethods.instance(Class.forName("1579742958",true,loader),"public",void.class,stack.getClass(),stack.getClass(),Object.class);setter.invoke(factory,stack,next,key);map=moduleMap(stack);Object installed=map.get(key);if((next==null)!=(installed==null)||next!=null&&!Arrays.equals(moduleWire(next),moduleWire(installed)))throw new IOException("module_native_set_rejected");
+            List<Object> removed=new ArrayList<>();if(oldMode!=null&&(Boolean)returnsToBag.invoke(oldMode))removed.add(old);Method setter=NativeMethods.instance(Class.forName("1579742958",true,loader),"public",void.class,stack.getClass(),stack.getClass(),Object.class);setter.invoke(factory,stack,next,key);map=moduleMap(stack);Object installed=map.get(key);if((next==null)!=(installed==null)||next!=null&&!Arrays.equals(moduleWire(next),moduleWire(installed)))throw new IOException("module_native_set_rejected");
             for(int pass=0;pass<slots.length;pass++){boolean changed=false;for(Object childKey:slots){Object child=map.get(childKey);if(child==null||childKey==key)continue;Object childFactory=moduleFactory(moduleId(child));
                 if(!(Boolean)gun.getMethod("interface",stack.getClass(),base,keyType).invoke(factory,stack,childFactory,childKey)){
-                    Object mode=module.getMethod("extends",stack.getClass()).invoke(null,child);if(!(Boolean)mode.getClass().getMethod("super").invoke(mode))throw new IOException("module_locked_dependency");
-                    setter.invoke(factory,stack,null,childKey);map=moduleMap(stack);if(map.containsKey(childKey))throw new IOException("module_native_remove_rejected");addRemovedModule(child,stateType,removed);changed=true;
+                    Object mode=moduleMode.invoke(null,child);if(!(Boolean)canDetach.invoke(mode))throw new IOException("module_locked_dependency");
+                    setter.invoke(factory,stack,null,childKey);map=moduleMap(stack);if(map.containsKey(childKey))throw new IOException("module_native_remove_rejected");if((Boolean)returnsToBag.invoke(mode))removed.add(child);changed=true;
                 }}if(!changed)break;}
             Object state=stack.getClass().getMethod("for",Class.class).invoke(stack,Class.forName(kind,true,loader));return new NativeModuleChange(state,List.copyOf(removed));
         });List<byte[]> removed=new ArrayList<>();for(Object value:nativeChange.removed())removed.add(moduleWire(value));return new ModuleChange(encode(codec(kind),nativeChange.state()),List.copyOf(removed));
     }
-    private void addRemovedModule(Object stack,Class<?> stateType,List<Object> removed)throws Exception{
-        Object state=stack.getClass().getMethod("for",Class.class).invoke(stack,stateType);if(state==null||!stateType.getField("instanceof").getBoolean(state))removed.add(stack);
+    private void restoreSelectableModules(Map<Object,Object> installed,Map<?,?> fixed,int[] selectable)throws Exception{
+        if(selectable.length==0||installed.isEmpty())return;
+        Class<?> moduleState=Class.forName("1806321611",true,loader);
+        var inbuilt=moduleState.getField("instanceof");
+        var defaultChoice=moduleState.getField("static");
+        for(var entry:installed.entrySet()){
+            Object attachment=entry.getValue();
+            Object state=attachment.getClass().getMethod("for",Class.class).invoke(attachment,moduleState);
+            if(state==null||!inbuilt.getBoolean(state))continue;
+            int id=moduleId(attachment);
+            // Earlier builds saved selectable presets as permanent configured parts.
+            if(!Objects.equals(fixed.get(entry.getKey()),id)&&Arrays.stream(selectable).anyMatch(choice->choice==id)){
+                inbuilt.setBoolean(state,false);
+                defaultChoice.setBoolean(state,true);
+            }
+        }
     }
     public record InventoryPoint(int owner,int sequence,int aggregate,int container,int slot,byte[] stack){}
     /** Genuine native inventory point reader/writer. No client gameplay callback is run. */
