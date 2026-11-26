@@ -247,8 +247,13 @@ public final class NativeConfigSourceChecks {
                     "native inbuilt forend follows the mounted config");
             if (stock) {
                 var equipped = items.moduleBatch(gun, 14, null, 23000).weapon();
-                check(items.modules(equipped).stream().anyMatch(module -> module.item() == 23000 && module.builtin()),
-                        "native default module can be installed");
+                check(items.modules(equipped).stream().anyMatch(module -> module.item() == 23000
+                                && !module.builtin() && !module.locked()),
+                        "native selectable default can be installed and replaced");
+                var removed = items.moduleBatch(equipped, 14, null, 0);
+                check(removed.removed().isEmpty() && items.modules(removed.weapon()).stream()
+                                .noneMatch(module -> module.item() == 23000),
+                        "removing a selectable default does not grant a bag item");
             } else {
                 try {
                     items.moduleBatch(gun, 14, null, 23000);
