@@ -1529,6 +1529,8 @@ fn compact_health(health: Value) -> Value {
             "maxTickMs",
             "tickTiming",
             "datagrams",
+            "reliableTransport",
+            "nativeAdmin",
             "connectionMismatch",
             "rejected",
             "running",
