@@ -5,6 +5,7 @@
   "pages": [
     "index",
     "locations",
+    "faq",
     "contributing"
   ]
 }
