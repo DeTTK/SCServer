@@ -31,7 +31,6 @@ struct Draft {
     world: String,
     desktop_shortcut: bool,
     relay_enabled: bool,
-    friendly_fire: bool,
 }
 impl Draft {
     fn read(ui: &AppWindow) -> Self {
@@ -50,7 +49,6 @@ impl Draft {
             world: ui.get_first_world_name().to_string(),
             desktop_shortcut: ui.get_desktop_shortcut(),
             relay_enabled: ui.get_relay_enabled(),
-            friendly_fire: ui.get_friendly_fire(),
         }
     }
     fn settings(&self, old: &Settings, layout: &Layout) -> Result<Settings> {
@@ -78,7 +76,6 @@ impl Draft {
             bail!("SERVER_MEMORY_INVALID: Укажите память сервера от 512 до 65536 МБ.")
         }
         s.relay_enabled = self.relay_enabled;
-        s.friendly_fire = self.friendly_fire;
         s.base_port = self
             .port
             .parse()
@@ -150,7 +147,6 @@ fn set_draft(ui: &AppWindow, s: &Settings) {
     ui.set_server_memory_setting(s.server_memory_mb.to_string().into());
     ui.set_port(s.base_port.to_string().into());
     ui.set_relay_enabled(s.relay_enabled);
-    ui.set_friendly_fire(s.friendly_fire);
     ui.set_feed_url(s.feed_url.clone().into());
     ui.set_game_branch(s.game_branch.clone().into());
     ui.set_branches(rows(

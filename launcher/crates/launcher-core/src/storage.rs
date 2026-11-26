@@ -28,7 +28,6 @@ pub struct Settings {
     #[serde(alias = "base_port", alias = "basePort")]
     pub base_port: u16,
     pub relay_enabled: bool,
-    pub friendly_fire: bool,
     pub relay_url: String,
     #[serde(alias = "client_memory_mb", alias = "clientMemoryMb")]
     pub client_memory_mb: u32,
@@ -72,7 +71,6 @@ impl Default for Settings {
             selected_world: String::new(),
             base_port: 29545,
             relay_enabled: false,
-            friendly_fire: false,
             relay_url: String::new(),
             client_memory_mb: 4096,
             server_memory_mb: 2048,

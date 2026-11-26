@@ -24,7 +24,6 @@ export component Configuration inherits VerticalLayout {
     in-out property <string> server-memory-setting;
     in-out property <string> port;
     in-out property <bool> relay-enabled;
-    in-out property <bool> friendly-fire;
     in-out property <string> feed-url;
     in-out property <string> game-branch;
     in property <[string]> branches;
@@ -107,8 +106,6 @@ export component Configuration inherits VerticalLayout {
             if !root.wizard && root.tab == "server": VerticalLayout {
                 CheckBox { text: "Поднимать сервер через ретранслятор"; checked <=> root.relay-enabled; enabled: !root.busy; }
                 Hint { text: "При следующем запуске появится приглашение для друзей. Проброс портов не нужен. Локальное подключение остаётся доступным."; wrap: word-wrap; }
-                CheckBox { text: "Урон по союзникам"; checked <=> root.friendly-fire; enabled: !root.busy; }
-                Hint { text: "Разрешает урон по своей фракции и отряду. Применяется при следующем запуске сервера."; wrap: word-wrap; }
                 spacing: 18px;
                 HorizontalLayout {
                     spacing: 14px;

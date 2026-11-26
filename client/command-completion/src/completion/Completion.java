@@ -49,6 +49,7 @@ public final class Completion {
     else if(arg==3&&before.get(1).text.equalsIgnoreCase("clone")){add(values,"clear");for(String s:animations)values.add(new Suggestion(s,"анимация"));}
    }
    case "/fraction" -> {if(arg==1)add(values,"stalker","bandit","merc","freedom","duty","covenant");}
+   case "/friendlyfire" -> {if(arg==1)add(values,"on","off","status");}
    case "/alliance", "/фракции" -> {
     if(arg==1){add(values,"reload","list","help","stalker","stalkers","bandit","bandits","duty","freedom","merc","covenant");}
     else if(arg==2){values.add(new Suggestion("add","добавить бонус"));values.add(new Suggestion("remove","убрать бонус"));values.add(new Suggestion("fee","стоимость перехода"));add(values,"list","farm","delivery","quest","discount","buyer","ffa");}

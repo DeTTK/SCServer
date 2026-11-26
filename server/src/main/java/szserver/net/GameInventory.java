@@ -472,6 +472,37 @@ public final class GameInventory implements AutoCloseable {
             completion(()->{if(c.deathClear||!admissionAllowed(id)){c.busy=false;failure.accept("launcher_owner_changed");return;}persist(id,c,plan,success,failure);});
         }catch(Exception|LinkageError error){completion(()->{c.busy=false;denied++;failure.accept(Objects.toString(error.getMessage(),"launcher_reload_failed"));});}});}catch(RejectedExecutionException error){c.busy=false;failure.accept("inventory_factory_queue_full");}
     }
+    public void unloadWeapon(UUID id,Inventory.Address target,Consumer<Inventory.Plan> success,Consumer<String> failure){
+        Character c=character(id);
+        if(c.busy||c.failed||c.deathClear||!admissionAllowed(id)){failure.accept("inventory_busy");return;}
+        Inventory before=c.inventory;
+        ItemStack weapon=before.at(target);
+        if(weapon==null){failure.accept("Оружие в этой ячейке отсутствует.");return;}
+        c.busy=true;
+        try{
+            factories.execute(()->{
+                try{
+                    var unloaded=items.unloadWeapon(weapon);
+                    Inventory.Plan packed=before.give(unloaded.ammo());
+                    Map<Inventory.Address,ItemStack> changes=new LinkedHashMap<>(packed.changes());
+                    changes.put(target,unloaded.weapon());
+                    Inventory.Plan plan=before.replace(changes,packed.moved());
+                    completion(()->{
+                        if(c.deathClear||!admissionAllowed(id)){c.busy=false;failure.accept("weapon_unload_owner_changed");return;}
+                        persist(id,c,plan,success,failure);
+                    });
+                }catch(Exception|LinkageError error){
+                    completion(()->{
+                        c.busy=false;
+                        denied++;
+                        String reason=Objects.toString(error.getMessage(),"weapon_unload_failed");
+                        failure.accept(reason.equals("inventory_full")?"В рюкзаке нет места для патронов.":reason);
+                    });
+                }
+            });
+        }catch(RejectedExecutionException error){c.busy=false;failure.accept("inventory_factory_queue_full");}
+    }
+
     /** Moves the actual unspent native charge into the bag in one journal revision. */
     public void unloadLauncher(UUID id,Inventory.Address target,Consumer<Inventory.Plan> success,Consumer<String> failure){
         Character c=character(id);if(c.busy||c.failed||c.deathClear||!admissionAllowed(id)){failure.accept("inventory_busy");return;}

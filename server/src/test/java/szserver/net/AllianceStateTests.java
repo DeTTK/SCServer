@@ -35,10 +35,6 @@ public final class AllianceStateTests {
         AllianceState closed=new AllianceState(root.resolve("closed"));closed.close();reject(closed.set("duty","fee",1));
     }
     static void playerRelations(){
-        var settings=new Properties();
-        check(!PlayerRules.configured(settings).friendlyFire(),"friendly fire defaults off for old servers");
-        settings.setProperty("game.friendlyFire","true");
-        check(PlayerRules.configured(settings).friendlyFire(),"server explicitly enables friendly fire");
         var factions=AllianceState.ALLIANCES;
         // Include a directed alliance so server rules use the configured matrix, not just faction equality.
         var relations=new AreaRelations(factions.stream().map(name->
@@ -75,5 +71,26 @@ public final class AllianceStateTests {
         check(relations.allowsPlayerDamage(false,player,player),"own explosives retain their damage");
         check(relations.allowsPlayerDamage(false,null,player),"world damage is unaffected");
     }
-    public static void main(String[] args)throws Exception{Path base=Path.of(args[0]);Files.createDirectories(base);Path root=Files.createTempDirectory(base,"alliances-");try{test(root);playerRelations();}finally{try(var walk=Files.walk(root)){for(Path path:walk.sorted(Comparator.reverseOrder()).toList())Files.delete(path);}}System.out.println("PASS "+checks+" alliance settings, native framing, party relations, friendly fire and persistence checks");}
+    static void friendlyFireCommands(Path root)throws Exception{
+        try(var state=new AllianceState(root)){
+            check(!state.friendlyFire(),"old worlds start with friendly fire disabled");
+            await(AllianceCommands.friendlyFire(state,"/friendlyfire on"));
+            check(state.friendlyFire(),"setting applies while the server is running");
+            check(await(AllianceCommands.friendlyFire(state,"/friendlyfire status")).contains("включён"),"status reads live value");
+        }
+        var refuseWrite=new AtomicBoolean(true);
+        try(var state=new AllianceState(root,(path,data)->{
+            if(refuseWrite.get()&&path.getFileName().toString().equals("friendly-fire.txt"))throw new IOException("write_failed");
+            AllianceState.store(path,data);
+        })){
+            check(state.friendlyFire(),"value survives restart");
+            reject(AllianceCommands.friendlyFire(state,"/friendlyfire off"));
+            check(state.friendlyFire(),"failed save leaves the live setting intact");
+            refuseWrite.set(false);
+            await(AllianceCommands.friendlyFire(state,"/friendlyfire off"));
+            check(!state.friendlyFire(),"disable takes effect without restart");
+        }
+        try(var state=new AllianceState(root)){check(!state.friendlyFire(),"off survives restart");}
+    }
+    public static void main(String[] args)throws Exception{Path base=Path.of(args[0]);Files.createDirectories(base);Path root=Files.createTempDirectory(base,"alliances-");try{test(root);playerRelations();friendlyFireCommands(root.resolve("friendly-fire"));}finally{try(var walk=Files.walk(root)){for(Path path:walk.sorted(Comparator.reverseOrder()).toList())Files.delete(path);}}System.out.println("PASS "+checks+" alliance settings, native framing, party relations, friendly fire and persistence checks");}
 }
