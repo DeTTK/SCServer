@@ -258,6 +258,23 @@ async fn session_request(
     if stage == "characters/create" && status == 409 {
         bail!("NICKNAME_TAKEN: choose another nickname for your first character");
     }
+    if status == 401 {
+        let code = response
+            .json::<serde_json::Value>()
+            .await
+            .ok()
+            .and_then(|value| match value["error"].as_str()? {
+                "launcher_clock_skew" => Some("BACKEND_CLOCK_SKEW"),
+                "launcher_identity_required" => Some("BACKEND_IDENTITY_REQUIRED"),
+                "launcher_identity_invalid" => Some("BACKEND_IDENTITY_INVALID"),
+                "launcher_request_replayed" => Some("BACKEND_REQUEST_REPLAYED"),
+                "launcher_identity_busy" => Some("BACKEND_IDENTITY_BUSY"),
+                "launcher_route_invalid" => Some("BACKEND_ROUTE_INVALID"),
+                _ => None,
+            })
+            .unwrap_or("BACKEND_UNAUTHORIZED");
+        bail!("{code}: {stage} returned HTTP 401");
+    }
     if !status.is_success() {
         // The loopback proxy generates this header itself and never relays it from upstream.
         let source = response
@@ -596,6 +613,63 @@ mod integration_tests {
             refused,
             "BACKEND_SESSION: session/game returned HTTP 502 (upstream_connect)"
         );
+    }
+
+    #[tokio::test]
+    async fn session_reports_only_known_unauthorized_reasons() {
+        let root = tempfile::tempdir().unwrap();
+        let layout = bscp_launcher_core::Layout::new(root.path());
+        layout.init().unwrap();
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let server = tokio::spawn(async move {
+            for body in [
+                r#"{"error":"launcher_clock_skew"}"#,
+                r#"{"error":"launcher_identity_invalid"}"#,
+                r#"{"error":"private server details"}"#,
+                "<html>access denied</html>",
+            ] {
+                let (mut stream, _) = listener.accept().await.unwrap();
+                let mut header = Vec::new();
+                while !header.ends_with(b"\r\n\r\n") {
+                    header.push(stream.read_u8().await.unwrap());
+                }
+                let length = std::str::from_utf8(&header)
+                    .unwrap()
+                    .lines()
+                    .find_map(|line| {
+                        let (key, value) = line.split_once(':')?;
+                        key.eq_ignore_ascii_case("content-length")
+                            .then(|| value.trim().parse::<usize>().unwrap())
+                    })
+                    .unwrap();
+                stream.read_exact(&mut vec![0; length]).await.unwrap();
+                let reply = format!(
+                    "HTTP/1.1 401 Unauthorized\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                    body.len()
+                );
+                stream.write_all(reply.as_bytes()).await.unwrap();
+            }
+        });
+        let proxy = SignedProxy::start(
+            endpoint(&format!("127.0.0.1:{port}")).unwrap(),
+            LocalIdentity::load(&layout).unwrap(),
+            None,
+        )
+        .await
+        .unwrap();
+        for code in [
+            "BACKEND_CLOCK_SKEW",
+            "BACKEND_IDENTITY_INVALID",
+            "BACKEND_UNAUTHORIZED",
+            "BACKEND_UNAUTHORIZED",
+        ] {
+            assert_eq!(
+                proxy.session("QA").await.unwrap_err().to_string(),
+                format!("{code}: session/game returned HTTP 401")
+            );
+        }
+        server.await.unwrap();
     }
 
     #[tokio::test]
