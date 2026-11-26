@@ -49,7 +49,7 @@ final class NativeRigDraw {
         // Preserve both native hand-visibility gates from szFp_final.
         Object visibility=call(type("916325480"),"double","916325480",game.player);
         handsVisible=(visibility==null||!(boolean)get(visibility,"private"))&&(boolean)call(call(context,"szFp_this","168071319"),"szFp_handsEnabled","boolean",game.item);
-        proxy=FpContext.create(context,hands.pose,sleeves==null?null:sleeves.pose,weapon.pose,game.item);
+        proxy=FpContext.create(context,hands.pose,sleeves==null?null:sleeves.pose,weapon.pose,game.attachments.weaponItem(game));
         optic.prepare(game,context,weapon);
     }
     private NativePose rig(Object data,String name)throws Exception {
@@ -102,7 +102,7 @@ final class NativeRigDraw {
                     if(game.gun.held){matrix(game.result.weapon(),eye);meshes=0;call(renderer,"szFp_throw","void",proxy);
                     // A native non-firearm/no-op provider cannot silently erase the rifle.
                     if(meshes==0)call(call(game.profile.model,"public","631538241"),"for","void",weapon.pose);}
-                    if(magazine!=null&&game.gun.magazinePose()!=null){matrix(game.gun.magazinePose(),eye);call(call(game.profile.model,"public","631538241"),"for","void",magazine.pose);}
+                    if(magazine!=null&&game.gun.magazinePose()!=null){matrix(game.gun.magazinePose(),eye);if(!game.attachments.drawMagazine(game))call(call(game.profile.model,"public","631538241"),"for","void",magazine.pose);}
                     call(renderer,"szFp_extends","void");
                     if(game.gun.held)effects.draw(world);}
                     if(debris!=null)for(WorldDebris.Item prop:debris.items){matrix(prop.body().pose,eye);call(call(prop.model(),"public","631538241"),"for","void",prop.mesh().pose);}

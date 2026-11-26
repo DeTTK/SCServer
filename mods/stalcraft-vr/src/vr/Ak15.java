@@ -27,7 +27,9 @@ public final class Ak15 {
     private double extraction,alignmentDepth;
     private Pose lastWeapon=Pose.ID,magazineModel;
     private Pose leftWrist,rightWrist,magazineGrip;
-    private Q supportRotation,boltRotation,boltGripStart;
+    private Q boltRotation,boltGripStart;
+    double recoilScale=1.35;
+    V magazinePouch;
     private double boltLift;
     public double boltLift(){return boltLift;}
     private Mounts mounts;
@@ -68,11 +70,12 @@ public final class Ak15 {
     public void shot(){chambers.shot();if(spec.mechanism==WeaponSpec.Mechanism.ROTARY_MAG)drumTarget+=2*Math.PI/spec.capacity;slide=.045;if(spec.manualCycle())chambered=false;}
     public Ak15(Mounts mounts){this.mounts=mounts;}
     public void mounts(Mounts mounts){this.mounts=mounts;}
-    public void recoil(double radians){
-        double strength=supported?.55:1;
-        recoil=Math.min(.16,recoil+radians*strength);
-        recoilYaw=Math.max(-.035,Math.min(.035,recoilYaw+radians*.22*(((++shots%5)<2)?-1:1)*strength));
-        recoilKick=Math.min(.035,recoilKick+.012*strength);
+    public void recoil(double radians){recoil(radians,radians*.22);}
+    void recoil(double vertical,double horizontal){
+        double strength=recoilScale*(supported?.55:1);
+        recoil=Math.min(.23,recoil+vertical*strength);
+        recoilYaw=Math.max(-.07,Math.min(.07,recoilYaw+horizontal*(((++shots%5)<2)?-1:1)*strength));
+        recoilKick=Math.min(.045,recoilKick+.012*strength);
     }
     public void reconcile(int ammo,boolean chamber){serverAmmo=Math.max(0,ammo);chambered=chamber;}
     public void magazineAcquired(boolean accepted){
@@ -85,7 +88,7 @@ public final class Ak15 {
         if(magazine==Magazine.INSERT_PENDING)magazine=accepted?Magazine.INSERTED:Magazine.HELD;
     }
     public void suspend(){fireArmed=interactionArmed=false;leftInteractHeld=boltHeld=boltPulled=actionHeld=supported=false;returning=boltRelease=false;boltPosition=returnPosition=0;revolver.reset();breakAction.reset();leftWrist=null;}
-    public void reset(){revolver.reset();breakAction.reset();cycleExtracted=false;boltLift=0;boltGripStart=null;chamberSlot=0;drumAngle=drumTarget=0;chambers.receive(0);gestureAnimation=returning=boltRelease=false;boltPosition=returnPosition=0;opened=actionHeld=false;actionProgress=0;actionStart=null;actionWrist=null;leftCarry=externalDraw=foregripLatched=false;carryOffset=carryWrist=null;held=supported=retainedMagazine=chambered=false;serverAmmo=0;magazine=Magazine.INSERTED;secondaryHeld=leftInteractHeld=rightGripHeld=boltHeld=boltPulled=false;fireArmed=interactionArmed=false;recoil=recoilYaw=recoilKick=slide=0;shots=0;lastTime=chargeStarted=0;lastWeapon=Pose.ID;magazineModel=magazineGrip=leftWrist=rightWrist=null;supportRotation=boltRotation=null;}
+    public void reset(){revolver.reset();breakAction.reset();cycleExtracted=false;boltLift=0;boltGripStart=null;chamberSlot=0;drumAngle=drumTarget=0;chambers.receive(0);gestureAnimation=returning=boltRelease=false;boltPosition=returnPosition=0;opened=actionHeld=false;actionProgress=0;actionStart=null;actionWrist=null;leftCarry=externalDraw=foregripLatched=false;carryOffset=carryWrist=null;held=supported=retainedMagazine=chambered=false;serverAmmo=0;magazine=Magazine.INSERTED;secondaryHeld=leftInteractHeld=rightGripHeld=boltHeld=boltPulled=false;fireArmed=interactionArmed=false;recoil=recoilYaw=recoilKick=slide=0;shots=0;lastTime=chargeStarted=0;lastWeapon=Pose.ID;magazineModel=magazineGrip=leftWrist=rightWrist=null;boltRotation=null;}
     /** Invisible inventory mount, above/right of the backpack, in torso yaw space. */
     public static Pose backHolster(Pose belt){return belt.compose(new Pose(new V(.43,.65,.23),Q.ID));}
     public Pose magazinePose(){return magazine==Magazine.INSERTED||magazine==Magazine.REMOVED?null:magazineModel;}
@@ -115,7 +118,6 @@ public final class Ak15 {
             Pose current=t.left().valid()?t.left().grip().compose(carryOffset):lastWeapon;
             if(t.right().grip().p().sub(current.transform(mounts.handToWeapon().inverse().p())).length()<.14){
                 leftCarry=false;supported=t.left().valid()&&t.left().squeeze()>.55;
-                supportRotation=current.q().inverse().mul(ControllerHands.wrist(t.left()).q());
                 fireArmed=interactionArmed=false;leftInteractHeld=false;
             }
         }
@@ -144,7 +146,7 @@ public final class Ak15 {
         // or another offhand interaction breaks the support, never inspection reach.
         boolean pumpIntent=spec.pump()&&left.squeeze()>.55&&left.trigger()>.65;
         if(!held||!left.valid()||left.squeeze()<.25||magazineInHand()||boltHeld||pumpIntent)supported=false;
-        else if(!leftCarry&&!supported&&left.squeeze()>.55&&localLeft.sub(mounts.support()).length()<.16){supported=true;supportRotation=weapon.q().inverse().mul(ControllerHands.wrist(left).q());}
+        else if(!leftCarry&&!supported&&left.squeeze()>.55&&localLeft.sub(mounts.support()).length()<.16){supported=true;}
         if(supported){V anchor=mounts.handToWeapon().inverse().p(),desired=left.grip().p().sub(right.grip().p());Q correction=Q.fromTo(weapon.q().rotate(mounts.support().sub(anchor)),desired);Q q=correction.mul(weapon.q());weapon=new Pose(right.grip().p().sub(q.rotate(anchor)),q);localLeft=weapon.inverse().transform(left.grip().p());}
         // Apply after support solving, in rifle coordinates. The two-hand solver
         // must not erase the shot impulse or rotate it around the world's X axis.
@@ -152,10 +154,10 @@ public final class Ak15 {
             Pose base=weapon;Q q=base.q().mul(Q.axis(new V(0,1,0),recoilYaw)).mul(Q.axis(new V(1,0,0),recoil));
             V anchor=mounts.handToWeapon().inverse().p(),kick=base.q().rotate(new V(0,0,recoilKick));
             weapon=new Pose(right.grip().p().add(kick).sub(q.rotate(anchor)),q);
-            Pose wrist=ControllerHands.wrist(right);rightWrist=mounts.mainWrist()==null?new Pose(wrist.p().add(kick),q.mul(base.q().inverse()).mul(wrist.q())):weapon.compose(mounts.mainWrist());
+            Pose wrist=ControllerHands.wrist(right);rightWrist=new Pose(wrist.p().add(kick),q.mul(base.q().inverse()).mul(wrist.q()));
             localLeft=left.valid()?weapon.inverse().transform(left.grip().p()):localLeft;
         }
-        if(held&&leftCarry)rightWrist=weapon.compose(carryWrist);
+        if(held&&leftCarry)rightWrist=new Pose(weapon.transform(carryWrist.p()),ControllerHands.wrist(right).q());
         if(spec.mechanism==WeaponSpec.Mechanism.REVOLVER){
             boolean eligible=held&&!authorityPending&&!supported&&!actionHeld&&!gestureAnimation&&!magazineInHand()&&magazine!=Magazine.INSERT_PENDING&&right.trigger()<.25;
             RevolverGesture.Gesture gesture=revolver.update(t.time(),weapon,t.head(),opened,eligible);
@@ -184,13 +186,14 @@ public final class Ak15 {
         }
         boolean accessible=!authorityPending&&(!spec.gate()||opened&&!gestureAnimation);
         boolean magazineInteract=event==Event.NONE&&!actionHeld;
-        if(spec.singleRounds()&&accessible&&magazineInteract&&held&&interactPressed&&magazine==Magazine.INSERTED&&serverAmmo<spec.capacity&&left.grip().p().sub(belt.p()).length()<.22){magazine=Magazine.REMOVED;event=Event.REQUEST_MAGAZINE;}
+        V pouch=magazinePouch==null?belt.p():magazinePouch;
+        if(spec.singleRounds()&&accessible&&magazineInteract&&held&&interactPressed&&magazine==Magazine.INSERTED&&serverAmmo<spec.capacity&&left.grip().p().sub(pouch).length()<.22){magazine=Magazine.REMOVED;event=Event.REQUEST_MAGAZINE;}
         else if(!spec.singleRounds()&&accessible&&magazineInteract&&held&&release&&magazine==Magazine.INSERTED){magazine=Magazine.REMOVED;retainedMagazine=false;magazineModel=null;event=Event.REMOVE_MAGAZINE;}
         else if(!spec.singleRounds()&&accessible&&magazineInteract&&held&&interactPressed&&magazine==Magazine.INSERTED&&localLeft.sub(feed()).length()<.11){
             magazine=Magazine.UNLATCHING;retainedMagazine=true;supported=false;extraction=0;magazineGrabLocal=localLeft;
             magazineGrip=new Pose(mounts.magazine(),weapon.compose(magazineBase()).q().inverse().mul(ControllerHands.wrist(left).q()));
             magazineModel=weapon.compose(magazineBase()).compose(magazineRail(0));
-        } else if(accessible&&magazineInteract&&interactPressed&&magazine==Magazine.REMOVED&&left.grip().p().sub(belt.p()).length()<.22){event=Event.REQUEST_MAGAZINE;}
+        } else if(accessible&&magazineInteract&&interactPressed&&magazine==Magazine.REMOVED&&left.grip().p().sub(pouch).length()<.22){event=Event.REQUEST_MAGAZINE;}
         if(magazine==Magazine.UNLATCHING){
             extraction=Math.max(0,Math.min(.10,localLeft.sub(magazineGrabLocal).dot(magazineBase().q().rotate(railAxis()))+(spec.mechanism==WeaponSpec.Mechanism.ROCK_MAG?.35*(localLeft.z()-magazineGrabLocal.z()):0)));
             magazineModel=weapon.compose(magazineBase()).compose(magazineRail(extraction/.10));leftWrist=magazineModel.compose(magazineGrip);
@@ -242,7 +245,7 @@ public final class Ak15 {
             }
         }
         boltPosition=travel;
-        if(supported)leftWrist=weapon.compose(new Pose(mounts.support(),supportRotation==null?Q.ID:supportRotation));
+        if(supported)leftWrist=new Pose(weapon.transform(mounts.support()),ControllerHands.wrist(left).q());
         if(!held||!t.left().valid()||t.left().squeeze()<.25||magazineInHand()&& !leftCarry||boltHeld&&!spec.pump()&& !leftCarry)foregripLatched=false;
         else if(supported)foregripLatched=true;
         boolean fire=fireArmed&&held&&!leftCarry&&right.trigger()>.65&&!opened&&!gestureAnimation&&!actionHeld&&!boltHeld&&!returning&&boltPosition<.001&&boltLift<1&&magazine==Magazine.INSERTED&&chambered&&serverAmmo>0;

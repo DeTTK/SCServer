@@ -10,6 +10,7 @@ final class GameSession {
     final Roomscale roomscale=new Roomscale();
     final NativeControls controls=new NativeControls();
     final NativeAk15 profile=new NativeAk15();
+    final NativeAttachments attachments=new NativeAttachments();
     final VrAudio audio=new VrAudio();
     final WorldDebris debris=new WorldDebris(audio);
     private int ejectExpected;
@@ -52,13 +53,17 @@ final class GameSession {
         Object state=call(held,"static","java.lang.Object",type("1535556086")),identity=state==null?null:get(state,"package");
         // Native ammo/attachment updates clone item objects. Compare the durable
         // firearm UUID, not object identity, when reopening server reload state.
-        if(item==null||player!=current||spec!=selected||!java.util.Objects.equals(identity,weaponIdentity)){controls.fire(game,false);reload.close();if(weaponIdentity!=null&&spec.mechanism==WeaponSpec.Mechanism.REVOLVER)cylinderCases.put(weaponIdentity,revolverCases);player=current;weaponIdentity=identity;spec=selected;profile.select(spec);component=call(type("1810277368"),"static","1810277368",player);gun.configure(spec);replyVersion=reload.replyVersion;requestedChamberEjection=queuedChamberEjection=0;physicalExtracted=magazineNeedsLoad=false;audio.reset();ejectExpected=0;pendingEjection=null;spentPumpShell=false;revolverCases=cylinderCases.getOrDefault(identity,0);needsRack=false;insertRequested=0;nativeAmmo=ammoId=loadedAmmoId=0;status=spec.name+" за спиной — возьмите правым grip";}
-        item=held;reload.open(game);if(profile.load())gun.mounts(profile.mounts);
+        if(item==null||player!=current||spec!=selected||!java.util.Objects.equals(identity,weaponIdentity)){controls.fire(game,false);reload.close();if(weaponIdentity!=null&&spec.mechanism==WeaponSpec.Mechanism.REVOLVER)cylinderCases.put(weaponIdentity,revolverCases);player=current;weaponIdentity=identity;spec=selected;profile.select(spec);component=call(type("1810277368"),"static","1810277368",player);gun.configure(spec);replyVersion=reload.replyVersion;requestedChamberEjection=queuedChamberEjection=0;physicalExtracted=magazineNeedsLoad=false;audio.reset();ejectExpected=0;pendingEjection=null;spentPumpShell=false;revolverCases=cylinderCases.getOrDefault(identity,0);needsRack=false;insertRequested=0;nativeAmmo=ammoId=loadedAmmoId=0;status=spec.name+" в кобуре — возьмите правым хватом";}
+        item=held;reload.open(game);if(profile.load()){gun.mounts(profile.mounts);attachments.prepare(this);}
         int previousAmmo=nativeAmmo;Object ammo=state==null?null:get(state,"void");nativeAmmo=ammo==null?0:((Number)call(ammo,"import","int")).intValue();loadedAmmoId=ammo==null?0:((Number)call(ammo,"continue","int")).intValue();
         if(nativeAmmo<previousAmmo&&gun.magazine==Ak15.Magazine.INSERTED){
             int difference=previousAmmo-nativeAmmo;
             if(ejectExpected>0){int eject=Math.min(ejectExpected,difference);ejectExpected-=eject;difference-=eject;if(eject>0&&pendingEjection!=null)debris.eject(profile,pendingEjection,false,System.nanoTime());}
-            if(difference>0&&!needsRack&&reload.ready){shotHaptic=true;for(int shot=0;shot<Math.min(5,difference);shot++){gun.shot();gun.recoil(Math.toRadians(spec.recoil));if(spec.manualCycle()&&!spec.slotted())spentPumpShell=true;else if(spec.slotted()){}else if(spec.mechanism==WeaponSpec.Mechanism.REVOLVER)revolverCases=Math.min(spec.capacity,revolverCases+1);else if(result!=null)debris.eject(profile,result.weapon(),true,System.nanoTime());}if(spec.manualCycle()){needsRack=true;reload.ready=false;}}
+            if(difference>0&&!needsRack&&reload.ready){
+                Object definition=call(component,"this","1745367406");
+                double vertical=Math.toRadians(definition==null?spec.recoil:recoilDegrees(call(definition,"break","float",item),spec.recoil));
+                double horizontal=Math.toRadians(definition==null?spec.recoil*.22:recoilDegrees(call(definition,"default","float",item),spec.recoil*.22));
+                shotHaptic=true;for(int shot=0;shot<Math.min(5,difference);shot++){gun.shot();gun.recoil(vertical,horizontal);if(spec.manualCycle()&&!spec.slotted())spentPumpShell=true;else if(spec.slotted()){}else if(spec.mechanism==WeaponSpec.Mechanism.REVOLVER)revolverCases=Math.min(spec.capacity,revolverCases+1);else if(result!=null)debris.eject(profile,result.weapon(),true,System.nanoTime());}if(spec.manualCycle()){needsRack=true;reload.ready=false;}}
         }
         if(reload.replyVersion!=replyVersion){
             replyVersion=reload.replyVersion;
@@ -72,6 +77,10 @@ final class GameSession {
         if(reload.failed){ejectExpected=0;pendingEjection=null;}if(reload.failed)status="VR перезарядка отклонена сервером — повторите цикл";
         else if(reload.pending!=0&&System.nanoTime()-reload.pending>5_000_000_000L)status="Нет подтверждения VR перезарядки от сервера";
         gun.reconcile(nativeAmmo,nativeAmmo>0&&!needsRack&&reload.ready);
+    }
+    static double recoilDegrees(Object nativeValue,double fallback){
+        double value=((Number)nativeValue).doubleValue();
+        return Double.isFinite(value)&&value>=0?Math.min(18,value):fallback;
     }
     void observe(Tracking t,VrSpace space){tracking=world(t,space);received=System.nanoTime();}
     void tracking(Tracking t,VrSpace space,Object game)throws Exception {
@@ -87,6 +96,7 @@ final class GameSession {
         Q bodyYaw=Q.axis(new V(0,1,0),yaw);Pose belt=new Pose(tracking.head().p().add(bodyYaw.rotate(new V(-.23,-.65,.05))),bodyYaw);
         debris.tick(System.nanoTime(),actor,tracking,gun.offHand());
         boolean blocked=menu||headBlocked||call(game,"float","622415611")!=null;
+        gun.magazinePouch=holsters.pouch(belt);
         String draw=holsters.update(tracking,belt,blocked,gun.held);
         if(draw!=null&&actor!=null){
             Object equipment=call(type("276406255"),"implements","276406255",actor),slot=get(type("920235447"),draw);

@@ -13,6 +13,7 @@ public final class VrMod implements ClientMod {
     private SettingsRegistry.BooleanSetting mirrorEnabled;
     private SettingsRegistry.BooleanSetting reducedScope;
     private SettingsRegistry.BooleanSetting performance;
+    private SettingsRegistry.NumberSetting recoilScale,holsterShoulder,holsterWaist,holsterSide,magazinePouch;
     private long nextPerformanceLog;
     private SettingsRegistry.ChoiceSetting mirrorEye;
     private SettingsRegistry.ChoiceSetting eyeResolution;
@@ -32,6 +33,12 @@ public final class VrMod implements ClientMod {
         mirrorEye=tab.choiceSetting("desktop-eye","Глаз для записи","Авто (прицел)",java.util.List.of("Авто (прицел)","Правый","Левый"));
         eyeResolution=tab.choiceSetting("eye-resolution","Мир VR: ширина изображения одного глаза","1280",java.util.List.of("Штатное","960","1280","1600","По шлему"));
         reducedScope=tab.booleanSetting("reduced-scope","Экономить ресурсы на оптике (картинка 512×512)",false);
+        recoilScale=tab.numberSetting("recoil-scale","Сила отдачи в VR",1.35,.5,2.5);
+        tab.section("holsters","Кобуры и подсумок · положение относительно пояса, м");
+        holsterShoulder=tab.numberSetting("holster-shoulder","Высота кобуры основного оружия",.65,.38,.9);
+        holsterWaist=tab.numberSetting("holster-waist","Высота кобуры вторичного оружия",0,-.2,.25);
+        holsterSide=tab.numberSetting("holster-side","Смещение правых кобур",.43,.3,.6);
+        magazinePouch=tab.numberSetting("magazine-pouch","Высота левого подсумка",0,-.2,.25);
         performance=tab.booleanSetting("performance","Измерять время VR-кадра (меню / журнал)",false);
     }
     public void onFrame(ClientFrame frame){renderThread=Thread.currentThread();game=frame.game();frameNumber=frame.number();long window=glfwGetCurrentContext();if(window==0)return;
@@ -41,6 +48,13 @@ public final class VrMod implements ClientMod {
         if(xr==null)return;
         xr.timings.enabled(performance!=null&&performance.get());xr.timings.refresh(System.nanoTime());
         if(xr.timings.enabled&&System.nanoTime()>=nextPerformanceLog){nextPerformanceLog=System.nanoTime()+5_000_000_000L;context.log(xr.timings.report);}
+        if(recoilScale!=null){
+            gameplay.gun.recoilScale=recoilScale.get();
+            gameplay.holsters.shoulderHeight=holsterShoulder.get();
+            gameplay.holsters.waistHeight=holsterWaist.get();
+            gameplay.holsters.lateralOffset=holsterSide.get();
+            gameplay.holsters.pouchHeight=magazinePouch.get();
+        }
         try{if(!xr.poll()){stop();reconnect.disconnected(System.nanoTime());status=startupNotice="Связь со SteamVR потеряна. Ожидаю шлем; F12 — отменить подключение.";}else if(worldEnabled!=null&&worldEnabled.get()&&xr.running()){System.setProperty("sz.vr.active","true");gameplay.frame(game,xr.focused());}else{System.clearProperty("sz.vr.active");gameplay.close();}}catch(Throwable e){fail(e);}
     }
     private void start(long window){

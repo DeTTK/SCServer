@@ -1,5 +1,4 @@
 package vr;
-import static vr.Math3.*;
 
 /** Logical native GUI coordinates, independent of framebuffer pixels. */
 record UiRegion(int x,int y,int width,int height) {
@@ -14,5 +13,7 @@ record UiRegion(int x,int y,int width,int height) {
     UiRegion padded(int margin,int totalWidth,int totalHeight){return clipped((long)x-margin,(long)y-margin,(long)x+width+margin,(long)y+height+margin,totalWidth,totalHeight);}
     int nativeX(double u){return x+Math.min(width-1,Math.max(0,(int)Math.floor(u*width)));}
     int nativeY(double v){return y+Math.min(height-1,Math.max(0,(int)Math.floor(v*height)));}
-    Pose surface(Pose base,UiRegion anchor,double metresPerUnit){return base.compose(new Pose(new V(((x+width*.5)-(anchor.x+anchor.width*.5))*metresPerUnit,-((y+height*.5)-(anchor.y+anchor.height*.5))*metresPerUnit,0),Q.ID));}
+    double scaleToFit(double maxWidth,double maxHeight){
+        return Math.min(maxWidth/width,maxHeight/height);
+    }
 }
