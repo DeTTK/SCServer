@@ -84,7 +84,7 @@ public final class BoltAnomalyTests {
         check(hit!=null&&Math.abs(hit.rebound().x()-29.6)<.0001&&hit.rebound().y()==0&&hit.rebound().z()==0,
             "replace mode uses the instance transform and strength");
     }
-    public static void main(String[] args){
+    public static void main(String[] args)throws java.io.IOException{
         byte[] vrBolt=java.nio.ByteBuffer.allocate(16).putInt(0x56524231).putFloat(180).putFloat(-10).putFloat(1.2f).array();
         var intent=szserver.client.VrBoltIntent.read(vrBolt);
         if(intent.yaw()!=180||intent.pitch()!=-10||intent.strength()!=1.2f)throw new AssertionError("VR bolt wire changed");
