@@ -52,7 +52,12 @@ final class StereoWorld implements OpenXr.Renderer {
         if(eyeIndex>=0)return false;
         this.renderer=renderer;this.player=player;this.camera=camera;this.partial=partial;
         mirror.beginFrame();sourceFbo=-1;sourceWrapper=null;captureNativeTarget();Throwable failure=null;
-        try{return xr.frame(this);}catch(Exception|Error error){failure=error;throw error;}finally{
+        try{
+            boolean rendered=xr.frame(this);
+            // Install the completed eye as the world background before the game draws its HUD.
+            if(rendered&&mirrorEnabled)mirror.publishNative(color,sourceFbo,sourceViewport[2],sourceViewport[3]);
+            return rendered;
+        }catch(Exception|Error error){failure=error;throw error;}finally{
             eyeIndex=-1;auxiliaryPose=null;auxiliaryFov=null;snapshot=null;effectsPrepared=false;
             // Restore native camera-derived matrices/frustum after the two eye views.
             try{try{rebuildCamera(camera,call(player,"transient","1500514786"));syncShaderCamera();}finally{

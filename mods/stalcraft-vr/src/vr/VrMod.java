@@ -73,14 +73,9 @@ public final class VrMod implements ClientMod {
         if(hook.equals("network.vr.weapon.v1")){gameplay.reload.receive(args[0],(byte[])args[1]);return null;}
         if(world==null)return null;
         if(hook.equals("vr.action-focus.v1"))return Boolean.getBoolean("sz.vr.active")&&xr!=null&&xr.focused()&&gameplay.actionFocus(game);
-        if(hook.equals("vr.desktop-ui.v1")){world.screen.capture(game);submitFallback();
-            if(world!=null&&Boolean.getBoolean("sz.vr.active")&&submitted==frameNumber&&world.mirrorEnabled&&NativeAccess.call(game,"float","622415611")==null){
-                long window=glfwGetCurrentContext();int[] w={0},h={0};glfwGetFramebufferSize(window,w,h);
-                // Native world colour was copied before the scope overlay.
-                // Recorders reading that target must receive the completed eye too.
-                Object nativeWrapper=NativeFramebuffer.current();try{world.mirror.publishNative(world.color,world.sourceFbo,world.sourceViewport[2],world.sourceViewport[3]);world.mirror.present(0,org.lwjgl.opengl.GL33.GL_BACK,w[0],h[0]);}
-                finally{NativeFramebuffer.restore(nativeWrapper);}
-            }
+        if(hook.equals("vr.desktop-ui.v1")){
+            world.screen.capture(game);
+            submitFallback();
             return null;
         }
         if(Boolean.getBoolean("sz.vr.active")){
