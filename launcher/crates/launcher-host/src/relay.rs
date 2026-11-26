@@ -1,5 +1,5 @@
 //! Capability-scoped game tunnel. It exposes only backend, gateway and world traffic.
-use crate::relay_catalog::ranked_relays;
+use crate::relay_catalog::{bscp_relay_ca, ranked_relays};
 use anyhow::{Context, Result, bail};
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use iroh::{
@@ -166,6 +166,9 @@ async fn endpoint(
                 .ca_tls_config(CaTlsConfig::custom_roots([access.ca.clone().into()]));
         } else {
             builder = builder.relay_mode(RelayMode::custom([url.clone()]));
+            if let Some(ca) = bscp_relay_ca(url) {
+                builder = builder.ca_tls_config(CaTlsConfig::custom_roots([ca.into()]));
+            }
         }
     }
     if relay_only {
