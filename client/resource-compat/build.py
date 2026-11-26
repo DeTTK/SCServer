@@ -23,10 +23,10 @@ def main():
     a.output.parent.mkdir(parents=True,exist_ok=True)
     if a.output.resolve()==a.base_agent.resolve():parser.error('Output must not overwrite the input agent')
     with tempfile.TemporaryDirectory(prefix='camera-compile-',dir=a.output.parent)as scratch:
-        sources=[here/'src/gamecompat'/n for n in ['ResourceCompatibilityAgent.java','PerspectivePolicyTransformer.java','ContainerMotifIconTransformer.java']];cp=os.pathsep.join(str(f.resolve())for f in [a.asm,a.asm_tree,a.base_agent]);subprocess.run([tool('javac'),'--release','17','-proc:none','-encoding','UTF-8','-cp',cp,'-d',scratch,*map(str,sources)],check=True)
+        sources=[here/'src/gamecompat'/n for n in ['ResourceCompatibilityAgent.java','PerspectivePolicyTransformer.java','ContainerMotifIconTransformer.java','ContainerMotifModels.java']];cp=os.pathsep.join(str(f.resolve())for f in [a.asm,a.asm_tree,a.base_agent]);subprocess.run([tool('javac'),'--release','17','-proc:none','-encoding','UTF-8','-cp',cp,'-d',scratch,*map(str,sources)],check=True)
         if a.native_camera:
             tests=here/'tests/gamecompat/PerspectivePolicyTests.java';run_cp=scratch+os.pathsep+cp;subprocess.run([tool('javac'),'--release','17','-proc:none','-encoding','UTF-8','-cp',run_cp,'-d',scratch,str(tests)],check=True);subprocess.run([tool('java'),'-cp',run_cp,'gamecompat.PerspectivePolicyTests',str(a.native_camera)],check=True)
-        changed=lambda n:n.startswith(('gamecompat/ResourceCompatibilityAgent','gamecompat/PerspectivePolicyTransformer','gamecompat/ContainerMotifIconTransformer'))and n.endswith('.class')
+        changed=lambda n:n.startswith(('gamecompat/ResourceCompatibilityAgent','gamecompat/PerspectivePolicyTransformer','gamecompat/ContainerMotifIconTransformer','gamecompat/ContainerMotifModels'))and n.endswith('.class')
         with zipfile.ZipFile(a.base_agent)as old,zipfile.ZipFile(a.output,'w',zipfile.ZIP_DEFLATED)as out:
             for e in old.infolist():
                 if not changed(e.filename):out.writestr(e,old.read(e.filename))

@@ -17,6 +17,7 @@ final class ContainerMotifIconTransformer implements ClassFileTransformer, Opcod
     @Override
     public byte[] transform(ClassLoader loader, String name, Class<?> type,
                             ProtectionDomain domain, byte[] bytes) {
+        if ("946927356".equals(name)) return inheritModel(bytes);
         if (!THUMBNAIL_FACTORY.equals(name)) return null;
         var reader = new ClassReader(bytes);
         var writer = new ClassWriter(reader, ClassWriter.COMPUTE_MAXS);
@@ -57,5 +58,41 @@ final class ContainerMotifIconTransformer implements ClassFileTransformer, Opcod
             }
         }, 0);
         return transformed[0] ? writer.toByteArray() : null;
+    }
+
+    private static byte[] inheritModel(byte[] bytes) {
+        var reader = new ClassReader(bytes);
+        var writer = new ClassWriter(reader, ClassWriter.COMPUTE_MAXS);
+        int[] edits = {0};
+        reader.accept(new ClassVisitor(ASM9, writer) {
+            @Override
+            public MethodVisitor visitMethod(int access, String name, String descriptor,
+                                             String signature, String[] exceptions) {
+                var original = super.visitMethod(access, name, descriptor, signature, exceptions);
+                if (!name.equals("implements") || !descriptor.equals("(L1422486348;)V")) return original;
+                return new MethodVisitor(ASM9, original) {
+                    @Override
+                    public void visitMethodInsn(int opcode, String owner, String name, String descriptor,
+                                                boolean itf) {
+                        if (opcode == INVOKESTATIC && owner.equals("1982565452") && name.equals("try")
+                                && descriptor.equals("(L837932848;L1144692372;L1825675213;)L1982565452;")) {
+                            // Slot 5 is the native target container selected by applicable_items.
+                            super.visitVarInsn(ALOAD, 5);
+                            super.visitMethodInsn(INVOKESTATIC, "gamecompat/ContainerMotifModels", "create",
+                                    "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", false);
+                            super.visitTypeInsn(CHECKCAST, owner);
+                            edits[0]++;
+                        } else {
+                            super.visitMethodInsn(opcode, owner, name, descriptor, itf);
+                        }
+                    }
+                };
+            }
+        }, 0);
+        if (edits[0] != 1) {
+            System.err.println("[Container motifs] Unexpected model factory shape: " + edits[0]);
+            return null;
+        }
+        return writer.toByteArray();
     }
 }
