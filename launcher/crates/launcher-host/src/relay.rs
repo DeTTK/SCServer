@@ -10,7 +10,10 @@ use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
     net::SocketAddr,
-    sync::Arc,
+    sync::{
+        Arc,
+        atomic::{AtomicU64, Ordering},
+    },
     time::{Duration, Instant},
 };
 use tokio::{
@@ -78,7 +81,20 @@ pub struct Tunnel {
     pub game_port: u16,
     pub world_port: u16,
     pub remote_base: u16,
+    udp: Arc<RelayUdpMetrics>,
 }
+#[derive(Default)]
+struct RelayUdpMetrics {
+    received: AtomicU64,
+    sent: AtomicU64,
+    fragments: AtomicU64,
+    fragmented: AtomicU64,
+    send_errors: AtomicU64,
+    buffer_pressure: AtomicU64,
+    forwarded: AtomicU64,
+    forward_errors: AtomicU64,
+}
+
 impl Drop for Tunnel {
     fn drop(&mut self) {
         self.stop.cancel();
@@ -139,6 +155,20 @@ fn task(stop: &CancellationToken, future: impl std::future::Future<Output = ()> 
     });
 }
 impl Tunnel {
+    pub fn udp_metrics(&self) -> serde_json::Value {
+        let counts = &self.udp;
+        let load = |value: &AtomicU64| value.load(Ordering::Relaxed);
+        serde_json::json!({
+            "udpReceived": load(&counts.received),
+            "udpSubmitted": load(&counts.sent),
+            "quicFragmentsSubmitted": load(&counts.fragments),
+            "udpFragmented": load(&counts.fragmented),
+            "quicSendErrors": load(&counts.send_errors),
+            "quicFragmentBufferPressure": load(&counts.buffer_pressure),
+            "udpForwarded": load(&counts.forwarded),
+            "udpForwardErrors": load(&counts.forward_errors),
+        })
+    }
     pub fn relay_host(&self) -> Option<String> {
         self.endpoint
             .addr()
@@ -165,6 +195,8 @@ impl Tunnel {
         let listener = ep.clone();
         let limit = Arc::new(Semaphore::new(32));
         let signal = stop.clone();
+        let udp_stats = Arc::new(RelayUdpMetrics::default());
+        let listener_stats = udp_stats.clone();
         task(&stop, async move {
             while let Some(incoming) = listener.accept().await {
                 let Ok(permit) = limit.clone().try_acquire_owned() else {
@@ -173,6 +205,7 @@ impl Tunnel {
                 };
                 let key = bytes;
                 let s = signal.clone();
+                let stats = listener_stats.clone();
                 task(&signal, async move {
                     let _permit = permit;
                     let _ = async {
@@ -196,7 +229,7 @@ impl Tunnel {
                         tx.finish()?;
                         let udp = UdpSocket::bind("127.0.0.1:0").await?;
                         udp.connect(("127.0.0.1", base + 2)).await?;
-                        udp_host(conn.clone(), udp, &s);
+                        udp_host(conn.clone(), udp, &s, stats);
                         let streams = Arc::new(Semaphore::new(64));
                         while let Ok((mut send, mut recv)) = conn.accept_bi().await {
                             let Ok(p) = streams.clone().try_acquire_owned() else {
@@ -248,6 +281,7 @@ impl Tunnel {
             game_port: base + 1,
             world_port: base + 2,
             remote_base: base,
+            udp: udp_stats,
         })
     }
     pub async fn join(value: &str, custom: &str) -> Result<Self> {
@@ -320,7 +354,8 @@ impl Tunnel {
                 }
             });
         }
-        udp_client(conn, world, &stop);
+        let udp = Arc::new(RelayUdpMetrics::default());
+        udp_client(conn, world, &stop, udp.clone());
         Ok(Self {
             endpoint: ep,
             stop,
@@ -329,11 +364,12 @@ impl Tunnel {
             game_port,
             world_port,
             remote_base: ticket.base,
+            udp,
         })
     }
 }
 // UDP stays datagram-based. Large game datagrams are fragmented with bounded reassembly.
-fn send_packet(conn: &Connection, id: u32, packet: &[u8]) -> Result<()> {
+fn send_packet(conn: &Connection, id: u32, packet: &[u8], stats: &RelayUdpMetrics) -> Result<()> {
     if packet.len() > 65507 {
         bail!("UDP_LIMIT")
     };
@@ -346,6 +382,9 @@ fn send_packet(conn: &Connection, id: u32, packet: &[u8]) -> Result<()> {
         bail!("DATAGRAM_MTU")
     };
     let count = packet.len().max(1).div_ceil(size);
+    if count > 1 {
+        stats.fragmented.fetch_add(1, Ordering::Relaxed);
+    }
     for i in 0..count {
         let mut frame = Vec::with_capacity(size + 8);
         frame.extend_from_slice(&id.to_be_bytes());
@@ -354,7 +393,11 @@ fn send_packet(conn: &Connection, id: u32, packet: &[u8]) -> Result<()> {
         frame.extend_from_slice(
             &packet[(i * size).min(packet.len())..((i + 1) * size).min(packet.len())],
         );
+        if conn.datagram_send_buffer_space() < frame.len() {
+            stats.buffer_pressure.fetch_add(1, Ordering::Relaxed);
+        }
         conn.send_datagram(frame.into())?;
+        stats.fragments.fetch_add(1, Ordering::Relaxed);
     }
     Ok(())
 }
@@ -397,20 +440,58 @@ impl Packets {
         None
     }
 }
-fn udp_host(conn: Connection, socket: UdpSocket, stop: &CancellationToken) {
+fn tunnel_udp(conn: &Connection, id: &mut u32, packet: &[u8], stats: &RelayUdpMetrics) {
+    *id = id.wrapping_add(1);
+    stats.received.fetch_add(1, Ordering::Relaxed);
+    let status = if send_packet(conn, *id, packet, stats).is_ok() {
+        &stats.sent
+    } else {
+        &stats.send_errors
+    };
+    status.fetch_add(1, Ordering::Relaxed);
+}
+
+fn udp_forwarded(result: std::io::Result<usize>, stats: &RelayUdpMetrics) {
+    let status = if result.is_ok() {
+        &stats.forwarded
+    } else {
+        &stats.forward_errors
+    };
+    status.fetch_add(1, Ordering::Relaxed);
+}
+
+fn udp_host(
+    conn: Connection,
+    socket: UdpSocket,
+    stop: &CancellationToken,
+    stats: Arc<RelayUdpMetrics>,
+) {
     task(stop, async move {
         let mut buffer = vec![0; 65536];
         let mut packets = Packets::default();
         let mut id = 0u32;
         loop {
             tokio::select! {
-                r=socket.recv(&mut buffer)=>match r{Ok(n)=>{id=id.wrapping_add(1);let _=send_packet(&conn,id,&buffer[..n]);},Err(_)=>break},
-                r=conn.read_datagram()=>match r{Ok(v)=>if let Some(p)=packets.push(&v){let _=socket.send(&p).await;},Err(_)=>break}
+                r = socket.recv(&mut buffer) => match r {
+                    Ok(n) => tunnel_udp(&conn, &mut id, &buffer[..n], &stats),
+                    Err(_) => break,
+                },
+                r = conn.read_datagram() => match r {
+                    Ok(v) => if let Some(p) = packets.push(&v) {
+                        udp_forwarded(socket.send(&p).await, &stats);
+                    },
+                    Err(_) => break,
+                }
             }
         }
     });
 }
-fn udp_client(conn: Connection, socket: UdpSocket, stop: &CancellationToken) {
+fn udp_client(
+    conn: Connection,
+    socket: UdpSocket,
+    stop: &CancellationToken,
+    stats: Arc<RelayUdpMetrics>,
+) {
     task(stop, async move {
         let mut buffer = vec![0; 65536];
         let mut packets = Packets::default();
@@ -418,8 +499,20 @@ fn udp_client(conn: Connection, socket: UdpSocket, stop: &CancellationToken) {
         let mut id = 0u32;
         loop {
             tokio::select! {
-                r=socket.recv_from(&mut buffer)=>match r{Ok((n,addr))=>{if !addr.ip().is_loopback(){continue};peer=Some(addr);id=id.wrapping_add(1);let _=send_packet(&conn,id,&buffer[..n]);},Err(_)=>break},
-                r=conn.read_datagram()=>match r{Ok(v)=>if let (Some(p),Some(peer))=(packets.push(&v),peer){let _=socket.send_to(&p,peer).await;},Err(_)=>break}
+                r = socket.recv_from(&mut buffer) => match r {
+                    Ok((n, addr)) if addr.ip().is_loopback() => {
+                        peer = Some(addr);
+                        tunnel_udp(&conn, &mut id, &buffer[..n], &stats);
+                    }
+                    Ok(_) => continue,
+                    Err(_) => break,
+                },
+                r = conn.read_datagram() => match r {
+                    Ok(v) => if let (Some(p), Some(peer)) = (packets.push(&v), peer) {
+                        udp_forwarded(socket.send_to(&p, peer).await, &stats);
+                    },
+                    Err(_) => break,
+                }
             }
         }
     });
@@ -438,6 +531,85 @@ mod tests {
         assert!(p.push(&[0, 0, 0, 1, 0, 1, 0, 2, 2]).is_none());
         assert_eq!(p.push(&[0, 0, 0, 1, 0, 0, 0, 2, 1]), Some(vec![1, 2]));
     }
+    #[tokio::test]
+    async fn local_iroh_udp_preserves_bursts_and_counts_both_directions() {
+        let server = Endpoint::builder(presets::N0)
+            .alpns(vec![ALPN.to_vec()])
+            .relay_mode(RelayMode::Disabled)
+            .clear_address_lookup()
+            .bind()
+            .await
+            .unwrap();
+        let client = Endpoint::builder(presets::N0)
+            .relay_mode(RelayMode::Disabled)
+            .clear_address_lookup()
+            .bind()
+            .await
+            .unwrap();
+        let stop = CancellationToken::new();
+        let timeout = Duration::from_secs(10);
+        let addr = server.addr();
+        let (host_conn, client_conn) = tokio::time::timeout(timeout, async {
+            tokio::join!(
+                async { server.accept().await.unwrap().await.unwrap() },
+                async { client.connect(addr, ALPN).await.unwrap() },
+            )
+        })
+        .await
+        .unwrap();
+
+        let game = UdpSocket::bind("127.0.0.1:0").await.unwrap();
+        let host_udp = UdpSocket::bind("127.0.0.1:0").await.unwrap();
+        host_udp.connect(game.local_addr().unwrap()).await.unwrap();
+        let client_udp = UdpSocket::bind("127.0.0.1:0").await.unwrap();
+        let player = UdpSocket::bind("127.0.0.1:0").await.unwrap();
+        player
+            .connect(client_udp.local_addr().unwrap())
+            .await
+            .unwrap();
+        let host_stats = Arc::new(RelayUdpMetrics::default());
+        let client_stats = Arc::new(RelayUdpMetrics::default());
+        udp_host(host_conn, host_udp, &stop, host_stats.clone());
+        udp_client(client_conn, client_udp, &stop, client_stats.clone());
+
+        let mut packet = [0; 5000];
+        for size in [25, 83, 975, 1000, 4096].into_iter().cycle().take(40) {
+            let data = vec![81; size];
+            player.send(&data).await.unwrap();
+            let (n, addr) = tokio::time::timeout(timeout, game.recv_from(&mut packet))
+                .await
+                .unwrap()
+                .unwrap();
+            assert_eq!(&packet[..n], data);
+            game.send_to(&packet[..n], addr).await.unwrap();
+            let n = tokio::time::timeout(timeout, player.recv(&mut packet))
+                .await
+                .unwrap()
+                .unwrap();
+            assert_eq!(&packet[..n], data);
+        }
+        for id in 0..48 {
+            player.send(&[id; 160]).await.unwrap();
+        }
+        let mut received = std::collections::HashSet::new();
+        for _ in 0..48 {
+            let (n, _) = tokio::time::timeout(timeout, game.recv_from(&mut packet))
+                .await
+                .unwrap()
+                .unwrap();
+            assert_eq!(n, 160);
+            assert!(received.insert(packet[0]));
+        }
+        assert_eq!(received, (0..48).collect());
+        assert_eq!(client_stats.sent.load(Ordering::Relaxed), 88);
+        assert_eq!(host_stats.sent.load(Ordering::Relaxed), 40);
+        assert!(host_stats.fragmented.load(Ordering::Relaxed) >= 8);
+        assert_eq!(host_stats.forward_errors.load(Ordering::Relaxed), 0);
+        assert_eq!(client_stats.send_errors.load(Ordering::Relaxed), 0);
+        stop.cancel();
+        let _ = tokio::join!(server.close(), client.close());
+    }
+
     #[tokio::test]
     #[ignore = "explicit public Iroh relay integration; no player data"]
     async fn public_relay_carries_tcp_udp_and_revokes_invitation() {
