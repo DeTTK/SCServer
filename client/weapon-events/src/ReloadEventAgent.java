@@ -21,6 +21,7 @@ public final class ReloadEventAgent implements Opcodes {
         },true);
         for(Class<?> type:instrumentation.getAllLoadedClasses())if(type.getName().equals("1810277368"))instrumentation.retransformClasses(type);
         MeleeBodyAgent.install(instrumentation);
+        ReloadClipAgent.install(instrumentation);
         MeleeInventoryAgent.install(instrumentation);
         MeleeStyleAgent.install(instrumentation);
         StorageInventoryViewAgent.install(instrumentation);

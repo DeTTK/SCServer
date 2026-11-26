@@ -56,8 +56,22 @@ public final class MeleeInventoryProbe implements Opcodes {
         verifyCancelledStrike();
         verifyDamageLabels();
         verifyMeleeStyleCast();
+        verifyReloadClipFallback();
         Class.forName("833813734", false, MeleeInventoryProbe.class.getClassLoader()).getDeclaredMethods();
         System.out.println("Melee cancellation and localized item stats: PASS");
+    }
+
+    private static void verifyReloadClipFallback() throws Exception {
+        ClassLoader loader = MeleeInventoryProbe.class.getClassLoader();
+        Class<?> agent = Class.forName("ReloadClipAgent");
+        try (var resource = loader.getResourceAsStream("1149187425.class")) {
+            if (resource == null) throw new AssertionError("Native weapon reload controller missing");
+            var patch = agent.getDeclaredMethod("patch", byte[].class);
+            patch.setAccessible(true);
+            patch.invoke(null, resource.readAllBytes());
+        }
+        Class.forName("1149187425", false, loader).getDeclaredMethods();
+        System.out.println("First-person reload clip fallback: PASS");
     }
 
     private static void verifyMeleeStyleCast() throws Exception {
