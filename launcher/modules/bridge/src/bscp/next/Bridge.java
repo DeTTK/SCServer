@@ -77,6 +77,9 @@ public final class Bridge {
             System.setOut(new PrintStream(new ConsoleLog(System.out,"stdout"),true,java.nio.charset.StandardCharsets.UTF_8));System.setErr(new PrintStream(new ConsoleLog(System.err,"stderr"),true,java.nio.charset.StandardCharsets.UTF_8));
             if(token==null||token.length()<32)throw new IllegalArgumentException("agent token missing");
             if(kind.equals("server")) {
+                Path sessions=output.getParent(),state=sessions==null?null:sessions.getParent();
+                if(state!=null&&state.getParent()!=null&&sessions.endsWith("sessions")&&state.endsWith("state"))
+                    System.setProperty("bscp.serverOwnerProfile",state.getParent().resolve("config/identity/profile.json").toString());
                 var worldLease=Path.of(config.getProperty("worldLease"));Files.createDirectories(worldLease.getParent());leaseChannel=FileChannel.open(worldLease,StandardOpenOption.CREATE,StandardOpenOption.WRITE);lease=leaseChannel.tryLock();if(lease==null)throw new IllegalStateException("world already owned by a Java process");
                 ServerPatches.verify(config.getProperty("serverJar"));
                 instrumentation.addTransformer(new ServerPatches());

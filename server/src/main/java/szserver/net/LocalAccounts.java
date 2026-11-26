@@ -221,6 +221,23 @@ public final class LocalAccounts implements AutoCloseable {
     public List<CharacterIdentity> listCharacters(UUID accountId){return stateRead(()->listCharactersNow(accountId));}
     private List<CharacterIdentity> listCharactersNow(UUID accountId){if(storageFailed)throw new IllegalStateException("account_storage_failed");List<CharacterIdentity> result=durableSnapshot.identities(accountId);if(result==null)throw new IllegalArgumentException("account_not_found");return result;}
     public CompletableFuture<Boolean> prepareCharacterCheck(UUID id){return stateWork(()->{if(storageFailed||closed)throw new IllegalStateException("account_storage_failed");return durableSnapshot.characterExists(id);});}
+    CompletableFuture<Boolean> launcherOwnsCharacter(UUID character,Path identityFile){
+        return stateWork(()->{
+            if(closed||storageFailed||!Files.isRegularFile(identityFile,LinkOption.NOFOLLOW_LINKS))return false;
+            String fingerprint;
+            try(var in=Files.newInputStream(identityFile,LinkOption.NOFOLLOW_LINKS)){
+                byte[] raw=in.readNBytes(8193);
+                if(raw.length>8192)return false;
+                var profile=JsonParser.parseString(new String(raw,StandardCharsets.UTF_8)).getAsJsonObject();
+                var id=profile.get(profile.has("Id")?"Id":"id");
+                if(id==null||!id.isJsonPrimitive()||!id.getAsJsonPrimitive().isString())return false;
+                fingerprint=id.getAsString();
+            }catch(java.io.IOException|RuntimeException invalid){return false;}
+            if(!fingerprint.matches("[0-9a-f]{64}"))return false;
+            var profile=durableSnapshot.profiles.get("bscp-"+fingerprint);
+            return profile!=null&&profile.accountId().equals(durableSnapshot.characters.get(character));
+        });
+    }
     public boolean characterExists(UUID id){return stateRead(()->{if(storageFailed)throw new IllegalStateException("account_storage_failed");return durableSnapshot.characterExists(id);});}
     public CharacterIdentity getCharacter(UUID accountId,UUID characterId){return listCharacters(accountId).stream().filter(character->character.id.equals(characterId)).findFirst().orElseThrow(()->new IllegalArgumentException("character_does_not_belong_to_account"));}
     private Set<String> touchedProfiles(){Set<String> result=new HashSet<>(dirtyProfiles);for(UUID id:dirtyAccounts)result.addAll(accountProfiles.getOrDefault(id,Set.of()));return result;}

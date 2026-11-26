@@ -139,6 +139,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
     private long nextLocationFlush;
     private final GameInventory inventories;
     private final AllianceState allianceState;private long allianceRevision;
+    private final Path serverOwnerProfile=Optional.ofNullable(System.getProperty("bscp.serverOwnerProfile")).map(Path::of).orElse(null);
     private static final class VitalsTask {final UUID id;final Session session;final Runnable finished;CompletableFuture<Void> save;boolean held=true;VitalsTask(UUID id,Session session,Runnable finished){this.id=id;this.session=session;this.finished=finished;}}
     private record ReviveCheck(Session target,GrenadeAreaStore.Activation source,int profile,UUID death,long life,double[] position,CompletableFuture<Integer> placement){}
     private final Map<UUID,ReviveCheck> reviveChecks=new LinkedHashMap<>();private long revives,reviveDenied,reviveErrors;
@@ -2251,11 +2252,24 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
             try{if(!playerRules.entitled(character(s)))throw new IllegalArgumentException("zombies_requires_admin");var words=CommandSupport.split(text);if(words.size()>2)throw new IllegalArgumentException("/zombies start|stop|status");String operation=words.size()==1?"start":words.get(1).toLowerCase(Locale.ROOT);String reply=switch(operation){case "start"->zombies.start(character(s));case "stop"->zombies.stop();case "status"->zombies.status().toString();default->throw new IllegalArgumentException("/zombies start|stop|status");};enqueue(s,0,GamePackets.chat(reply));}catch(IllegalArgumentException error){enqueue(s,0,GamePackets.chat(error.getMessage()));}return;
         }
         if(commandRuntime(s,text))return;
-        if(verb.equals("/alliance")||verb.equals("/фракции")||verb.equals("/friendlyfire")){
+        if(verb.equals("/friendlyfire")){
+            try{
+                if(s.allianceChange!=null)throw new IllegalArgumentException("Предыдущая команда фракций ещё выполняется");
+                UUID character=character(s);
+                if(playerRules.configuredAdministrator(character))s.allianceChange=AllianceCommands.friendlyFire(allianceState,text);
+                else if(serverOwnerProfile!=null)s.allianceChange=accounts.launcherOwnsCharacter(character,serverOwnerProfile).thenCompose(owns->{
+                    if(!owns)throw new IllegalArgumentException("Команда доступна администратору");
+                    return AllianceCommands.friendlyFire(allianceState,text);
+                });
+                else throw new IllegalArgumentException("Команда доступна администратору");
+            }catch(IllegalArgumentException error){enqueueOrRetire(s,GamePackets.chat(error.getMessage()));}
+            return;
+        }
+        if(verb.equals("/alliance")||verb.equals("/фракции")){
             try{
                 if(!playerRules.entitled(character(s)))throw new IllegalArgumentException("Команда доступна администратору");
                 if(s.allianceChange!=null)throw new IllegalArgumentException("Предыдущая команда фракций ещё выполняется");
-                s.allianceChange=verb.equals("/friendlyfire")?AllianceCommands.friendlyFire(allianceState,text):AllianceCommands.execute(allianceState,text);
+                s.allianceChange=AllianceCommands.execute(allianceState,text);
             }catch(IllegalArgumentException error){enqueueOrRetire(s,GamePackets.chat(error.getMessage()));}
             return;
         }
