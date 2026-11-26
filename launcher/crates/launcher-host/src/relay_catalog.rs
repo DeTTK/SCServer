@@ -9,6 +9,13 @@ use tokio::task::JoinSet;
 const CATALOG_URL: &str =
     "https://raw.githubusercontent.com/DeTTK/SCServer/main/launcher/relays.json";
 const EMBEDDED_CATALOG: &str = include_str!("../../../relays.json");
+const TEST_CATALOG: &str = include_str!("../../../relays-test.json");
+
+pub(crate) fn test_relay() -> Result<RelayUrl> {
+    let mut relays = parse_catalog(TEST_CATALOG.as_bytes())?;
+    ensure!(relays.len() == 1, "RELAY_TEST_CATALOG");
+    Ok(relays.remove(0))
+}
 const MAX_CATALOG_BYTES: usize = 8192;
 const MAX_RELAYS: usize = 12;
 

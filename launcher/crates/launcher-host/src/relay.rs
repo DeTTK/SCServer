@@ -197,7 +197,12 @@ async fn host_endpoint(
     custom: &str,
     private: Option<&PrivateRelay>,
     relay_only: bool,
+    branch: &str,
 ) -> Result<Endpoint> {
+    if branch == "test" && custom.trim().is_empty() {
+        let relay = crate::relay_catalog::test_relay()?;
+        return online_endpoint(Some(&relay), private, relay_only, Duration::from_secs(20)).await;
+    }
     let selected: Option<RelayUrl> = if custom.trim().is_empty() {
         private.map(|access| access.url.clone())
     } else {
@@ -266,15 +271,17 @@ impl Tunnel {
     }
 
     pub async fn host(base: u16, custom: &str, root: &Path) -> Result<Self> {
-        Self::host_mode(base, custom, PrivateRelay::load(root)?.as_ref(), false).await
+        let settings = bscp_launcher_core::Layout::new(root).load().unwrap_or_default();
+        Self::host_mode(base, custom, PrivateRelay::load(root)?.as_ref(), false, &settings.game_branch).await
     }
     async fn host_mode(
         base: u16,
         custom: &str,
         access: Option<&PrivateRelay>,
         relay_only: bool,
+        branch: &str,
     ) -> Result<Self> {
-        let ep = host_endpoint(custom, access, relay_only).await?;
+        let ep = host_endpoint(custom, access, relay_only, branch).await?;
         let mut bytes = [0; 32];
         rand::RngCore::fill_bytes(&mut rand::rngs::OsRng, &mut bytes);
         let ticket = Invite {
@@ -410,12 +417,15 @@ impl Tunnel {
                 Duration::from_secs(25),
                 ep.connect(ticket.address.clone(), ALPN),
             )
-            .await??;
+            .await.context("RELAY_PEER_TIMEOUT: хост не ответил на соединение")?
+            .context("RELAY_PEER_CONNECT")?;
             let (mut tx, mut rx) = conn.open_bi().await?;
             tx.write_all(&hex::decode(&ticket.key)?).await?;
             tx.finish()?;
             let mut ack = [0; 2];
-            tokio::time::timeout(Duration::from_secs(10), rx.read_exact(&mut ack)).await??;
+            tokio::time::timeout(Duration::from_secs(10), rx.read_exact(&mut ack))
+                .await.context("RELAY_INVITE_TIMEOUT: хост не подтвердил приглашение")?
+                .context("RELAY_INVITE_REPLY")?;
             if &ack != b"OK" {
                 bail!("INVITE_DENIED")
             }
@@ -811,7 +821,7 @@ mod tests {
             );
         }
         let start = Instant::now();
-        let host = Tunnel::host_mode(base, &target, private.as_ref(), true)
+        let host = Tunnel::host_mode(base, &target, private.as_ref(), true, "main")
             .await
             .expect("host relay online");
         let selected = host.relay_host().expect("selected relay");

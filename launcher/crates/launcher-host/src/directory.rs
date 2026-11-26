@@ -35,7 +35,7 @@ pub struct PublicServer {
     pub icon: Option<String>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct DirectoryAddress {
     endpoint: EndpointId,
@@ -192,11 +192,15 @@ async fn exchange<T: DeserializeOwned>(
     limit: usize,
 ) -> Result<T> {
     tokio::time::timeout(DEADLINE, async {
-        let connection = ep.connect(address, ALPN).await?;
+        let connection = ep
+            .connect(address, ALPN)
+            .await
+            .context("DIRECTORY_CONNECT")?;
         let (mut tx, mut rx) = connection.open_bi().await?;
         tx.write_all(&serde_json::to_vec(&request)?).await?;
         tx.finish()?;
-        let response = serde_json::from_slice(&rx.read_to_end(limit).await?)?;
+        let response =
+            serde_json::from_slice(&rx.read_to_end(limit).await.context("DIRECTORY_REPLY")?)?;
         connection.close(0u32.into(), b"directory request complete");
         Ok(response)
     })
@@ -228,6 +232,7 @@ pub(crate) async fn advertise(
 
 pub struct Browser {
     runtime: tokio::runtime::Runtime,
+    link: Option<(DirectoryAddress, Endpoint)>,
 }
 
 impl Browser {
@@ -237,15 +242,30 @@ impl Browser {
                 .worker_threads(2)
                 .enable_all()
                 .build()?,
+            link: None,
         })
     }
 
-    pub fn list(&self, layout: &Layout) -> Result<Vec<PublicServer>> {
+    pub fn list(&mut self, layout: &Layout) -> Result<Vec<PublicServer>> {
+        let link = &mut self.link;
         self.runtime.block_on(async {
             let address = DirectoryAddress::load(layout).await?;
-            let ep = endpoint(&address.relay, None).await?;
-            let result = exchange(&ep, address.address(), Request::List, 2 * 1024 * 1024).await;
-            ep.close().await;
+            if link
+                .as_ref()
+                .is_none_or(|(prior, ep)| *prior != address || ep.is_closed())
+            {
+                let ep = endpoint(&address.relay, None).await?;
+                if let Some((_, old)) = link.replace((address, ep)) {
+                    old.close().await;
+                }
+            }
+            let (address, ep) = link.as_ref().expect("directory link initialized");
+            let mut result = exchange(ep, address.address(), Request::List, 2 * 1024 * 1024).await;
+            if result.is_err() {
+                // The first connection can spend its budget establishing the relay transport.
+                // Keep the same endpoint so the retry can use the connection it just opened.
+                result = exchange(ep, address.address(), Request::List, 2 * 1024 * 1024).await;
+            }
             let Response::List(mut servers) = result? else {
                 anyhow::bail!("DIRECTORY_REJECTED")
             };

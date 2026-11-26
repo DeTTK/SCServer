@@ -96,6 +96,8 @@ export component Home inherits HorizontalLayout {
                 Action { label: "Открытые"; kind: "plain"; selected: root.show-public; activated => { root.server-tab = "public"; } }
             }
             Rule {}
+            if root.show-public && root.public-servers.length > 0 && root.directory-message != "":
+                Hint { text: root.directory-message; wrap: word-wrap; }
             Scroller {
                 vertical-stretch: 1;
                 VerticalLayout {

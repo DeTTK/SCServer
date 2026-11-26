@@ -1,6 +1,6 @@
 use crate::{AppWindow, PublicServerRow};
 use anyhow::{Result, ensure};
-use bscp_launcher_core::{Layout, read_json, write_json};
+use bscp_launcher_core::{Layout, RotatingLog, read_json, redact, write_json};
 use bscp_launcher_host::directory::{
     Browser, ICON_PATH, ICON_SIDE, PublicServer, decode_icon, encode_icon,
 };
@@ -13,7 +13,7 @@ use std::{
         atomic::{AtomicBool, Ordering},
         mpsc,
     },
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 fn pixels(encoded: Option<&str>) -> Option<Image> {
@@ -80,16 +80,25 @@ pub fn bind(ui: &AppWindow, layout: Layout, alive: Arc<AtomicBool>) {
     });
     let ui = ui.as_weak();
     std::thread::spawn(move || {
-        let Ok(browser) = Browser::new() else { return };
+        let Ok(mut browser) = Browser::new() else {
+            return;
+        };
+        let logger = RotatingLog::new(layout.at("logs"), "public-directory");
+        let mut last_success = None::<Instant>;
         while alive.load(Ordering::Relaxed) {
             if !visible.load(Ordering::Relaxed) {
                 let _ = change.recv_timeout(Duration::from_secs(1));
                 continue;
             }
-            let _ = ui
-                .upgrade_in_event_loop(|ui| ui.set_directory_message("Загружаем каталог…".into()));
-            match browser.list(&layout) {
+            let _ = ui.upgrade_in_event_loop(|ui| {
+                if ui.get_public_servers().row_count() == 0 && ui.get_directory_message().is_empty()
+                {
+                    ui.set_directory_message("Загружаем каталог…".into());
+                }
+            });
+            let delay = match browser.list(&layout) {
                 Ok(servers) => {
+                    last_success = Some(Instant::now());
                     let display = servers.clone();
                     let _ = ui.upgrade_in_event_loop(move |ui| {
                         ui.set_directory_message("".into());
@@ -113,15 +122,26 @@ pub fn bind(ui: &AppWindow, layout: Layout, alive: Arc<AtomicBool>) {
                             }
                         });
                     });
+                    Duration::from_secs(20)
                 }
-                Err(_) => {
-                    let _ = ui.upgrade_in_event_loop(|ui| {
-                        ui.set_public_servers(ModelRc::default());
-                        ui.set_directory_message("Каталог временно недоступен".into());
+                Err(error) => {
+                    let _ = logger.line(&redact(&format!("List refresh failed: {error:#}")));
+                    let recent =
+                        last_success.is_some_and(|last| last.elapsed() < Duration::from_secs(70));
+                    let _ = ui.upgrade_in_event_loop(move |ui| {
+                        if recent && ui.get_public_servers().row_count() > 0 {
+                            ui.set_directory_message(
+                                "Нет связи с каталогом. Показан последний список.".into(),
+                            );
+                        } else {
+                            ui.set_public_servers(ModelRc::default());
+                            ui.set_directory_message("Каталог временно недоступен".into());
+                        }
                     });
+                    Duration::from_secs(5)
                 }
-            }
-            let _ = change.recv_timeout(Duration::from_secs(20));
+            };
+            let _ = change.recv_timeout(delay);
         }
     });
 }
