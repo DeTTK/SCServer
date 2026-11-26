@@ -1,6 +1,9 @@
 package szserver.net;
 
+import szserver.client.NativeResidentChunkCodec.ReadSnapshot;
 import szserver.world.RegionTerrain;
+import szserver.world.ResidentChunks;
+import szserver.world.ResidentMapRuntime;
 import szserver.util.Workers;
 import java.nio.*;
 import java.util.*;
@@ -22,14 +25,78 @@ public final class ChunkManifests implements AutoCloseable {
     }
     public CompletableFuture<List<Row>> inspect(List<Long> coordinates){
         if(coordinates.size()>128)throw new IllegalArgumentException("chunk_manifest_batch_limit");List<Long> immutable=List.copyOf(coordinates);var result=new CompletableFuture<List<Row>>();
-        try{worker.execute(()->{try{List<Row> rows=new ArrayList<>();for(long key:immutable){try{int x=(int)(key>>32),z=(int)key;UUID revision;
-            var resident=world==null?null:world.residentMap();if(resident!=null){var snapshot=world.submit(w->resident.load(new szserver.world.ResidentChunks.Key(x,z))).thenCompose(future->future).get(10,TimeUnit.SECONDS);revision=snapshot.networkRevision();}
-            else if(regions==null){ByteBuffer record=ByteBuffer.wrap(packets.chunkRecord(x,z));revision=new UUID(record.getLong(17),record.getLong(25));}
-            else revision=regions.manifestRevision(x,z);
-            reads.incrementAndGet();rows.add(new Row(key,revision,revision!=null));
-            }catch(Exception failure){if(szserver.world.ResidentChunks.missingBase(failure)){reads.incrementAndGet();rows.add(new Row(key,null,false));continue;}errors.incrementAndGet();String message=failure.getMessage();if(message==null)message=failure.getClass().getSimpleName();rows.add(new Row(key,null,false,message.substring(0,Math.min(message.length(),160))));}
-        }result.complete(List.copyOf(rows));}catch(Exception failure){errors.incrementAndGet();result.completeExceptionally(failure);}});}catch(RejectedExecutionException full){rejected.incrementAndGet();result.completeExceptionally(full);}return result;
+        try{
+            worker.execute(()->{
+                try{
+                    var resident=world==null?null:world.residentMap();
+                    var rows=resident==null?inspectBase(immutable):inspectResident(resident,immutable);
+                    result.complete(rows);
+                }catch(Exception failure){errors.incrementAndGet();result.completeExceptionally(failure);}
+            });
+        }catch(RejectedExecutionException full){rejected.incrementAndGet();result.completeExceptionally(full);}
+        return result;
     }
+
+    private List<Row> inspectBase(List<Long> keys){
+        List<Row> rows=new ArrayList<>(keys.size());
+        for(long key:keys){
+            try{
+                int x=(int)(key>>32),z=(int)key;
+                UUID revision;
+                if(regions==null){
+                    ByteBuffer record=ByteBuffer.wrap(packets.chunkRecord(x,z));
+                    revision=new UUID(record.getLong(17),record.getLong(25));
+                }else revision=regions.manifestRevision(x,z);
+                rows.add(row(key,revision,null));
+            }catch(Exception failure){rows.add(row(key,null,failure));}
+        }
+        return List.copyOf(rows);
+    }
+
+    private record ResidentRead(ReadSnapshot snapshot,Throwable failure){}
+
+    private List<Row> inspectResident(ResidentMapRuntime resident,List<Long> keys)throws Exception{
+        List<CompletableFuture<ResidentRead>> reads=new ArrayList<>(keys.size());
+        Map<ResidentChunks.Key,CompletableFuture<ResidentRead>> cold=new LinkedHashMap<>();
+        for(long key:keys){
+            var region=new ResidentChunks.Key((int)(key>>32),(int)key);
+            var current=resident.reads().peek(region);
+            reads.add(current==null?cold.computeIfAbsent(region,ignored->new CompletableFuture<>())
+                :CompletableFuture.completedFuture(new ResidentRead(current.data(),null)));
+        }
+        // One submission for the whole batch. Geometry/revision work stays on
+        // this worker even when the map owner completes a cold load.
+        if(!cold.isEmpty())world.submit(w->{
+            if(world.residentMap()!=resident)throw new IllegalStateException("chunk_manifest_map_changed");
+            cold.forEach((key,waiting)->resident.load(key).whenComplete((snapshot,failure)->
+                waiting.complete(new ResidentRead(snapshot,failure))));
+            return null;
+        }).exceptionally(failure->{
+            cold.values().forEach(waiting->waiting.completeExceptionally(failure));
+            return null;
+        });
+        CompletableFuture.allOf(reads.toArray(CompletableFuture[]::new)).get(10,TimeUnit.SECONDS);
+        List<Row> rows=new ArrayList<>(keys.size());
+        for(int i=0;i<keys.size();i++){
+            ResidentRead read=reads.get(i).join();
+            try{rows.add(row(keys.get(i),read.snapshot()==null?null:read.snapshot().networkRevision(),read.failure()));}
+            catch(Exception failure){rows.add(row(keys.get(i),null,failure));}
+        }
+        return List.copyOf(rows);
+    }
+
+    private Row row(long key,UUID revision,Throwable failure){
+        if(failure==null||ResidentChunks.missingBase(failure)){
+            reads.incrementAndGet();
+            return new Row(key,revision,revision!=null);
+        }
+        errors.incrementAndGet();
+        Throwable cause=failure;
+        while(cause.getCause()!=null)cause=cause.getCause();
+        String message=Objects.toString(cause.getMessage(),cause.getClass().getSimpleName());
+        return new Row(key,null,false,message.substring(0,Math.min(message.length(),160)));
+    }
+
     public Map<String,Object> metrics(){return Map.of("reads",reads.get(),"errors",errors.get(),"rejected",rejected.get(),"queued",worker.getQueue().size());}
     @Override public void close()throws InterruptedException{Workers.stop(worker);}
 }

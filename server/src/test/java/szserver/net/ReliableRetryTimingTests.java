@@ -18,8 +18,36 @@ public final class ReliableRetryTimingTests {
         if (relay.timeout(40) > 4000 * MS) throw new AssertionError("backoff exceeded bound");
         checkOutputPacking();
         checkAckPacking();
+        checkMapSendWindow();
         checkIdleReplication();
         System.out.println("PASS reliable retry timing and packed ordered transport on LAN and relay");
+    }
+
+    private static void checkMapSendWindow() {
+        var window = new ChunkSendWindow();
+        window.peer(0, 512, 0);
+        if (!window.allows(0, 31) || window.allows(32, 32))
+            throw new AssertionError("map window must open conservatively");
+        for (int i = 0; i < 1000; i++) window.acknowledge(i);
+        if (!window.likelyGap(996) || window.likelyGap(997))
+            throw new AssertionError("map retransmit must wait for later acknowledged segments");
+        if (!window.allows(511, 0) || window.allows(512, 0) || window.allows(511, 512))
+            throw new AssertionError("selective ACKs must honor both window limits");
+        window.peer(520, 512, 512);
+        if (window.allows(512, 0)) throw new AssertionError("accepted future cumulative ACK");
+        window.peer(100, 0, 512);
+        window.peer(99, 512, 512);
+        if (window.allows(100, 0)) throw new AssertionError("stale ACK reopened a closed window");
+        window.peer(100, 512, 512);
+        window.loss(200 * MS, 200 * MS);
+        window.loss(210 * MS, 200 * MS);
+        if (!window.allows(512, 383) || window.allows(512, 384))
+            throw new AssertionError("loss must reduce congestion window");
+        if (window.budget(10, 1) != 152 || window.budget(10, 4) != 76)
+            throw new AssertionError("map burst exceeded its fair share");
+        window.sent();
+        if (window.budget(10, 4) != 75 || window.budget(11, 4) != 76)
+            throw new AssertionError("extra flush bypassed map budget");
     }
 
     private static void checkAckPacking() {

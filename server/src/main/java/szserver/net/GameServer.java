@@ -31,7 +31,9 @@ import com.google.gson.JsonObject;
 public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
     private static final int MAX_SESSIONS=32,WINDOW=128,MAX_QUEUE=2048;
     // The relay carries up to 1000 bytes of game UDP in one datagram.
+    // The launcher's Iroh relay splits UDP payloads above 1000 bytes.
     private static final int UDP_BYTES=1000,FRAGMENT=UDP_BYTES-25;
+    private static final int CHUNK_REFILL=128;
     private static final int CHUNK_QUEUE=(256*1100+FRAGMENT-1)/FRAGMENT;
     private record LauncherReload(long deadline,long life,int hand,UUID firearm,UUID launcher,int ammo,ItemStack expected) {}
     private record ShotKey(long seed,int sequence){}
@@ -72,7 +74,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         final PlayerAnimation animation=new PlayerAnimation();final PlayerReplication replication=new PlayerReplication();final PlayerReplication botReplication=new PlayerReplication();final PlayerReplication cloneReplication=new PlayerReplication();final PlayerMotion motion=new PlayerMotion();String forcedAnimation;long lastCompletion;final Map<Integer,String> poses=new HashMap<>();
         boolean vehicleCapable,vehicleArticulation,vehicleFleet,vehicleContacts,vehicleInteractions;long vehicleCommandAt;
         boolean fpvCapable;long fpvOwnerSent;final Map<UUID,Long> fpvWorldSent=new HashMap<>();final Set<UUID> fpvUsed=new HashSet<>();
-        final InetSocketAddress address;final UUID incarnation=UUID.randomUUID();final int id,clientId;final byte[] cookie;final long challengeStarted=System.nanoTime();final ReliableRetryTiming retryTiming=new ReliableRetryTiming();final Lane[] lanes={new Lane(),new Lane()};
+        final InetSocketAddress address;final UUID incarnation=UUID.randomUUID();final int id,clientId;final byte[] cookie;final long challengeStarted=System.nanoTime();final ReliableRetryTiming retryTiming=new ReliableRetryTiming();final Lane[] lanes={new Lane(),new Lane()};final ChunkSendWindow chunkSend=new ChunkSendWindow();
         SicknessState sickness=SicknessState.EMPTY;Map<String,SicknessRules.State> sicknessSent=Map.of();Map<String,Float> sicknessExposure=Map.of(),sicknessExposureSent=Map.of();long sicknessSendAt;CharacterEffects effects=new CharacterEffects();MedicineUse medicineUse;GrenadePulseEffects pulses=new GrenadePulseEffects();final AreaEffects areaEffects=new AreaEffects();List<AreaExposure.Contact> selectedAreas=List.of();Map<String,Float> stats=Map.of();long lastDamage,lastVitals,damageWall,deadUntil,effectsExpireBefore;double[] velocity=new double[3];CharacterLocations.PlayerState restoredState,lastStateRequest;CharacterLocations.StateSave stateSave,respawnStateSave;CompletableFuture<Void> joinVitals;boolean vitalsQueued;
         byte[] movementConfiguration,lastMovementConfigurationSent;float stamina=1,maxStamina=1,observedStamina=1;long lastInput,lastStaminaCorrection;Float reportedStamina;
         final Set<BotKey> bots=new HashSet<>();final Map<BotKey,Float> botHealth=new HashMap<>(),botMaximum=new HashMap<>();final Map<BotKey,szserver.world.ActorPresentation> botAppearances=new HashMap<>();
@@ -263,7 +265,8 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
     private volatile Map<String,Object> metrics=Map.of();
     private int tick;
     private final Set<Session> ackPending=new HashSet<>();
-    private long outboundReliableDatagrams,reliableUdpDatagrams,reliableUdpBytes,ackOnlyDatagrams,mixedAckDatagrams,acknowledgedSegments;
+    private long outboundReliableDatagrams,reliableUdpDatagrams,reliableUdpBytes,ackOnlyDatagrams,mixedAckDatagrams,acknowledgedSegments,chunkPayloadBytes;
+    private long chunkPeakInFlight,chunkGapRetries;
     private long shortMovementTicks,fullMovementTicks,chunkBackgroundDeferred;
     private record ItemMotion(World.Vec position,World.Vec velocity) {}
     private long rejected,inputs,shots,hits,retries,retired,maxTickNanos,skipped,deaths,respawns,tileRefreshes,bulkBlockRefreshes;
@@ -322,7 +325,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         packets=new GamePackets(root.resolve("fixtures/world-ready.b64"));nativePackets=new ClientPackets(runtime);rollback.push(nativePackets);nativePackets.input(Wire.bytes(o->{o.writeByte(7);o.writeFloat(0);o.writeInt(0);o.write(new byte[8]);o.writeInt(0);o.writeDouble(.5);o.writeDouble(1);o.writeDouble(.5);o.writeFloat(0);o.writeFloat(0);o.writeInt(1);o.writeInt(0);o.writeInt(1);o.writeFloat(.05f);o.writeByte(0);}),false);
         NativeSocialPackets.verify(nativePackets);
         nativePackets.roundTrip("306768345",nativePackets.playerProfile("Player","stalkers","BSCPCRAFT",0,0));
-        fpvExplosion=new FpvExplosion(root.resolve("fixtures/fpv-fab100.bin"));nativePackets.roundTrip(FpvExplosion.PACKET,fpvExplosion.body(new FpvPackets.Vector(0,64,0)));staminaRules=nativePackets.staminaRules();terrainProjection=new TerrainProjection(world,regions,packets,256);rollback.push(terrainProjection);nativeBlocks=new NativeBlockAccess(world,regions,terrainProjection,commands);rollback.push(nativeBlocks);nativePackets.roundTrip("146340354",new byte[20]);
+        fpvExplosion=new FpvExplosion(root.resolve("fixtures/fpv-fab100.bin"));nativePackets.roundTrip(FpvExplosion.PACKET,fpvExplosion.body(new FpvPackets.Vector(0,64,0)));staminaRules=nativePackets.staminaRules();terrainProjection=new TerrainProjection(world,regions,packets,TerrainProjection.STREAM_CACHE_ENTRIES);rollback.push(terrainProjection);nativeBlocks=new NativeBlockAccess(world,regions,terrainProjection,commands);rollback.push(nativeBlocks);nativePackets.roundTrip("146340354",new byte[20]);
         chunkManifests=new ChunkManifests(world,regions,packets);rollback.push(chunkManifests);nativePackets.roundTrip("1980173742",ChunkManifestPackets.body(List.of()));nativePackets.roundTrip("297896610",ChunkManifestPackets.body(List.of()));szserver.client.ChunkDistancePackets.warm(nativePackets,chunkSettings.distance());
         // No factory construction/codec cold path in the transport owner.
         try(GameItems items=new GameItems(runtime,registry)){byte[] empty=items.create(20004,new JsonObject());for(int n=0;n<=30;n++)baseMagazines[n]=items.magazine(empty,12714,n);}
@@ -471,12 +474,16 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
     private void flush(Session s,long now)throws IOException{
         for(int lane=0;lane<2;lane++){
             Lane outgoing=s.lanes[lane];
-            int budget=16;
+            boolean mapLane=lane==1&&s.ready;
+            int budget=mapLane?s.chunkSend.budget(tick,sessions.size()):16;
             ByteBuffer packet=null;
             for(var entry:outgoing.sent.entrySet()){
                 if(budget==0)break;
                 Sent sent=entry.getValue();
-                if(now-sent.last<s.retryTiming.timeout(sent.attempts))continue;
+                long sinceSent=now-sent.last;
+                boolean timedOut=sinceSent>=s.retryTiming.timeout(sent.attempts);
+                boolean gap=mapLane&&sent.attempts==1&&s.chunkSend.likelyGap(entry.getKey())&&sinceSent>=s.retryTiming.gapDelay();
+                if(!timedOut&&!gap)continue;
                 if(sent.attempts>=40||now-sent.first>=30_000_000_000L){
                     long lastAckMs=outgoing.lastAck==0?-1:(now-outgoing.lastAck)/1_000_000;
                     throw new IOException("reliable_stalled lane="+lane+" seq="+Integer.toUnsignedString(entry.getKey())
@@ -488,15 +495,26 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
                 sendReliableData(s,lane,packet,129,entry.getKey(),(int)(now/1_000_000),sent.payload);
                 entry.setValue(new Sent(sent.payload,sent.first,now,sent.attempts+1));
                 retries++;
-                budget--;
+                if(mapLane){
+                    s.chunkSend.loss(now,s.retryTiming.timeout(1));
+                    s.chunkSend.sent();
+                    if(!timedOut)chunkGapRetries++;
+                }
+                budget=Math.min(budget-1,15);
             }
-            while(budget-->0&&outgoing.sent.size()<WINDOW&&!outgoing.queued.isEmpty()){
+            while(budget-->0&&!outgoing.queued.isEmpty()
+                &&(mapLane?s.chunkSend.allows(outgoing.tx,outgoing.sent.size()):outgoing.sent.size()<WINDOW)){
                 byte[] payload=outgoing.queued.remove();
                 int seq=outgoing.tx++;
                 if(packet==null)packet=reliablePacket(s,lane);
                 sendReliableData(s,lane,packet,1,seq,(int)(now/1_000_000),payload);
                 outboundReliableDatagrams++;
                 outgoing.sent.put(seq,new Sent(payload,now,now,1));
+                if(mapLane){
+                    s.chunkSend.sent();
+                    chunkPayloadBytes+=payload.length;
+                    chunkPeakInFlight=Math.max(chunkPeakInFlight,outgoing.sent.size());
+                }
             }
             if(packet!=null)finishReliableData(s,lane,packet);
             if(outgoing.acks.due(now))sendAcks(s,lane);
@@ -513,22 +531,24 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         if(s==null||s.id!=connection){connectionMismatch++;return;}s.last=System.nanoTime();
         if(type==17){if(b.remaining()!=25||b.get()!=20)throw new IOException("cookie_size");byte[] cookie=new byte[20];b.get(cookie);int nonce=b.getInt();if(!java.security.MessageDigest.isEqual(cookie,s.cookie))throw new IOException("cookie_invalid");if(!s.accepted)s.retryTiming.observe(System.nanoTime()-s.challengeStarted);s.accepted=true;Session target=s;sendRaw(s,Wire.bytes(o->{o.writeInt(target.id);o.writeByte(18);o.writeInt(nonce+1);o.writeInt(0);}));return;}
         if(!s.accepted)return;if(type==16){remove(s,"client_close");return;}if(type==22||type==23)return;if(type!=0&&type!=1)return;Lane l=s.lanes[type];
-        while(b.hasRemaining()){if(b.remaining()<20)throw new IOException("reliable_header");int kind=b.get()&7;b.get();b.getShort();int time=b.getInt(),seq=b.getInt(),peerRx=b.getInt(),value=b.getInt();
+        while(b.hasRemaining()){if(b.remaining()<20)throw new IOException("reliable_header");int kind=b.get()&7;b.get();int peerWindow=Short.toUnsignedInt(b.getShort());int time=b.getInt(),seq=b.getInt(),peerRx=b.getInt(),value=b.getInt();
             long now=System.nanoTime();
+            if(type==1)s.chunkSend.peer(peerRx,peerWindow,l.tx);
             var pending=l.sent.entrySet().iterator();
             Sent cumulativeSample=null;
             boolean cumulativeProgress=false;
-            while(pending.hasNext()){
+            while(l.tx-peerRx>=0&&pending.hasNext()){
                 var entry=pending.next();
                 int age=peerRx-entry.getKey();
-                if(Integer.compareUnsigned(age,1)<0||Integer.compareUnsigned(age,4096)>=0)continue;
+                if(age<=0||age>=4096)break;
                 if(entry.getValue().attempts==1)cumulativeSample=entry.getValue();
+                if(type==1)s.chunkSend.acknowledge(entry.getKey());
                 pending.remove();
                 cumulativeProgress=true;
             }
             if(cumulativeProgress)l.lastAck=now;
             observeAck(s,l,cumulativeSample,now);
-            if(kind==2){if(value<0||value>WINDOW)throw new IOException("ack_range");for(int i=0;i<value;i++)observeAck(s,l,l.sent.remove(seq+i),now);continue;}
+            if(kind==2){if(value<0||value>(type==1?ChunkSendWindow.MAX_WINDOW:WINDOW))throw new IOException("ack_range");for(int i=0;i<value;i++){int acknowledged=seq+i;Sent packet=l.sent.remove(acknowledged);if(type==1&&packet!=null)s.chunkSend.acknowledge(acknowledged);observeAck(s,l,packet,now);}continue;}
             if(kind!=1||value<0||value>b.remaining()||value>8192)throw new IOException("reliable_data");byte[] payload=new byte[value];b.get(payload);
             int distance=seq-l.rx;if(Integer.compareUnsigned(distance,WINDOW)>=0){if(distance<0)acknowledge(s,type,seq,time,now);continue;}
             l.received.putIfAbsent(seq,payload);acknowledge(s,type,seq,time,now);while(l.received.containsKey(l.rx)){byte[] part=l.received.remove(l.rx++);l.stream.append(part);if(!l.parsing){l.parsing=true;parseReady.addLast(new ParseTarget(s,type));}}
@@ -1993,7 +2013,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
             try{rows=s.manifest.join();}catch(CompletionException failure){manifestFailures++;s.window.retry(s.manifestKeys);s.manifestRetryAt=System.nanoTime()+1_000_000_000L;s.manifest=null;s.manifestKeys=List.of();return;}
             if(s.manifestEpoch!=s.windowEpoch){manifestStale++;s.window.retry(s.manifestKeys);s.manifest=null;s.manifestKeys=List.of();return;}
             List<ChunkManifestPackets.Entry> entries=new ArrayList<>();
-            for(var row:rows){if(row.error()!=null){manifestFailures++;s.faults.failed(row.key(),System.nanoTime());s.window.complete(row.key());continue;}s.faults.resolved(row.key());if(!row.present()||s.chunks.contains(row.key())){s.window.complete(row.key());continue;}
+            for(var row:rows){if(row.error()!=null){manifestFailures++;s.faults.failed(row.key(),System.nanoTime());s.window.complete(row.key());continue;}s.faults.resolved(row.key());if(!row.present()){s.pendingChunks.remove(row.key());s.cachedRequests.remove(row.key());s.window.complete(row.key());continue;}if(s.chunks.contains(row.key())){s.window.complete(row.key());continue;}
                 // A dirty overlay has another native revision. A null catalogue revision requests
                 // the authoritative projected body instead of comparing an obsolete base UUID.
                 UUID revision=terrainProjection.version((int)(row.key()>>32),(int)row.key())==0?row.revision():null;
@@ -2007,9 +2027,9 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
     private void streamChunks(Session s){
         if(s.teleport!=null)return; // Finish existing frames; never truncate an in-flight stream.
         if(!streamCompleteTiles(s))return;
-        if(!streamNativeRepair(s))return;chunkWindow(s);pruneChunkWindow(s);Lane lane=s.lanes[1];if(lane.queued.size()>32||lane.sent.size()>32)return;
+        if(!streamNativeRepair(s))return;chunkWindow(s);pruneChunkWindow(s);Lane lane=s.lanes[1];if(lane.queued.size()>=CHUNK_REFILL)return;
         // Changes in already visible chunks precede background map loading on the same lane.
-        streamBlockChanges(s);if(s.completeTiles!=null||lane.queued.size()>32||lane.sent.size()>32)return;
+        streamBlockChanges(s);if(s.completeTiles!=null||lane.queued.size()>=CHUNK_REFILL)return;
         Lane gameplay=s.lanes[0];
         if(gameplay.queued.size()>8||gameplay.sent.size()>=32){
             if(!s.pendingChunks.isEmpty()||s.manifest!=null||s.window.deferred()>0)chunkBackgroundDeferred++;
@@ -2017,7 +2037,11 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         }
         streamManifest(s);int sent=0,requested=0;
         List<Long> deferred=new ArrayList<>();
-        for(var iterator=s.pendingChunks.iterator();iterator.hasNext()&&sent<2&&requested<16;){long key=iterator.next();int x=(int)(key>>32),z=(int)key;requested++;
+        // Small acknowledged chunks can fill one tick's budget without buying
+        // extra reliable fragments when the channel is already backlogged.
+        for(var iterator=s.pendingChunks.iterator();iterator.hasNext()&&sent<24&&requested<48;){
+            if(lane.queued.size()>=CHUNK_REFILL)break;
+            long key=iterator.next();int x=(int)(key>>32),z=(int)key;requested++;
             TerrainProjection.Prepared prepared=terrainProjection.prepared(x,z);if(prepared==null){iterator.remove();deferred.add(key);continue;}
             // Every initial/re-entry demand needs the current immutable projection. Older
             // snapshots cannot be repaired by deltas that a native commit already retired.
@@ -2034,7 +2058,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
     /** Complete NBT frames follow their atomic appearance chunk on the same reliable lane. */
     private boolean streamCompleteTiles(Session s){
         if(s.completeTiles==null)return true;Lane lane=s.lanes[1];int budget=2;
-        while(s.completeTileAt<s.completeTiles.completeFrameCount()&&budget-->0){byte[] frame=s.completeTiles.completeFrame(s.completeTileAt);int fragments=(frame.length+FRAGMENT-1)/FRAGMENT;if(lane.queued.size()>32||lane.sent.size()>32||lane.queued.size()+fragments>MAX_QUEUE)return false;enqueue(s,1,frame);s.completeTileAt++;}
+        while(s.completeTileAt<s.completeTiles.completeFrameCount()&&budget-->0){byte[] frame=s.completeTiles.completeFrame(s.completeTileAt);int fragments=(frame.length+FRAGMENT-1)/FRAGMENT;if(lane.queued.size()>=CHUNK_REFILL||lane.queued.size()+fragments>MAX_QUEUE)return false;enqueue(s,1,frame);s.completeTileAt++;}
         if(s.completeTileAt==s.completeTiles.completeFrameCount()){s.completeTiles=null;s.completeTileAt=0;return true;}return false;
     }
     private void streamBlockChanges(Session s){
@@ -2937,6 +2961,9 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
             Map.entry("queuedTerrain",sessions.values().stream().mapToLong(s->s.lanes[1].queued.size()).sum()),
             Map.entry("udpDatagrams",reliableUdpDatagrams),
             Map.entry("udpBytes",reliableUdpBytes),
+            Map.entry("chunkPayloadBytes",chunkPayloadBytes),
+            Map.entry("chunkPeakInFlight",chunkPeakInFlight),
+            Map.entry("chunkGapRetries",chunkGapRetries),
             Map.entry("ackOnlyDatagrams",ackOnlyDatagrams),
             Map.entry("mixedAckDatagrams",mixedAckDatagrams),
             Map.entry("acknowledgedSegments",acknowledgedSegments),

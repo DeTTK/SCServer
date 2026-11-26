@@ -1,6 +1,7 @@
 package szserver.net;
 
 import com.github.luben.zstd.Zstd;
+import szserver.client.NativeResidentChunkCodec;
 import szserver.world.*;
 import szserver.util.Workers;
 import java.nio.*;
@@ -38,7 +39,7 @@ public final class TerrainProjection implements AutoCloseable {
         private Prepared(byte[] record,BlockOverlays.Snapshot overlay,boolean tileRefresh,List<TilePayload.Tile> baseTiles,long baseRevision,szserver.client.NativeResidentChunkCodec.ReadSnapshot basis,SceneHashWire.SceneInstances sceneInstances){this.baseRevision=baseRevision;this.tileRefresh=tileRefresh;residentBasis=new java.lang.ref.WeakReference<>(basis);
             // Existing scenes/tiles do not make every later voxel edit a full chunk update.
             // A changed base tile still requires its complete appearance to be replaced.
-            long refresh=overlay.refreshRevision();for(var tile:baseTiles){var voxel=overlay.cells().get(tile.cell());if(voxel!=null)refresh=Math.max(refresh,voxel.revision());}refreshRevision=refresh;this.record=record;byte[] wireRecord=SceneHashWire.record(record,sceneInstances);ByteBuffer header=ByteBuffer.wrap(wireRecord);nativeRevision=new UUID(header.getLong(17),header.getLong(25));frame=GamePackets.terrainChunk(wireRecord);objectFrame=szserver.client.TerrainCachePackets.frame(wireRecord);if(frame.length>240000)throw new IllegalArgumentException("terrain_frame_limit");Map<Integer,TilePayload.Tile> full=new HashMap<>();for(var tile:baseTiles)full.put(tile.cell(),tile);for(var entry:overlay.tiles().entrySet())if(entry.getValue()==null||entry.getValue().completeStateSize()==0)full.remove(entry.getKey());else full.put(entry.getKey(),entry.getValue());tileCells.addAll(full.keySet());for(var tile:TilePayload.fromRecord(record))tileCells.add(tile.cell());completeFrames=TilePayload.fromRecord(record).stream().sorted(Comparator.comparingInt(TilePayload.Tile::cell)).filter(tile->{var state=full.get(tile.cell());return state!=null&&state.completeStateSize()>0&&Arrays.equals(tile.record(),state.record());}).map(tile->szserver.client.CompleteTileState.frame(full.get(tile.cell()))).toList();revision=overlay.revision();deltas=overlay.cells().entrySet().stream().map(e->new Delta(e.getKey(),e.getValue())).sorted(Comparator.comparingLong(delta->delta.voxel.revision())).toList();}
+            long refresh=overlay.refreshRevision();for(var tile:baseTiles){var voxel=overlay.cells().get(tile.cell());if(voxel!=null)refresh=Math.max(refresh,voxel.revision());}refreshRevision=refresh;this.record=record;byte[] wireRecord=SceneHashWire.record(record,sceneInstances);ByteBuffer header=ByteBuffer.wrap(wireRecord);nativeRevision=new UUID(header.getLong(17),header.getLong(25));frame=GamePackets.terrainChunk(wireRecord);objectFrame=szserver.client.TerrainCachePackets.frame(wireRecord);if(frame.length>MAX_TERRAIN_FRAME_BYTES)throw new IllegalArgumentException("terrain_frame_limit");Map<Integer,TilePayload.Tile> full=new HashMap<>();for(var tile:baseTiles)full.put(tile.cell(),tile);for(var entry:overlay.tiles().entrySet())if(entry.getValue()==null||entry.getValue().completeStateSize()==0)full.remove(entry.getKey());else full.put(entry.getKey(),entry.getValue());tileCells.addAll(full.keySet());for(var tile:TilePayload.fromRecord(record))tileCells.add(tile.cell());completeFrames=TilePayload.fromRecord(record).stream().sorted(Comparator.comparingInt(TilePayload.Tile::cell)).filter(tile->{var state=full.get(tile.cell());return state!=null&&state.completeStateSize()>0&&Arrays.equals(tile.record(),state.record());}).map(tile->szserver.client.CompleteTileState.frame(full.get(tile.cell()))).toList();revision=overlay.revision();deltas=overlay.cells().entrySet().stream().map(e->new Delta(e.getKey(),e.getValue())).sorted(Comparator.comparingLong(delta->delta.voxel.revision())).toList();}
         public byte[] record(){return record.clone();}
         public int completeFrameCount(){return completeFrames.size();}
         byte[] completeFrame(int index){return completeFrames.get(index);}
@@ -66,6 +67,11 @@ public final class TerrainProjection implements AutoCloseable {
     private volatile String lastError="";
     private void projectionFailed(long key,Exception failure){errors.incrementAndGet();Throwable cause=failure;while(cause.getCause()!=null)cause=cause.getCause();String reason=cause.getClass().getSimpleName()+":"+Objects.toString(cause.getMessage(),"");lastError=(int)(key>>32)+","+(int)key+":"+reason.substring(0,Math.min(200,reason.length()));if(retryAfter.size()<capacity||retryAfter.containsKey(key))retryAfter.put(key,System.nanoTime()+TimeUnit.SECONDS.toNanos(1));}
     private final Map<Long,Prepared> cache=new LinkedHashMap<>(32,.75f,true);
+    // A complete chunk may span several reliable windows. It still fits the
+    // transport's bounded terrain backlog, including headers and scene data.
+    static final int MAX_TERRAIN_FRAME_BYTES=256*1024;
+    static final int STREAM_CACHE_ENTRIES=4096;
+    private static final int CHANGES_CACHE_ENTRIES=256;
     private static final long CACHE_BYTES=128L*1024*1024;private long cachedBytes;
     /** Native chunks already bound complete tile state to 32 MiB. Keep legacy oversized records streamable. */
     private void remember(long key,Prepared prepared){synchronized(cache){var previous=cache.put(key,prepared);if(previous!=null)cachedBytes-=previous.retainedBytes();cachedBytes+=prepared.retainedBytes();while(cache.size()>capacity||cachedBytes>CACHE_BYTES&&cache.size()>1){var first=cache.entrySet().iterator();var row=first.next();cachedBytes-=row.getValue().retainedBytes();first.remove();}}}
@@ -100,7 +106,7 @@ public final class TerrainProjection implements AutoCloseable {
             List<Delta> deltas=overlay.cells().entrySet().stream().map(e->new Delta(e.getKey(),e.getValue())).sorted(Comparator.comparingLong(d->d.voxel.revision())).toList();
             return new Changes(overlay.revision(),capturedBase,refresh,deltas);
         }).whenComplete((value,error)->{
-            synchronized(changesCache){changesLoading.remove(key);if(error==null){changesCache.put(key,value);while(changesCache.size()>capacity)changesCache.remove(changesCache.keySet().iterator().next());deltaReads.incrementAndGet();}else rejected.incrementAndGet();}
+            synchronized(changesCache){changesLoading.remove(key);if(error==null){changesCache.put(key,value);while(changesCache.size()>Math.min(capacity,CHANGES_CACHE_ENTRIES))changesCache.remove(changesCache.keySet().iterator().next());deltaReads.incrementAndGet();}else rejected.incrementAndGet();}
         });
         return null;
     }
@@ -125,21 +131,40 @@ public final class TerrainProjection implements AutoCloseable {
                 deltas.add(new Delta(point.cell(),new BlockOverlays.Voxel(point.packed()>>>4,point.packed()&15,point.revision())));
                 if(point.tile()!=null){if(point.tile().completeStateSize()==0){refresh=view.revision();break;}byte[] frame=szserver.client.CompleteTileState.frame(point.tile());wireBytes+=frame.length;if(wireBytes>1500000){refresh=view.revision();break;}tiles.add(new TileUpdate(point.revision(),frame));}
             }
-            var prepared=new Changes(view.revision(),view.floor(),refresh,deltas,tiles);synchronized(changesCache){var before=changesCache.put(key,prepared);if(before!=null)changesBytes-=before.bytes();changesBytes+=prepared.bytes();while(changesCache.size()>capacity||changesBytes>64L*1024*1024){var first=changesCache.entrySet().iterator();var row=first.next();changesBytes-=row.getValue().bytes();first.remove();}}deltaReads.incrementAndGet();
+            var prepared=new Changes(view.revision(),view.floor(),refresh,deltas,tiles);synchronized(changesCache){var before=changesCache.put(key,prepared);if(before!=null)changesBytes-=before.bytes();changesBytes+=prepared.bytes();while(changesCache.size()>Math.min(capacity,CHANGES_CACHE_ENTRIES)||changesBytes>64L*1024*1024){var first=changesCache.entrySet().iterator();var row=first.next();changesBytes-=row.getValue().bytes();first.remove();}}deltaReads.incrementAndGet();
         }catch(Exception failure){errors.incrementAndGet();}finally{synchronized(changesCache){changesLoading.remove(key);}}});}catch(RejectedExecutionException full){synchronized(changesCache){changesLoading.remove(key);}rejected.incrementAndGet();}return null;
     }
     private Prepared residentPrepared(ResidentMapRuntime map,int x,int z){
         long key=BlockOverlays.key(x,z);var point=new ResidentChunks.Key(x,z);var current=map.reads().peek(point);Prepared found;synchronized(cache){found=cache.get(key);}if(current!=null&&found!=null&&found.revision()==current.revision()&&found.residentBasis.get()==current.data())return found;
         if(System.nanoTime()<retryAfter.getOrDefault(key,Long.MIN_VALUE))return null;
-        if(loading.add(key))world.submit(world->map.load(point)).thenCompose(future->future).whenComplete((snapshot,error)->{
-            if(error!=null){loading.remove(key);rejected.incrementAndGet();return;}var basis=map.reads().peek(point);if(basis==null||basis.data()!=snapshot){loading.remove(key);return;}long revision=basis.revision();
-            try{worker.execute(()->{try{
-                byte[] record=snapshot.networkRecord();var tiles=snapshot.tiles().values().stream().map(Terrain.TileCell::tile).toList();Prepared ready=new Prepared(record,new BlockOverlays.Snapshot(revision,Map.of(),Map.of(),Map.of()),true,tiles,revision,snapshot,sceneInstances);
-                var active=map.reads().peek(point);if(active==null||active.data()!=snapshot)return;remember(key,ready);retryAfter.remove(key);builds.incrementAndGet();
-            }catch(Exception failure){projectionFailed(key,failure);}finally{loading.remove(key);}});}catch(RejectedExecutionException full){loading.remove(key);rejected.incrementAndGet();}
-        });
+        if(loading.add(key)){
+            if(current!=null){
+                // Snapshot is immutable. Its current identity was published by the
+                // map owner, so the projection can start without another tick.
+                projectResident(map,point,key,current.data(),current.revision());
+            }else world.submit(world->map.load(point)).thenCompose(future->future).whenComplete((snapshot,error)->{
+                if(error!=null){loading.remove(key);rejected.incrementAndGet();return;}
+                var basis=map.reads().peek(point);
+                if(basis==null||basis.data()!=snapshot){loading.remove(key);return;}
+                projectResident(map,point,key,snapshot,basis.revision());
+            });
+        }
         // Initial/re-entry streaming must wait for an authoritative resident revision.
         return null;
+    }
+    private void projectResident(ResidentMapRuntime map,ResidentChunks.Key point,long key,
+                                 NativeResidentChunkCodec.ReadSnapshot snapshot,long revision){
+        try{worker.execute(()->{try{
+            byte[] record=snapshot.networkRecord();
+            var tiles=snapshot.tiles().values().stream().map(Terrain.TileCell::tile).toList();
+            Prepared ready=new Prepared(record,new BlockOverlays.Snapshot(revision,Map.of(),Map.of(),Map.of()),true,tiles,revision,snapshot,sceneInstances);
+            var active=map.reads().peek(point);
+            if(active==null||active.data()!=snapshot)return;
+            remember(key,ready);
+            retryAfter.remove(key);
+            builds.incrementAndGet();
+        }catch(Exception failure){projectionFailed(key,failure);}finally{loading.remove(key);}});}
+        catch(RejectedExecutionException full){loading.remove(key);rejected.incrementAndGet();}
     }
     private static int nibble(byte[] array,int index){return (array[index>>1]>>>((index&1)*4))&15;}
     private static void nibble(byte[] array,int index,int value){int at=index>>1,shift=(index&1)*4;array[at]=(byte)((array[at]&~(15<<shift))|(value<<shift));}
