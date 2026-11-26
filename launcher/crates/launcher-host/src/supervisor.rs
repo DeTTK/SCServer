@@ -1121,6 +1121,75 @@ impl Supervisor {
         }
         bail!("STOP_PENDING: server is saving; no force kill performed")
     }
+
+    pub async fn refresh_public_listing(self: Arc<Self>) {
+        use crate::directory::{ICON_PATH, PublicServer, advertise};
+        let mut advertised = None::<iroh::Endpoint>;
+        let mut last_sent = None::<Instant>;
+        let mut was_enabled = false;
+        loop {
+            let settings = self.layout.load().unwrap_or_default();
+            let enabled = settings.relay_enabled && settings.public_listing;
+            let active = if enabled && self.status()["State"] == "Ready" {
+                let running = self.running.lock().unwrap();
+                running.server.as_ref().filter(|server| alive(server))
+                    .zip(running.server_tunnel.as_ref())
+                    .and_then(|(server, tunnel)| Some((server.clone(), tunnel.directory_endpoint(), tunnel.public_invite().ok()?)))
+            } else {
+                None
+            };
+            if let Some(previous) = &advertised {
+                if active.as_ref().is_none_or(|(_, endpoint, _)| endpoint.id() != previous.id()) {
+                    if !previous.is_closed() {
+                        let _ = advertise(&self.layout, previous, None).await;
+                    }
+                    advertised = None;
+                    last_sent = None;
+                }
+            }
+            let status = match active {
+                Some((server, endpoint, invite)) if last_sent.is_none_or(|last| last.elapsed() >= Duration::from_secs(20)) => {
+                    last_sent = Some(Instant::now());
+                    if !crate::relay::public_ticket(&invite).is_ok_and(|(_, relay)| crate::directory::public_relay(&relay)) {
+                        self.view.lock().unwrap()["DirectoryStatus"] = json!("Для публикации нужен ретранслятор из публичного списка BSCPCRAFT");
+                        was_enabled = enabled;
+                        tokio::time::sleep(Duration::from_secs(2)).await;
+                        continue;
+                    }
+                    advertised = Some(endpoint.clone());
+                    let submission: Result<()> = async {
+                        let health = self.admin(&server, "health", false).await?;
+                        let players = health["game"]["players"].as_array().context("DIRECTORY_PLAYERS")?;
+                        let world = self.worlds()?.get(&server.world)?;
+                        let icon = read_json::<String>(&self.layout.at(ICON_PATH)).ok().filter(|icon| !icon.is_empty());
+                        advertise(&self.layout, &endpoint, Some(PublicServer {
+                            name: world.name,
+                            invite,
+                            icon,
+                            players: players.len().min(u16::MAX as usize) as u16,
+                        })).await
+                    }.await;
+                    if submission.is_ok() {
+                        Some("Сервер опубликован")
+                    } else {
+                        Some("Публикация недоступна. Повторим автоматически.")
+                    }
+                }
+                Some(_) => None,
+                None if enabled => {
+                    last_sent = None;
+                    Some("Публикация начнётся, когда мир и ретранслятор будут готовы")
+                }
+                None if was_enabled => Some(""),
+                None => None,
+            };
+            if let Some(status) = status {
+                self.view.lock().unwrap()["DirectoryStatus"] = json!(status);
+            }
+            was_enabled = enabled;
+            tokio::time::sleep(Duration::from_secs(2)).await;
+        }
+    }
     fn relay_udp_metrics(&self) -> Value {
         let state = self.running.lock().unwrap();
         json!({

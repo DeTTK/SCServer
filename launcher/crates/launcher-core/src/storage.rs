@@ -28,6 +28,7 @@ pub struct Settings {
     #[serde(alias = "base_port", alias = "basePort")]
     pub base_port: u16,
     pub relay_enabled: bool,
+    pub public_listing: bool,
     pub relay_url: String,
     #[serde(alias = "client_memory_mb", alias = "clientMemoryMb")]
     pub client_memory_mb: u32,
@@ -71,6 +72,7 @@ impl Default for Settings {
             selected_world: String::new(),
             base_port: 29545,
             relay_enabled: false,
+            public_listing: false,
             relay_url: String::new(),
             client_memory_mb: 4096,
             server_memory_mb: 2048,
@@ -631,6 +633,7 @@ impl HostResponse {
 pub struct ProcessView {
     pub relay_invite: String,
     pub relay_status: String,
+    pub directory_status: String,
     #[serde(alias = "state")]
     pub state: String,
     #[serde(alias = "pid")]

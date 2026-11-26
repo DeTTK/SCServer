@@ -1,3 +1,4 @@
+pub mod directory;
 pub mod ipc;
 pub mod launch;
 pub mod network;

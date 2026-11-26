@@ -15,7 +15,7 @@ pub fn run(args: Vec<String>) -> Result<()> {
 pub fn is_service_mode(args: &[String]) -> bool {
     args.iter()
         .skip(1)
-        .any(|arg| matches!(arg.as_str(), "--host" | "--rpc"))
+        .any(|arg| matches!(arg.as_str(), "--host" | "--rpc" | "--server-directory"))
 }
 
 async fn run_async(args: Vec<String>) -> Result<()> {
@@ -31,6 +31,10 @@ async fn run_async(args: Vec<String>) -> Result<()> {
     };
     let root = opt("--root").unwrap_or(std::env::current_exe()?.parent().unwrap().to_owned());
     let layout = Layout::new(root);
+    if let Some(at) = args.iter().position(|value| value == "--server-directory") {
+        let relay = args.get(at + 1).ok_or_else(|| anyhow::anyhow!("--server-directory requires a relay origin"))?;
+        return crate::directory::run(&layout, relay).await;
+    }
     if let Some(at) = args.iter().position(|v| v == "--rpc") {
         let command = args
             .get(at + 1)
@@ -74,6 +78,7 @@ async fn run_async(args: Vec<String>) -> Result<()> {
     let host = Supervisor::new(layout, opt("--java-root"), opt("--isolated-qa-guard"))?;
     host.recover().await?;
     tokio::spawn(host.clone().monitor());
+    tokio::spawn(host.clone().refresh_public_listing());
     tokio::spawn(host.clone().record_diagnostics());
     #[cfg(windows)]
     ipc::serve(host).await?;

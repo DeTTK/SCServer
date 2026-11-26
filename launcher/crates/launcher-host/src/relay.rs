@@ -25,6 +25,7 @@ use tokio::{
 };
 use tokio_util::sync::CancellationToken;
 const ALPN: &[u8] = b"bscp/game-tunnel/1";
+const PROBE_ALPN: &[u8] = b"bscp/game-probe/1";
 const PREFIX: &str = "bscp://";
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -139,7 +140,7 @@ impl PrivateRelay {
         }))
     }
 }
-fn relay_origin(url: &RelayUrl) -> bool {
+pub(crate) fn relay_origin(url: &RelayUrl) -> bool {
     url.scheme() == "https"
         && url.host_str().is_some()
         && url.username().is_empty()
@@ -155,7 +156,7 @@ async fn endpoint(
     relay_only: bool,
 ) -> Result<Endpoint> {
     let mut builder = Endpoint::builder(presets::N0)
-        .alpns(vec![ALPN.to_vec()])
+        .alpns(vec![ALPN.to_vec(), PROBE_ALPN.to_vec()])
         .clear_address_lookup();
     if let Some(url) = custom {
         anyhow::ensure!(relay_origin(url), "RELAY_URL: an HTTPS origin is required");
@@ -232,6 +233,16 @@ fn task(stop: &CancellationToken, future: impl std::future::Future<Output = ()> 
     });
 }
 impl Tunnel {
+    pub(crate) fn directory_endpoint(&self) -> Endpoint {
+        self.endpoint.clone()
+    }
+
+    pub(crate) fn public_invite(&self) -> Result<String> {
+        let mut ticket = Invite::parse(&self.invite)?;
+        let relay = ticket.address.relay_urls().next().cloned().context("Нет ретранслятора")?;
+        ticket.address = EndpointAddr::new(ticket.address.id).with_relay_url(relay);
+        ticket.encode()
+    }
     pub fn udp_metrics(&self) -> serde_json::Value {
         let counts = &self.udp;
         let load = |value: &AtomicU64| value.load(Ordering::Relaxed);
@@ -309,6 +320,10 @@ impl Tunnel {
                         };
                         tx.write_all(b"OK").await?;
                         tx.finish()?;
+                        if conn.alpn() == PROBE_ALPN {
+                            let _ = tokio::time::timeout(Duration::from_secs(2), conn.closed()).await;
+                            return Ok(());
+                        }
                         let udp = UdpSocket::bind("127.0.0.1:0").await?;
                         udp.connect(("127.0.0.1", base + 2)).await?;
                         udp_host(conn.clone(), udp, &s, stats);
@@ -467,6 +482,28 @@ impl Tunnel {
             udp,
         })
     }
+}
+
+pub(crate) fn public_ticket(value: &str) -> Result<(iroh::EndpointId, RelayUrl)> {
+    let ticket = Invite::parse(value)?;
+    let mut relays = ticket.address.relay_urls();
+    let relay = relays.next().cloned().context("Нет ретранслятора")?;
+    anyhow::ensure!(relays.next().is_none() && ticket.address.ip_addrs().next().is_none(), "Ожидалось приглашение только через ретранслятор");
+    Ok((ticket.address.id, relay))
+}
+
+pub(crate) async fn public_ping(ep: &Endpoint, value: &str) -> Result<u64> {
+    let ticket = Invite::parse(value)?;
+    let conn = ep.connect(ticket.address, PROBE_ALPN).await?;
+    let (mut tx, mut rx) = conn.open_bi().await?;
+    let started = Instant::now();
+    tx.write_all(&hex::decode(ticket.key)?).await?;
+    tx.finish()?;
+    let mut ack = [0; 2];
+    rx.read_exact(&mut ack).await?;
+    conn.close(0u32.into(), b"probe complete");
+    anyhow::ensure!(&ack == b"OK", "INVITE_DENIED");
+    Ok(started.elapsed().as_millis().max(1) as u64)
 }
 // UDP stays datagram-based. Large game datagrams are fragmented with bounded reassembly.
 fn send_packet(conn: &Connection, id: u32, packet: &[u8], stats: &RelayUdpMetrics) -> Result<()> {

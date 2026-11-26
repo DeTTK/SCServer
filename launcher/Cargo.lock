@@ -682,6 +682,7 @@ dependencies = [
  "bscp-launcher-core",
  "bscp-launcher-host",
  "hex",
+ "image",
  "rfd",
  "serde_json",
  "sha2 0.10.9",

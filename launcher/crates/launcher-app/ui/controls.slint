@@ -158,11 +158,14 @@ export component RowButton inherits Rectangle {
     in property <string> detail;
     in property <string> meta;
     in property <string> glyph;
+    in property <image> row-icon;
+    in property <bool> has-icon;
+    in property <bool> wrap-title;
     in property <bool> selected;
     in property <bool> online;
     in property <bool> enabled: true;
     callback activated;
-    height: 62px;
+    height: root.wrap-title ? 70px : 62px;
     border-radius: Theme.radius;
     background: tap.pressed ? Theme.pressed : tap.has-hover ? Theme.hover : root.selected ? Theme.selected : transparent;
     border-width: 0px;
@@ -174,10 +177,21 @@ export component RowButton inherits Rectangle {
     if root.selected: Rectangle { x: 0px; width: 3px; height: parent.height - 20px; y: 10px; background: Theme.accent; }
     HorizontalLayout {
         padding-left: 12px; padding-right: 12px; spacing: 12px;
-        if root.glyph != "": Icon { text: root.glyph; color: root.selected ? Theme.accent : Theme.muted; width: 22px; }
+        if root.has-icon: VerticalLayout {
+            width: 32px; alignment: center;
+            Rectangle {
+                height: 32px; border-radius: 5px; clip: true;
+                Image { source: root.row-icon; image-fit: contain; }
+            }
+        }
+        if !root.has-icon && root.glyph != "": Icon { text: root.glyph; color: root.selected ? Theme.accent : Theme.muted; width: 22px; }
         VerticalLayout {
             alignment: center; spacing: 2px; horizontal-stretch: 1;
-            Label { text: root.title; font-size: 15px; font-weight: 600; height: 21px; }
+            Label {
+                text: root.title; font-size: 15px; font-weight: 600;
+                height: root.wrap-title ? 36px : 21px;
+                wrap: root.wrap-title ? word-wrap : no-wrap;
+            }
             if root.detail != "": Hint { text: root.detail; height: 18px; }
         }
         if root.meta != "": Hint { text: root.meta; color: root.online ? Theme.online : Theme.muted; max-width: 110px; }

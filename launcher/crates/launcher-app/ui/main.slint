@@ -7,8 +7,8 @@ import { ModsPage } from "mods.slint";
 import { WorldsPage, ServerPage, ReportPage } from "management.slint";
 import { Configuration } from "forms.slint";
 import { LauncherDialog } from "dialogs.slint";
-import { WorldRow, ServerRow, ChangeRow, TransferView, AttachmentRow, ModRow } from "api.slint";
-export { WorldRow, ServerRow, ChangeRow, TransferView, AttachmentRow, ModRow } from "api.slint";
+import { WorldRow, ServerRow, PublicServerRow, ChangeRow, TransferView, AttachmentRow, ModRow } from "api.slint";
+export { WorldRow, ServerRow, PublicServerRow, ChangeRow, TransferView, AttachmentRow, ModRow } from "api.slint";
 export component AppWindow inherits Window {
     // Pages and user-visible information. Models contain real data supplied by Rust.
     in-out property <string> page: "home";
@@ -33,6 +33,9 @@ export component AppWindow inherits Window {
     in property <string> selected-world-title;
     in property <[ServerRow]> favorites;
     in property <[ServerRow]> server-history;
+    in property <[PublicServerRow]> public-servers;
+    in property <string> directory-message;
+    in-out property <string> server-tab: "favorites";
     in property <[ChangeRow]> changes;
     in property <[WorldRow]> backups;
     in property <bool> server-running;
@@ -42,6 +45,14 @@ export component AppWindow inherits Window {
     in property <string> relay-invite;
     in property <string> relay-status;
     in-out property <bool> relay-enabled;
+    in-out property <bool> public-listing;
+    in property <image> server-icon;
+    in property <bool> has-server-icon;
+    in property <string> directory-status;
+    private property <bool> directory-visible: root.page == "home" && root.server-tab == "public" && !root.setup-visible && root.dialog == "";
+    changed directory-visible => { root.open-directory(root.directory-visible); }
+    callback open-directory(bool);
+    callback edit-server-icon(bool);
     in property <string> server-uptime;
     in property <string> server-memory;
     in property <[string]> players;
@@ -175,6 +186,7 @@ export component AppWindow inherits Window {
             }
             if !root.setup-visible && root.page == "home": Home {
                 vertical-stretch: 1; worlds: root.worlds; favorites: root.favorites; server-history: root.server-history; changes: root.changes;
+                public-servers: root.public-servers; directory-message: root.directory-message; server-tab <=> root.server-tab;
                 world-id: root.selected-world-id; world-title: root.selected-world-title; address <=> root.address; busy: root.busy;
                 server-column-width: clamp((root.width - 250px) * 0.36, 310px, 460px);
                 select-world(id) => { root.select-world(id); } manage-worlds => { root.navigate("worlds"); }
@@ -213,6 +225,8 @@ export component AppWindow inherits Window {
                     game-path <=> root.game-path; data-path <=> root.data-path; nickname <=> root.nickname; bundle-path <=> root.bundle-path;
                     client-path <=> root.client-path; server-path <=> root.server-path; client-memory <=> root.client-memory;
                     server-memory-setting <=> root.server-memory-setting; port <=> root.port; relay-enabled <=> root.relay-enabled;
+                    public-listing <=> root.public-listing; server-icon: root.server-icon; has-server-icon: root.has-server-icon; directory-status: root.directory-status;
+                    edit-server-icon(remove) => { root.edit-server-icon(remove); }
                     feed-url <=> root.feed-url; game-branch <=> root.game-branch; branches: root.branches; first-world-name <=> root.first-world-name; desktop-shortcut <=> root.desktop-shortcut;
                     transfer-view: root.transfer-view;
                     busy: root.busy; error: root.error; error-field: root.error-field; progress: root.progress; progress-text: root.progress-text; status: root.status;

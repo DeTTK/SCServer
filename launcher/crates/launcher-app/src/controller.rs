@@ -15,6 +15,9 @@ use std::{
     time::Duration,
 };
 
+#[path = "public_servers.rs"]
+mod public_servers;
+
 #[derive(Clone)]
 struct Draft {
     game: String,
@@ -31,6 +34,7 @@ struct Draft {
     world: String,
     desktop_shortcut: bool,
     relay_enabled: bool,
+    public_listing: bool,
 }
 impl Draft {
     fn read(ui: &AppWindow) -> Self {
@@ -49,6 +53,7 @@ impl Draft {
             world: ui.get_first_world_name().to_string(),
             desktop_shortcut: ui.get_desktop_shortcut(),
             relay_enabled: ui.get_relay_enabled(),
+            public_listing: ui.get_public_listing(),
         }
     }
     fn settings(&self, old: &Settings, layout: &Layout) -> Result<Settings> {
@@ -76,6 +81,7 @@ impl Draft {
             bail!("SERVER_MEMORY_INVALID: Укажите память сервера от 512 до 65536 МБ.")
         }
         s.relay_enabled = self.relay_enabled;
+        s.public_listing = self.relay_enabled && self.public_listing;
         s.base_port = self
             .port
             .parse()
@@ -98,6 +104,7 @@ enum Work {
     Install(Option<PathBuf>, Draft),
     World(String, String, String, Option<PathBuf>),
     Favorite(String, String, String, String),
+    ServerIcon(Option<PathBuf>),
     Server(String),
     Update(String, String),
     Report(String, BugReportDraft),
@@ -116,6 +123,7 @@ impl Work {
             Self::Install(..) => "install",
             Self::World(..) => "manage-world",
             Self::Favorite(..) => "manage-favorites",
+            Self::ServerIcon(..) => "server-icon",
             Self::Server(..) => "manage-server",
             Self::Update(..) => "update-game",
             Self::Report(..) => "bug-report",
@@ -147,6 +155,7 @@ fn set_draft(ui: &AppWindow, s: &Settings) {
     ui.set_server_memory_setting(s.server_memory_mb.to_string().into());
     ui.set_port(s.base_port.to_string().into());
     ui.set_relay_enabled(s.relay_enabled);
+    ui.set_public_listing(s.public_listing && s.relay_enabled);
     ui.set_feed_url(s.feed_url.clone().into());
     ui.set_game_branch(s.game_branch.clone().into());
 }
@@ -624,6 +633,7 @@ pub fn bind(ui: &AppWindow, layout: Layout) -> Binding {
     let alive = Arc::new(AtomicBool::new(true));
     let cancel = Arc::new(AtomicBool::new(false));
     let local_work = Arc::new(AtomicBool::new(false));
+    public_servers::bind(ui, layout.clone(), alive.clone());
     ui.set_version(env!("CARGO_PKG_VERSION").into());
     ui.set_status("Подготовка лаунчера…".into());
     ui.set_changes(rows(vec![
@@ -656,6 +666,18 @@ pub fn bind(ui: &AppWindow, layout: Layout) -> Binding {
         }
     };
     let submit: Rc<dyn Fn(Work, bool)> = Rc::new(submit);
+    {
+        let send = submit.clone();
+        ui.on_edit_server_icon(move |remove| {
+            if remove {
+                send(Work::ServerIcon(None), true);
+            } else if let Some(path) = rfd::FileDialog::new()
+                .add_filter("Изображения", &["png", "jpg", "jpeg", "webp"]).pick_file()
+            {
+                send(Work::ServerIcon(Some(path)), true);
+            }
+        });
+    }
     {
         let w = ui.as_weak();
         let send = submit.clone();
@@ -1106,6 +1128,7 @@ pub fn bind(ui: &AppWindow, layout: Layout) -> Binding {
                 ui.set_server_address(address.into());
                 ui.set_relay_invite(view.relay_invite.into());
                 ui.set_relay_status(view.relay_status.into());
+                ui.set_directory_status(view.directory_status.into());
                 ui.set_server_uptime("Нет данных".into());
                 ui.set_server_memory("Нет данных".into());
                 if changed && !ui.get_busy() && ui.get_configured() {
@@ -1628,6 +1651,12 @@ fn execute(
             close_dialog(ui);
             refresh(ui, layout, false)?;
             Ok("Операция с миром завершена".into())
+        }
+        Work::ServerIcon(path) => {
+            public_servers::save_icon(layout, path.as_deref())?;
+            let layout = layout.clone();
+            let _ = ui.upgrade_in_event_loop(move |ui| public_servers::show_icon(&ui, &layout));
+            Ok("Иконка сервера обновлена".into())
         }
         Work::Favorite(action, name, address, nickname) => {
             let mut list: Vec<ServerEntry> = read_json(&layout.at("config/servers.json"))?;
