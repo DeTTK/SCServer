@@ -589,8 +589,48 @@ public final class GameInventory implements AutoCloseable {
     }
     public void edit(UUID id,Inventory.Address address,byte[] raw,boolean config,Consumer<Inventory.Plan> success,Consumer<String> failure){
         Character c=character(id);if(c.busy||c.failed||c.deathClear){denied++;failure.accept("inventory_busy");return;}
-        ItemStack original=c.inventory.at(address);if(original==null){failure.accept("editor_original_missing");return;}c.busy=true;Inventory before=c.inventory;
-        try{factories.execute(()->{try{ItemStack edited=config?items.readConfig(raw):items.readEditedStack(raw);if(edited.id()!=original.id()||!config&&edited.count()!=original.count())throw new IllegalArgumentException("editor_cannot_replace_item_or_count");validateEditedWeapon(edited);edited=items.preserveIdentity(original,edited.count(original.count()));Inventory.Plan plan=before.replace(Map.of(address,edited),0);completion(()->persist(id,c,plan,success,failure));}catch(Exception | LinkageError error){completion(()->{c.busy=false;denied++;failure.accept(Objects.toString(error.getMessage(),"editor_state_invalid"));});}});}catch(RejectedExecutionException error){c.busy=false;denied++;failure.accept("inventory_factory_queue_full");}
+        if(address.aggregate()>1||!StorageLayout.validAddress(address)){failure.accept("editor_invalid_address");return;}
+        Inventory before=c.inventory;
+        c.busy=true;
+        try{
+            factories.execute(()->{
+                try{
+                    ItemStack edited=config?items.readConfig(raw):items.readEditedStack(raw);
+                    Inventory.Address target=editorTarget(before,address,edited);
+                    ItemStack original=before.at(target);
+                    if(edited.id()!=original.id()||!config&&edited.count()!=original.count())
+                        throw new IllegalArgumentException("editor_cannot_replace_item_or_count");
+                    validateEditedWeapon(edited);
+                    edited=items.preserveIdentity(original,edited.count(original.count()));
+                    Inventory.Plan plan=before.replace(Map.of(target,edited),0);
+                    completion(()->persist(id,c,plan,success,failure));
+                }catch(Exception | LinkageError error){
+                    completion(()->{c.busy=false;denied++;failure.accept(Objects.toString(error.getMessage(),"editor_state_invalid"));});
+                }
+            });
+        }catch(RejectedExecutionException error){c.busy=false;denied++;failure.accept("inventory_factory_queue_full");}
+    }
+
+    private Inventory.Address editorTarget(Inventory inventory,Inventory.Address selected,ItemStack edited)throws Exception{
+        ItemStack original=inventory.at(selected);
+        UUID identity=items.identity(edited);
+        if(identity.getMostSignificantBits()==0&&identity.getLeastSignificantBits()==0){
+            if(original==null)throw new IllegalArgumentException("editor_original_missing");
+            if(original.stateful()&&catalog.limit(original)==1)throw new IllegalArgumentException("editor_identity_missing");
+            return selected;
+        }
+        if(original!=null&&original.id()==edited.id()&&identity.equals(items.identity(original)))return selected;
+
+        // The native editor retains the opening address. Its stack keeps the root UUID across moves.
+        Inventory.Address target=null;
+        for(var entry:inventory.items().entrySet()){
+            ItemStack candidate=entry.getValue();
+            if(entry.getKey().aggregate()>1||candidate.id()!=edited.id()||!identity.equals(items.identity(candidate)))continue;
+            if(target!=null)throw new IllegalArgumentException("editor_identity_ambiguous");
+            target=entry.getKey();
+        }
+        if(target==null)throw new IllegalArgumentException("editor_original_missing");
+        return target;
     }
     public void cosmetic(UUID id,Inventory.Address target,Inventory.Address source,int selection,int slot,boolean skin,Consumer<Inventory.Plan> success,Consumer<String> failure){
         Character c=character(id);if(c.busy||c.failed||c.deathClear){failure.accept("inventory_busy");return;}Inventory before=c.inventory;ItemStack item=before.at(target),consumed=source==null?null:before.at(source);
