@@ -213,7 +213,7 @@ impl Supervisor {
             return;
         }
         self.view.lock().unwrap()["RelayStatus"] = json!("Проверяем ретрансляторы…");
-        match crate::relay::Tunnel::host(base, &s.relay_url).await {
+        match crate::relay::Tunnel::host(base, &s.relay_url, &self.layout.root).await {
             Ok(t) => {
                 let host = t.relay_host();
                 self.running.lock().unwrap().server_tunnel = Some(t);
@@ -545,7 +545,7 @@ impl Supervisor {
                     }
                 }
                 return Ok(
-                    json!({"state":self.status(),"server":server,"client":client,"health":health,"metricErrors":{"server":server_error,"client":client_error},"addresses":network::local_addresses().iter().map(|a| format!("{a}:{}", self.layout.load().map(|s| s.base_port).unwrap_or(29545))).collect::<Vec<_>>()}),
+                    json!({"state":self.status(),"server":server,"client":client,"health":health,"metricErrors":{"server":server_error,"client":client_error},"relayUdp":self.relay_udp_metrics(),"addresses":network::local_addresses().iter().map(|a| format!("{a}:{}", self.layout.load().map(|s| s.base_port).unwrap_or(29545))).collect::<Vec<_>>()}),
                 );
             }
             "probe" => {
@@ -556,7 +556,13 @@ impl Supervisor {
                     let _activity = DeliveryActivity(self.deliveries.clone());
                     let settings = self.layout.load()?;
                     return Ok(
-                        match crate::relay::Tunnel::join(&address, &settings.relay_url).await {
+                        match crate::relay::Tunnel::join(
+                            &address,
+                            &settings.relay_url,
+                            &self.layout.root,
+                        )
+                        .await
+                        {
                             Ok(_) => {
                                 json!({"online":true,"detail":"Приглашение доступно"})
                             }
@@ -952,7 +958,7 @@ impl Supervisor {
         let game = GameLayout::resolve(self.layout.resolve(&s.game_path))?;
         let java = self.java(&source)?;
         let tunnel = if crate::relay::is_invite(address) {
-            Some(crate::relay::Tunnel::join(address, &s.relay_url).await?)
+            Some(crate::relay::Tunnel::join(address, &s.relay_url, &self.layout.root).await?)
         } else {
             None
         };
@@ -1116,6 +1122,14 @@ impl Supervisor {
         }
         bail!("STOP_PENDING: server is saving; no force kill performed")
     }
+    fn relay_udp_metrics(&self) -> Value {
+        let state = self.running.lock().unwrap();
+        json!({
+            "host": state.server_tunnel.as_ref().map(crate::relay::Tunnel::udp_metrics),
+            "client": state.client_tunnel.as_ref().map(crate::relay::Tunnel::udp_metrics)
+        })
+    }
+
     pub async fn record_diagnostics(self: Arc<Self>) {
         let logger = RotatingLog::new(self.layout.at("logs"), "performance");
         let outbox = TelemetryOutbox::new(&self.layout);
@@ -1183,7 +1197,7 @@ impl Supervisor {
                 last_queued = std::time::Instant::now() - Duration::from_secs(30);
             }
             let sample = json!({"type":"performance","run":server.as_ref().or(client.as_ref()).map(|o|o.session.as_str()),"serverPid":server.as_ref().map(|v|v.pid),"clientPid":client.as_ref().map(|v|v.pid),
-                "runGroup":context["runGroup"],"context":context,"time":chrono::Utc::now().to_rfc3339(),"health":health,"server":server_metrics,"client":client_metrics,"errors":{"server":server_error,"client":client_error}});
+                "runGroup":context["runGroup"],"context":context,"time":chrono::Utc::now().to_rfc3339(),"health":health,"server":server_metrics,"client":client_metrics,"errors":{"server":server_error,"client":client_error},"relayUdp":self.relay_udp_metrics()});
             let _ = logger.line(&sample.to_string());
             recent.push_back(sample.clone());
             while recent.len() > 12 {
@@ -1529,6 +1543,8 @@ fn compact_health(health: Value) -> Value {
             "maxTickMs",
             "tickTiming",
             "datagrams",
+            "reliableTransport",
+            "nativeAdmin",
             "connectionMismatch",
             "rejected",
             "running",

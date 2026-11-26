@@ -24,7 +24,7 @@ async fn main() -> Result<()> {
     );
     layout.init()?;
     let tunnel = if relay::is_invite(&args[2]) {
-        Some(relay::Tunnel::join(&args[2], "").await?)
+        Some(relay::Tunnel::join(&args[2], "", &layout.root).await?)
     } else {
         None
     };

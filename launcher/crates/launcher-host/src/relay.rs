@@ -3,14 +3,19 @@ use crate::relay_catalog::ranked_relays;
 use anyhow::{Context, Result, bail};
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use iroh::{
-    Endpoint, EndpointAddr, RelayMode,
+    Endpoint, EndpointAddr, RelayMap, RelayMode, RelayUrl,
     endpoint::{Connection, presets},
+    tls::CaTlsConfig,
 };
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
     net::SocketAddr,
-    sync::Arc,
+    path::Path,
+    sync::{
+        Arc,
+        atomic::{AtomicU64, Ordering},
+    },
     time::{Duration, Instant},
 };
 use tokio::{
@@ -48,11 +53,7 @@ impl Invite {
         {
             bail!("INVITE_INVALID")
         }
-        if ticket
-            .address
-            .relay_urls()
-            .any(|u| u.scheme() != "https" || !u.username().is_empty() || u.password().is_some())
-        {
+        if ticket.address.relay_urls().any(|u| !relay_origin(u)) {
             bail!("INVITE_INVALID")
         }
         Ok(ticket)
@@ -78,7 +79,20 @@ pub struct Tunnel {
     pub game_port: u16,
     pub world_port: u16,
     pub remote_base: u16,
+    udp: Arc<RelayUdpMetrics>,
 }
+#[derive(Default)]
+struct RelayUdpMetrics {
+    received: AtomicU64,
+    sent: AtomicU64,
+    fragments: AtomicU64,
+    fragmented: AtomicU64,
+    send_errors: AtomicU64,
+    buffer_pressure: AtomicU64,
+    forwarded: AtomicU64,
+    forward_errors: AtomicU64,
+}
+
 impl Drop for Tunnel {
     fn drop(&mut self) {
         self.stop.cancel();
@@ -88,16 +102,71 @@ impl Drop for Tunnel {
         });
     }
 }
-async fn endpoint(custom: &str, relay_only: bool) -> Result<Endpoint> {
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct RelayCredentials {
+    url: String,
+    token: String,
+}
+struct PrivateRelay {
+    url: RelayUrl,
+    token: String,
+    ca: Vec<u8>,
+}
+impl PrivateRelay {
+    fn load(root: &Path) -> Result<Option<Self>> {
+        let config = root.join("config");
+        let data = match std::fs::read(config.join("relay-access.json")) {
+            Ok(data) => data,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+            Err(error) => return Err(error).context("RELAY_ACCESS_FILE"),
+        };
+        anyhow::ensure!(data.len() <= 4096, "RELAY_ACCESS_FILE");
+        let access: RelayCredentials =
+            serde_json::from_slice(&data).context("RELAY_ACCESS_FILE")?;
+        let url: RelayUrl = access.url.parse().context("RELAY_ACCESS_URL")?;
+        anyhow::ensure!(relay_origin(&url), "RELAY_ACCESS_URL");
+        anyhow::ensure!(
+            access.token.len() == 64 && access.token.bytes().all(|byte| byte.is_ascii_hexdigit()),
+            "RELAY_ACCESS_TOKEN"
+        );
+        let ca = std::fs::read(config.join("relay-ca.der")).context("RELAY_ACCESS_CA")?;
+        anyhow::ensure!((1..=8192).contains(&ca.len()), "RELAY_ACCESS_CA");
+        Ok(Some(Self {
+            url,
+            token: access.token,
+            ca,
+        }))
+    }
+}
+fn relay_origin(url: &RelayUrl) -> bool {
+    url.scheme() == "https"
+        && url.host_str().is_some()
+        && url.username().is_empty()
+        && url.password().is_none()
+        && url.path() == "/"
+        && url.query().is_none()
+        && url.fragment().is_none()
+}
+
+async fn endpoint(
+    custom: Option<&RelayUrl>,
+    private: Option<&PrivateRelay>,
+    relay_only: bool,
+) -> Result<Endpoint> {
     let mut builder = Endpoint::builder(presets::N0)
         .alpns(vec![ALPN.to_vec()])
         .clear_address_lookup();
-    if !custom.trim().is_empty() {
-        let u: iroh::RelayUrl = custom.parse()?;
-        if u.scheme() != "https" {
-            bail!("RELAY_URL: HTTPS required")
-        };
-        builder = builder.relay_mode(RelayMode::custom([u]));
+    if let Some(url) = custom {
+        anyhow::ensure!(relay_origin(url), "RELAY_URL: an HTTPS origin is required");
+        if let Some(access) = private.filter(|access| &access.url == url) {
+            let relays = RelayMap::from_iter([url.clone()]).with_auth_token(&access.token);
+            builder = builder
+                .relay_mode(RelayMode::Custom(relays))
+                .ca_tls_config(CaTlsConfig::custom_roots([access.ca.clone().into()]));
+        } else {
+            builder = builder.relay_mode(RelayMode::custom([url.clone()]));
+        }
     }
     if relay_only {
         builder = builder.clear_ip_transports();
@@ -105,31 +174,52 @@ async fn endpoint(custom: &str, relay_only: bool) -> Result<Endpoint> {
     Ok(builder.bind().await?)
 }
 
-async fn online_endpoint(custom: &str, relay_only: bool, wait: Duration) -> Result<Endpoint> {
-    let ep = endpoint(custom, relay_only).await?;
-    if tokio::time::timeout(wait, ep.online()).await.is_err() {
+async fn online_endpoint(
+    custom: Option<&RelayUrl>,
+    private: Option<&PrivateRelay>,
+    relay_only: bool,
+    wait: Duration,
+) -> Result<Endpoint> {
+    let ep = endpoint(custom, private, relay_only).await?;
+    let online = tokio::time::timeout(wait, ep.online()).await.is_ok();
+    if !online {
         ep.close().await;
         bail!("RELAY_OFFLINE: Сеть Iroh недоступна")
     }
     Ok(ep)
 }
 
-async fn host_endpoint(custom: &str, relay_only: bool) -> Result<Endpoint> {
-    if custom.trim().is_empty() {
+async fn host_endpoint(
+    custom: &str,
+    private: Option<&PrivateRelay>,
+    relay_only: bool,
+) -> Result<Endpoint> {
+    let selected: Option<RelayUrl> = if custom.trim().is_empty() {
+        private.map(|access| access.url.clone())
+    } else {
+        Some(custom.parse().context("RELAY_URL")?)
+    };
+    if selected.is_none() {
         let ranked = ranked_relays().await.unwrap_or_default();
-        let deadline = Instant::now() + Duration::from_secs(8);
+        let deadline = Instant::now() + Duration::from_secs(14);
         for relay in ranked {
             let remaining = deadline.saturating_duration_since(Instant::now());
             if remaining.is_zero() {
                 break;
             }
-            let wait = remaining.min(Duration::from_secs(4));
-            if let Ok(ep) = online_endpoint(relay.as_str(), relay_only, wait).await {
+            let wait = remaining.min(Duration::from_secs(7));
+            if let Ok(ep) = online_endpoint(Some(&relay), None, relay_only, wait).await {
                 return Ok(ep);
             }
         }
     }
-    online_endpoint(custom, relay_only, Duration::from_secs(20)).await
+    online_endpoint(
+        selected.as_ref(),
+        private,
+        relay_only,
+        Duration::from_secs(20),
+    )
+    .await
 }
 
 fn task(stop: &CancellationToken, future: impl std::future::Future<Output = ()> + Send + 'static) {
@@ -139,6 +229,20 @@ fn task(stop: &CancellationToken, future: impl std::future::Future<Output = ()> 
     });
 }
 impl Tunnel {
+    pub fn udp_metrics(&self) -> serde_json::Value {
+        let counts = &self.udp;
+        let load = |value: &AtomicU64| value.load(Ordering::Relaxed);
+        serde_json::json!({
+            "udpReceived": load(&counts.received),
+            "udpSubmitted": load(&counts.sent),
+            "quicFragmentsSubmitted": load(&counts.fragments),
+            "udpFragmented": load(&counts.fragmented),
+            "quicSendErrors": load(&counts.send_errors),
+            "quicFragmentBufferPressure": load(&counts.buffer_pressure),
+            "udpForwarded": load(&counts.forwarded),
+            "udpForwardErrors": load(&counts.forward_errors),
+        })
+    }
     pub fn relay_host(&self) -> Option<String> {
         self.endpoint
             .addr()
@@ -147,11 +251,16 @@ impl Tunnel {
             .map(|host| host.trim_end_matches('.').to_owned())
     }
 
-    pub async fn host(base: u16, custom: &str) -> Result<Self> {
-        Self::host_mode(base, custom, false).await
+    pub async fn host(base: u16, custom: &str, root: &Path) -> Result<Self> {
+        Self::host_mode(base, custom, PrivateRelay::load(root)?.as_ref(), false).await
     }
-    async fn host_mode(base: u16, custom: &str, relay_only: bool) -> Result<Self> {
-        let ep = host_endpoint(custom, relay_only).await?;
+    async fn host_mode(
+        base: u16,
+        custom: &str,
+        access: Option<&PrivateRelay>,
+        relay_only: bool,
+    ) -> Result<Self> {
+        let ep = host_endpoint(custom, access, relay_only).await?;
         let mut bytes = [0; 32];
         rand::RngCore::fill_bytes(&mut rand::rngs::OsRng, &mut bytes);
         let ticket = Invite {
@@ -165,6 +274,8 @@ impl Tunnel {
         let listener = ep.clone();
         let limit = Arc::new(Semaphore::new(32));
         let signal = stop.clone();
+        let udp_stats = Arc::new(RelayUdpMetrics::default());
+        let listener_stats = udp_stats.clone();
         task(&stop, async move {
             while let Some(incoming) = listener.accept().await {
                 let Ok(permit) = limit.clone().try_acquire_owned() else {
@@ -173,6 +284,7 @@ impl Tunnel {
                 };
                 let key = bytes;
                 let s = signal.clone();
+                let stats = listener_stats.clone();
                 task(&signal, async move {
                     let _permit = permit;
                     let _ = async {
@@ -196,7 +308,7 @@ impl Tunnel {
                         tx.finish()?;
                         let udp = UdpSocket::bind("127.0.0.1:0").await?;
                         udp.connect(("127.0.0.1", base + 2)).await?;
-                        udp_host(conn.clone(), udp, &s);
+                        udp_host(conn.clone(), udp, &s, stats);
                         let streams = Arc::new(Semaphore::new(64));
                         while let Ok((mut send, mut recv)) = conn.accept_bi().await {
                             let Ok(p) = streams.clone().try_acquire_owned() else {
@@ -248,14 +360,33 @@ impl Tunnel {
             game_port: base + 1,
             world_port: base + 2,
             remote_base: base,
+            udp: udp_stats,
         })
     }
-    pub async fn join(value: &str, custom: &str) -> Result<Self> {
-        Self::join_mode(value, custom, false).await
+    pub async fn join(value: &str, custom: &str, root: &Path) -> Result<Self> {
+        Self::join_mode(value, custom, PrivateRelay::load(root)?.as_ref(), false).await
     }
-    async fn join_mode(value: &str, custom: &str, relay_only: bool) -> Result<Self> {
+    async fn join_mode(
+        value: &str,
+        custom: &str,
+        access: Option<&PrivateRelay>,
+        relay_only: bool,
+    ) -> Result<Self> {
         let ticket = Invite::parse(value)?;
-        let ep = endpoint(custom, relay_only).await?;
+        let fallback: Option<RelayUrl> = if custom.trim().is_empty() {
+            None
+        } else {
+            Some(custom.parse().context("RELAY_URL")?)
+        };
+        let selected = access
+            .and_then(|access| ticket.address.relay_urls().find(|url| **url == access.url))
+            .or_else(|| ticket.address.relay_urls().next())
+            .or(fallback.as_ref());
+        let ep = if relay_only {
+            online_endpoint(selected, access, true, Duration::from_secs(12)).await?
+        } else {
+            endpoint(selected, access, false).await?
+        };
         let result = async {
             let conn = tokio::time::timeout(
                 Duration::from_secs(25),
@@ -320,7 +451,8 @@ impl Tunnel {
                 }
             });
         }
-        udp_client(conn, world, &stop);
+        let udp = Arc::new(RelayUdpMetrics::default());
+        udp_client(conn, world, &stop, udp.clone());
         Ok(Self {
             endpoint: ep,
             stop,
@@ -329,11 +461,12 @@ impl Tunnel {
             game_port,
             world_port,
             remote_base: ticket.base,
+            udp,
         })
     }
 }
 // UDP stays datagram-based. Large game datagrams are fragmented with bounded reassembly.
-fn send_packet(conn: &Connection, id: u32, packet: &[u8]) -> Result<()> {
+fn send_packet(conn: &Connection, id: u32, packet: &[u8], stats: &RelayUdpMetrics) -> Result<()> {
     if packet.len() > 65507 {
         bail!("UDP_LIMIT")
     };
@@ -346,6 +479,9 @@ fn send_packet(conn: &Connection, id: u32, packet: &[u8]) -> Result<()> {
         bail!("DATAGRAM_MTU")
     };
     let count = packet.len().max(1).div_ceil(size);
+    if count > 1 {
+        stats.fragmented.fetch_add(1, Ordering::Relaxed);
+    }
     for i in 0..count {
         let mut frame = Vec::with_capacity(size + 8);
         frame.extend_from_slice(&id.to_be_bytes());
@@ -354,7 +490,11 @@ fn send_packet(conn: &Connection, id: u32, packet: &[u8]) -> Result<()> {
         frame.extend_from_slice(
             &packet[(i * size).min(packet.len())..((i + 1) * size).min(packet.len())],
         );
+        if conn.datagram_send_buffer_space() < frame.len() {
+            stats.buffer_pressure.fetch_add(1, Ordering::Relaxed);
+        }
         conn.send_datagram(frame.into())?;
+        stats.fragments.fetch_add(1, Ordering::Relaxed);
     }
     Ok(())
 }
@@ -397,20 +537,58 @@ impl Packets {
         None
     }
 }
-fn udp_host(conn: Connection, socket: UdpSocket, stop: &CancellationToken) {
+fn tunnel_udp(conn: &Connection, id: &mut u32, packet: &[u8], stats: &RelayUdpMetrics) {
+    *id = id.wrapping_add(1);
+    stats.received.fetch_add(1, Ordering::Relaxed);
+    let status = if send_packet(conn, *id, packet, stats).is_ok() {
+        &stats.sent
+    } else {
+        &stats.send_errors
+    };
+    status.fetch_add(1, Ordering::Relaxed);
+}
+
+fn udp_forwarded(result: std::io::Result<usize>, stats: &RelayUdpMetrics) {
+    let status = if result.is_ok() {
+        &stats.forwarded
+    } else {
+        &stats.forward_errors
+    };
+    status.fetch_add(1, Ordering::Relaxed);
+}
+
+fn udp_host(
+    conn: Connection,
+    socket: UdpSocket,
+    stop: &CancellationToken,
+    stats: Arc<RelayUdpMetrics>,
+) {
     task(stop, async move {
         let mut buffer = vec![0; 65536];
         let mut packets = Packets::default();
         let mut id = 0u32;
         loop {
             tokio::select! {
-                r=socket.recv(&mut buffer)=>match r{Ok(n)=>{id=id.wrapping_add(1);let _=send_packet(&conn,id,&buffer[..n]);},Err(_)=>break},
-                r=conn.read_datagram()=>match r{Ok(v)=>if let Some(p)=packets.push(&v){let _=socket.send(&p).await;},Err(_)=>break}
+                r = socket.recv(&mut buffer) => match r {
+                    Ok(n) => tunnel_udp(&conn, &mut id, &buffer[..n], &stats),
+                    Err(_) => break,
+                },
+                r = conn.read_datagram() => match r {
+                    Ok(v) => if let Some(p) = packets.push(&v) {
+                        udp_forwarded(socket.send(&p).await, &stats);
+                    },
+                    Err(_) => break,
+                }
             }
         }
     });
 }
-fn udp_client(conn: Connection, socket: UdpSocket, stop: &CancellationToken) {
+fn udp_client(
+    conn: Connection,
+    socket: UdpSocket,
+    stop: &CancellationToken,
+    stats: Arc<RelayUdpMetrics>,
+) {
     task(stop, async move {
         let mut buffer = vec![0; 65536];
         let mut packets = Packets::default();
@@ -418,8 +596,20 @@ fn udp_client(conn: Connection, socket: UdpSocket, stop: &CancellationToken) {
         let mut id = 0u32;
         loop {
             tokio::select! {
-                r=socket.recv_from(&mut buffer)=>match r{Ok((n,addr))=>{if !addr.ip().is_loopback(){continue};peer=Some(addr);id=id.wrapping_add(1);let _=send_packet(&conn,id,&buffer[..n]);},Err(_)=>break},
-                r=conn.read_datagram()=>match r{Ok(v)=>if let (Some(p),Some(peer))=(packets.push(&v),peer){let _=socket.send_to(&p,peer).await;},Err(_)=>break}
+                r = socket.recv_from(&mut buffer) => match r {
+                    Ok((n, addr)) if addr.ip().is_loopback() => {
+                        peer = Some(addr);
+                        tunnel_udp(&conn, &mut id, &buffer[..n], &stats);
+                    }
+                    Ok(_) => continue,
+                    Err(_) => break,
+                },
+                r = conn.read_datagram() => match r {
+                    Ok(v) => if let (Some(p), Some(peer)) = (packets.push(&v), peer) {
+                        udp_forwarded(socket.send_to(&p, peer).await, &stats);
+                    },
+                    Err(_) => break,
+                }
             }
         }
     });
@@ -438,6 +628,85 @@ mod tests {
         assert!(p.push(&[0, 0, 0, 1, 0, 1, 0, 2, 2]).is_none());
         assert_eq!(p.push(&[0, 0, 0, 1, 0, 0, 0, 2, 1]), Some(vec![1, 2]));
     }
+    #[tokio::test]
+    async fn local_iroh_udp_preserves_bursts_and_counts_both_directions() {
+        let server = Endpoint::builder(presets::N0)
+            .alpns(vec![ALPN.to_vec()])
+            .relay_mode(RelayMode::Disabled)
+            .clear_address_lookup()
+            .bind()
+            .await
+            .unwrap();
+        let client = Endpoint::builder(presets::N0)
+            .relay_mode(RelayMode::Disabled)
+            .clear_address_lookup()
+            .bind()
+            .await
+            .unwrap();
+        let stop = CancellationToken::new();
+        let timeout = Duration::from_secs(10);
+        let addr = server.addr();
+        let (host_conn, client_conn) = tokio::time::timeout(timeout, async {
+            tokio::join!(
+                async { server.accept().await.unwrap().await.unwrap() },
+                async { client.connect(addr, ALPN).await.unwrap() },
+            )
+        })
+        .await
+        .unwrap();
+
+        let game = UdpSocket::bind("127.0.0.1:0").await.unwrap();
+        let host_udp = UdpSocket::bind("127.0.0.1:0").await.unwrap();
+        host_udp.connect(game.local_addr().unwrap()).await.unwrap();
+        let client_udp = UdpSocket::bind("127.0.0.1:0").await.unwrap();
+        let player = UdpSocket::bind("127.0.0.1:0").await.unwrap();
+        player
+            .connect(client_udp.local_addr().unwrap())
+            .await
+            .unwrap();
+        let host_stats = Arc::new(RelayUdpMetrics::default());
+        let client_stats = Arc::new(RelayUdpMetrics::default());
+        udp_host(host_conn, host_udp, &stop, host_stats.clone());
+        udp_client(client_conn, client_udp, &stop, client_stats.clone());
+
+        let mut packet = [0; 5000];
+        for size in [25, 83, 975, 1000, 4096].into_iter().cycle().take(40) {
+            let data = vec![81; size];
+            player.send(&data).await.unwrap();
+            let (n, addr) = tokio::time::timeout(timeout, game.recv_from(&mut packet))
+                .await
+                .unwrap()
+                .unwrap();
+            assert_eq!(&packet[..n], data);
+            game.send_to(&packet[..n], addr).await.unwrap();
+            let n = tokio::time::timeout(timeout, player.recv(&mut packet))
+                .await
+                .unwrap()
+                .unwrap();
+            assert_eq!(&packet[..n], data);
+        }
+        for id in 0..48 {
+            player.send(&[id; 160]).await.unwrap();
+        }
+        let mut received = std::collections::HashSet::new();
+        for _ in 0..48 {
+            let (n, _) = tokio::time::timeout(timeout, game.recv_from(&mut packet))
+                .await
+                .unwrap()
+                .unwrap();
+            assert_eq!(n, 160);
+            assert!(received.insert(packet[0]));
+        }
+        assert_eq!(received, (0..48).collect());
+        assert_eq!(client_stats.sent.load(Ordering::Relaxed), 88);
+        assert_eq!(host_stats.sent.load(Ordering::Relaxed), 40);
+        assert!(host_stats.fragmented.load(Ordering::Relaxed) >= 8);
+        assert_eq!(host_stats.forward_errors.load(Ordering::Relaxed), 0);
+        assert_eq!(client_stats.send_errors.load(Ordering::Relaxed), 0);
+        stop.cancel();
+        let _ = tokio::join!(server.close(), client.close());
+    }
+
     #[tokio::test]
     #[ignore = "explicit public Iroh relay integration; no player data"]
     async fn public_relay_carries_tcp_udp_and_revokes_invitation() {
@@ -475,23 +744,58 @@ mod tests {
                 let _ = socket.send_to(&b[..n], a).await;
             }
         });
-        // Disable all IP transports on both endpoints: success proves the relay path.
-        let ranked = ranked_relays().await.unwrap();
-        assert!(
-            !ranked.is_empty(),
-            "no public relay passed the HTTPS probes"
-        );
-        let host = Tunnel::host_mode(base, "", true).await.unwrap();
+        // Force the relay path and optionally select a single origin for reproducible comparisons.
+        let target = std::env::var("BSCP_RELAY_QA_URL").unwrap_or_default();
+        let private = std::env::var_os("BSCP_RELAY_QA_ROOT").map(|root| {
+            PrivateRelay::load(Path::new(&root))
+                .unwrap()
+                .expect("private relay QA configuration")
+        });
+        if target.is_empty() && private.is_none() {
+            assert!(
+                !ranked_relays().await.unwrap().is_empty(),
+                "no public relay passed the HTTPS probes"
+            );
+        }
+        if let Some(access) = private.as_ref() {
+            let wrong = PrivateRelay {
+                url: access.url.clone(),
+                token: "00".repeat(32),
+                ca: access.ca.clone(),
+            };
+            assert!(
+                online_endpoint(Some(&wrong.url), Some(&wrong), true, Duration::from_secs(5))
+                    .await
+                    .is_err(),
+                "private relay accepted an incorrect relay token"
+            );
+        }
+        let start = Instant::now();
+        let host = Tunnel::host_mode(base, &target, private.as_ref(), true)
+            .await
+            .expect("host relay online");
         let selected = host.relay_host().expect("selected relay");
-        eprintln!("Selected public relay: {selected}");
-        let mut invalid = Invite::parse(&host.invite).unwrap();
-        invalid.key = "00".repeat(32);
-        assert!(
-            Tunnel::join_mode(&invalid.encode().unwrap(), "", true)
-                .await
-                .is_err()
+        eprintln!(
+            "Relay online {selected} after {} ms",
+            start.elapsed().as_millis()
         );
-        let client = Tunnel::join_mode(&host.invite, "", true).await.unwrap();
+        if private.is_some() {
+            let mut invalid = Invite::parse(&host.invite).unwrap();
+            invalid.key = "00".repeat(32);
+            assert!(
+                Tunnel::join_mode(&invalid.encode().unwrap(), "", private.as_ref(), true)
+                    .await
+                    .is_err()
+            );
+        }
+        let start = Instant::now();
+        let client = Tunnel::join_mode(&host.invite, "", private.as_ref(), true)
+            .await
+            .expect("peer tunnel connected");
+        eprintln!(
+            "Peer tunnel connected after {} ms",
+            start.elapsed().as_millis()
+        );
         for port in [client.backend_port, client.game_port] {
             let mut tcp = TcpStream::connect(("127.0.0.1", port)).await.unwrap();
             tcp.write_all(b"BSCP-TCP-PROBE").await.unwrap();
@@ -504,16 +808,35 @@ mod tests {
         }
         let udp = UdpSocket::bind("127.0.0.1:0").await.unwrap();
         udp.connect(("127.0.0.1", client.world_port)).await.unwrap();
-        for size in [40, 4096, 32000] {
-            let payload = vec![37; size];
+        let mut round_trips = Vec::new();
+        let sizes = [40, 975, 1000];
+        for (index, size) in sizes.into_iter().cycle().take(12).enumerate() {
+            let payload = vec![index as u8; size];
+            let start = Instant::now();
             udp.send(&payload).await.unwrap();
-            let mut out = vec![0; 65536];
-            let n = tokio::time::timeout(Duration::from_secs(12), udp.recv(&mut out))
-                .await
-                .unwrap()
-                .unwrap();
-            assert_eq!(&out[..n], payload);
+            let reply = tokio::time::timeout(Duration::from_secs(3), async {
+                let mut out = [0; 1000];
+                loop {
+                    let n = udp.recv(&mut out).await.unwrap();
+                    if out[..n] == payload {
+                        break;
+                    }
+                }
+            })
+            .await;
+            if reply.is_ok() {
+                round_trips.push(start.elapsed().as_millis());
+            } else {
+                eprintln!("UDP echo timed out for sample {index}, {size} bytes");
+            }
         }
+        round_trips.sort_unstable();
+        let received = round_trips.len();
+        eprintln!(
+            "UDP echoes: {received}/12, median RTT {:?} ms",
+            round_trips.get(received / 2)
+        );
+        assert_eq!(received, 12, "UDP delivery through forced relay");
         let local = client.backend_port;
         drop(client);
         tokio::time::sleep(Duration::from_millis(200)).await;
