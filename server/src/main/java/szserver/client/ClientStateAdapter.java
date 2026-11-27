@@ -278,7 +278,11 @@ public final class ClientStateAdapter implements AutoCloseable {
         Map<?,?> modules=(Map<?,?>)state.getClass().getMethod("for").invoke(state);if(modules.size()>127)throw new IOException("appearance_module_count");out.writeByte(modules.size());
         Class<?> slotType=Class.forName("1173269411",true,loader);Method slotWriter=Class.forName("1046176253",true,loader).getMethod("while",slotType,DataOutput.class);
         Method itemId=Arrays.stream(stackType.getMethods()).filter(m->m.getName().equals("continue")&&m.getParameterCount()==0&&m.getReturnType()==int.class).findFirst().orElseThrow();
-        for(var entry:modules.entrySet()){slotWriter.invoke(null,entry.getKey(),out);out.writeShort((Integer)itemId.invoke(entry.getValue()));}
+        // The client validates each attachment as it reads it. Native slot ordinals put
+        // parent mounts before their dependent slots, unlike the decoded state's map.
+        var orderedModules=new ArrayList<>(modules.entrySet());
+        orderedModules.sort(Comparator.comparingInt(entry->entry.getKey() instanceof Enum<?> slot?slot.ordinal():-1));
+        for(var entry:orderedModules){slotWriter.invoke(null,entry.getKey(),out);out.writeShort((Integer)itemId.invoke(entry.getValue()));}
         Class<?> properties=Class.forName("241793746",true,loader),key=Class.forName("520353426",true,loader);
         Method get=Arrays.stream(stackType.getMethods()).filter(m->m.getName().equals("do")&&Arrays.equals(m.getParameterTypes(),new Class<?>[]{key})&&m.getReturnType()==int.class).findFirst().orElseThrow();out.writeShort(((Number)get.invoke(stack,properties.getField("enum").get(null))).intValue());out.writeShort(((Number)get.invoke(stack,properties.getField("strictfp").get(null))).intValue());
         return bytes.toByteArray();

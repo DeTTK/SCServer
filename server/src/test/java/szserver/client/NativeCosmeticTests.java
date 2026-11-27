@@ -297,6 +297,17 @@ public final class NativeCosmeticTests {
         var modules=items.modules(equipped);
         check(modules.stream().anyMatch(m->m.slot()==sightSlot&&m.item()==riser.id())
                 &&modules.stream().anyMatch(m->m.slot()==sightOnMountSlot&&m.item()==scope.id()),"both native slots retained");
+        var appearance=java.nio.ByteBuffer.wrap(items.appearance(equipped,null));
+        appearance.position(7);
+        int styleBytes=appearance.get();
+        if(styleBytes>=0)appearance.position(appearance.position()+styleBytes);
+        int count=Byte.toUnsignedInt(appearance.get()),mountIndex=-1,scopeIndex=-1;
+        for(int index=0;index<count;index++){
+            int slot=appearance.get(),item=Short.toUnsignedInt(appearance.getShort());
+            if(slot==sightSlot&&item==riser.id())mountIndex=index;
+            if(slot==sightOnMountSlot&&item==scope.id())scopeIndex=index;
+        }
+        check(mountIndex>=0&&scopeIndex>mountIndex,"appearance installs parent rail before its optic");
         var detached=items.moduleBatch(equipped,sightSlot,null,0);
         check(detached.removed().size()==2&&detached.removed().stream().map(ItemStack::id)
                 .collect(java.util.stream.Collectors.toSet()).equals(Set.of(riser.id(),scope.id())),"mount removal returns dependent sight");
