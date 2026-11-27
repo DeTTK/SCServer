@@ -2382,7 +2382,24 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         clones.remove(clone,false);if(attacker!=null&&sessions.get(attacker.address)==attacker)enqueueOrRetire(attacker,GamePackets.killNotification(clone.code));for(Session viewer:viewers)enqueueOrRetire(viewer,GamePackets.killFeed(clone.code,killerName));
     }
     private void receiveChat(Session s,byte[] body){
-        try{chat(s,ChatPackets.request(body));}catch(IOException|IllegalArgumentException error){enqueue(s,0,GamePackets.chat(error.getMessage()));}
+        try{
+            ChatPackets.Request request=ChatPackets.request(body);
+            var channel=request.channel();
+            if(channel==ChatPackets.Channel.COMMAND){chat(s,request.text());return;}
+            long timestamp=System.currentTimeMillis();
+            if(channel==ChatPackets.Channel.PRIVATE){
+                var message=ChatPackets.privateMessage(request.text());
+                Session target=socialTarget(message.recipient());
+                if(target!=s)enqueueOrRetire(target,ChatPackets.player(channel,s.grant.name(),message.text(),timestamp));
+                enqueueOrRetire(s,ChatPackets.player(ChatPackets.Channel.PRIVATE_SENT,s.grant.name(),target.grant.name()+": "+message.text(),timestamp));
+                return;
+            }
+            var party=channel==ChatPackets.Channel.PARTY?squads.members(squadPlayer(s)):null;
+            if(party!=null&&party.isEmpty())throw new IllegalArgumentException("Вы не в отряде.");
+            byte[] packet=ChatPackets.player(channel,s.grant.name(),request.text(),timestamp);
+            for(Session other:new ArrayList<>(sessions.values()))
+                if(other.ready&&(party==null||party.contains(other.incarnation)))enqueueOrRetire(other,packet);
+        }catch(IOException|IllegalArgumentException error){enqueue(s,0,GamePackets.chat(Objects.toString(error.getMessage(),"Некорректное сообщение чата.")));}
     }
     /** Menu requests and the existing development command share one durable inventory mutation. */
     private void changeFaction(Session s,String requested){
@@ -2472,8 +2489,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
             }catch(RuntimeException error){enqueue(s,0,GamePackets.chat(Objects.toString(error.getMessage(),"give_failed")));}return;
         }
         if(Set.of("/storage","/stash").contains(verb)){try{var storage=PlayerCommands.storage(text);if(storage.operation().equals("open")){boolean opened=openStorage(s,0,true);enqueue(s,0,GamePackets.chat(opened?"Персональный склад открыт.":"Склад недоступен."));}else enqueue(s,0,GamePackets.chat("Склад перемещается штатным drag-and-drop в инвентаре."));}catch(IllegalArgumentException error){enqueue(s,0,GamePackets.chat(error.getMessage()));}return;}
-        if(verb.startsWith("/")){enqueue(s,0,GamePackets.chat(ChatPackets.unknown(verb)));return;}
-        byte[] message=ChatPackets.global(s.grant.name(),text,System.currentTimeMillis());for(Session other:new ArrayList<>(sessions.values()))if(other.ready)enqueueOrRetire(other,message);
+        enqueue(s,0,GamePackets.chat(ChatPackets.unknown(verb)));
     }
     private static double distance(double[] a,double[] b){double n=0;for(int i=0;i<3;i++)n+=(a[i]-b[i])*(a[i]-b[i]);return Math.sqrt(n);}
     private void nativeEcho(Session s,byte[] body)throws IOException{
