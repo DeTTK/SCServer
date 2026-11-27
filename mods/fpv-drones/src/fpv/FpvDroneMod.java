@@ -5,6 +5,7 @@ import java.util.*;
 import java.nio.*;
 import static fpv.NativeFlight.call;
 import static fpv.NativeFlight.get;
+import static org.lwjgl.glfw.GLFW.*;
 
 /** Native collision/view integration; authoritative deployment transport is a separate boundary. */
 public final class FpvDroneMod implements ClientMod {
@@ -15,6 +16,10 @@ public final class FpvDroneMod implements ClientMod {
     private final RemoteDrones remote=new RemoteDrones();
     private final DroneScene scene=new DroneScene();
     private final DroneView view=new DroneView();
+    private final MouseStick mouseStick=new MouseStick();
+    private final double[] cursorX=new double[1],cursorY=new double[1];
+    private SettingsRegistry.BooleanSetting mouseFlight;
+    private SettingsRegistry.NumberSetting mouseTravel;
     private final FpvOsd osd=new FpvOsd();
     private final FpvNavigation navigation=new FpvNavigation();
     private Vec3 home=new Vec3(0,0,0);
@@ -181,6 +186,8 @@ public final class FpvDroneMod implements ClientMod {
         tab.section("flight", "Полёт и пульт");
         networkFlight=tab.booleanSetting("network-flight", "Сетевой дрон (нужен обновлённый сервер)", true);
         defaultFlightMode=tab.choiceSetting("flight-mode","Режим полёта по умолчанию","ACRO",List.of("ACRO","HOLD"));
+        mouseFlight=tab.booleanSetting("mouse-flight","Управлять креном и тангажом мышью",true);
+        mouseTravel=tab.numberSetting("mouse-travel","Ход мыши до упора стика, пикс.",140.,40.,400.);
         invertPitch = tab.booleanSetting("invert-pitch", "Инвертировать тангаж (pitch)", false);
         invertRoll = tab.booleanSetting("invert-roll", "Инвертировать крен (roll)", false);
         invertYaw = tab.booleanSetting("invert-yaw", "Инвертировать рыскание (yaw)", false);
@@ -190,28 +197,58 @@ public final class FpvDroneMod implements ClientMod {
         tab.choiceSetting("failsafe", "Failsafe при потере связи", "Падение", List.of("Падение", "Зависание", "Возврат домой"));
     }
     @Override public void onInput(InputSnapshot input) throws Exception {
-        if(!deployed || link.lost()) {flight.control=new Control(0,0,0,body!=null&&flight.armed?.5:0,false);throttleDirection=0;return;}
-        Map<Integer,Boolean> keys=new HashMap<>(input.keys());
-        for(int code:new int[]{32,65,68,69,81,82,83,87,341})
-            if(rawKey(code)) keys.put(code,true); else keys.put(code,false);
-        input=new InputSnapshot(keys,input.mouseButtons(),input.axes(),input.buttons(),input.gamepads());
+        if(!deployed || link.lost()) {mouseStick.reset();flight.control=new Control(0,0,0,body!=null&&flight.armed?.5:0,false);throttleDirection=0;return;}
         GamepadState pad = input.gamepads().values().stream().findFirst().orElse(null);
+        boolean useMouse=pad==null&&mouseFlight.get();
+        boolean rightMouse=useMouse&&Boolean.TRUE.equals(input.mouseButtons().get(GLFW_MOUSE_BUTTON_RIGHT));
+        boolean middleMouse=useMouse&&Boolean.TRUE.equals(input.mouseButtons().get(GLFW_MOUSE_BUTTON_MIDDLE));
+        boolean arm=pad==null?input.keyDown(GLFW_KEY_R):pad.buttonDown("start");
+        boolean mode=pad==null?rightMouse:pad.buttonDown("a");
+        boolean charge=pad==null?middleMouse:pad.buttonDown("b");
+        long window=glfwGetCurrentContext();
+        boolean focused=window!=0&&glfwGetWindowAttrib(window,GLFW_FOCUSED)!=0;
+        boolean captured=focused&&glfwGetInputMode(window,GLFW_CURSOR)==GLFW_CURSOR_DISABLED;
+        boolean hidden=Boolean.getBoolean("standard.jvm.headless.hideWindow");
+        if(currentGame==null||get(currentGame,"implements")!=null||get(currentGame,"volatile")!=null||!focused&&!hidden){
+            mouseStick.reset();
+            armPressed=arm;modeButtonPressed=mode;chargeButtonPressed=charge;
+            throttleDirection=0;
+            flight.control=new Control(0,0,0,flight.control.throttle,false);
+            rawControl=new Control(0,0,0,rawControl.throttle,false);
+            return;
+        }
+        if(useMouse&&captured){
+            glfwGetCursorPos(window,cursorX,cursorY);
+            boolean center=Boolean.TRUE.equals(input.mouseButtons().get(GLFW_MOUSE_BUTTON_LEFT));
+            mouseStick.sample(window,cursorX[0],cursorY[0],center,mouseTravel.get());
+        }else mouseStick.reset();
+        if(useMouse&&!captured){
+            // Sync button edges while the game releases its cursor.
+            modeButtonPressed=mode;chargeButtonPressed=charge;
+        }
         if (pad != null) {
             gamepad = true;
-            rawControl=new Control(pad.axis("right-x"),-pad.axis("right-y"),pad.axis("left-x"),trigger(pad.axis("left-y")),pad.buttonDown("start"));
+            rawControl=new Control(pad.axis("right-x"),-pad.axis("right-y"),pad.axis("left-x"),trigger(pad.axis("left-y")),arm);
         } else {
             gamepad = false;
-            throttleDirection = (input.keyDown(32) ? 1 : 0) - (input.keyDown(341) ? 1 : 0);
+            boolean up=input.keyDown(GLFW_KEY_SPACE)||useMouse&&input.keyDown(GLFW_KEY_W);
+            boolean down=input.keyDown(GLFW_KEY_LEFT_CONTROL)||useMouse&&input.keyDown(GLFW_KEY_S);
+            throttleDirection=(up?1:0)-(down?1:0);
             if(invertThrottle.get()) throttleDirection=-throttleDirection;
-            rawControl=new Control(axis(input,68,65),axis(input,87,83),axis(input,69,81),keyboardThrottle,input.keyDown(82));
+            double yaw=useMouse
+                ? (input.keyDown(GLFW_KEY_E)||input.keyDown(GLFW_KEY_D)?1:0)-(input.keyDown(GLFW_KEY_Q)||input.keyDown(GLFW_KEY_A)?1:0)
+                : axis(input,GLFW_KEY_E,GLFW_KEY_Q);
+            double roll=useMouse?mouseStick.roll():axis(input,GLFW_KEY_D,GLFW_KEY_A);
+            double pitch=useMouse?mouseStick.pitch():axis(input,GLFW_KEY_W,GLFW_KEY_S);
+            rawControl=new Control(roll,pitch,yaw,keyboardThrottle,arm);
         }
         FlightSettings settings=controls();
         double throttle=gamepad&&invertThrottle.get()?1-rawControl.throttle:rawControl.throttle;
         flight.control=new Control(adjust(shape(rawControl.roll),invertRoll,settings.roll),
             adjust(shape(rawControl.pitch),invertPitch,settings.pitch),adjust(shape(rawControl.yaw),invertYaw,settings.yaw),
             FlightSettings.throttle(throttle,settings.throttleExpo.get(),activeFlightMode.equals("HOLD")),rawControl.arm);
-        updateModeButton(pad!=null && pad.buttonDown("a"));
-        updateChargeButton(pad!=null && pad.buttonDown("b"));
+        updateModeButton(mode);
+        updateChargeButton(charge);
         if (deployed && !flight.contact && flight.control.arm() && !armPressed) { requestedArm = serverDrone==null ? !flight.armed : !requestedArm; flight.armed=requestedArm; if(requestedArm&&activeFlightMode.equals("HOLD")&&!gamepad){keyboardThrottle=.5;Control c=flight.control;flight.control=new Control(c.roll,c.pitch,c.yaw,.5,c.arm);} armPressed = true; if(log!=null) log.log("FPV arm="+flight.armed+" throttle="+flight.control.throttle()); }
         if (!flight.control.arm()) armPressed = false;
     }
@@ -396,7 +433,7 @@ public final class FpvDroneMod implements ClientMod {
             float noise=link.noise(System.nanoTime());
             if(hudEnabled()||noise>0) {
                 osd.link(hudEnabled(),noise);
-                osd.guides(sticks.get(),hints.get(),rawControl.yaw,rawControl.roll,rawControl.pitch,rawControl.throttle);
+                osd.guides(sticks.get(),hints.get(),gamepad,!gamepad&&mouseFlight.get(),rawControl.yaw,rawControl.roll,rawControl.pitch,rawControl.throttle);
                 Vec3 p=flight.position;
                 FpvNavigation.Reading nav=navigation.update(flight.rotation,p,home,cameraTilt.get(),System.nanoTime());
                 osd.render(new FpvOsd.Telemetry(p.x,p.y,p.z,flight.velocity.length(),flight.velocity.y,p.y-home.y,nav.homeDistance(),nav.homeBearing(),nav.heading(),nav.roll(),nav.pitch(),flight.control.throttle,serverBattery,flightSeconds,lastSnapshotNanos==0?0:(System.nanoTime()-lastSnapshotNanos)/1e9,serverDrone!=null,flight.armed,flight.contact,activeFlightMode,flight.chargeEnabled));
@@ -442,6 +479,12 @@ public final class FpvDroneMod implements ClientMod {
         neutralIntent=NativeFlight.neutralIntent();camera=view.begin(currentGame,world,player);
         deployed=true;activeFlightMode=resumeMode;flight.setAssisted(false);keyboardThrottle=flight.armed?.5:0;
         requestedArm=flight.armed;disconnectPressed=rawKey(88);armPressed=rawKey(82);
+        mouseStick.reset();
+        long window=glfwGetCurrentContext();
+        if(window!=0&&mouseFlight.get()){
+            modeButtonPressed=glfwGetMouseButton(window,GLFW_MOUSE_BUTTON_RIGHT)==GLFW_PRESS;
+            chargeButtonPressed=glfwGetMouseButton(window,GLFW_MOUSE_BUTTON_MIDDLE)==GLFW_PRESS;
+        }
         flight.control=new Control(0,0,0,keyboardThrottle,false);
         invokeAnimationHook(player,true);link.connect(System.nanoTime());
         receiverAudio.connect(soundVolume.get()/100.);
@@ -453,6 +496,7 @@ public final class FpvDroneMod implements ClientMod {
         resumeMode=activeFlightMode;activeFlightMode="HOLD";flight.setAssisted(true);
         flight.control=new Control(0,0,0,flight.armed?.5:0,false);keyboardThrottle=flight.armed?.5:0;throttleDirection=0;
         deployed=false;poseApplied=false;awaitingConnection=false;link.clear();
+        mouseStick.reset();
         receiverAudio.stop();
         call(Class.forName("szmods.runtime.FpvAudioHooks"),"setListener","void",(Object)null);
         view.restore();invokeAnimationHook(player,false);
@@ -466,6 +510,7 @@ public final class FpvDroneMod implements ClientMod {
         awaitingDeployment=false;awaitingConnection=false;placementRequest=null;terminalSent=false;link.clear();serverDrone=null; inputSequence=0; lastAcknowledged=-1; requestedArm=false; networkDebt=0;
         lastSnapshotNanos=0; serverBattery=0;
         deployed=false; body=null; neutralIntent=null; flight.reset(); keyboardThrottle=0;
+        mouseStick.reset();
         poseApplied=false;
         audio.stop();navigation.reset();
         call(Class.forName("szmods.runtime.FpvAudioHooks"),"setListener","void",(Object)null);

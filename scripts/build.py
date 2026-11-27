@@ -109,6 +109,9 @@ def tests():
     cp=os.pathsep.join(map(str,[test_classes,classes]+deps));results=[]
     subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.voice.VoiceTests'],check=True)
     subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.net.VehicleLifecycleTests'],check=True)
+    fpv=ROOT/'mods/fpv-drones'
+    mouse_test=compile_java('fpv-mouse-test',[fpv/'src/fpv/MouseStick.java',fpv/'tests/MouseStickTest.java'])
+    subprocess.run([tool('java'),'-Xmx128m','-cp',str(mouse_test),'fpv.MouseStickTest'],check=True)
     subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.net.ReliableRetryTimingTests'],check=True)
     subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.client.HandPacketTests'],check=True)
     subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.EquipmentPlacementTests'],check=True)
