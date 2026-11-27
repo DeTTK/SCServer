@@ -8,6 +8,7 @@ import scvehicles.protocol.VehicleWire;
 import scvehicles.protocol.VehicleAction;
 import scvehicles.protocol.VehicleActionProfiles;
 import scvehicles.protocol.VehicleSeats;
+import scvehicles.protocol.VehicleTypes;
 import szserver.commands.CommandService;
 import szserver.commands.WorldEditChat;
 import szserver.util.*;
@@ -701,11 +702,13 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
                 case VehicleWire.SPAWN -> {car=vehicles.spawn(s,request,s.pos,playerRules.entitled(character(s)),now);emitVehicle(car,VehicleWire.SNAPSHOT);}
                 case VehicleWire.ENTER -> {
                     if(piloting(s))throw new Vehicles.Rejected(2);car=vehicles.get(request.id);double[] start=null;int seat=vehicles.seatSupport(s)&&request.sequence>0?request.sequence-1:0;if(car==null||!VehicleSeats.valid(car.state.model,seat))throw new Vehicles.Rejected(2);
-                    if(car!=null&&s.vehicleInteractions&&VehicleActionProfiles.ENABLED[car.state.model]){
-                        start=VehicleAction.local(car.state,s.pos);double[] door=VehicleSeats.DOOR[car.state.model][seat];
-                        if(Math.hypot(start[0]-door[0],start[2]-door[2])>2.4||car.state.speed>1.5)throw new Vehicles.Rejected(2);start[1]+=.82;
+                    if(s.vehicleInteractions&&VehicleActionProfiles.ENABLED[car.state.model]){
+                        if(car.state.speed>1.5)throw new Vehicles.Rejected(2);
+                        start=VehicleAction.local(car.state,s.pos);
+                        // Remote boarding still begins at the vehicle, at a plausible door height.
+                        start[1]=Math.max(0,Math.min(VehicleTypes.HEIGHT[car.state.model],start[1]+.82));
                     }
-                    car=vehicles.enter(s,request.id,seat,s.pos,now);detachVehicleContact(s);fpvPose(s);
+                    car=vehicles.enter(s,request.id,seat,now);detachVehicleContact(s);fpvPose(s);
                     if(start!=null){VehicleWire action=new VehicleWire();action.flags=VehicleAction.ENTER;emitVehicleAction(s,vehicleActions.begin(s,action,car,start,now));}
                     vehicleSeat(s,car.state);emitVehicle(car,VehicleWire.SNAPSHOT);
                 }

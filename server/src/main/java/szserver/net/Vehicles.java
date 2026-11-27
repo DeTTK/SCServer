@@ -25,11 +25,8 @@ public final class Vehicles<O> {
         VehicleWire initial=new VehicleWire();initial.id=s.id;initial.model=s.model;initial.x=s.x;initial.y=s.y;initial.z=s.z;initial.yaw=s.yaw;
         Car<O> car=new Car<>(owner,initial,now);cars.put(s.id,car);return car;
     }
-    public Car<O> enter(O owner,UUID id,double[] at,long now){
-        return enter(owner,id,0,at,now);
-    }
-    public Car<O> enter(O owner,UUID id,int seat,double[] at,long now){
-        Car<O> car=cars.get(id);if(car==null||!VehicleSeats.valid(car.state.model,seat)||distance(car.state,at)>Math.pow(Math.max(5,scvehicles.protocol.VehicleTypes.LENGTH[car.state.model]*.5+2.5),2))throw new Rejected(2);
+    public Car<O> enter(O owner,UUID id,int seat,long now){
+        Car<O> car=cars.get(id);if(car==null||!VehicleSeats.valid(car.state.model,seat))throw new Rejected(2);
         Car<O> existing=driving(owner);if(existing!=null){if(existing==car&&seat(car,owner)==seat)return car;throw new Rejected(2);}
         if(seat==0?car.driver!=null:car.passengers.containsKey(seat))throw new Rejected(4);
         if(seat==0){car.state.sequence=0;car.driver=owner;car.simulator=owner;car.updated=now;}else{car.passengers.put(seat,owner);car.passengerSeen.put(seat,now);}
