@@ -10,6 +10,7 @@ public final class ResourceCompatibilityAgent {
   agent.addTransformer(new ResourceSchemaTransformer());
   agent.addTransformer(new OptionalResourceTransformer());
   agent.addTransformer(new ContainerMotifIconTransformer());
+  agent.addTransformer(new SightMountAnchorTransformer());
   agent.addTransformer(new UiStabilityTransformer());
   agent.addTransformer(new WorldMapTransformer());
   agent.addTransformer(new PlayerRelationsTransformer());
