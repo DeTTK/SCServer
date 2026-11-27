@@ -48,7 +48,24 @@ public final class PortableWorldTests {
             check(rows.equals(List.of("give"))&&active.receipts().receipt("old-map-edit")!=null,"business recovery and lazy legacy receipt");
         }
         residentCharacters(root.resolve("character-cohort"));
+        storedChunkCoverage(root.resolve("coverage"));
         System.out.println("PASS portable worlds, template disconnection, independent copies, region corruption, rollback, detached mixed journal, resident character generations");
+    }
+
+    private static void storedChunkCoverage(Path path)throws Exception{
+        Files.createDirectories(path);
+        var table=java.nio.ByteBuffer.allocate(16400+41);
+        table.putInt(0x535a5231).putInt(-1).putInt(0).putInt(1);
+        table.position(16+31*16);table.putLong(16400).putInt(41);
+        Files.write(path.resolve("r.-1.0.szr"),table.array());
+        try(var terrain=new RegionTerrain(path,16,63,null)){
+            terrain.savedChunks(()->Set.of(new ResidentChunks.Key(-1,1),new ResidentChunks.Key(48,-1)));
+            var coverage=terrain.storedChunkMasks();
+            var first=coverage.get(BlockOverlays.key(-1,0));
+            check(first.cardinality()==2&&first.get(31)&&first.get(63)&&!first.get(30),"negative chunks, saved overlay and a hole in the map");
+            var second=coverage.get(BlockOverlays.key(1,-1));
+            check(coverage.size()==2&&second.cardinality()==1&&second.get(1008),"saved-only region, without synthetic flat chunks");
+        }
     }
     private static void residentCharacters(Path root)throws Exception{
         Files.createDirectories(root);

@@ -119,7 +119,7 @@ def prepare():
     files={
         'server/server.jar':player/'Server/server.jar',
         'server/server.template.properties':player/'Server/server.template.properties',
-        **{'client/compat/'+name:player/'Client/compat'/name for name in ('startup-guard.jar','character-scale.jar','game-resource-compat.jar','weapon-events.jar','bscp-game.exe')},
+        **{'client/compat/'+name:player/'Client/compat'/name for name in ('startup-guard.jar','character-scale.jar','game-resource-compat.jar','weapon-events.jar','world-environment.jar','bscp-game.exe')},
         'mods/command-completion/command-completion.jar':player/'Client/mods/command-completion.jar'}
     OUT.mkdir(parents=True,exist_ok=False)
     for name,src in files.items():dst=OUT/name;dst.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(src,dst)

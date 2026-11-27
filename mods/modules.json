@@ -20,7 +20,7 @@
     "assetsIncluded": false
   },
   "world-environment": {
-    "status": "source-only; not in independent CI",
+    "status": "source-built client compatibility agent",
     "assetsIncluded": false
   },
   "better-third-face": {

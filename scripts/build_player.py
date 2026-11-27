@@ -164,6 +164,20 @@ def build(output):
     values['META-INF/MANIFEST.MF']=b'Manifest-Version: 1.0\nPremain-Class: ReloadEventAgent\nAgent-Class: MeleeBodyAgent\nCan-Retransform-Classes: true\n\n'
     weapon_agent=player/'Client/compat/weapon-events.jar'
     jar(weapon_agent,values)
+    environment=ROOT/'mods/world-environment'
+    environment_classes=output/'environment-classes';environment_classes.mkdir()
+    environment_sources=[*(environment/'src').rglob('*.java'),*(environment/'shared').rglob('*.java')]
+    subprocess.run([tools.tool('javac'),'-source','17','-target','17',EXPORT,'-proc:none','-encoding','UTF-8',
+                    '-cp',os.pathsep.join(map(str,[runtime/'bootstrap.jar',*libraries,*tools.dependencies()])),
+                    '-d',str(environment_classes),*map(str,sorted(environment_sources))],check=True)
+    environment_tools=tools.compile_java('player-environment-tools',
+        (environment/'tools').glob('*.java'),[asm])
+    subprocess.run([tools.tool('java'),'-cp',os.pathsep.join(map(str,[environment_tools,asm])),
+                    'BuildEnvironmentPackets',str(environment_classes)],check=True)
+    weather={name:body for name,body in entries(environment_classes).items()
+             if name not in ('environment/EnvironmentMod.class','environment/EnvironmentQa.class')}
+    weather['META-INF/MANIFEST.MF']=b'Manifest-Version: 1.0\nPremain-Class: environment.EnvironmentAgent\n\n'
+    jar(player/'Client/compat/world-environment.jar',weather)
     probe=compile_internal('player-melee-test',[ROOT/'client/weapon-events/tests/MeleeInventoryProbe.java'],output)
     probe_entries=entries(probe)
     probe_entries['META-INF/MANIFEST.MF']=b'Manifest-Version: 1.0\nPremain-Class: MeleeInventoryProbe\n\n'

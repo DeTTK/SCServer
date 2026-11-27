@@ -66,7 +66,7 @@ public final class EnvironmentBridge {
     public static void frame(Object currentGame) {
         try {
             game=currentGame;Object next=call(currentGame,"transient","1219970978");
-            if(next!=connection){if(originalManager!=null){set(type("1049587979"),"package",originalManager);originalManager=null;}connection=next;active=false;editable=false;helloAt=0;incoming.clear();outgoing.clear();download=null;preparing=null;saving=false;appliedRevision=0;appliedHash="";authoredJson=null;editorVersions.clear();state=new JsonObject();snowState=null;snowKey="";}
+            if(next!=connection){if(originalManager!=null){set(type("1049587979"),"package",originalManager);originalManager=null;}connection=next;active=false;editable=false;helloAt=0;incoming.clear();outgoing.clear();download=null;preparing=null;saving=false;appliedRevision=0;appliedHash="";authoredJson=null;editorVersions.clear();state=new JsonObject();snowState=null;snowKey="";WeatherChunkOverlay.reset();}
             if(next==null||field(currentGame,"e")==null||field(currentGame,"g")==null||replay()){active=false;return;}
             long now=System.nanoTime();if(!active&&now-helloAt>1_000_000_000L){helloAt=now;send(EnvironmentWire.message("hello"));}
             for(int i=0;i<8;i++){Received nextMessage=incoming.poll();if(nextMessage==null)break;if(nextMessage.connection()==connection)accept(EnvironmentWire.decode(nextMessage.body()));}
@@ -83,6 +83,7 @@ public final class EnvironmentBridge {
     }
     private static void accept(JsonObject message)throws Exception {
         switch(message.get("op").getAsString()){
+            case "chunkCoverage"->WeatherChunkOverlay.receive(message);
             case "state"->{state=message;receivedAt=System.nanoTime();active=true;editable=message.get("editable").getAsBoolean();syncUtc();syncSnow();}
             case "ack"->{if(message.has("ok")&&message.get("ok").getAsBoolean()){
                 if(message.has("operation")&&message.get("operation").getAsString().equals("saveConfig")&&savedEditor!=null&&savedJson!=null){set(savedEditor,"enum",savedJson);editorVersions.put(savedEditor,message.has("configRevision")?message.get("configRevision").getAsLong():appliedRevision+1);savedEditor=null;savedJson=null;}
@@ -140,7 +141,9 @@ public final class EnvironmentBridge {
         try{if(!((Enum<?>)field(type("1461113355"),"default")).name().equals("NORMAL"))return false;}catch(Exception error){error(error);return false;}
         return clock(game);
     }
-    public static boolean weather(Object unused){return owns();}
+    static boolean chunkCoverageAvailable(){return owns()&&editable&&state.has("chunkCoverage")&&state.get("chunkCoverage").getAsBoolean();}
+    static void requestChunkCoverage(){outgoing.add(new Outgoing(connection,EnvironmentWire.message("getChunkCoverage")));}
+    public static boolean weather(Object game){if(context==null)frame(game);return owns();}
     public static boolean clockPacket(Object packet) {
         if(!owns())return false;
         try{set(packet,"catch",state.get("serverMillis").getAsLong()+(System.nanoTime()-receivedAt)/1_000_000L);set(packet,"switch",1f);return true;}catch(Exception error){error(error);return false;}

@@ -25,6 +25,7 @@ public final class RegionSnapshotStore implements ResidentChunks.Storage {
     private final Path root;private final String binding;private final Base base;
     private final FileChannel lockChannel;private final FileLock lock;
     private Head head;private Head previous;private boolean closed,recoveredPrevious;private String maintenanceError="";
+    public synchronized Set<ResidentChunks.Key> savedChunks(){return head.chunks().keySet();}
     private volatile long publishedStateRevision;private boolean mapExposed;
 
     public RegionSnapshotStore(Path directory,String worldBinding,Base base)throws Exception {

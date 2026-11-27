@@ -2114,13 +2114,13 @@
       "kind": "default-map-region"
     },
     "map/data/region/r.-1.-4.szr": {
-      "size": 262622,
-      "sha256": "ec8ba4a299cdba1965e2bfaa716f9009b5524f486e3e0a700d8832bd9ce45228",
+      "size": 262628,
+      "sha256": "0061827ce46011f1d2fb03aae626e9be6625df3e27cb1115d27d77f974e5fbab",
       "kind": "default-map-region"
     },
     "map/data/region/r.-1.-5.szr": {
       "size": 42828,
-      "sha256": "31f972ebd28a277a05adcff60b800c060d26f13621a62e6d3bb856f15b1d1557",
+      "sha256": "50b64841d076dae1414cf5520bb36b87d0ab972af38be994eb59139ec3d82a44",
       "kind": "default-map-region"
     },
     "map/data/region/r.-1.-7.szr": {
@@ -2519,13 +2519,13 @@
       "kind": "default-map-region"
     },
     "map/data/region/r.-2.-4.szr": {
-      "size": 120954,
-      "sha256": "afce8d04779a19063fb7430d0a04553a19e25f58ea023b4416ce20db98a1ac4b",
+      "size": 120957,
+      "sha256": "49984f33ab9a3509a3b259a7bdf560403f2fd460f394f5af202cd9178ad2d85b",
       "kind": "default-map-region"
     },
     "map/data/region/r.-2.-5.szr": {
       "size": 16843,
-      "sha256": "1eb3ef590f23a9e8861f93c478d0e6685946975618d898586446bfbd9515c4a5",
+      "sha256": "95d4bec101c909fce1616c14cdaef33083ba5960600cd93e2c24a122d6a13097",
       "kind": "default-map-region"
     },
     "map/data/region/r.-2.0.szr": {
@@ -3359,8 +3359,8 @@
       "kind": "default-map-metadata"
     },
     "map/data/map-info.json": {
-      "size": 192470,
-      "sha256": "fd2b7544a434edbf90a9afb341abc6b40b828e414c609d67dffa53d5d1f6d928",
+      "size": 191456,
+      "sha256": "93ae058a4261625cc0b0b39e9655dc61d9ede8e52e9bdb9e692b019c99a559d1",
       "kind": "default-map-metadata"
     },
     "bootstrap/inputs/asset-overrides/configs/assets/bundle/radio/global/tracklists/rock1_radio_en.json": {
@@ -6917,15 +6917,15 @@
       ]
     },
     "map/region/r.-1.-4.szr": {
-      "size": 262622,
-      "sha256": "ec8ba4a299cdba1965e2bfaa716f9009b5524f486e3e0a700d8832bd9ce45228",
+      "size": 262628,
+      "sha256": "0061827ce46011f1d2fb03aae626e9be6625df3e27cb1115d27d77f974e5fbab",
       "parts": [
         "map/data/region/r.-1.-4.szr"
       ]
     },
     "map/region/r.-1.-5.szr": {
       "size": 42828,
-      "sha256": "31f972ebd28a277a05adcff60b800c060d26f13621a62e6d3bb856f15b1d1557",
+      "sha256": "50b64841d076dae1414cf5520bb36b87d0ab972af38be994eb59139ec3d82a44",
       "parts": [
         "map/data/region/r.-1.-5.szr"
       ]
@@ -7484,15 +7484,15 @@
       ]
     },
     "map/region/r.-2.-4.szr": {
-      "size": 120954,
-      "sha256": "afce8d04779a19063fb7430d0a04553a19e25f58ea023b4416ce20db98a1ac4b",
+      "size": 120957,
+      "sha256": "49984f33ab9a3509a3b259a7bdf560403f2fd460f394f5af202cd9178ad2d85b",
       "parts": [
         "map/data/region/r.-2.-4.szr"
       ]
     },
     "map/region/r.-2.-5.szr": {
       "size": 16843,
-      "sha256": "1eb3ef590f23a9e8861f93c478d0e6685946975618d898586446bfbd9515c4a5",
+      "sha256": "95d4bec101c909fce1616c14cdaef33083ba5960600cd93e2c24a122d6a13097",
       "parts": [
         "map/data/region/r.-2.-5.szr"
       ]
@@ -8660,8 +8660,8 @@
       ]
     },
     "map/map-info.json": {
-      "size": 192470,
-      "sha256": "fd2b7544a434edbf90a9afb341abc6b40b828e414c609d67dffa53d5d1f6d928",
+      "size": 191456,
+      "sha256": "93ae058a4261625cc0b0b39e9655dc61d9ede8e52e9bdb9e692b019c99a559d1",
       "parts": [
         "map/data/map-info.json"
       ]

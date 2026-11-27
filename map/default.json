@@ -1,19 +1,19 @@
 {
-  "id": "merged-netdecode-20261121-registry-r2",
+  "id": "merged-netdecode-20261121-registry-r3",
   "date": "2026-11-21",
   "stats": {
     "tiles": 23335019,
-    "objectsWithBehaviour": 290153,
+    "objectsWithBehaviour": 290046,
     "chunks": 144669,
     "staticObjects": 813459,
     "interactiveObjects": 261627,
-    "technicalObjects": 132223,
+    "technicalObjects": 132253,
     "regions": 249,
     "nbtObjectsConvertedToNative": 6977,
     "nbtContainersConvertedToRaw": 320,
     "objects": 1075086
   },
-  "sourceArchiveSha256": "9785a77c386954ddc06b3230c829ac3558a47219625e24ebe342a8df56d37367",
+  "sourceArchiveSha256": "d942c466f1f86b14171f6700182f3266ce62af73ce5e9b8042e6eeb897337c4a",
   "registrySha256": "5ed8734fde9a73cfc0a5587597583988d4272bbb82e0de71a58896d699dd1c71",
   "codecsSha256": "34e87dc25867496f7989baf5a8e9c451b8e4643726ec65f23f896c91122c4fd5",
   "missingTerrainChunks": 507,
@@ -102,5 +102,13 @@
         }
       }
     }
+  },
+  "hospitalRegistryCorrection": {
+    "capture": "duel_invite_20260603_215236.jsonl",
+    "captureSha256": "96b8703ff5ea3526c26fd49aab422935423e7e689b48a0f7ade3689c09b803cc",
+    "registryBundle": "07.06",
+    "objects": 636,
+    "chunks": 78,
+    "regions": 4
   }
 }
