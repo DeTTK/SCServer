@@ -12,7 +12,7 @@ import java.util.zip.CRC32;
 
 /** Rebuilt from the locked inventory journal. Bodies and UUID lookup live on disk;
  * only one small head/count per owner is published to gameplay. No pickup entities. */
-final class DiskWorldDrops implements AutoCloseable {
+final class DiskWorldDrops implements WorldDropRoots {
     private static final int MAGIC=0x535a4458,HEADER=16,SLOT=40,INITIAL=8,MAX_CAPACITY=1<<26,CHANNELS=64;
     private record Ref(UUID id,long at,int length,int checksum){}
     private record Head(long at,long count){}
@@ -78,9 +78,9 @@ final class DiskWorldDrops implements AutoCloseable {
             if(ref==null||ref.id().equals(id))return new Found(at,ref);
         }throw new IOException("drop_index_full");
     }
-    synchronized boolean contains(UUID id)throws IOException{ensure();int shard=shard(hash(id));FileChannel file=channel(shard,false);boolean present=file!=null&&find(file,shard,capacities[shard],id).ref()!=null;publish();return present;}
-    boolean hasOwner(UUID id){return owners.containsKey(id);}
-    Set<UUID> ownerIds(){return Collections.unmodifiableSet(owners.keySet());}
+    public synchronized boolean contains(UUID id)throws IOException{ensure();int shard=shard(hash(id));FileChannel file=channel(shard,false);boolean present=file!=null&&find(file,shard,capacities[shard],id).ref()!=null;publish();return present;}
+    public boolean hasOwner(UUID id){return owners.containsKey(id);}
+    public Set<UUID> ownerIds(){return Collections.unmodifiableSet(owners.keySet());}
     private FileChannel grow(int shard,FileChannel previous)throws IOException{
         int old=capacities[shard],capacity=old*2;if(capacity<old||capacity>MAX_CAPACITY)throw new IOException("drop_index_capacity_limit");
         Path destination=path(shard),candidate=destination.resolveSibling(destination.getFileName()+".rehash");int copied=0;
@@ -90,7 +90,7 @@ final class DiskWorldDrops implements AutoCloseable {
         }
         previous.close();channels.remove(shard);Files.move(candidate,destination,StandardCopyOption.ATOMIC_MOVE,StandardCopyOption.REPLACE_EXISTING);capacities[shard]=capacity;indexBytes+=size(capacity)-size(old);rehashes++;return channel(shard,false);
     }
-    synchronized void add(WorldDrop drop)throws IOException{
+    public synchronized void add(WorldDrop drop)throws IOException{
         ensure();int shard=shard(hash(drop.id()));FileChannel file=channel(shard,true);Found found=find(file,shard,capacities[shard],drop.id());
         if(found.ref()!=null)throw new IllegalArgumentException("world_drop_duplicate");
         if((long)(sizes[shard]+1)*4>capacities[shard]*3L){file=grow(shard,file);found=find(file,shard,capacities[shard],drop.id());}
@@ -107,19 +107,18 @@ final class DiskWorldDrops implements AutoCloseable {
         byte[] raw=read(bodies,at+16,length);if(bodyCrc(previous,raw)!=checksum)throw new IOException("drop_body_crc");
         try{return new Body(previous,WorldDrop.read(Json.parse(raw)),length,checksum);}catch(RuntimeException invalid){throw new IOException("drop_body_schema",invalid);}
     }
-    synchronized List<WorldDrop> list(UUID owner)throws IOException{
+    public synchronized List<WorldDrop> list(UUID owner)throws IOException{
         ensure();Head head=owners.get(owner);if(head==null)return List.of();List<WorldDrop> result=new ArrayList<>();long at=head.at();
         for(long i=0;i<head.count();i++){Body b=body(at);if(!b.drop().character().equals(owner))throw new IOException("drop_owner_chain");result.add(b.drop());at=b.previous();}
         if(at!=0)throw new IOException("drop_owner_chain_count");result.sort(Comparator.comparing(d->d.id().toString()));return List.copyOf(result);
     }
-    @FunctionalInterface interface Visitor{void accept(WorldDrop drop)throws Exception;}
     /** Sequential streaming for checkpoint/inspection; no per-drop heap directory. */
-    synchronized void visit(Visitor visitor)throws Exception{
+    public synchronized void visit(Visitor visitor)throws Exception{
         ensure();long observed=0,at=8;while(at<bodyBytes){Body b=body(at);visitor.accept(b.drop());at+=16+b.length();observed++;}
         if(at!=bodyBytes||observed!=count)throw new IOException("drop_body_count");
     }
-    long count(){return count;}long bytes(){return jsonBytes;}
+    public long count(){return count;}public long bytes(){return jsonBytes;}
     private void publish(){view=Map.of("rows",count,"jsonBytes",jsonBytes,"bodyBytes",bodyBytes,"indexBytes",indexBytes,"owners",owners.size(),"retainedDropBodies",0,"openChannels",channels.size(),"openChannelLimit",CHANNELS,"probes",probes,"rehashes",rehashes);}
-    Map<String,Object> metrics(){return view;}
+    public Map<String,Object> metrics(){return view;}
     @Override public synchronized void close()throws IOException{if(closed)return;closed=true;IOException failure=null;for(FileChannel file:channels.values())try{file.close();}catch(IOException error){if(failure==null)failure=error;else failure.addSuppressed(error);}try{bodies.close();}catch(IOException error){if(failure==null)failure=error;else failure.addSuppressed(error);}channels.clear();owners.clear();publish();if(failure!=null)throw failure;}
 }

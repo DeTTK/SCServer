@@ -72,6 +72,9 @@ public final class GameInventory implements AutoCloseable {
     }
     /** Isolated test fault injection, never set from the live configuration. */
     public GameInventory(Path root,Path data,Path runtime,Path registry,long testDelayMillis)throws Exception {
+        this(root,data,runtime,registry,testDelayMillis,null);
+    }
+    GameInventory(Path root,Path data,Path runtime,Path registry,long testDelayMillis,szserver.world.ResidentCharacterState saved)throws Exception{
         equipmentRoot=root;
         catalog=new ItemCatalog(root.resolve("fixtures/item-definitions.json"));
         items=new GameItems(runtime,registry);
@@ -80,7 +83,9 @@ public final class GameInventory implements AutoCloseable {
             items.warmGameplay(root.resolve("fixtures/item-definitions.json"),root.resolve("fixtures/artifact-settings.json"));
             lootboxes=items.lootboxes(root,catalog);
             meleeProfiles=items.meleeProfiles();
-            journal=new InventoryJournal(data.resolve("characters.sjournal"),catalog,testDelayMillis);
+            Path legacy=data.resolve("characters.sjournal");
+            journal=saved==null?new InventoryJournal(legacy,catalog,testDelayMillis):
+                    NativeGridMigration.openResident(data,root.resolve("fixtures/item-definitions.json"),catalog,items,saved.inventoryRows());
         } catch(Exception | LinkageError failure) {
             try {items.close();} catch(Exception closeFailure) {failure.addSuppressed(closeFailure);}
             throw failure;
@@ -88,6 +93,7 @@ public final class GameInventory implements AutoCloseable {
         for(var entry:JsonParser.parseString(java.nio.file.Files.readString(root.resolve("fixtures/equipment-appearances.json"))).getAsJsonObject().entrySet())defaultAppearances.put(Integer.parseInt(entry.getKey()),HexFormat.of().parseHex(entry.getValue().getAsString()));
         for(int id=1;id<65536;id++){ItemCatalog.Definition definition;try{definition=catalog.get(id);}catch(IllegalArgumentException absent){continue;}if(definition.type().equals("bullet"))items.registerStateless(id);}
     }
+    InventoryJournal characterState(){return journal;}
     public Inventory inventory(UUID id){return character(id).inventory;}
     /** Share the already warmed native catalog; never construct another player catalog for NPCs. */
     public CompletableFuture<szserver.world.ActorEquipment> actorEquipment(List<Integer> worn,Integer held,boolean encumbered){

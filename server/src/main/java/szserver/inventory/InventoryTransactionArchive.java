@@ -17,9 +17,11 @@ final class InventoryTransactionArchive {
     static final int MAX_BYTES=384*1024*1024,MAX_ROWS=StorageLayout.MAX_ROOTS;
     private static final int JSON_NODES=500000;
     private final Path directory;
-    InventoryTransactionArchive(Path journal)throws IOException{
+    InventoryTransactionArchive(Path journal)throws IOException{this(journal,true);}
+    InventoryTransactionArchive(Path journal,boolean writable)throws IOException{
         worker();Path source=journal.toAbsolutePath().normalize();directory=source.resolveSibling(source.getFileName()+".transactions");
-        if(Files.isSymbolicLink(directory))throw new IOException("inventory_archive_directory");Files.createDirectories(directory);checkDirectory();
+        if(Files.isSymbolicLink(directory))throw new IOException("inventory_archive_directory");
+        if(writable){Files.createDirectories(directory);checkDirectory();}
     }
     private static void worker(){if(Set.of("native-game-owner","world-tick").contains(Thread.currentThread().getName()))throw new IllegalStateException("inventory_archive_on_owner");}
     private void checkDirectory()throws IOException{if(Files.isSymbolicLink(directory)||!Files.isDirectory(directory,LinkOption.NOFOLLOW_LINKS))throw new IOException("inventory_archive_directory");}

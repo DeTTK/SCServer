@@ -18,9 +18,12 @@ public final class AdminInventories implements PlayerInventories,AutoCloseable {
     private final ThreadPoolExecutor worker=Workers.pool("admin-inventory",1,32);
     private volatile boolean closing,failed;
     public AdminInventories(Path data,GameInventory inventories,Predicate<UUID> known,Consumer<Runnable> owner,BiConsumer<UUID,Inventory.Plan> sync)throws Exception{
+        this(data,inventories,known,owner,sync,false);
+    }
+    AdminInventories(Path data,GameInventory inventories,Predicate<UUID> known,Consumer<Runnable> owner,BiConsumer<UUID,Inventory.Plan> sync,boolean resident)throws Exception{
         this.inventories=inventories;this.known=known;this.owner=owner;this.sync=sync;
-        receipts=new AdminGiveReceipts(data);
-        try{inventories.repairAdminReceipts(receipts);}catch(Exception|Error error){receipts.close();throw error;}
+        receipts=resident?AdminGiveReceipts.inMemory():new AdminGiveReceipts(data);
+        try{if(!resident)inventories.repairAdminReceipts(receipts);}catch(Exception|Error error){receipts.close();throw error;}
     }
     @Override public JsonObject receipt(String id){AdminGiveReceipt r=receipts.find(id);return r==null?null:r.event();}
     @Override public CompletableFuture<szserver.world.ActorEquipment> actorEquipment(List<Integer> worn,Integer held,boolean encumbered){if(closing||!healthy())return CompletableFuture.failedFuture(new IllegalStateException("admin_inventory_unavailable"));return inventories.actorEquipment(worn,held,encumbered);}

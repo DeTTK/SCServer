@@ -11,8 +11,7 @@ import java.security.*;
 import java.util.*;
 import java.util.zip.CRC32;
 
-/** Disposable disk hash index. Canonical warps.sjournal owns durability; no live key set is retained.
- * All methods are used only at bootstrap or by WarpStore's single worker. */
+/** Character locations reducer. Legacy journal mode uses a disposable disk index. */
 final class DiskLocationIndex implements AutoCloseable {
     private static final int MAGIC=0x535a4c58,HEADER=16,RECORD=512,INITIAL=8,MAX_CAPACITY=1<<24,CHANNELS=64,CACHE=128;
     private static final List<String> SICKNESS=List.of("RADIATION","THERMAL","BIOLOGICAL","PSYCHO","ABNORMAL","BLEEDING","TOXIC","FROST","STOPPING","COMBUSTION","GONER");
@@ -20,6 +19,7 @@ final class DiskLocationIndex implements AutoCloseable {
     private record Slot(long at,Row row){}
     private record Cached(Root point){}
     private final Path directory;
+    private final Map<String,Root> memory;
     private final int[] capacities=new int[4096],used=new int[4096],live=new int[4096];
     private final LinkedHashMap<Integer,FileChannel> channels=new LinkedHashMap<>(64,.75f,true);
     private final LinkedHashMap<String,Cached> cache=new LinkedHashMap<>(128,.75f,true);
@@ -27,7 +27,10 @@ final class DiskLocationIndex implements AutoCloseable {
     private record Counts(long positions,long states,long spawns,long legacy,boolean global){}
     private volatile Counts counts=new Counts(0,0,0,0,false);
     private volatile Map<String,Object> view=Map.of();
-    DiskLocationIndex(Path journal)throws IOException{
+    DiskLocationIndex(Path journal)throws IOException{this(journal,false);}
+    DiskLocationIndex(Path journal,boolean resident)throws IOException{
+        memory=resident?new LinkedHashMap<>():null;
+        if(resident){directory=null;return;}
         directory=journal.toAbsolutePath().resolveSibling(journal.getFileName()+".location-index");
         if(Files.isSymbolicLink(directory))throw new IOException("location_index_symbolic_link");Files.createDirectories(directory);
         // Journal lock is already held. Only known derived shards and unpublished candidates are reset.
@@ -99,6 +102,7 @@ final class DiskLocationIndex implements AutoCloseable {
     }
     private void cached(String name,Root point){cache.put(name,new Cached(point));while(cache.size()>CACHE)cache.remove(cache.keySet().iterator().next());publish();}
     synchronized Root get(String name)throws IOException{
+        if(memory!=null)return memory.get(name);
         Cached cached=cache.get(name);if(cached!=null){hits++;return cached.point();}
         byte[] hash=hash(name);int shard=shard(hash);FileChannel file=channel(shard,false);Root point=null;
         if(file!=null){Slot slot=find(file,shard,capacities[shard],hash,name);Row row=slot.row();if(row!=null&&row.state()==1&&row.name().equals(name))point=row.point();}
@@ -115,17 +119,29 @@ final class DiskLocationIndex implements AutoCloseable {
         previous.close();channels.remove(shard);Files.move(candidate,destination,StandardCopyOption.ATOMIC_MOVE,StandardCopyOption.REPLACE_EXISTING);capacities[shard]=capacity;used[shard]=copied;indexBytes+=size(capacity)-size(old);rehashes++;return channel(shard,false);
     }
     synchronized void put(String name,Root point)throws IOException{
+        if(memory!=null){
+            validScope(name);
+            Root old=point==null?memory.remove(name):memory.put(name,point);
+            updateCounts(name,old,point);return;
+        }
         byte[] hash=hash(name);int shard=shard(hash);FileChannel file=channel(shard,point!=null);if(file==null){cached(name,null);return;}
         Slot slot=find(file,shard,capacities[shard],hash,name);boolean same=slot.row()!=null&&slot.row().name().equals(name),wasLive=same&&slot.row().state()==1;
         if(point==null&&!wasLive){cached(name,null);return;}
         if(point!=null&&!same&&(long)(used[shard]+1)*4>capacities[shard]*3L){file=rehash(shard,file);slot=find(file,shard,capacities[shard],hash,name);}
         write(file,slot.at(),encode(new Row(point==null?2:1,hash,name,point)));
         if(slot.row()==null)used[shard]++;if(point!=null&&!wasLive){live[shard]++;count++;}else if(point==null){live[shard]--;count--;}
-        Root old=same&&slot.row()!=null&&slot.row().state()==1?slot.row().point():null;Counts before=counts;counts=new Counts(before.positions()+present(point,1)-present(old,1),before.states()+present(point,2)-present(old,2),before.spawns()+present(point,3)-present(old,3),before.legacy()+present(point,4)-present(old,4),name.equals("*")?point!=null&&point.spawn()!=null:before.global());
+        updateCounts(name,same&&slot.row()!=null&&slot.row().state()==1?slot.row().point():null,point);
         cached(name,point);
+    }
+    private void updateCounts(String name,Root old,Root point){
+        Counts before=counts;
+        counts=new Counts(before.positions()+present(point,1)-present(old,1),before.states()+present(point,2)-present(old,2),
+                before.spawns()+present(point,3)-present(old,3),before.legacy()+present(point,4)-present(old,4),
+                name.equals("*")?point!=null&&point.spawn()!=null:before.global());
     }
     @FunctionalInterface interface Visitor{void point(String name,Root point)throws Exception;}
     synchronized void visit(Visitor visitor)throws Exception{
+        if(memory!=null){for(var entry:memory.entrySet())visitor.point(entry.getKey(),entry.getValue());return;}
         for(int shard=0;shard<4096;shard++){if(capacities[shard]==0)continue;FileChannel file=channel(shard,false);int observed=0,occupied=0;
             for(int n=0;n<capacities[shard];n++){Row row=decode(shard,read(file,HEADER+(long)n*RECORD,RECORD).array());if(row==null)continue;occupied++;if(row.state()==1){observed++;visitor.point(row.name(),row.point());}}
             if(observed!=live[shard]||occupied!=used[shard])throw new IOException("location_index_count");
@@ -134,7 +150,7 @@ final class DiskLocationIndex implements AutoCloseable {
     private static int present(Root root,int field){if(root==null)return 0;return switch(field){case 1->root.position()!=null?1:0;case 2->root.state()!=null?1:0;case 3->root.spawn()!=null?1:0;case 4->root.legacy()!=null?1:0;default->throw new IllegalArgumentException();};}
     long positionCount(){return counts.positions();}long stateCount(){return counts.states();}long spawnCount(){return counts.spawns();}long personalSpawnCount(){Counts value=counts;return value.spawns()-(value.global()?1:0);}long legacyCount(){return counts.legacy();}
     private void publish(){view=Map.of("roots",count,"cachedRoots",cache.size(),"cacheLimit",CACHE,"openChannels",channels.size(),"openChannelLimit",CHANNELS,"diskBytes",indexBytes,"lookupProbes",probes,"cacheHits",hits,"rehashes",rehashes);}
-    Map<String,Object> metrics(){return view;}
+    synchronized Map<String,Object> metrics(){return memory==null?view:Map.of("storage","memory","roots",memory.size());}
     synchronized void apply(com.google.gson.JsonObject event){
         try{String type=event.get("type").getAsString();if(type.equals("delete-character")){put(event.get("scope").getAsString(),null);return;}
             if(!Set.of("positions","spawns","legacy-players").contains(type))throw new IllegalArgumentException("location_event_type");var rows=event.getAsJsonArray("rows");if(rows.size()>CharacterLocations.BATCH)throw new IllegalArgumentException("location_batch_limit");

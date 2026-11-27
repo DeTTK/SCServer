@@ -42,6 +42,30 @@ public final class Journal implements AutoCloseable {
     /** World bootstrap uses a validated file prefix, without retaining every JSON event in RAM. */
     public static Journal streaming(Path path)throws IOException{return new Journal(path,0,event->{});}
     @FunctionalInterface public interface Recovery {void accept(JsonObject event)throws Exception;}
+    @FunctionalInterface public interface SnapshotReader {void read(Recovery recovery)throws Exception;}
+    /** Read a legacy save once while the server owns its data directory. Ignore only a torn tail. */
+    public static void replayReadOnly(Path path,Recovery recovery)throws Exception{
+        try(FileChannel source=FileChannel.open(path,StandardOpenOption.READ,LinkOption.NOFOLLOW_LINKS)){
+            long end=source.size();
+            if(end<8)throw new IOException("truncated_journal_header");
+            ByteBuffer header=PackedJournal.read(source,0,8);
+            if(header.getInt()!=MAGIC)throw new IOException("journal_version_mismatch");
+            int version=header.getInt();
+            if(version==2){PackedJournal.replayReadOnly(source,recovery);return;}
+            if(version!=1)throw new IOException("journal_version_mismatch");
+            for(long at=8;end-at>=8;){
+                ByteBuffer frame=PackedJournal.read(source,at,8);
+                int length=frame.getInt(),checksum=frame.getInt();
+                if(length<1||length>MAX_RECORD)throw new IOException("invalid_journal_record_length_at:"+at);
+                if(end-at-8<length)break;
+                byte[] payload=PackedJournal.read(source,at+8,length).array();
+                CRC32 crc=new CRC32();crc.update(payload);
+                if((int)crc.getValue()!=checksum)throw new IOException("journal_checksum_mismatch_at:"+at);
+                recovery.accept(Json.parse(payload));
+                at+=8L+length;
+            }
+        }
+    }
     public record Reference(long offset,int length,int checksum){}
     public record Prefix(long end,long records,String sha256){
         public Prefix{if(end<8||records<0||sha256==null||!sha256.matches("[0-9a-f]{64}"))throw new IllegalArgumentException("invalid_journal_prefix");}

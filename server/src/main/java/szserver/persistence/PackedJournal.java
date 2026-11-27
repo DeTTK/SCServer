@@ -51,13 +51,33 @@ final class PackedJournal implements AutoCloseable {
     private Block find(long position)throws IOException{long low=0,high=blocks;while(low<high){long middle=(low+high)>>>1;Block block=block(middle);if(position<block.begin)high=middle;else if(position>=block.begin+block.raw)low=middle+1;else return block;}throw new IOException("packed_journal_seek_bounds");}
     private byte[] body(Block block)throws IOException{
         byte[] cached=cache.get(block.physical);if(cached!=null)return cached;
+        byte[] raw=validatedBody(file,block);
+        cache.put(block.physical,raw);cacheBytes+=raw.length;while(cache.size()>8){var entry=cache.entrySet().iterator();var old=entry.next();cacheBytes-=old.getValue().length;entry.remove();}publish();return raw;
+    }
+    private static byte[] validatedBody(FileChannel file,Block block)throws IOException{
         byte[] compressed=read(file,block.physical+HEADER,block.compressed).array();if(crc(compressed,compressed.length)!=block.compressedCrc)throw new IOException("packed_journal_compressed_crc");
         byte[] raw=new byte[block.raw];Inflater inflater=new Inflater();
         try{inflater.setInput(compressed);int at=0;while(at<raw.length){int count=inflater.inflate(raw,at,raw.length-at);if(count==0)throw new IOException("packed_journal_inflate_progress");at+=count;}if(!inflater.finished()||inflater.getRemaining()!=0||crc(raw,raw.length)!=block.rawCrc)throw new IOException("packed_journal_raw_crc");}
         catch(DataFormatException error){throw new IOException("packed_journal_deflate",error);}finally{inflater.end();}
         // Validate complete frame boundaries independently of callers and their prefix cut.
         ByteBuffer rows=ByteBuffer.wrap(raw);int count=0;while(rows.hasRemaining()){if(rows.remaining()<8)throw new IOException("packed_journal_frame_boundary");int length=rows.getInt(),checksum=rows.getInt();if(length<1||length>65536||length>rows.remaining())throw new IOException("packed_journal_frame_length");CRC32 crc=new CRC32();crc.update(raw,rows.position(),length);if((int)crc.getValue()!=checksum)throw new IOException("packed_journal_frame_crc");rows.position(rows.position()+length);count++;}if(count!=block.records)throw new IOException("packed_journal_frame_count");
-        cache.put(block.physical,raw);cacheBytes+=raw.length;while(cache.size()>8){var entry=cache.entrySet().iterator();var old=entry.next();cacheBytes-=old.getValue().length;entry.remove();}publish();return raw;
+        return raw;
+    }
+    /** An offline migration walks blocks once, with no seek index or source mutation. */
+    static void replayReadOnly(FileChannel file,Journal.Recovery recovery)throws Exception{
+        long at=8,logical=8,end=file.size();
+        while(end-at>=HEADER){
+            Block block=decode(at,read(file,at,HEADER).array());
+            if(block.begin!=logical)throw new IOException("packed_journal_discontinuous");
+            if(end-at-HEADER<block.compressed)break;
+            ByteBuffer rows=ByteBuffer.wrap(validatedBody(file,block));
+            while(rows.hasRemaining()){
+                int length=rows.getInt();rows.getInt();
+                byte[] payload=new byte[length];rows.get(payload);
+                recovery.accept(szserver.util.Json.parse(payload));
+            }
+            at+=HEADER+block.compressed;logical+=block.raw;
+        }
     }
     synchronized ByteBuffer logicalRead(long position,int count)throws IOException{
         if(position<0||count<0||position>logicalEnd-count)throw new EOFException("packed_journal_logical_bounds");byte[] out=new byte[count];int at=0;

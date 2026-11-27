@@ -41,27 +41,8 @@ public final class NativeGridMigration {
             }
             try(var input=new DataInputStream(new BufferedInputStream(Files.newInputStream(queue,LinkOption.NOFOLLOW_LINKS)))){
                 for(;;){UUID id;try{id=new UUID(input.readLong(),input.readLong());}catch(EOFException end){break;}
-                    Inventory before=journal.load(id);
-                    Map<Inventory.Address,ItemStack> prepared=new TreeMap<>();List<ItemStack> extras=new ArrayList<>();boolean metadataChanged=false;
-                    for(var row:before.items().entrySet()){ItemStack item=nativeItems==null?row.getValue():nativeItems.geometry(row.getValue());if(NativeStackRules.singletonBuiltin(item.id(),current.get(item.id()).type())&&item.count()>1){
-                            if(nativeItems==null)throw new IllegalStateException("native_count_repair_requires_factories");
-                            ItemStack single=item.count(1);for(int n=1;n<item.count();n++)extras.add(nativeItems.copyForGrant(single));item=single;metadataChanged=true;
-                        }prepared.put(row.getKey(),item);metadataChanged|=item.gridWidth()!=row.getValue().gridWidth()||item.gridHeight()!=row.getValue().gridHeight();}
-                    boolean valid=extras.isEmpty();if(valid)try{Inventory.restore(current,prepared,before.revision());}
-                    catch(IllegalArgumentException oldPlacement){if(!Set.of("occupied_inventory_cells","item_out_of_grid","wrong_equipment").contains(oldPlacement.getMessage()))throw oldPlacement;valid=false;}
-                    if(valid&&!metadataChanged)continue;
-                    // Old generic quest rules could issue count>1 with one native identity.
-                    // Keep the original identity on the first item and assign fresh identities to its counted copies.
-                    for(int n=0;n<extras.size();n++)prepared.put(new Inventory.Address(1,0,32767-n),extras.get(n));
-                    recoveredCopies+=extras.size();
-                    if(!valid){
-                        Map<Inventory.Address,LegacyInventoryLayout.Root> roots=new TreeMap<>();prepared.forEach((address,item)->roots.put(address,new LegacyInventoryLayout.Root(item,false)));
-                        var after=LegacyInventoryLayout.repack(current,nativeItems,roots);if(after.splitRoots()!=0)throw new IllegalStateException("native_grid_repair_cannot_split_identity");prepared=new TreeMap<>(after.items());moved+=after.movedRoots();
-                    }
-                    Map<Inventory.Address,ItemStack> delta=new TreeMap<>();before.items().keySet().forEach(address->delta.put(address,null));delta.putAll(prepared);
-                    // Preserve native bytes/gameplay; the reviewed singleton count repair above
-                    // retains one original identity and accounts for each freshly identified copy.
-                    journal.commit(id,before.replace(delta,0)).get();repaired++;
+                    var change=repairInventory(journal.load(id),current,nativeItems);
+                    if(change.plan()!=null){journal.commit(id,change.plan()).get();repaired++;moved+=change.moved();recoveredCopies+=change.copies();}
                 }
             }
             // Old deltas may contain overlaps even when the final root does not.
@@ -75,4 +56,48 @@ public final class NativeGridMigration {
         try{Files.move(temporary,marker,StandardCopyOption.ATOMIC_MOVE,StandardCopyOption.REPLACE_EXISTING);}catch(AtomicMoveNotSupportedException unsupported){Files.move(temporary,marker,StandardCopyOption.REPLACE_EXISTING);}
         if(repaired>0)System.out.println("Native inventory grid repaired: "+repaired+" characters, "+moved+" roots moved; no items removed");return report;
     }
+
+    /** Translate old grid placements in the loaded snapshot while leaving old files untouched. */
+    public static InventoryJournal openResident(Path data,Path definitions,ItemCatalog current,szserver.client.GameItems nativeItems,szserver.persistence.Journal.SnapshotReader saved)throws Exception{
+        Path file=data.resolve("characters.sjournal");
+        if(saved!=null||status(data)!=null)return InventoryJournal.resident(file,current,saved);
+        var previous=ItemCatalog.legacyGeometry(definitions);
+        var changed=current.geometryDifferences(previous);
+        try(var legacy=InventoryJournal.resident(file,previous,null)){
+            var candidates=new ArrayList<UUID>();
+            legacy.visitRoots((id,inventory,gameplay)->{if(inventory.items().values().stream().anyMatch(item->
+                changed.contains(item.id())||current.get(item.id()).type().equals("weapon")))candidates.add(id);});
+            for(UUID id:candidates){
+                var repair=repairInventory(legacy.load(id),current,nativeItems);
+                if(repair.plan()!=null)legacy.commit(id,repair.plan()).get();
+            }
+            var snapshot=legacy.capture().get();
+            return InventoryJournal.resident(file,current,recovery->snapshot.rows().write(recovery::accept));
+        }
+    }
+
+    private record Repair(Inventory.Plan plan,int moved,int copies){}
+    private static Repair repairInventory(Inventory before,ItemCatalog current,szserver.client.GameItems nativeItems)throws Exception{
+        Map<Inventory.Address,ItemStack> prepared=new TreeMap<>();List<ItemStack> extras=new ArrayList<>();boolean metadataChanged=false;
+        for(var row:before.items().entrySet()){ItemStack item=nativeItems==null?row.getValue():nativeItems.geometry(row.getValue());if(NativeStackRules.singletonBuiltin(item.id(),current.get(item.id()).type())&&item.count()>1){
+                if(nativeItems==null)throw new IllegalStateException("native_count_repair_requires_factories");
+                ItemStack single=item.count(1);for(int n=1;n<item.count();n++)extras.add(nativeItems.copyForGrant(single));item=single;metadataChanged=true;
+            }prepared.put(row.getKey(),item);metadataChanged|=item.gridWidth()!=row.getValue().gridWidth()||item.gridHeight()!=row.getValue().gridHeight();}
+        boolean valid=extras.isEmpty();if(valid)try{Inventory.restore(current,prepared,before.revision());}
+        catch(IllegalArgumentException oldPlacement){if(!Set.of("occupied_inventory_cells","item_out_of_grid","wrong_equipment").contains(oldPlacement.getMessage()))throw oldPlacement;valid=false;}
+        if(valid&&!metadataChanged)return new Repair(null,0,0);
+        // Old generic quest rules could issue count>1 with one native identity.
+        // Keep the original identity on the first item and assign fresh identities to its counted copies.
+        for(int n=0;n<extras.size();n++)prepared.put(new Inventory.Address(1,0,32767-n),extras.get(n));
+        int moved=0;
+        if(!valid){
+            Map<Inventory.Address,LegacyInventoryLayout.Root> roots=new TreeMap<>();prepared.forEach((address,item)->roots.put(address,new LegacyInventoryLayout.Root(item,false)));
+            var after=LegacyInventoryLayout.repack(current,nativeItems,roots);if(after.splitRoots()!=0)throw new IllegalStateException("native_grid_repair_cannot_split_identity");prepared=new TreeMap<>(after.items());moved+=after.movedRoots();
+        }
+        Map<Inventory.Address,ItemStack> delta=new TreeMap<>();before.items().keySet().forEach(address->delta.put(address,null));delta.putAll(prepared);
+        // Preserve native bytes/gameplay; the reviewed singleton count repair above
+        // retains one original identity and accounts for each freshly identified copy.
+        return new Repair(before.replace(delta,0),moved,extras.size());
+    }
+
 }

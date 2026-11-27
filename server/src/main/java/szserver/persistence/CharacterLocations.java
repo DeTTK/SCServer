@@ -45,6 +45,9 @@ public final class CharacterLocations implements AutoCloseable {
     private final ThreadPoolExecutor legacyWorker=szserver.util.Workers.pool("location-legacy",1,32);
     private final Object closeLock=new Object();private volatile boolean closing,closed;
     private final LegacyPlayerArchive legacyArchive;
+    private final ThreadPoolExecutor memoryWriter;
+    private volatile LocationSnapshot sealed;
+    private final java.util.concurrent.atomic.AtomicLong memoryRevision=new java.util.concurrent.atomic.AtomicLong();
     private final Set<String> legacyPending=new HashSet<>(),retiring=new HashSet<>();
     private final Map<String,PlayerState> dirtyStates=new LinkedHashMap<>();
     private final Semaphore spawnRequests=new Semaphore(32);
@@ -58,11 +61,39 @@ public final class CharacterLocations implements AutoCloseable {
     public CharacterLocations(Path data,String worldIdentity)throws Exception{this(data,worldIdentity,0,0);}
     public CharacterLocations(Path data,String worldIdentity,long testDelay)throws Exception{this(data,worldIdentity,testDelay,0);}
     public CharacterLocations(Path data,String worldIdentity,long testDelay,int countLimit)throws Exception{
+        this(data,worldIdentity,testDelay,countLimit,false,null);
+    }
+    public static CharacterLocations resident(Path data,String worldIdentity,Journal.SnapshotReader saved)throws Exception{
+        return new CharacterLocations(data,worldIdentity,0,0,true,saved);
+    }
+    private CharacterLocations(Path data,String worldIdentity,long testDelay,int countLimit,boolean resident,Journal.SnapshotReader saved)throws Exception{
         if(worldIdentity==null||worldIdentity.isBlank()||countLimit<0)throw new IllegalArgumentException("world_identity_or_limit_required");this.countLimit=countLimit;
         String key=HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(worldIdentity.getBytes(StandardCharsets.UTF_8)));
-        Path path=data.resolve("locations-"+key+".sjournal");legacyArchive=new LegacyPlayerArchive(path);journal=new Journal(path,testDelay,event->{});DiskLocationIndex opened=null;
-        try{opened=new DiskLocationIndex(path);index=opened;journal.replayLocated((reference,event)->recover(event)).get();journalBytes=Files.size(path);var global=index.get("*");if(global!=null&&global.spawn()!=null)spawns.put("*",global.spawn());}
-        catch(Exception|Error error){loadWorker.shutdownNow();legacyWorker.shutdownNow();if(opened!=null)opened.close();journal.close();throw error;}
+        Path path=data.resolve("locations-"+key+".sjournal");
+        legacyArchive=resident?null:new LegacyPlayerArchive(path);journal=resident?null:new Journal(path,testDelay,event->{});
+        memoryWriter=resident?szserver.util.Workers.pool("location-memory",1,128):null;
+        DiskLocationIndex opened=null;
+        try{
+            opened=new DiskLocationIndex(path,resident);index=opened;
+            if(saved!=null)saved.read(this::recoverCurrent);
+            else if(resident){if(Files.exists(path,java.nio.file.LinkOption.NOFOLLOW_LINKS))Journal.replayReadOnly(path,this::recoverCurrent);}
+            else{journal.replayLocated((reference,event)->recover(event)).get();journalBytes=Files.size(path);}
+            var global=index.get("*");if(global!=null&&global.spawn()!=null)spawns.put("*",global.spawn());
+        }catch(Exception|Error error){
+            loadWorker.shutdownNow();legacyWorker.shutdownNow();
+            if(memoryWriter!=null)memoryWriter.shutdownNow();
+            if(opened!=null)opened.close();if(journal!=null)journal.close();throw error;
+        }
+    }
+    private <T> CompletableFuture<T> inMemory(Callable<T> work){
+        var result=new CompletableFuture<T>();
+        try{memoryWriter.execute(()->{try{result.complete(work.call());}catch(Throwable failure){result.completeExceptionally(failure);}});}
+        catch(RejectedExecutionException closed){result.completeExceptionally(closed);}
+        return result.copy();
+    }
+    private CompletableFuture<Void> write(JsonObject event,Runnable publish){
+        if(journal!=null)return journal.append(event,publish);
+        return inMemory(()->{publish.run();memoryRevision.incrementAndGet();return null;});
     }
     /** A native session retains its hot root from prepare until disconnect. Closing an unfinished lease is safe. */
     public final class Lease implements AutoCloseable{
@@ -94,6 +125,9 @@ public final class CharacterLocations implements AutoCloseable {
     private void evictLoaded(){if(loaded.size()<=HOT_LIMIT)return;var cursor=loaded.keySet().iterator();while(cursor.hasNext()&&loaded.size()>HOT_LIMIT){String key=cursor.next();if(retained(key))continue;cursor.remove();forget(key);}}
     private void hotPoints(Map<String,Vec> target,Map<String,Vec> values){values.forEach((key,point)->{if(key.equals("*")||loaded.containsKey(key))target.put(key,point);});}
     private void applyIndex(JsonObject event){index.apply(event);}
+    private void recoverCurrent(JsonObject event){
+        if(!"legacy-players".equals(event.get("type").getAsString()))recover(event);
+    }
     /** Store.set_spawn accepts finite authored coordinates in the full old world domain.
      * Live placement validates collisions and the native terrain's vertical range separately. */
     public static Vec valid(Vec p){if(p==null||!Double.isFinite(p.x())||!Double.isFinite(p.y())||!Double.isFinite(p.z())||Math.abs(p.x())>30_000_000||Math.abs(p.y())>30_000_000||Math.abs(p.z())>30_000_000)throw new IllegalArgumentException("invalid_character_position");return p;}
@@ -115,7 +149,7 @@ public final class CharacterLocations implements AutoCloseable {
         String key=id.toString();if(!deletionReady(id))return CompletableFuture.failedFuture(new IllegalStateException("character_delete_not_quiescent"));
         if(closing||!healthy())return CompletableFuture.failedFuture(new IllegalStateException("location_storage_failed"));
         dirty.remove(key);dirtyStates.remove(key);JsonObject event=new JsonObject();event.addProperty("type","delete-character");event.addProperty("scope",key);
-        return journal.append(event,()->{applyIndex(event);journalBytes+=8+szserver.util.Json.bytes(event).length;synchronized(this){forget(key);}autoCheckpoint();}).copy();
+        return write(event,()->{applyIndex(event);if(journal!=null)journalBytes+=8+szserver.util.Json.bytes(event).length;synchronized(this){forget(key);}autoCheckpoint();}).copy();
     }
     public void observeState(UUID id,PlayerState state){withLoaded(List.of(id),()->{observeStateLoaded(id,state);return null;});}
     private synchronized void observeStateLoaded(UUID id,PlayerState state){Objects.requireNonNull(state);if(closing||!healthy())throw new IllegalStateException("location_storage_failed");String key=id.toString();if(retiring.contains(key))throw new IllegalStateException("character_deleting");if(!positions.containsKey(key))throw new IllegalArgumentException("player_state_without_position");if(!vitalsHeld.containsKey(key)&&!state.equals(states.get(key))){states.put(key,state);dirtyStates.put(key,state);}}
@@ -195,11 +229,14 @@ public final class CharacterLocations implements AutoCloseable {
     }
     public JsonObject legacyPlayer(UUID id){LegacyPlayerArchive.Ref value=withLoaded(List.of(id),()->{synchronized(this){return legacyPlayers.get(id.toString());}});try{return value==null?null:legacyArchive.read(value);}catch(java.io.IOException error){throw new java.io.UncheckedIOException(error);}}
     public void observe(UUID id,Vec position,PlayerState state){withLoaded(List.of(id),()->{observePrepared(id,position,state);return null;});}
-    private synchronized void observePrepared(UUID id,Vec position,PlayerState state){Objects.requireNonNull(state);observeLoaded(id,position);String key=id.toString();if(!vitalsHeld.containsKey(key)&&!state.equals(states.get(key))){states.put(key,state);dirty.put(key,position);}}
+    private synchronized void observePrepared(UUID id,Vec position,PlayerState state){Objects.requireNonNull(state);observeLoaded(id,position);String key=id.toString();if(!vitalsHeld.containsKey(key)&&!state.equals(states.get(key))){states.put(key,state);dirty.put(key,position);if(journal==null)memoryRevision.incrementAndGet();}}
     /** Offline migration retains the complete compatibility row without replacing hot core coordinates. */
     public CompletableFuture<Void> importLegacyPlayer(UUID id,JsonObject value){return importLegacyPlayers(Map.of(id,value));}
     /** Bounded offline batch. Body publication/fsync precedes one journal reference append. */
-    public CompletableFuture<Void> importLegacyPlayers(Map<UUID,JsonObject> values){return loadedBatch(values,"legacy_player_batch_limit",()->importLegacyPlayersLoaded(values));}
+    public CompletableFuture<Void> importLegacyPlayers(Map<UUID,JsonObject> values){
+        if(legacyArchive==null)return CompletableFuture.failedFuture(new IllegalStateException("legacy_player_archive_offline_only"));
+        return loadedBatch(values,"legacy_player_batch_limit",()->importLegacyPlayersLoaded(values));
+    }
     private synchronized CompletableFuture<Void> importLegacyPlayersLoaded(Map<UUID,JsonObject> values){
         if(closing||!healthy())return CompletableFuture.failedFuture(new IllegalStateException("location_storage_failed"));
         Map<String,JsonObject> copy=new LinkedHashMap<>();long bytes=0;
@@ -210,7 +247,7 @@ public final class CharacterLocations implements AutoCloseable {
         if(!spawnRequests.tryAcquire())return CompletableFuture.failedFuture(new IllegalStateException("location_command_queue_full"));legacyPending.addAll(copy.keySet());CompletableFuture<Void> result=new CompletableFuture<>();
         try{legacyWorker.execute(()->{Throwable problem=null;try{
             Map<String,LegacyPlayerArchive.Ref> refs=new LinkedHashMap<>();for(var entry:copy.entrySet())refs.put(entry.getKey(),legacyArchive.store(entry.getValue()));
-            JsonObject event=legacyEvent(refs);journal.append(event,()->{applyIndex(event);journalBytes+=8+szserver.util.Json.bytes(event).length;synchronized(this){refs.forEach((key,ref)->{if(loaded.containsKey(key))legacyPlayers.put(key,ref);});batches++;}autoCheckpoint();}).get();
+            JsonObject event=legacyEvent(refs);write(event,()->{applyIndex(event);if(journal!=null)journalBytes+=8+szserver.util.Json.bytes(event).length;synchronized(this){refs.forEach((key,ref)->{if(loaded.containsKey(key))legacyPlayers.put(key,ref);});batches++;}autoCheckpoint();}).get();
         }catch(Throwable error){Throwable cause=error instanceof ExecutionException?error.getCause():error;failed=true;problem=cause;}
         finally{synchronized(this){legacyPending.removeAll(copy.keySet());evictLoaded();}spawnRequests.release();}if(problem==null)result.complete(null);else result.completeExceptionally(problem);});}
         catch(RejectedExecutionException error){legacyPending.removeAll(copy.keySet());spawnRequests.release();result.completeExceptionally(error);}
@@ -222,7 +259,7 @@ public final class CharacterLocations implements AutoCloseable {
     public List<Vec> spawnCandidates(UUID id,Vec fallback){return withLoaded(List.of(id),()->spawnCandidatesLoaded(id,fallback));}
     private synchronized List<Vec> spawnCandidatesLoaded(UUID id,Vec fallback){LinkedHashSet<Vec> candidates=new LinkedHashSet<>();Vec personal=spawns.get(id.toString()),global=spawns.get("*");if(personal!=null)candidates.add(personal);if(global!=null)candidates.add(global);candidates.add(fallback);return List.copyOf(candidates);}
     public void observe(UUID id,Vec p){withLoaded(List.of(id),()->{observeLoaded(id,p);return null;});}
-    private synchronized void observeLoaded(UUID id,Vec p){validPosition(p);if(closing||!healthy())throw new IllegalStateException("location_storage_failed");String key=id.toString();if(retiring.contains(key))throw new IllegalStateException("character_deleting");if(countLimit>0&&!positions.containsKey(key)&&index.positionCount()+positionPending.keySet().stream().filter(scope->!durablePositions.containsKey(scope)).count()>=countLimit)throw new IllegalStateException("location_limit");if(p.equals(positions.get(key)))return;positions.put(key,p);dirty.put(key,p);}
+    private synchronized void observeLoaded(UUID id,Vec p){validPosition(p);if(closing||!healthy())throw new IllegalStateException("location_storage_failed");String key=id.toString();if(retiring.contains(key))throw new IllegalStateException("character_deleting");if(countLimit>0&&!positions.containsKey(key)&&index.positionCount()+positionPending.keySet().stream().filter(scope->!durablePositions.containsKey(scope)).count()>=countLimit)throw new IllegalStateException("location_limit");if(p.equals(positions.get(key)))return;positions.put(key,p);dirty.put(key,p);if(journal==null)memoryRevision.incrementAndGet();}
     /** Teleport caller serializes that player's input until this durable write completes. */
     public CompletableFuture<Void> teleport(UUID id,Vec p){return teleportBatch(Map.of(id,p));}
     /** Same durable teleport publication, one append for up to32 offline owners. */
@@ -270,7 +307,7 @@ public final class CharacterLocations implements AutoCloseable {
     private synchronized CompletableFuture<Void> append(String type,Map<String,Vec> batch,Map<String,PlayerState> stateBatch,Runnable durable){
         JsonObject record=event(type,batch);Map<String,PlayerState> captured=new LinkedHashMap<>();Map<String,Long> revisions=new LinkedHashMap<>();if(type.equals("positions"))for(JsonElement value:record.getAsJsonArray("rows")){JsonObject row=value.getAsJsonObject();String key=row.get("scope").getAsString();PlayerState state=states.get(key);if(state!=null){row.add("state",state.json());captured.put(key,state);captureVitalsRevision(key,row,revisions);}}
         if(!stateBatch.isEmpty()){JsonArray extra=new JsonArray();stateBatch.forEach((key,state)->{JsonObject row=new JsonObject();row.addProperty("scope",key);row.add("state",state.json());captureVitalsRevision(key,row,revisions);extra.add(row);});record.add("stateRows",extra);captured.putAll(stateBatch);}
-        CompletableFuture<Void> write=journal.append(record,()->{applyIndex(record);journalBytes+=8+szserver.util.Json.bytes(record).length;durable.run();synchronized(this){captured.forEach((key,state)->{if(loaded.containsKey(key))durableStates.put(key,state);});revisions.forEach((key,revision)->{if(loaded.containsKey(key))durableVitalsRevisions.put(key,revision);});}autoCheckpoint();});
+        CompletableFuture<Void> write=write(record,()->{applyIndex(record);if(journal!=null)journalBytes+=8+szserver.util.Json.bytes(record).length;durable.run();synchronized(this){captured.forEach((key,state)->{if(loaded.containsKey(key))durableStates.put(key,state);});revisions.forEach((key,revision)->{if(loaded.containsKey(key))durableVitalsRevisions.put(key,revision);});}autoCheckpoint();});
         batches++;return write;
     }
     /** Only this journal owner mutates durable positions/states/spawns/legacy rows. Emit without the live-state lock. */
@@ -285,10 +322,50 @@ public final class CharacterLocations implements AutoCloseable {
         for(var part:List.of(Map.entry("positions",positionsPart[0]),Map.entry("spawns",spawnsPart[0]),Map.entry("legacy-players",legacyPart[0])))if(!part.getValue().isEmpty()){JsonObject record=new JsonObject();record.addProperty("type",part.getKey());record.add("rows",part.getValue());counted.accept(record);}
     }
     private static void checkpointRow(Journal.CheckpointSink sink,String type,JsonArray[] part,JsonObject row)throws Exception{part[0].add(row);if(part[0].size()==BATCH){JsonObject record=new JsonObject();record.addProperty("type",type);record.add("rows",part[0]);sink.accept(record);part[0]=new JsonArray();}}
-    public boolean healthy(){return !closed&&!failed&&journal.healthy();}
-    public synchronized Map<String,Object> metrics(){return Map.of("healthy",healthy(),"positions",index.positionCount(),"spawns",index.spawnCount(),"playerStates",index.stateCount(),"legacyPlayers",index.legacyCount(),"dirty",dirty.size(),"dirtyStates",dirtyStates.size(),"inFlight",!pending.isDone(),"spawnRequests",32-spawnRequests.availablePermits(),"journal",journal.metrics());}
+    public record LocationSnapshot(long revision,Journal.StreamingCheckpoint rows){}
+    public long memoryRevision(){return memoryRevision.get();}
+    public CompletableFuture<LocationSnapshot> capture(){
+        if(journal!=null)return CompletableFuture.failedFuture(new IllegalStateException("locations_not_resident"));
+        var finalState=sealed;if(finalState!=null)return CompletableFuture.completedFuture(finalState);
+        return inMemory(()->{
+            var saved=new LinkedHashMap<String,DiskLocationIndex.Root>();
+            index.visit(saved::put);
+            long revision;
+            synchronized(this){
+                // Include observations made since the last movement flush. A held
+                // vitals transaction still owns its previous committed state.
+                var observed=new LinkedHashSet<>(dirty.keySet());observed.addAll(dirtyStates.keySet());
+                for(String key:observed){
+                    var before=saved.getOrDefault(key,DiskLocationIndex.Root.empty(key));
+                    PlayerState state=vitalsHeld.containsKey(key)?before.state():states.get(key);
+                    saved.put(key,new DiskLocationIndex.Root(key,positions.get(key),state,before.revision(),before.spawn(),before.legacy()));
+                }
+                revision=memoryRevision.get();
+            }
+            return new LocationSnapshot(revision,sink->{
+                JsonArray[] positionPart={new JsonArray()},spawnPart={new JsonArray()};
+                for(var pair:saved.entrySet()){
+                    String key=pair.getKey();var root=pair.getValue();
+                    if(root.position()!=null){
+                        var row=entry(key,root.position());
+                        if(root.state()!=null)row.add("state",root.state().json());
+                        if(root.revision()>0)row.addProperty("vitalsRevision",root.revision());
+                        checkpointRow(sink,"positions",positionPart,row);
+                    }
+                    if(root.spawn()!=null)checkpointRow(sink,"spawns",spawnPart,entry(key,root.spawn()));
+                }
+                for(var part:List.of(Map.entry("positions",positionPart[0]),Map.entry("spawns",spawnPart[0]))){
+                    if(part.getValue().isEmpty())continue;
+                    var event=new JsonObject();event.addProperty("type",part.getKey());event.add("rows",part.getValue());sink.accept(event);
+                }
+            });
+        });
+    }
+    public boolean healthy(){return !closed&&!failed&&(journal==null||journal.healthy());}
+    public synchronized Map<String,Object> metrics(){return Map.of("healthy",healthy(),"positions",index.positionCount(),"spawns",index.spawnCount(),"playerStates",index.stateCount(),"legacyPlayers",index.legacyCount(),"dirty",dirty.size(),"dirtyStates",dirtyStates.size(),"inFlight",!pending.isDone(),"spawnRequests",32-spawnRequests.availablePermits(),"journal",journal==null?Map.of("storage","memory","healthy",healthy()):journal.metrics());}
     public synchronized Map<String,Object> residencyMetrics(){return Map.of("cachedRoots",loaded.size(),"cacheLimit",HOT_LIMIT,"heldRoots",heldLoads.size(),"heldLeases",128-loadRequests.availablePermits(),"capacityLimit",countLimit,"index",index.metrics());}
     private synchronized void autoCheckpoint(){
+        if(journal==null)return;
         long budget=Math.max(1024L*1024,index.positionCount()*512L+index.spawnCount()*192L+index.legacyCount()*256L);
         if(!closing&&checkpointPending.isDone()&&journalBytes>Math.max(nextCheckpointAt,budget))startCheckpoint();
     }
@@ -297,8 +374,9 @@ public final class CharacterLocations implements AutoCloseable {
             if(error==null){journalBytes=checkpointBytesWritten;nextCheckpointAt=journalBytes+1024L*1024;}else{nextCheckpointAt=journalBytes+1024L*1024;if(!journal.healthy())failed=true;}
         });return checkpointPending;
     }
-    public synchronized CompletableFuture<Void> compact(){if(closing||!healthy())return CompletableFuture.failedFuture(new IllegalStateException("location_storage_failed"));if(!checkpointPending.isDone())return checkpointPending.copy();return startCheckpoint().copy();}
+    public synchronized CompletableFuture<Void> compact(){if(closing||!healthy())return CompletableFuture.failedFuture(new IllegalStateException("location_storage_failed"));if(journal==null)return inMemory(()->null);if(!checkpointPending.isDone())return checkpointPending.copy();return startCheckpoint().copy();}
     private void drainJournal()throws Exception{
+        if(journal==null){szserver.util.Workers.stop(memoryWriter);return;}
         while(true)try{journal.durablePrefix().get();return;}catch(ExecutionException error){if(error.getCause() instanceof RejectedExecutionException){Thread.sleep(10);continue;}throw error;}
     }
     @Override public void close()throws Exception{synchronized(closeLock){if(closed)return;synchronized(this){closing=true;}
@@ -308,7 +386,8 @@ public final class CharacterLocations implements AutoCloseable {
                 if(pending.isDone()&&dirty.isEmpty()&&dirtyStates.isEmpty()&&stateWrites.isEmpty()&&stateWritesInFlight.isEmpty())break;write=flush();
             }
             write.get();
-        }}finally{try{drainJournal();}finally{try{index.close();}finally{try{journal.close();}finally{synchronized(this){
+        }if(journal==null)sealed=capture().get(10,TimeUnit.SECONDS);
+        }finally{try{drainJournal();}finally{try{index.close();}finally{try{if(journal!=null)journal.close();}finally{synchronized(this){
             closed=true;var abandoned=List.copyOf(stateWrites.values());stateWrites.clear();abandoned.forEach(request->request.future.completeExceptionally(new IllegalStateException("location_closed")));
             loaded.clear();heldLoads.clear();positions.clear();durablePositions.clear();states.clear();durableStates.clear();vitalsRevisions.clear();durableVitalsRevisions.clear();vitalsHeld.clear();vitalsPending.clear();stateWritesInFlight.clear();spawns.clear();dirty.clear();dirtyStates.clear();legacyPlayers.clear();legacyPending.clear();positionPending.clear();spawnPending.clear();movementInFlight.clear();
         }}}}}
