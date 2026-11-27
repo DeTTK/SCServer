@@ -2,6 +2,7 @@ package szserver.net;
 
 import scvehicles.protocol.VehicleWire;
 import scvehicles.protocol.VehicleSeats;
+import scvehicles.protocol.VehicleTypes;
 import java.util.*;
 
 /** Lifecycle and driver ownership only. No competing server vehicle physics. */
@@ -18,11 +19,12 @@ public final class Vehicles<O> {
     /** Existing movement/weapon/FPV gates treat every occupant as seated. */
     public Car<O> driving(O owner){for(Car<O> car:cars.values())if(seat(car,owner)>=0)return car;return null;}
     public static int seat(Car<?> car,Object owner){if(car==null||owner==null)return -1;if(car.driver==owner)return 0;for(var e:car.passengers.entrySet())if(e.getValue()==owner)return e.getKey();return -1;}
-    public Car<O> spawn(O owner,VehicleWire s,double[] at,boolean administrator,long now){
-        if(!administrator)throw new Rejected(1);
+    public Car<O> spawn(O owner,VehicleWire s,double[] at,long now){
         Car<O> prior=cars.get(s.id);if(prior!=null){if(prior.creator!=owner)throw new Rejected(2);return prior;}
-        if(s.id.equals(VehicleWire.ZERO)||cars.size()>=32||cars.values().stream().anyMatch(c->c.creator==owner)||distance(s,at)>64)throw new Rejected(2);
-        VehicleWire initial=new VehicleWire();initial.id=s.id;initial.model=s.model;initial.x=s.x;initial.y=s.y;initial.z=s.z;initial.yaw=s.yaw;
+        if(s.id.equals(VehicleWire.ZERO))throw new Rejected(2);
+        double reach=Math.min(7.5,VehicleTypes.LENGTH[s.model]*.5+2);
+        VehicleWire initial=new VehicleWire();initial.id=s.id;initial.model=s.model;initial.yaw=s.yaw;
+        initial.x=at[0]+Math.sin(s.yaw)*reach;initial.y=at[1]+.2;initial.z=at[2]+Math.cos(s.yaw)*reach;
         Car<O> car=new Car<>(owner,initial,now);cars.put(s.id,car);return car;
     }
     public Car<O> enter(O owner,UUID id,int seat,long now){
@@ -43,14 +45,11 @@ public final class Vehicles<O> {
         if(Math.sqrt(distance(s,new double[]{car.state.x,car.state.y,car.state.z}))>maximum||Math.sqrt(s.vx*s.vx+s.vy*s.vy+s.vz*s.vz)>55||s.speed<0||s.speed>50||s.fuel>car.state.fuel+.0001)throw new Rejected(2);
         car.state=s.copy();car.state.driver=-1;car.updated=now;if(car.driver==null&&s.speed<.05&&(s.flags&2)!=0)car.simulator=null;return car;
     }
-    public Car<O> exit(O owner,VehicleWire request){
-        Car<O> car=cars.get(request.id);int index=seat(car,owner);if(index<0)throw new Rejected(2);
-        double[] at={request.x,request.y,request.z},seat=scvehicles.protocol.VehicleAction.world(car.state,VehicleSeats.seat(car.state.model,index));
-        double seatDistance=Math.pow(at[0]-seat[0],2)+Math.pow(at[1]-seat[1],2)+Math.pow(at[2]-seat[2],2);
-        if(distance(car.state,at)>16&&seatDistance>16)throw new Rejected(3);
-        if(index==0){car.driver=null;car.simulator=owner;}else{car.passengers.remove(index);car.passengerSeen.remove(index);}return car;
+    public void exit(Car<O> car,O owner){
+        int index=seat(car,owner);if(index<0)throw new Rejected(2);
+        if(index==0){car.driver=null;car.simulator=owner;}else{car.passengers.remove(index);car.passengerSeen.remove(index);}
     }
-    public Car<O> remove(O owner,UUID id){Car<O> car=cars.get(id);if(car==null||car.creator!=owner||car.driver!=null||!car.passengers.isEmpty())throw new Rejected(2);cars.remove(id);return car;}
+    public Car<O> remove(UUID id){Car<O> car=cars.remove(id);if(car==null)throw new Rejected(2);return car;}
     public void detach(O owner){for(Car<O> car:all()){if(car.driver==owner||car.driver==null&&car.simulator==owner){car.driver=null;car.simulator=null;car.state.sequence++;car.state.vx=car.state.vy=car.state.vz=car.state.speed=0;}car.passengers.values().removeIf(o->o==owner);car.passengerSeen.keySet().retainAll(car.passengers.keySet());}}
     public List<Car<O>> forget(O owner){seatClients.remove(owner);List<Car<O>> removed=new ArrayList<>();for(Car<O> car:all())if(car.creator==owner){O successor=car.occupants().stream().filter(o->o!=owner).findFirst().orElse(null);if(successor!=null)car.creator=successor;else{cars.remove(car.state.id);removed.add(car);}}detach(owner);return removed;}
     public List<Car<O>> expired(long now){return expired(now,owner->{});}

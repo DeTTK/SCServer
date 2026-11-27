@@ -6,6 +6,12 @@ public final class VehicleAction {
     public static final double ENTRY_CONTROL_DELAY=1.0;
     public static final int LOCAL_EXIT=0x20000000;
     public static double[] exitFeet(VehicleWire car,VehicleWire request){double[] p={request.x,request.y,request.z};return request.sequence==LOCAL_EXIT?world(car,p):p;}
+    public static double[] fallbackExit(VehicleWire car,int seat){
+        double[] point=VehicleSeats.seat(car.model,seat);
+        double side=Math.copySign(VehicleTypes.WIDTH[car.model]*.5+1.05,point[0]);
+        double cos=Math.cos(car.yaw),sin=Math.sin(car.yaw);
+        return new double[]{car.x+side*cos+point[2]*sin,car.y+.25,car.z-side*sin+point[2]*cos};
+    }
     public static boolean locksDriving(int action,double elapsed){return action==ENTER?elapsed<ENTRY_CONTROL_DELAY:action==EXIT||action==ROOF_UP||action==ROOF_DOWN;}
     public static double[] exitVelocity(VehicleWire car){return exitVelocity(car,0);}
     public static double[] exitVelocity(VehicleWire car,int seat){if(car.speed<1.5)return new double[3];double side=VehicleSeats.SEAT[car.model][seat][0]>=0?1:-1;return new double[]{car.vx+side*1.4*Math.cos(car.yaw),Math.max(.7,car.vy),car.vz-side*1.4*Math.sin(car.yaw)};}

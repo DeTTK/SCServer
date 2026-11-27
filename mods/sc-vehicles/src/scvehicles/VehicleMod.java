@@ -1,7 +1,6 @@
 package scvehicles;
 import scvehicles.protocol.VehicleWire;
 import scvehicles.protocol.VehicleAction;
-import scvehicles.protocol.VehicleActionProfiles;
 import scvehicles.protocol.VehicleSeats;
 
 import szmods.api.*;
@@ -55,7 +54,7 @@ public final class VehicleMod implements ClientMod {
     private boolean graphics,doorsOpen;
 
     @Override public void onLoad(ModContext context){log=context;rider.actions=actions;observer.actions=actions;log.log("SC Vehicles 0.9.19");}
-    @Override public void registerKeybinds(KeybindRegistry keys){keys.register("previous-type","Предыдущая машина",91);keys.register("next-type","Следующая машина",93);keys.register("spawn","Создать выбранный транспорт (администратор)",298);keys.register("enter","Сесть в транспорт (с Shift)",GLFW_KEY_E);keys.register("engine","Запуск двигателя",82);keys.register("exit","Выйти из транспорта",71);keys.register("doors","Открыть / закрыть двери",74);keys.register("remove","Убрать свою машину",297);keys.register("lean","Высунуться из окна / вернуться",86);}
+    @Override public void registerKeybinds(KeybindRegistry keys){keys.register("previous-type","Предыдущая машина",91);keys.register("next-type","Следующая машина",93);keys.register("spawn","Создать выбранный транспорт",298);keys.register("enter","Сесть в транспорт (с Shift)",GLFW_KEY_E);keys.register("engine","Запуск двигателя",82);keys.register("exit","Выйти из транспорта",71);keys.register("doors","Открыть / закрыть двери",74);keys.register("remove","Убрать машину",297);keys.register("lean","Высунуться из окна / вернуться",86);}
     @Override public void registerSettings(SettingsRegistry settings){var tab=settings.registerTab("vehicles","Транспорт");volume=tab.numberSetting("volume","Громкость транспорта, %",30,0,100);soundEffectsVolume=tab.numberSetting("sound-effects-volume","Механика, колёса и удары, %",65,0,100);cameraMotion=tab.numberSetting("camera-motion","Движение гоночной камеры, %",70,0,100);wheelEffects=tab.booleanSetting("wheel-effects","Дым, пыль и брызги из-под колёс",true);}
     @Override public void registerHud(HudRegistry hud){hud.register("vehicle-info",(h,w,height,pt)->{
         if(player==null)return;
@@ -120,33 +119,28 @@ public final class VehicleMod implements ClientMod {
         boolean previous=edge(91),next=edge(93);
         if(driving==null&&!menu()&&(previous||next)){selectedModel=Math.floorMod(selectedModel+(next?1:-1),VehicleFleet.ALL.length);notice("Выбрано: "+VehicleFleet.get(selectedModel).name);soundScene.action(VehicleSoundScene.Event.SELECT);}
         boolean spawn=edge(298),enter=edge(GLFW_KEY_E)&&boardingModifier(),remove=edge(297),engine=edge(82),exit=edge(71),doors=edge(74),lean=edge(86);
+        if(spawn)spawnVehicle();
+        if(remove)removeVehicle();
+        else if(exit&&driving!=null){
+            double[] at=body.exit(physics,seatIndex);
+            finishExit(at!=null?at:VehicleAction.fallbackExit(driverState(),seatIndex));
+        }
         if(!menu()){
             if(driving==null&&pending==null){
-                if(spawn&&selectedModel!=0&&!fleetSupported)notice("Для других машин нужен сервер SC Vehicles 0.6.0");
-                else if(spawn){VehicleWire s=new VehicleWire();s.op=VehicleWire.SPAWN;s.model=selectedModel;s.id=UUID.randomUUID();double[] at=xyz(call(player,"if","153304200"));double yaw=-(Float)call(player,"catch","float")*Math.PI/180;double reach=Math.min(7.5,VehicleFleet.get(selectedModel).length*.5+2);s.x=at[0]+Math.sin(yaw)*reach;s.y=at[1]+.2;s.z=at[2]+Math.cos(yaw)*reach;s.yaw=(float)yaw;request(s);}
-                UUID nearest=!spawn&&(enter||remove)?nearest():null;
+                UUID nearest=!spawn&&!remove&&enter?nearest():null;
                 if(enter&&nearest!=null){
                     VehicleWire car=replicas.get(nearest).current;double[] local=VehicleHull.local(car,xyz(call(player,"if","153304200")));int slot=seatsSupported?VehicleSeats.nearest(car.model,local):0;
                     VehicleWire s=new VehicleWire();s.op=VehicleWire.ENTER;s.id=nearest;s.sequence=seatsSupported?slot+1:0;request(s);
                 }
-                else if(remove&&nearest!=null){VehicleWire s=new VehicleWire();s.op=VehicleWire.REMOVE;s.id=nearest;request(s);}
             }else if(driving!=null){
                 if(pending==null&&!actions.busy(driving)&&lean){
                     int posture=actions.posture(driving);
                     if(!interactionsSupported)notice("Для действий с кузовом нужен сервер SC Vehicles 0.9.6");
-                    else if(!VehicleSeats.window(physics.model,seatIndex))notice("У этой позиции нет открывающегося бокового окна");else action(posture==1?VehicleAction.LEAN_IN:VehicleAction.LEAN_OUT,null);
+                    else if(!VehicleSeats.window(physics.model,seatIndex))notice("У этой позиции нет открывающегося бокового окна");else action(posture==1?VehicleAction.LEAN_IN:VehicleAction.LEAN_OUT);
                 }
                 if(doors&&isDriver()){doorToggles++;doorsOpen=!doorsOpen;notice("");}
                 if(engine&&isDriver()&&!windowView()){engineEdges++;physics.engine=!physics.engine&&physics.fuel>0;if(physics.fuel<=0)soundScene.action(VehicleSoundScene.Event.FUEL_EMPTY);notice(physics.fuel<=0?"Бак пуст":"");log.log("Engine="+physics.engine+" fuel="+physics.fuel);}
-                if(exit&&pending==null&&!actions.busy(driving)&&!actions.exiting(driving)){
-                    double[] at=body.exit(physics,seatIndex);if(at==null)notice("Нет свободного места для выхода");else{pendingExit=at;if(interactionsSupported&&VehicleActionProfiles.ENABLED[physics.model])action(VehicleAction.EXIT,at);else finishExit(at);}
-                }
             }
-        }
-        if(driving!=null&&actions.exiting(driving)&&!actions.busy(driving)&&pending==null){
-            double[] at=body.exit(physics,seatIndex);
-            if(at==null){action(0,null);notice("Место выхода перекрыто — остаёмся в машине");}
-            else finishExit(at);
         }
         for(VehicleWire coast:coasting.outgoing(frame.deltaSeconds()))send(coast);
         if(driving!=null){
@@ -173,10 +167,26 @@ public final class VehicleMod implements ClientMod {
         var listener=new VehicleSoundScene.Listener(ears[0],ears[1],ears[2],look,driving==null?0:physics.vx,driving==null?0:physics.vy,driving==null?0:physics.vz);
         audio.publish(soundScene.update(visualStates,new VehicleSoundScene.Controls(isDriver()?driving:null,physics.throttle,physics.handbrake,physics.drift),listener,focused&&volume!=null?volume.get()/100:0,soundEffectsVolume==null?.65:soundEffectsVolume.get()/100,frame.deltaSeconds(),effectSurface));
     }
-    private void request(VehicleWire s)throws Exception{if(!supported)send(new VehicleWire());send(s);pending=s.id;pendingAt=System.nanoTime();if(s.op!=VehicleWire.ACTION||s.flags!=0)notice("");if(s.op==VehicleWire.SPAWN||s.op==VehicleWire.REMOVE)soundScene.action(s.op==VehicleWire.SPAWN?VehicleSoundScene.Event.SPAWN:VehicleSoundScene.Event.REMOVE);}
-    private void action(int kind,double[] exit)throws Exception{
+    private void spawnVehicle()throws Exception{
+        VehicleWire s=new VehicleWire();s.op=VehicleWire.SPAWN;s.model=selectedModel;s.id=UUID.randomUUID();
+        double[] at=xyz(call(player,"if","153304200"));
+        double yaw=-(Float)call(player,"catch","float")*Math.PI/180;
+        double reach=Math.min(7.5,VehicleFleet.get(selectedModel).length*.5+2);
+        s.x=at[0]+Math.sin(yaw)*reach;s.y=at[1]+.2;s.z=at[2]+Math.cos(yaw)*reach;s.yaw=(float)yaw;
+        sendVehicleCommand(s);
+        soundScene.action(VehicleSoundScene.Event.SPAWN);
+    }
+    private void removeVehicle()throws Exception{
+        UUID target=driving!=null?driving:nearest();
+        if(target==null)return;
+        VehicleWire s=new VehicleWire();s.op=VehicleWire.REMOVE;s.id=target;
+        sendVehicleCommand(s);
+        soundScene.action(VehicleSoundScene.Event.REMOVE);
+    }
+    private void sendVehicleCommand(VehicleWire s)throws Exception{if(!supported)send(new VehicleWire());send(s);notice("");}
+    private void request(VehicleWire s)throws Exception{sendVehicleCommand(s);pending=s.id;pendingAt=System.nanoTime();}
+    private void action(int kind)throws Exception{
         VehicleWire s=new VehicleWire();s.op=VehicleWire.ACTION;s.id=driving;s.model=physics.model;s.flags=kind;
-        if(exit!=null){VehicleWire car=driverState();double[] p=VehicleHull.local(car,new double[]{exit[0],exit[1]+.82,exit[2]});s.x=p[0];s.y=p[1];s.z=p[2];}
         request(s);
     }
     private void finishExit(double[] feet)throws Exception{pendingExit=feet;VehicleWire done=driverState();double[] local=interactionsSupported?VehicleAction.local(done,feet):feet;done.op=VehicleWire.EXIT;done.id=driving;done.sequence=interactionsSupported?VehicleAction.LOCAL_EXIT:0;done.x=local[0];done.y=local[1];done.z=local[2];request(done);}
@@ -202,7 +212,11 @@ public final class VehicleMod implements ClientMod {
         if(s.op==VehicleWire.CONTACT_SNAPSHOT){observer.accept(s,System.nanoTime());return;}
         if(s.id.equals(pending))pending=null;
         if(s.op==VehicleWire.DENIED){if(s.sequence==5)coasting.active.remove(s.id);soundScene.action(VehicleSoundScene.Event.DENIED);notice(switch(s.sequence){case 1->"Создание транспорта доступно администратору";case 2->"Действие недоступно: проверьте место, скорость и завершение предыдущего действия";case 3->"Нет безопасного места для выхода";case 4->"Место у этой двери занято";case 5->"Управление машиной завершено";default->"Действие с транспортом отклонено";});return;}
-        if(s.op==VehicleWire.DESPAWN){occupants.despawn(s.id);coasting.accept(s);replicas.remove(s.id);if(s.id.equals(driving))stop();return;}
+        if(s.op==VehicleWire.DESPAWN){
+            occupants.despawn(s.id);coasting.accept(s);replicas.remove(s.id);
+            if(s.id.equals(driving)){pendingExit=VehicleAction.fallbackExit(s,seatIndex);release(s,false);}
+            return;
+        }
         if(s.op!=VehicleWire.SNAPSHOT)return;
         if(s.id.equals(driving))lastReply=System.nanoTime();
         VehicleReplica r=replicas.computeIfAbsent(s.id,k->new VehicleReplica());int former=r.current==null?-1:r.current.driver;if(!r.accept(s))return;coasting.accept(s);
@@ -222,11 +236,11 @@ public final class VehicleMod implements ClientMod {
         }
     }
     private void release(VehicleWire s,boolean coast)throws Exception{
-        int index=seatIndex;double[] local=actions.exitAnchor(s),at=body==null?null:body.exit(physics,index);
-        if(at==null){double side=VehicleSeats.SEAT[s.model][index][0]>=0?1:-1;at=pendingExit!=null?pendingExit.clone():local==null?new double[]{s.x+side*2.1*Math.cos(s.yaw),s.y,s.z-side*2.1*Math.sin(s.yaw)}:VehicleAction.world(s,local);if(pendingExit==null&&local!=null)at[1]-=.82;}
+        int index=seatIndex;double[] at=pendingExit==null?(body==null?null:body.exit(physics,index)):pendingExit.clone();
+        if(at==null)at=VehicleAction.fallbackExit(s,index);
         VehiclePhysics released=physics;VehicleBody terrain=body;boolean engineOn=physics.engine,continueCoast=coast&&s.driver<0&&pendingExit!=null;int flags=doorsOpen?VehicleArticulation.DOORS_OPEN:0;stop();
         if(continueCoast){released.engine=engineOn;coasting.begin(s.id,released,terrain,sequence,flags);}
-        VehiclePlayer.release(player,at,VehicleAction.exitVelocity(s,index));pendingExit=null;
+        VehiclePlayer.release(player,at,VehicleAction.exitVelocity(s,index));
     }
     private void begin(VehicleWire s)throws Exception{begin(s,0);}
     private void begin(VehicleWire s,int index)throws Exception{
@@ -249,7 +263,7 @@ public final class VehicleMod implements ClientMod {
     private void applyPlayer(double[] p)throws Exception{VehiclePlayer.position(player,p,(Float)call(player,"catch","float"),(Float)call(player,"volatile","float"));}
     private void stop()throws Exception{
         if(camera!=null&&originalMode!=null)call(camera,"abstract","void",originalMode);
-        driving=null;seatIndex=0;pending=null;doorsOpen=false;body=null;camera=null;originalMode=null;neutral=null;physics.throttle=physics.turn=0;physics.engine=false;audio.silence();
+        driving=null;seatIndex=0;pending=null;pendingExit=null;doorsOpen=false;body=null;camera=null;originalMode=null;neutral=null;physics.throttle=physics.turn=0;physics.engine=false;audio.silence();
     }
     private VehicleWire driverState(){VehicleWire state=physics.state();if(doorsOpen)state.flags|=VehicleArticulation.DOORS_OPEN;return state;}
     private Collection<VehicleWire> renderStates(){

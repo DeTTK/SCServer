@@ -731,7 +731,8 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
                 for(long key:new ArrayList<>(s.chunks)){releaseChunk(s,key);chunk(s,(int)(key>>32),(int)key);}
                 for(var car:vehicles.all())emitVehicleTo(s,car,VehicleWire.SNAPSHOT);if(s.vehicleContacts)for(var link:vehicleContacts.all())emitVehicleContactTo(s,link.owner(),link.state());if(s.vehicleInteractions)for(var action:vehicleActions.all())emitVehicleActionTo(s,action.owner(),vehicleActions.snapshot(action,now));}return;}
             if(!s.vehicleFleet&&(request.model!=0||vehicles.get(request.id)!=null&&vehicles.get(request.id).state.model!=0))throw new Vehicles.Rejected(2);
-            if(!s.vehicleCapable||s.hp<=0||s.respawning||s.teleport!=null)throw new Vehicles.Rejected(2);
+            boolean lifecycle=request.op==VehicleWire.SPAWN||request.op==VehicleWire.REMOVE||request.op==VehicleWire.EXIT;
+            if(!s.vehicleCapable||!lifecycle&&(s.hp<=0||s.respawning||s.teleport!=null))throw new Vehicles.Rejected(2);
             if(request.op==VehicleWire.SEAT_HEARTBEAT){if(!vehicles.seatSupport(s))throw new Vehicles.Rejected(2);vehicles.heartbeat(s,request,now);return;}
             if(request.op==VehicleWire.CONTACT){
                 if(!s.vehicleContacts||vehicles.driving(s)!=null&&!request.id.equals(VehicleWire.ZERO))throw new Vehicles.Rejected(2);
@@ -739,9 +740,9 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
                 if(contact!=null)emitVehicleContact(s,contact);return;
             }
             Vehicles.Car<Session> car;
-            if(request.op!=VehicleWire.STATE){if(now-s.vehicleCommandAt<150_000_000L)throw new Vehicles.Rejected(2);s.vehicleCommandAt=now;}
+            if(!lifecycle&&request.op!=VehicleWire.STATE){if(now-s.vehicleCommandAt<150_000_000L)throw new Vehicles.Rejected(2);s.vehicleCommandAt=now;}
             switch(request.op){
-                case VehicleWire.SPAWN -> {car=vehicles.spawn(s,request,s.pos,playerRules.entitled(character(s)),now);emitVehicle(car,VehicleWire.SNAPSHOT);}
+                case VehicleWire.SPAWN -> {car=vehicles.spawn(s,request,s.pos,now);emitVehicle(car,VehicleWire.SNAPSHOT);}
                 case VehicleWire.ENTER -> {
                     if(piloting(s))throw new Vehicles.Rejected(2);car=vehicles.get(request.id);double[] start=null;int seat=vehicles.seatSupport(s)&&request.sequence>0?request.sequence-1:0;if(car==null||!VehicleSeats.valid(car.state.model,seat))throw new Vehicles.Rejected(2);
                     if(s.vehicleInteractions&&VehicleActionProfiles.ENABLED[car.state.model]){
@@ -759,16 +760,49 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
                     car=vehicles.state(s,request,now);
                     if(car!=null){for(Session occupant:car.occupants())vehicleSeat(occupant,car.state);emitVehicle(car,VehicleWire.SNAPSHOT);vehicleImpact(s,before,car.state,(now-updated)/1e9,now);}
                 }
-                case VehicleWire.EXIT -> {if(vehicleActions.busy(s,now))throw new Vehicles.Rejected(2);car=vehicles.get(request.id);int seat=Vehicles.seat(car,s);if(seat<0)throw new Vehicles.Rejected(2);double[] resolvedExit=VehicleAction.exitFeet(car.state,request);request.x=resolvedExit[0];request.y=resolvedExit[1];request.z=resolvedExit[2];var playing=vehicleActions.get(s);if(playing!=null&&playing.state().flags==VehicleAction.EXIT){double[] end=VehicleAction.local(car.state,new double[]{request.x,request.y+.82,request.z});playing.state().vx=(float)end[0];playing.state().vy=(float)end[1];playing.state().vz=(float)end[2];emitVehicleAction(s,vehicleActions.snapshot(playing,now));}double[] velocity=VehicleAction.exitVelocity(car.state,seat);car=vehicles.exit(s,request);emitVehicleSeatClear(s);s.pos=new double[]{request.x,request.y,request.z};s.velocity=velocity;s.motion.reset();s.speed=Math.sqrt(velocity[0]*velocity[0]+velocity[1]*velocity[1]+velocity[2]*velocity[2]);s.ground=car.state.speed<1.5;s.posture.set(0,0);emitVehicle(car,VehicleWire.SNAPSHOT);clearVehicleAction(s);fpvPose(s);}
+                case VehicleWire.EXIT -> {
+                    car=vehicles.get(request.id);int seat=Vehicles.seat(car,s);if(seat<0)throw new Vehicles.Rejected(2);
+                    double[] feet=VehicleAction.exitFeet(car.state,request);
+                    double[] fallback=VehicleAction.fallbackExit(car.state,seat);
+                    if(Math.hypot(Math.hypot(feet[0]-fallback[0],feet[2]-fallback[2]),feet[1]-fallback[1])>4)feet=fallback;
+                    var playing=vehicleActions.get(s);
+                    if(playing!=null&&playing.state().flags==VehicleAction.EXIT){
+                        double[] end=VehicleAction.local(car.state,new double[]{feet[0],feet[1]+.82,feet[2]});
+                        playing.state().vx=(float)end[0];playing.state().vy=(float)end[1];playing.state().vz=(float)end[2];
+                        emitVehicleAction(s,vehicleActions.snapshot(playing,now));
+                    }
+                    vehicles.exit(car,s);
+                    releaseVehicleOccupant(s,car.state,seat,feet);
+                    emitVehicle(car,VehicleWire.SNAPSHOT);
+                }
                 case VehicleWire.ACTION -> {
                     if(Boolean.getBoolean("sz.vehicle.actions.audit"))System.out.println("Vehicle action request kind="+request.flags+" supported="+s.vehicleInteractions+" busy="+vehicleActions.busy(s,now)+" prior="+(vehicleActions.get(s)==null?0:vehicleActions.get(s).state().flags));
                     var drone=drones.owned(s);if(!s.vehicleInteractions||drone!=null&&drone.piloting()||request.flags==VehicleAction.ENTER)throw new Vehicles.Rejected(2);
                     car=vehicles.get(request.id);if(request.flags==0){if(Vehicles.seat(car,s)<0)throw new Vehicles.Rejected(2);emitVehicleAction(s,vehicleActions.cancelExit(s,now));}else emitVehicleAction(s,vehicleActions.begin(s,request,car,car==null?null:VehicleSeats.seat(car.state.model,Math.max(0,Vehicles.seat(car,s))),now));
                 }
-                case VehicleWire.REMOVE -> {car=vehicles.remove(s,request.id);emitVehicle(car,VehicleWire.DESPAWN);}
+                case VehicleWire.REMOVE -> {
+                    car=vehicles.remove(request.id);
+                    emitVehicle(car,VehicleWire.DESPAWN);
+                    for(Session owner:car.occupants()){
+                        int seat=Vehicles.seat(car,owner);
+                        releaseVehicleOccupant(owner,car.state,seat,VehicleAction.fallbackExit(car.state,seat));
+                    }
+                    for(var link:vehicleContacts.all())if(link.state().id.equals(car.state.id))detachVehicleContact(link.owner());
+                }
                 default -> throw new Vehicles.Rejected(2);
             }
         }catch(IllegalArgumentException error){VehicleWire denied=new VehicleWire();denied.op=VehicleWire.DENIED;denied.id=request==null?VehicleWire.ZERO:request.id;denied.sequence=error instanceof Vehicles.Rejected r?r.code:2;enqueueOrRetire(s,vehicleFrame(denied));}
+    }
+    private void releaseVehicleOccupant(Session owner,VehicleWire car,int seat,double[] feet){
+        if(owner.hp>0&&!owner.respawning&&owner.teleport==null){
+            owner.pos=feet;
+            owner.velocity=VehicleAction.exitVelocity(car,seat);
+            owner.motion.reset();
+            owner.speed=Math.hypot(Math.hypot(owner.velocity[0],owner.velocity[2]),owner.velocity[1]);
+            owner.ground=car.speed<1.5;
+        }
+        emitVehicleSeatClear(owner);
+        clearVehicleAction(owner);
     }
     private void vehicleImpact(Session driver,VehicleWire before,VehicleWire after,double seconds,long now){
         if(!VehicleImpacts.moving(before,after,seconds))return;
