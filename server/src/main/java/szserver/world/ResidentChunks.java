@@ -203,17 +203,37 @@ public final class ResidentChunks<C,S> {
     public void tick() {
         owner();Runnable completion;while((completion=completions.poll())!=null)completion.run();
         if(closed){publishMetrics();return;}
-        boolean idleDirty=entries.values().stream().anyMatch(e->!e.loading&&e.tickets==0&&e.dirty()&&clock.getAsLong()-e.lastUse>=idleInterval);
-        if(!unsafe&&saveFlight==null&&captureFlight==null&&dirty()&&clock.getAsLong()>=retryAt&&(stopping||clock.getAsLong()>=nextSave||idleDirty))save();
+        long now=clock.getAsLong();
+        if(!unsafe&&saveFlight==null&&captureFlight==null&&now>=retryAt){
+            boolean due=stopping||now>=nextSave;
+            if(due?dirty():hasIdleDirtyChunk(now))save();
+        }
         evict(true,0);
         if(stopping&&stopFlight!=null&&!closingStorage&&saveFlight==null&&captureFlight==null&&(unsafe||!dirty())&&entries.values().stream().noneMatch(e->e.loading||e.tickets>0)){
             closingStorage=true;io.execute(()->{Exception failure=null;try{storage.close();}catch(Exception error){failure=error;}Exception result=failure;completions.add(()->{closed=true;io.shutdown();if(result!=null)stopFlight.completeExceptionally(result);else if(unsafe)stopFlight.completeExceptionally(new IllegalStateException("resident_map_uncommitted_transaction:"+this.failure));else stopFlight.complete(null);});});
         }
         publishMetrics();
     }
+    private boolean hasIdleDirtyChunk(long now){
+        for(var entry:entries.values())
+            if(!entry.loading&&entry.tickets==0&&entry.dirty()&&now-entry.lastUse>=idleInterval)return true;
+        return false;
+    }
     /** Seal ingress/edits; continue owner ticks until saves and outstanding tickets drain. */
     public CompletableFuture<Void> shutdown() {owner();if(stopFlight!=null)return stopFlight.copy();stopping=true;var result=new CompletableFuture<Void>();stopFlight=result;tick();return result.copy();}
-    private void publishMetrics(){Map<String,Object> view=new LinkedHashMap<>();view.put("residentChunks",entries.size());view.put("residentBytes",bytes);view.put("byteLimit",byteLimit);view.put("chunkLimit",chunkLimit);view.put("tickets",entries.values().stream().mapToInt(e->e.tickets).sum());view.put("dirtyChunks",entries.values().stream().filter(e->!e.loading&&e.dirty()).count());view.put("loading",entries.values().stream().filter(e->e.loading).count());view.put("savePending",saveFlight!=null||captureFlight!=null);view.put("capturePending",captureFlight!=null);view.put("stateRevision",state.revision());view.put("savedStateRevision",savedStateRevision);view.put("stateDirty",state.revision()!=savedStateRevision);view.put("failure",failure);view.put("loads",loads);view.put("saves",saves);view.put("evictions",evictions);view.put("loadFailures",failedLoads);view.put("saveFailures",failedSaves);view.put("stopping",stopping);view.put("closed",closed);metrics=Collections.unmodifiableMap(view);}
+    private void publishMetrics(){
+        int tickets=0;long dirty=0,loading=0;
+        for(var entry:entries.values()){tickets+=entry.tickets;if(entry.loading)loading++;else if(entry.dirty())dirty++;}
+        Map<String,Object> view=new LinkedHashMap<>();
+        view.put("residentChunks",entries.size());view.put("residentBytes",bytes);view.put("byteLimit",byteLimit);
+        view.put("chunkLimit",chunkLimit);view.put("tickets",tickets);view.put("dirtyChunks",dirty);view.put("loading",loading);
+        view.put("savePending",saveFlight!=null||captureFlight!=null);view.put("capturePending",captureFlight!=null);
+        long revision=state.revision();
+        view.put("stateRevision",revision);view.put("savedStateRevision",savedStateRevision);view.put("stateDirty",revision!=savedStateRevision);
+        view.put("failure",failure);view.put("loads",loads);view.put("saves",saves);view.put("evictions",evictions);
+        view.put("loadFailures",failedLoads);view.put("saveFailures",failedSaves);view.put("stopping",stopping);view.put("closed",closed);
+        metrics=Collections.unmodifiableMap(view);
+    }
     public Map<String,Object> metrics(){return metrics;}
     public boolean healthy(){return !unsafe&&failure.isEmpty();}
     /** A native transaction failed after its rollback boundary. Preserve the last coherent disk root. */

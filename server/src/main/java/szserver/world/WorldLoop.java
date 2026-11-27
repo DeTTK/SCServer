@@ -4,6 +4,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.Function;
+import java.lang.management.ManagementFactory;
 
 /** Fixed simulation steps; owner jobs wake independently within a per-step budget. No catch-up burst. */
 public final class WorldLoop implements AutoCloseable {
@@ -88,14 +89,47 @@ public final class WorldLoop implements AutoCloseable {
             }catch(Throwable failure){shutdownFailure=failure;System.err.println("World owner service shutdown failed: "+failure);}
         }
     }
-    private void runTicks(){long deadline=System.nanoTime();final long interval=50_000_000;long workNanos=0,previousStep=0,previousPark=0;int workCount=0;
+    private void runTicks(){long deadline=System.nanoTime();final long interval=50_000_000;long workNanos=0,previousStep=0,previousPark=0,parkOvershoot=0;int workCount=0;
+        var threads=ManagementFactory.getThreadMXBean();
+        boolean measureCpu=threads.isCurrentThreadCpuTimeSupported()&&threads.isThreadCpuTimeEnabled();
         while(running){
             long begin=System.nanoTime();
             if(begin>=deadline){
                 long gap=previousStep==0?0:begin-previousStep,late=begin-deadline;previousStep=begin;maxGapNanos=Math.max(maxGapNanos,gap);maxLateNanos=Math.max(maxLateNanos,late);
-                try{Players current=players;Map<UUID,World.Vec> positions=begin-current.received()<2_000_000_000L?current.positions():Map.of();if(ownerService!=null){ownerService.tick(positions,begin);serviceMetrics=ownerService.metrics();serviceHealthy=ownerService.healthy();}world.players(positions);MinePlayers contacts=minePlayers;world.minePlayers(begin-contacts.received()<2_000_000_000L?contacts.values():Map.of());if(simulation)world.step();snapshot=world.snapshot();actorMetrics=world.actorMetrics();}catch(Throwable e){failures++;running=false;shutdownFailure=e;System.err.println("World simulation failed: "+e);e.printStackTrace(System.err);}
+                long cpuBegin=measureCpu?threads.getCurrentThreadCpuTime():-1;
+                long residentEnd,simulationEnd;
+                try{
+                    Players current=players;
+                    Map<UUID,World.Vec> positions=begin-current.received()<2_000_000_000L?current.positions():Map.of();
+                    if(ownerService!=null){ownerService.tick(positions,begin);serviceMetrics=ownerService.metrics();serviceHealthy=ownerService.healthy();}
+                    residentEnd=System.nanoTime();
+                    world.players(positions);
+                    MinePlayers contacts=minePlayers;
+                    world.minePlayers(begin-contacts.received()<2_000_000_000L?contacts.values():Map.of());
+                    if(simulation)world.step();
+                    simulationEnd=System.nanoTime();
+                    snapshot=world.snapshot();actorMetrics=world.actorMetrics();
+                }catch(Throwable e){failures++;running=false;shutdownFailure=e;System.err.println("World simulation failed: "+e);e.printStackTrace(System.err);return;}
                 long end=System.nanoTime(),physics=end-begin,owned=workNanos;int jobs=workCount;maxPhysicsNanos=Math.max(maxPhysicsNanos,physics);maxTickNanos=Math.max(maxTickNanos,workNanos+physics);maxOwnerWorkNanos=Math.max(maxOwnerWorkNanos,workNanos);maxOwnerTasksPerTick=Math.max(maxOwnerTasksPerTick,workCount);workNanos=0;workCount=0;deadline+=interval;
-                if(end>deadline){long missed=(end-deadline)/interval+1;skipped+=missed;deadline+=missed*interval;if(missedSteps.size()==8)missedSteps.removeFirst();missedSteps.addLast(Map.of("tick",snapshot.tick(),"skipped",missed,"gapMs",gap/1e6,"lateMs",late/1e6,"physicsMs",physics/1e6,"ownerMs",owned/1e6,"ownerTasks",jobs,"previousParkMs",previousPark/1e6,"queued",queue.size()));missedView=List.copyOf(missedSteps);}
+                if(end>deadline){
+                    long missed=(end-deadline)/interval+1;skipped+=missed;deadline+=missed*interval;
+                    long cpuEnd=cpuBegin>=0?threads.getCurrentThreadCpuTime():-1;
+                    var timing=new LinkedHashMap<String,Object>();
+                    timing.put("tick",snapshot.tick());timing.put("skipped",missed);
+                    timing.put("gapMs",gap/1e6);timing.put("lateMs",late/1e6);
+                    timing.put("physicsMs",physics/1e6);timing.put("ownerMs",owned/1e6);
+                    timing.put("ownerTasks",jobs);timing.put("previousParkMs",previousPark/1e6);
+                    timing.put("parkOvershootMs",parkOvershoot/1e6);
+                    timing.put("queued",queue.size());
+                    timing.put("residentMs",(residentEnd-begin)/1e6);
+                    timing.put("simulationMs",(simulationEnd-residentEnd)/1e6);
+                    timing.put("publishMs",(end-simulationEnd)/1e6);
+                    if(cpuBegin>=0&&cpuEnd>=cpuBegin)timing.put("cpuMs",(cpuEnd-cpuBegin)/1e6);
+                    if(simulation)timing.put("simulationPhases",world.stepTimings());
+                    if(ownerService instanceof ResidentMapRuntime resident)timing.put("residentPhases",resident.tickTimings());
+                    if(missedSteps.size()==8)missedSteps.removeFirst();missedSteps.addLast(Collections.unmodifiableMap(timing));missedView=List.copyOf(missedSteps);
+                }
+                previousPark=0;parkOvershoot=0;
                 continue;
             }
             // New RPCs may run while physics waits for its next fixed step. The budget
@@ -104,7 +138,7 @@ public final class WorldLoop implements AutoCloseable {
                 while(running&&workCount+count<64&&workNanos+System.nanoTime()-workBegin<5_000_000&&System.nanoTime()<deadline){Task<?> task=queue.poll();if(task==null)break;long taskBegin=System.nanoTime();execute(task);maxTaskNanos=Math.max(maxTaskNanos,System.nanoTime()-taskBegin);count++;}
                 if(count>0){workNanos+=System.nanoTime()-workBegin;workCount+=count;ownerTasks+=count;}
             }
-            long sleep=deadline-System.nanoTime();if(sleep>0){long parkBegin=System.nanoTime();LockSupport.parkNanos(sleep);previousPark=System.nanoTime()-parkBegin;maxParkNanos=Math.max(maxParkNanos,previousPark);}
+            long parkBegin=System.nanoTime(),sleep=deadline-parkBegin;if(sleep>0){LockSupport.parkNanos(sleep);previousPark=System.nanoTime()-parkBegin;parkOvershoot+=Math.max(0,previousPark-sleep);maxParkNanos=Math.max(maxParkNanos,previousPark);}
         }
         Task<?> task;while((task=queue.poll())!=null)task.future.completeExceptionally(new IllegalStateException("world_stopped"));
     }

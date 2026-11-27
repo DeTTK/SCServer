@@ -66,8 +66,11 @@ public final class ResidentMapRuntime implements WorldLoop.OwnerService {
             if(history==null)return ResidentBlockOperations.Commit.NONE;var command=change.command();String kind=change.changes().isEmpty()?"command":"block";var body=change.changes().isEmpty()?null:ResidentMapEvents.blocks(change);var reserved=history.prepare(change.actor(),command==null?UUID.randomUUID():command.operation(),kind,ResidentCommandEnvelope.wrap(body,command));return new ResidentBlockOperations.Commit(){public void committed(){reserved.commit();if(command!=null)command.committed(reserved.id());}public void close(){reserved.close();}};
         });
     }
+    private long chunkWork,subscriptionWork,readWork;
+    Map<String,Double> tickTimings(){return Map.of("chunkMs",chunkWork/1e6,"subscriptionMs",subscriptionWork/1e6,"readMs",readWork/1e6);}
     @Override public void tick(Map<UUID,World.Vec> players,long now){
-        owner();chunks.tick();if(!stopping){subscriptions.players(players);subscriptions.tick(now);
+        owner();long begin=System.nanoTime();chunks.tick();long chunkEnd=System.nanoTime(),subscriptionEnd=chunkEnd;
+        if(!stopping){subscriptions.players(players);subscriptions.tick(now);subscriptionEnd=System.nanoTime();
             for(int i=0;i<readAdmissions;i++){var key=reads.poll();if(key==null)break;chunks.acquire(key).whenComplete((ticket,error)->{try{reads.complete(key,error);}finally{if(ticket!=null)ticket.close();}});}
             if(history!=null&&history.pendingBytes()>=32L*1024*1024&&!Boolean.TRUE.equals(chunks.metrics().get("savePending")))chunks.save();
         }
@@ -76,6 +79,7 @@ public final class ResidentMapRuntime implements WorldLoop.OwnerService {
             if(mapShutdown==null){reads.stop();mapShutdown=chunks.shutdown();}
             if(mapShutdown.isDone())mapShutdown.whenComplete((ignored,error)->{if(error==null)shutdown.complete(null);else shutdown.completeExceptionally(error);});
         }
+        chunkWork=chunkEnd-begin;subscriptionWork=subscriptionEnd-chunkEnd;readWork=System.nanoTime()-subscriptionEnd;
     }
     private CompletableFuture<Void> mapShutdown;
     public CompletableFuture<ResidentBlockOperations.Receipt> edit(ResidentBlockOperations.Request request){owner();if(stopping||!fatal.isEmpty())return CompletableFuture.failedFuture(new IllegalStateException("resident_map_stopping_or_failed:"+fatal));if(request.command()!=null&&(history==null||!canonicalCommands))return CompletableFuture.failedFuture(new IllegalStateException("resident_history_not_configured"));return blocks.submit(request);}

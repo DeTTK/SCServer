@@ -569,11 +569,16 @@ public final class World implements BlockShapes.Voxels {
         if(direction==0)e.x-=stepped;else e.z-=stepped;
         return stepped;
     }
+    private long npcWork,grenadeWork,actorWork,mineWork;
+    Map<String,Double> stepTimings(){return Map.of("npcMs",npcWork/1e6,"grenadeMs",grenadeWork/1e6,"actorMs",actorWork/1e6,"mineMs",mineWork/1e6);}
     public void step(){
+        long begin=System.nanoTime();
         szserver.npc.NpcDirector.tick(this);
+        long npcEnd=System.nanoTime();
         tick++;stepBodies=dynamicBodies;planBudget=actorMaps==null?8:2;sceneRequestBudget=4;actorBudget=new ActorScene.Budget(16384);
         if(actorControllers!=null)actorControllers.worldTick();
         grenades.step();
+        long grenadeEnd=System.nanoTime();
         // Rotate planner eligibility so a large population cannot starve later entities.
         List<Entity> order=new ArrayList<>(entities.values());
         if(!order.isEmpty())Collections.rotate(order,-(int)(tick%order.size()));
@@ -651,6 +656,7 @@ public final class World implements BlockShapes.Voxels {
             catch(RuntimeException ex){simulationFailures++;if(actorControllers!=null&&e.controller!=null)controllerFrame(e,e.controller.frame());else e.vx=e.vy=e.vz=0;e.navigation="simulation_error";}
             finally{activeScene=null;activePose=ActorPose.STAND;}
         }
+        long actorEnd=System.nanoTime();
         if(actorControllers!=null)for(var player:minePlayers.values())if(player.alive()&&!player.invulnerable())try{
             actorControllers.contactMines(player,new HeldActorVoxels(actorBudget,()->{if(minePlayers.get(player.character())!=player)throw new ActorScene.Deferred();}){
                 public ActorMineTrigger prepareMine(ActorMineTrigger trigger,Vec position){return prepareMineBlast(trigger,null,position,this,actorBudget);}
@@ -662,6 +668,7 @@ public final class World implements BlockShapes.Voxels {
             // Presentation is transient; cooldown and resulting actor health are durable state.
             if(mineEffects.size()==512)mineEffects.removeFirst();mineEffects.addLast(trigger);
         }
+        npcWork=npcEnd-begin;grenadeWork=grenadeEnd-npcEnd;actorWork=actorEnd-grenadeEnd;mineWork=System.nanoTime()-actorEnd;
     }
     private void controller(Entity e){if(e.controller==null){e.controller=actorControllers.create(e.id,e.incarnation,new Vec(e.x,e.y,e.z));e.controller.bindWorldClock(tick);e.controller.health(e.health);controllerFrame(e,e.controller.frame());}}
     private static void controllerFrame(Entity e,ActorControllerEngine.Frame frame){

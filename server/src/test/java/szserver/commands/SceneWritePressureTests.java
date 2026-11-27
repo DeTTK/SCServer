@@ -17,6 +17,9 @@ public final class SceneWritePressureTests {
         gate.complete(7);CompletableFuture.allOf(results.toArray(CompletableFuture[]::new)).get(2,TimeUnit.SECONDS);
         for(var order:starts){check(order.size()==128,"all admitted requests survive burst");for(int n=0;n<128;n++)check(order.get(n)==n,"per-editor ordering preserved");}
         check(queue.drain(100)&&queue.metrics().get("pending").equals(0),"shutdown drains admitted writes");
+        var timing=queue.metrics();
+        check(timing.get("completedBatches").equals(1024L)&&(double)timing.get("maxQueueMs")>0
+                &&(double)timing.get("maxExecutionMs")>0,"queued and executing edits are timed separately");
         var bytes=new SceneWriteQueue<Integer>();var held=new CompletableFuture<Integer>();
         for(int editor=0;editor<8;editor++){
             UUID id=UUID.randomUUID();for(int n=0;n<16;n++)check(!bytes.submit(id,65500,()->held).isCompletedExceptionally(),"bounded large payload admitted");

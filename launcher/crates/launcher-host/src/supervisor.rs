@@ -1276,7 +1276,7 @@ impl Supervisor {
         let mut last_queued = std::time::Instant::now() - Duration::from_secs(30);
         let mut seen = std::collections::HashSet::<[u8; 32]>::new();
         let mut intervals = PerformanceSampler::default();
-        let mut prior_health: Option<(u32, u64, u64)> = None;
+        let mut prior_health: Option<(u32, u64, u64, u64)> = None;
         let mut recent = std::collections::VecDeque::<Value>::new();
         let mut active_group = String::new();
         let mut last_incident = std::time::Instant::now() - Duration::from_secs(30);
@@ -1308,19 +1308,22 @@ impl Supervisor {
             let server_metrics = server_metrics.map(|m| intervals.sample("server", m));
             let client_metrics = client_metrics.map(|m| intervals.sample("client", m));
             if let (Some(h), Some(s)) = (health.as_mut(), server.as_ref()) {
-                let tick = h["native"]["tick"].as_u64().unwrap_or(0);
+                let tick = h["native"]["ownerSteps"]
+                    .as_u64()
+                    .or_else(|| h["native"]["tick"].as_u64())
+                    .unwrap_or(0);
                 let skipped = h["world"]["skippedSlots"].as_u64().unwrap_or(0);
-                if let Some((pid, old_tick, old_skipped)) =
-                    prior_health.filter(|(pid, _, _)| *pid == s.pid)
+                let native_skipped = h["native"]["skippedSlots"].as_u64().unwrap_or(0);
+                if let Some((_, old_tick, old_skipped, old_native_skipped)) =
+                    prior_health.filter(|(pid, _, _, _)| *pid == s.pid)
                 {
-                    let _ = pid;
                     let ms = server_metrics
                         .as_ref()
                         .and_then(|m| m["window"]["sampleMs"].as_f64())
                         .filter(|ms| *ms > 0.0);
-                    h["window"] = json!({"nativeTicksDelta":tick.saturating_sub(old_tick),"nativeTps":ms.map(|ms|tick.saturating_sub(old_tick)as f64*1000.0/ms),"skippedSlotsDelta":skipped.saturating_sub(old_skipped)});
+                    h["window"] = json!({"nativeTicksDelta":tick.saturating_sub(old_tick),"nativeTps":ms.map(|ms|tick.saturating_sub(old_tick)as f64*1000.0/ms),"skippedSlotsDelta":skipped.saturating_sub(old_skipped),"nativeSkippedSlotsDelta":native_skipped.saturating_sub(old_native_skipped)});
                 }
-                prior_health = Some((s.pid, tick, skipped));
+                prior_health = Some((s.pid, tick, skipped, native_skipped));
             }
             let folder = server
                 .as_ref()
@@ -1366,10 +1369,9 @@ impl Supervisor {
             {
                 reasons.push("client-slow-frames");
             }
-            if sample["health"]["window"]["skippedSlotsDelta"]
-                .as_u64()
-                .unwrap_or(0)
-                > 0
+            if ["skippedSlotsDelta", "nativeSkippedSlotsDelta"]
+                .iter()
+                .any(|key| sample["health"]["window"][*key].as_u64().unwrap_or(0) > 0)
             {
                 reasons.push("server-missed-ticks");
             }
@@ -1680,11 +1682,14 @@ fn compact_health(health: Value) -> Value {
         &health["game"],
         &[
             "tick",
+            "ownerSteps",
+            "skippedSlots",
             "maxTickMs",
             "tickTiming",
             "datagrams",
             "reliableTransport",
             "nativeAdmin",
+            "giveTiming",
             "connectionMismatch",
             "rejected",
             "running",
@@ -1695,6 +1700,17 @@ fn compact_health(health: Value) -> Value {
             .as_array()
             .map(Vec::len)
             .unwrap_or(0)
+    );
+    let scene = &health["game"]["sceneConfiguration"];
+    native["sceneWrites"] = pick(scene, &["failed", "unplaced", "maxWriteMs"]);
+    native["sceneWrites"]["queue"] = pick(
+        &scene["access"]["writeQueue"],
+        &[
+            "pending",
+            "completedBatches",
+            "maxQueueMs",
+            "maxExecutionMs",
+        ],
     );
     let chunks = pick(
         &health["world"]["residentMap"]["chunks"],
@@ -1954,12 +1970,23 @@ mod log_stream_tests {
     }
     #[test]
     fn unhealthy_world_metrics_survive_compaction_without_large_payloads() {
-        let sample = compact_health(
-            json!({"healthy":false,"world":{"tick":42,"skippedSlots":8,"failures":1,"actorSimulation":{"huge":"ignored"}},"checkpoint":{"failures":1}}),
-        );
+        let sample = compact_health(json!({"healthy":false,
+                "world":{"tick":42,"skippedSlots":8,"failures":1,"actorSimulation":{"huge":"ignored"},"tickTiming":{"missedSteps":[{"residentPhases":{"chunkMs":61}}]}},
+                "game":{"tick":51,"ownerSteps":42,"skippedSlots":4,"giveTiming":{"recentSlow":[{"applyMs":62}]},"sceneConfiguration":{"access":{"writeQueue":{"maxQueueMs":123}}}},
+                "checkpoint":{"failures":1}}));
         assert_eq!(sample["world"]["failures"], 1);
         assert_eq!(sample["world"]["skippedSlots"], 8);
         assert!(sample["world"]["actorSimulation"].is_null());
+        assert_eq!(
+            sample["world"]["tickTiming"]["missedSteps"][0]["residentPhases"]["chunkMs"],
+            61
+        );
+        assert_eq!(sample["native"]["ownerSteps"], 42);
+        assert_eq!(
+            sample["native"]["giveTiming"]["recentSlow"][0]["applyMs"],
+            62
+        );
+        assert_eq!(sample["native"]["sceneWrites"]["queue"]["maxQueueMs"], 123);
     }
 }
 
