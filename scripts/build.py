@@ -173,7 +173,7 @@ def tests():
     results.append('72 full HTTP/gateway/world cycles, Unicode identities, concurrent protocols and cold one-shot recovery')
     with tempfile.TemporaryDirectory(prefix='alliances-',dir=scratch) as directory:
         subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.net.AllianceStateTests',directory],check=True)
-    for case in ['PortalInteractionTests','PortalLookupTests','SceneInteractionTests','CloneDonorTests','CorpseHeadingPortableTests','commands.SceneWritePressureTests']:
+    for case in ['PortalInteractionTests','PortalLookupTests','SceneInteractionTests','CloneDonorTests','CorpseHeadingPortableTests','ProneAnimationTests','commands.SceneWritePressureTests']:
         subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.'+case],check=True)
     subprocess.run([tool('java'),'-ea','-Xmx128m','-cp',cp,'szserver.client.SceneLightMigrationTests'],check=True)
     results.append('aimed portal UUID/lifecycle, native object states and locks, state-specific door collision, clone donor ID lifetime, editor read/write ordering')

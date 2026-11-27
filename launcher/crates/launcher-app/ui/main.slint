@@ -52,6 +52,9 @@ export component AppWindow inherits Window {
     private property <bool> directory-visible: root.page == "home" && root.server-tab == "public" && !root.setup-visible && root.dialog == "";
     changed directory-visible => { root.open-directory(root.directory-visible); }
     callback open-directory(bool);
+    private property <bool> server-panel-visible: root.page == "server" && !root.setup-visible;
+    changed server-panel-visible => { root.watch-server-panel(root.server-panel-visible); }
+    callback watch-server-panel(bool);
     callback edit-server-icon(bool);
     in property <string> server-uptime;
     in property <string> server-memory;

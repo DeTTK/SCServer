@@ -1021,6 +1021,15 @@ pub fn bind(ui: &AppWindow, layout: Layout) -> Binding {
     });
     let poll_ui = ui.as_weak();
     let poll_alive = alive.clone();
+    let panel_visible = Arc::new(AtomicBool::new(false));
+    let (poll_wake, poll_signal) = mpsc::sync_channel(1);
+    ui.on_watch_server_panel({
+        let panel_visible = panel_visible.clone();
+        move |visible| {
+            panel_visible.store(visible, Ordering::Relaxed);
+            let _ = poll_wake.try_send(());
+        }
+    });
     let probe_layout = layout.clone();
     let probe_ui = ui.as_weak();
     let probe_alive = alive.clone();
@@ -1074,7 +1083,7 @@ pub fn bind(ui: &AppWindow, layout: Layout) -> Binding {
         let mut previous = String::new();
         let mut updating = false;
         while poll_alive.load(Ordering::Relaxed) {
-            std::thread::sleep(if updating {
+            let _ = poll_signal.recv_timeout(if updating {
                 Duration::from_millis(400)
             } else {
                 Duration::from_secs(3)
@@ -1103,11 +1112,16 @@ pub fn bind(ui: &AppWindow, layout: Layout) -> Binding {
             }
             let changed = view.detail != previous;
             previous = view.detail.clone();
-            let metrics = if matches!(view.state.as_str(), "Ready" | "Starting") {
-                host.call("metrics", &BTreeMap::new()).ok()
-            } else {
-                None
-            };
+            let panel = panel_visible.load(Ordering::Relaxed).then(|| {
+                if matches!(view.state.as_str(), "Ready" | "Starting") {
+                    host.call("server-summary", &BTreeMap::new())
+                        .ok()
+                        .and_then(|value| serde_json::from_value(value).ok())
+                        .unwrap_or_default()
+                } else {
+                    bscp_launcher_host::supervisor::ServerSummary::default()
+                }
+            });
             let s = layout.load().unwrap_or_default();
             let addresses = bscp_launcher_host::network::local_addresses();
             let address = format!(
@@ -1129,32 +1143,11 @@ pub fn bind(ui: &AppWindow, layout: Layout) -> Binding {
                 ui.set_relay_invite(view.relay_invite.into());
                 ui.set_relay_status(view.relay_status.into());
                 ui.set_directory_status(view.directory_status.into());
-                ui.set_server_uptime("Нет данных".into());
-                ui.set_server_memory("Нет данных".into());
                 if changed && !ui.get_busy() && ui.get_configured() {
                     ui.set_status(view.detail.into());
                 }
-                if let Some(metrics) = metrics {
-                    let health = &metrics["health"];
-                    let players = health["game"]["players"].as_array();
-                    ui.set_players_known(players.is_some());
-                    ui.set_players(rows(
-                        players
-                            .into_iter()
-                            .flatten()
-                            .filter_map(|p| p["name"].as_str().map(SharedString::from))
-                            .collect(),
-                    ));
-                    let (uptime, memory) = metric_values(&metrics);
-                    if let Some(ms) = uptime {
-                        ui.set_server_uptime(format!("{} мин", ms / 60000).into());
-                    }
-                    if let Some(mem) = memory {
-                        ui.set_server_memory(format!("{} МБ", mem / 1048576).into());
-                    }
-                } else {
-                    ui.set_players(rows(Vec::<SharedString>::new()));
-                    ui.set_players_known(false);
+                if let Some(panel) = panel {
+                    apply_server_summary(&ui, panel);
                 }
             });
         }
@@ -1701,8 +1694,8 @@ fn execute(
                 Ok("Мир сохранён, сервер остановлен".into())
             }
             "refresh" => {
-                let metrics = call(layout, "metrics", BTreeMap::new())?;
-                update_metrics(ui, Some(metrics));
+                let panel = serde_json::from_value(call(layout, "server-summary", BTreeMap::new())?)?;
+                let _ = ui.upgrade_in_event_loop(move |ui| apply_server_summary(&ui, panel));
                 Ok("Показатели обновлены".into())
             }
             _ => bail!("Неизвестная команда сервера"),
@@ -1901,55 +1894,65 @@ fn connection_nickname(favorites: &[ServerEntry], address: &str, fallback: &str)
     }
     Ok(nickname.into())
 }
-fn update_metrics(ui: &slint::Weak<AppWindow>, metrics: Option<serde_json::Value>) {
-    let _ = ui.upgrade_in_event_loop(move |ui| {
-        ui.set_server_uptime("Нет данных".into());
-        ui.set_server_memory("Нет данных".into());
-        ui.set_players_known(false);
-        ui.set_players(rows(Vec::<SharedString>::new()));
-        if let Some(metrics) = metrics {
-            let health = &metrics["health"];
-            let players = health["game"]["players"].as_array();
-            ui.set_players_known(players.is_some());
-            ui.set_players(rows(
-                players
-                    .into_iter()
-                    .flatten()
-                    .filter_map(|p| p["name"].as_str().map(SharedString::from))
-                    .collect(),
-            ));
-            let (uptime, memory) = metric_values(&metrics);
-            if let Some(ms) = uptime {
-                ui.set_server_uptime(format!("{} мин", ms / 60000).into());
-            }
-            if let Some(mem) = memory {
-                ui.set_server_memory(format!("{} МБ", mem / 1048576).into());
-            }
-        }
-    });
+fn players_match(model: &ModelRc<SharedString>, names: &[String]) -> bool {
+    model.row_count() == names.len()
+        && model.iter().zip(names).all(|(row, name)| row.as_str() == name)
 }
 
-fn metric_values(metrics: &serde_json::Value) -> (Option<u64>, Option<u64>) {
-    (
-        metrics["server"]["uptimeMs"]
-            .as_u64()
-            .or_else(|| metrics["health"]["uptimeMs"].as_u64()),
-        metrics["server"]["heapUsed"]
-            .as_u64()
-            .or_else(|| metrics["health"]["jvm"]["heapUsed"].as_u64()),
-    )
+fn apply_server_summary(ui: &AppWindow, summary: bscp_launcher_host::supervisor::ServerSummary) {
+    ui.set_players_known(summary.players.is_some());
+    let names = summary.players.unwrap_or_default();
+    let model = ui.get_players();
+    if !players_match(&model, &names) {
+        let next: Vec<_> = names.into_iter().map(SharedString::from).collect();
+        if let Some(existing) = model.as_any().downcast_ref::<VecModel<SharedString>>() {
+            existing.set_vec(next);
+        } else {
+            ui.set_players(rows(next));
+        }
+    }
+    ui.set_server_uptime(summary.uptime_ms.map_or_else(
+        || "Нет данных".into(),
+        |ms| format!("{} мин", ms / 60_000).into(),
+    ));
+    ui.set_server_memory(summary.heap_used.map_or_else(
+        || "Нет данных".into(),
+        |bytes| format!("{} МБ", bytes / 1_048_576).into(),
+    ));
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     #[test]
-    fn bridge_metrics_are_used_and_missing_metrics_stay_unknown() {
-        assert_eq!(
-            metric_values(&serde_json::json!({"server":{"uptimeMs":120000,"heapUsed":2097152}})),
-            (Some(120000), Some(2097152))
-        );
-        assert_eq!(metric_values(&serde_json::Value::Null), (None, None));
+    fn unchanged_player_rows_keep_the_existing_model() {
+        use bscp_launcher_host::supervisor::ServerSummary;
+        use slint::platform::{Platform, WindowAdapter, software_renderer::{MinimalSoftwareWindow, RepaintBufferType}};
+        struct TestPlatform(Rc<MinimalSoftwareWindow>);
+        impl Platform for TestPlatform {
+            fn create_window_adapter(&self) -> Result<Rc<dyn WindowAdapter>, slint::PlatformError> {
+                Ok(self.0.clone())
+            }
+        }
+        let window = MinimalSoftwareWindow::new(RepaintBufferType::NewBuffer);
+        slint::platform::set_platform(Box::new(TestPlatform(window))).unwrap();
+        let ui = AppWindow::new().unwrap();
+        let summary = || ServerSummary {
+            players: Some(vec!["Один".into(), "Два".into()]),
+            ..Default::default()
+        };
+        apply_server_summary(&ui, summary());
+        let model = ui.get_players();
+        for _ in 0..5_000 {
+            apply_server_summary(&ui, summary());
+            assert!(ui.get_players() == model);
+        }
+        apply_server_summary(&ui, ServerSummary { players: Some(Vec::new()), ..Default::default() });
+        assert_eq!(ui.get_players().row_count(), 0);
+        assert!(ui.get_players_known());
+        assert!(ui.get_players() == model);
+        apply_server_summary(&ui, ServerSummary::default());
+        assert!(!ui.get_players_known());
     }
     fn temporary() -> PathBuf {
         let p =

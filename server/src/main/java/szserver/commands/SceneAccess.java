@@ -18,11 +18,28 @@ public final class SceneAccess implements AutoCloseable {
     public SceneAccess(WorldLoop world,CommandService commands){this.world=world;this.commands=commands;}
     private CompletableFuture<JsonObject> submit(JsonObject request){var runtime=world.residentMap();return runtime==null?commands.submit(request):commands.submitResidentScenes(request,runtime,new UUID(0,0));}
     private World.SceneLocation locate(UUID id,List<Long> chunks)throws Exception{
-        if(chunks.isEmpty()||chunks.size()>289)throw new IllegalArgumentException("scene_configuration_visible_chunks");List<Long> scope=List.copyOf(new LinkedHashSet<>(chunks));long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(5);
-        while(true){long remaining=deadline-System.nanoTime();if(remaining<=0)throw new IllegalArgumentException("scene_configuration_load_timeout");World.SceneLookup result=world.submit(w->w.findScene(id,scope)).get(remaining,TimeUnit.NANOSECONDS);if(result.location()!=null)return result.location();if(!result.pending())throw new IllegalArgumentException("scene_object_not_found");Thread.sleep(10);}
+        var location=locateEdit(id,chunks);
+        if(location==null)throw new IllegalArgumentException("scene_object_not_found");
+        return location;
     }
     private World.SceneLocation locateEdit(UUID id,List<Long> chunks)throws Exception{
-        if(chunks.isEmpty()||chunks.size()>289)throw new IllegalArgumentException("scene_configuration_visible_chunks");List<Long> scope=List.copyOf(new LinkedHashSet<>(chunks));long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(5);while(true){long remaining=deadline-System.nanoTime();if(remaining<=0)throw new IllegalArgumentException("scene_configuration_load_timeout");World.SceneEditLookup found=world.submit(w->w.findSceneEdits(Set.of(id),Set.of(),scope)).get(remaining,TimeUnit.NANOSECONDS);World.SceneLocation object=found.objects().get(id);if(object!=null){if(object.entry()==null)throw new IllegalArgumentException("scene_object_not_found");return object;}if(!found.pending())return null;Thread.sleep(10);}
+        if(chunks.size()>289)throw new IllegalArgumentException("scene_configuration_visible_chunks");
+        var unexamined=new LinkedHashSet<>(chunks);
+        long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(5);
+        while(true){
+            long remaining=deadline-System.nanoTime();
+            if(remaining<=0)throw new IllegalArgumentException("scene_configuration_load_timeout");
+            var scope=List.copyOf(unexamined);
+            var found=world.submit(w->w.findSceneEdits(Set.of(id),Set.of(),scope)).get(remaining,TimeUnit.NANOSECONDS);
+            var object=found.objects().get(id);
+            if(object!=null){
+                if(object.entry()==null)throw new IllegalArgumentException("scene_object_not_found");
+                return object;
+            }
+            if(!found.pending())return null;
+            unexamined.removeAll(found.examined());
+            Thread.sleep(10);
+        }
     }
     public CompletableFuture<byte[]> queuedConfiguration(UUID writer,SceneConfigurationPackets.Request request,List<Long> chunks){List<Long> scope=List.copyOf(chunks);return writeQueue.barrier(writer).thenCompose(ignored->configuration(request,scope));}
     public CompletableFuture<byte[]> configuration(SceneConfigurationPackets.Request request,List<Long> chunks){

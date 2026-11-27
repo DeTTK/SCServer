@@ -6,6 +6,7 @@ use bscp_launcher_host::directory::{
 };
 use slint::{ComponentHandle, Image, Model, ModelRc, Rgba8Pixel, SharedPixelBuffer, VecModel};
 use std::{
+    collections::HashMap,
     path::Path,
     rc::Rc,
     sync::{
@@ -80,11 +81,19 @@ pub fn bind(ui: &AppWindow, layout: Layout, alive: Arc<AtomicBool>) {
     });
     let ui = ui.as_weak();
     std::thread::spawn(move || {
-        let Ok(mut browser) = Browser::new() else {
-            return;
-        };
         let logger = RotatingLog::new(layout.at("logs"), "public-directory");
+        let mut browser = match Browser::new() {
+            Ok(browser) => browser,
+            Err(error) => {
+                let _ = logger.line(&format!("Catalog browser initialization failed: {error:#}"));
+                let _ = ui.upgrade_in_event_loop(|ui| {
+                    ui.set_directory_message("Каталог временно недоступен".into())
+                });
+                return;
+            }
+        };
         let mut last_success = None::<Instant>;
+        let mut probe_times = HashMap::<String, Instant>::new();
         while alive.load(Ordering::Relaxed) {
             if !visible.load(Ordering::Relaxed) {
                 let _ = change.recv_timeout(Duration::from_secs(1));
@@ -102,27 +111,61 @@ pub fn bind(ui: &AppWindow, layout: Layout, alive: Arc<AtomicBool>) {
                     let display = servers.clone();
                     let _ = ui.upgrade_in_event_loop(move |ui| {
                         ui.set_directory_message("".into());
+                        let existing: HashMap<_, _> = ui
+                            .get_public_servers()
+                            .iter()
+                            .map(|row| (row.address.to_string(), (row.ping, row.online)))
+                            .collect();
                         ui.set_public_servers(ModelRc::from(Rc::new(VecModel::from(
-                            display.into_iter().map(server_row).collect::<Vec<_>>(),
+                            display
+                                .into_iter()
+                                .map(|server| {
+                                    let mut row = server_row(server);
+                                    if let Some((ping, online)) = existing.get(row.address.as_str())
+                                    {
+                                        row.ping = ping.clone();
+                                        row.online = *online;
+                                    }
+                                    row
+                                })
+                                .collect::<Vec<_>>(),
                         ))));
                     });
-                    browser.measure(&servers, |index, delay| {
-                        let address = servers[index].invite.clone();
-                        let _ = ui.upgrade_in_event_loop(move |ui| {
+                    probe_times.retain(|address, _| {
+                        servers.iter().any(|server| &server.invite == address)
+                    });
+                    let now = Instant::now();
+                    let probes: Vec<_> = servers
+                        .into_iter()
+                        .filter(|server| {
+                            if probe_times.get(&server.invite).is_some_and(|last| {
+                                now.duration_since(*last) < Duration::from_secs(15)
+                            }) {
+                                return false;
+                            }
+                            probe_times.insert(server.invite.clone(), now);
+                            true
+                        })
+                        .collect();
+                    let ping_ui = ui.clone();
+                    browser.measure(&probes, move |address, delay| {
+                        let _ = ping_ui.upgrade_in_event_loop(move |ui| {
                             let model = ui.get_public_servers();
-                            if let Some(mut row) = model.row_data(index) {
-                                if row.address.as_str() == address {
-                                    row.ping = delay.map_or_else(
-                                        || "Нет ответа".into(),
-                                        |ms| format!("{ms} мс").into(),
-                                    );
-                                    row.online = delay.is_some();
-                                    model.set_row_data(index, row);
-                                }
+                            if let Some((index, mut row)) = model
+                                .iter()
+                                .enumerate()
+                                .find(|(_, row)| row.address.as_str() == address)
+                            {
+                                row.ping = delay.map_or_else(
+                                    || "Нет ответа".into(),
+                                    |ms| format!("{ms} мс").into(),
+                                );
+                                row.online = delay.is_some();
+                                model.set_row_data(index, row);
                             }
                         });
                     });
-                    Duration::from_secs(20)
+                    Duration::from_secs(5)
                 }
                 Err(error) => {
                     let _ = logger.line(&redact(&format!("List refresh failed: {error:#}")));
@@ -138,7 +181,7 @@ pub fn bind(ui: &AppWindow, layout: Layout, alive: Arc<AtomicBool>) {
                             ui.set_directory_message("Каталог временно недоступен".into());
                         }
                     });
-                    Duration::from_secs(5)
+                    Duration::from_secs(2)
                 }
             };
             let _ = change.recv_timeout(delay);

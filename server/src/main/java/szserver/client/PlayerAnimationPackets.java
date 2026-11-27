@@ -35,7 +35,19 @@ public final class PlayerAnimationPackets {
     public record Transition(double x,double y,double z,float phase,double a,double b,float p,float q,float r,boolean active,int previous) {
         public Transition { finite(x,y,z,phase,a,b,p,q,r);if(previous<0||previous>12)throw new IllegalArgumentException("animation_climb_locomotion"); }
     }
-    public record Pose(float yaw,float pitch,float prone) { public Pose { finite(yaw,pitch,prone); } }
+    public record ProneMotion(boolean reversed,float inputHeading,float direction,double horizontalSpeed,double spatialSpeed) {
+        public ProneMotion { finite(inputHeading,direction,horizontalSpeed,spatialSpeed); }
+        public ProneMotion scaled(float scale){return scale==1?this:new ProneMotion(reversed,inputHeading,direction,horizontalSpeed/scale,spatialSpeed/scale);}
+    }
+    public record Pose(float yaw,float pitch,float prone,ProneMotion crawl) {
+        public Pose(float yaw,float pitch,float prone){this(yaw,pitch,prone,null);}
+        public Pose { finite(yaw,pitch,prone); }
+        public Pose scaled(float scale){return crawl==null||scale==1?this:new Pose(yaw,pitch,prone,crawl.scaled(scale));}
+        public Pose retainCrawlDirection(Pose previous){
+            if(crawl==null||crawl.horizontalSpeed>1e-5||previous==null||previous.crawl==null||previous.crawl.direction==crawl.direction)return this;
+            return new Pose(yaw,pitch,prone,new ProneMotion(crawl.reversed,crawl.inputHeading,previous.crawl.direction,crawl.horizontalSpeed,crawl.spatialSpeed));
+        }
+    }
     public record Motion(float heading,Integer jump,Integer boosted,Edge edge,Transition transition,boolean snapshot,Pose pose) {
         public Motion(float heading,Integer jump,Integer boosted,Edge edge,Transition transition,boolean snapshot){this(heading,jump,boosted,edge,transition,snapshot,null);}
         public Motion { finite(heading); }
@@ -73,8 +85,8 @@ public final class PlayerAnimationPackets {
         }
     }
     /** Installed 1943200621.switch layout, including variable history and nullable geometry.
-     * x/w are the native body yaw and terrain pitch; goto is native pose facing. Never
-     * substitute the outer camera yaw for body yaw. Cable states retain legacy fallback.
+     * x/w are the native body yaw and terrain pitch; goto is the traversal rotation.
+     * Cable states retain their separate native animation payload.
      */
     public static Pose pose(byte[] raw) {
         if(raw.length<211)return null;
@@ -87,11 +99,22 @@ public final class PlayerAnimationPackets {
             nullable(b,24);skip(b,4);int text=b.getShort()&65535;skip(b,text);
             skip(b,1+8+16+4+16);
             if(b.get()==0)return null; // cable has a separate native animation payload
-            skip(b,16);array(b,48,64);skip(b,2);
+            skip(b,16);array(b,48,64);boolean reversed=b.get()!=0;skip(b,1);
             float yaw=b.getFloat(),pitch=b.getFloat();skip(b,1+8+1+20);nullable(b,24);
             if(b.hasRemaining())return null;
-            return new Pose(yaw,pitch,prone);
+            return new Pose(yaw,pitch,prone,proneMotion(b,reversed));
         } catch(BufferUnderflowException|IndexOutOfBoundsException|IllegalArgumentException ignored){return null;}
+    }
+    private static ProneMotion proneMotion(ByteBuffer snapshot,boolean reversed){
+        if(snapshot.getInt(154)!=7&&snapshot.getInt(158)!=7)return null;
+        // Same per-step displacement and look-relative direction as the native local graph.
+        double dx=snapshot.getDouble(24)-snapshot.getDouble(0),dy=snapshot.getDouble(32)-snapshot.getDouble(8),dz=snapshot.getDouble(40)-snapshot.getDouble(16);
+        float step=snapshot.getFloat(178),view=snapshot.getFloat(104),heading=snapshot.getFloat(190);
+        if(!Float.isFinite(step)||step<=0||!Float.isFinite(view)||!Float.isFinite(heading)||!Double.isFinite(dx)||!Double.isFinite(dy)||!Double.isFinite(dz))return null;
+        double horizontal=Math.hypot(dx,dz)/step,spatial=Math.hypot(Math.hypot(dx,dz),dy)/step;
+        if(!Double.isFinite(horizontal)||!Double.isFinite(spatial))return null;
+        float direction=horizontal<=1e-5?0:-(float)Math.IEEEremainder(Math.toDegrees(Math.atan2(dz,dx))-view-90,360);
+        return new ProneMotion(reversed,-heading,direction,horizontal,spatial);
     }
     private static void skip(ByteBuffer b,int bytes){if(bytes<0||bytes>b.remaining())throw new IllegalArgumentException("animation_snapshot_bounds");b.position(b.position()+bytes);}
     private static void nullable(ByteBuffer b,int bytes){int flag=b.get()&255;if(flag>1)throw new IllegalArgumentException("animation_snapshot_nullable");if(flag==0)skip(b,bytes);}
@@ -101,16 +124,26 @@ public final class PlayerAnimationPackets {
     private static int nativeAngle(float value){return (int)Math.min((value+180f)/360f*255f,255f);}
     private static int angle(double value){double n=(value+180)%360;if(n<0)n+=360;return (int)(n/360*255);}
     private static int rounded(double value){double f=Math.floor(value),fraction=value-f;return (int)(fraction<.5?f:fraction>.5?f+1:(((long)f&1)==0?f:f+1));}
-    private static final int COMPONENT_MASK=63|(1<<6)|(1<<7)|(1<<8)|(1<<9)|(1<<11)|(1<<12)|(1<<13)|(1<<15)|(1<<16)|(1<<17)|(1<<18)|(1<<23)|(1<<24)|(1<<25)|(1<<27)|(1<<28)|(1<<29);
+    private static final int LEGACY_COMPONENT_MASK=63|(1<<6)|(1<<7)|(1<<8)|(1<<9)|(1<<11)|(1<<12)|(1<<13)|(1<<15)|(1<<16)|(1<<17)|(1<<18)|(1<<23)|(1<<24)|(1<<25)|(1<<27)|(1<<28)|(1<<29);
+    private static final int COMPONENT_MASK=LEGACY_COMPONENT_MASK|(1<<10);
     /** Compose the actor/world angle with the relative body rotation sent to the native graph. */
     public static float bodyHeading(byte[] component,float fallback){
         if(component==null||component.length<16)return fallback;
-        try{ByteBuffer input=ByteBuffer.wrap(component);if(input.get()!=1||Wire.varint(input)!=COMPONENT_MASK||input.remaining()<11)return fallback;input.position(input.position()+10);return fallback+(input.get()&255)/255f*360f-180f;}catch(java.io.IOException|RuntimeException invalid){return fallback;}
+        try{ByteBuffer input=ByteBuffer.wrap(component);if(input.get()!=1)return fallback;int mask=Wire.varint(input);if(mask!=COMPONENT_MASK&&mask!=LEGACY_COMPONENT_MASK)return fallback;input.position(input.position()+Integer.bitCount(mask&((1<<11)-1)));return fallback+(input.get()&255)/255f*360f-180f;}catch(java.io.IOException|RuntimeException invalid){return fallback;}
     }
     public static byte[] component(State s) {
         // Always carry nullable clears: a viewer may have last seen a ledge before teleport/holster.
-        int mask=COMPONENT_MASK;
-        return Wire.bytes(o->{o.writeByte(1);Wire.varint(o,mask);o.writeByte(s.locomotion);o.writeByte(s.previous);o.writeByte(s.mode);o.writeByte((int)Math.min(255,s.speed/12*255));o.writeByte(127);o.writeByte(angle(s.direction));o.writeByte(127);o.writeByte(s.jump);o.writeByte(s.boosted);o.writeBoolean(s.ground);o.writeByte(s.pose==null?angle(s.yaw):nativeAngle(s.pose.yaw));o.writeByte(s.pose==null?127:nativeAngle(s.pose.pitch));o.writeBoolean(s.aiming);o.writeByte(s.reload);o.writeByte(Math.max(0,Math.min(255,rounded(s.duration/5.0*255))));o.writeByte(s.swing);o.writeByte(s.strike);o.writeByte(127);o.writeByte(s.pose==null?127:nativeAngle(s.pose.prone));
+        ProneMotion crawl=s.pose==null||s.locomotion!=7&&s.previous!=7?null:s.pose.crawl;
+        return Wire.bytes(o->{
+            o.writeByte(1);Wire.varint(o,COMPONENT_MASK);
+            o.writeByte(s.locomotion);o.writeByte(crawl==null?s.previous:s.locomotion);o.writeByte(s.mode);
+            o.writeByte((int)Math.min(255,(crawl==null?s.speed:crawl.horizontalSpeed)/12*255));o.writeByte(127);
+            o.writeByte(angle(crawl==null?s.direction:crawl.direction));o.writeByte(crawl==null?127:angle(crawl.inputHeading));
+            o.writeByte(s.jump);o.writeByte(s.boosted);o.writeBoolean(s.ground);o.writeBoolean(crawl!=null&&crawl.reversed);
+            o.writeByte(s.pose==null?angle(s.yaw):crawl==null?nativeAngle(s.pose.yaw):angle(s.pose.yaw));o.writeByte(s.pose==null?127:nativeAngle(s.pose.pitch));
+            o.writeBoolean(s.aiming);o.writeByte(s.reload);o.writeByte(Math.max(0,Math.min(255,rounded(s.duration/5.0*255))));o.writeByte(s.swing);o.writeByte(s.strike);
+            // The existing bit 23 is spatial speed; bit 22 belongs to the nested weapon payload.
+            o.writeByte(crawl==null?127:(int)Math.min(255,crawl.spatialSpeed/2*255));o.writeByte(s.pose==null?127:nativeAngle(s.pose.prone));
             o.writeByte((int)Math.min(255,((s.cable==null?0:s.cable.angle())+180f)/360f*255f));
             o.writeBoolean(true);o.writeBoolean(s.edge==null);if(s.edge!=null){Edge e=s.edge;o.writeDouble(e.x1);o.writeDouble(e.y1);o.writeDouble(e.z1);o.writeDouble(e.x2);o.writeDouble(e.y2);o.writeDouble(e.z2);o.writeFloat(e.phase);}else o.writeFloat(0);
             o.writeBoolean(s.transition!=null);if(s.transition!=null){Transition t=s.transition;o.writeDouble(t.x);o.writeDouble(t.y);o.writeDouble(t.z);o.writeFloat(t.phase);o.writeDouble(t.a);o.writeDouble(t.b);o.writeFloat(t.p);o.writeFloat(t.q);o.writeFloat(t.r);o.writeBoolean(t.active);o.writeByte(t.previous);}

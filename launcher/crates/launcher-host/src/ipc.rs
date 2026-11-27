@@ -40,15 +40,41 @@ impl HostClient {
         let root = self.root.clone();
         let command = command.to_owned();
         let args = args.clone();
-        let deadline = if matches!(command.as_str(), "status" | "metrics" | "probe") {
+        let deadline = if matches!(command.as_str(), "status" | "metrics" | "probe" | "server-summary") {
             5
         } else {
             1800
         };
-        std::thread::spawn(move||tokio::runtime::Builder::new_current_thread().enable_all().build()?.block_on(async move {
- #[cfg(windows)] {let mut p=tokio::net::windows::named_pipe::ClientOptions::new().open(pipe_name(&root))?;verify_server_user(&p)?;let mut bytes=serde_json::to_vec(&json!({"ProtocolVersion":1,"RequestId":uuid::Uuid::new_v4().simple().to_string(),"Command":command,"Arguments":args}))?;bytes.push(b'\n');p.write_all(&bytes).await?;let raw=tokio::time::timeout(Duration::from_secs(deadline),line(&mut p)).await??;let v:Value=serde_json::from_slice(&raw)?;if v["Ok"]!=true {let code=v["Code"].as_str().unwrap_or("OPERATION_FAILED");let error=v["Error"].as_str().unwrap_or("Supervisor rejected the operation");if error.split(':').next()==Some(code){bail!("{error}")}bail!("{code}: {error}")} Ok(v["Data"].clone())}
- #[cfg(not(windows))] {let _=(root,command,args);bail!("Windows named pipes required")}
- })).join().map_err(|_|anyhow::anyhow!("IPC worker panicked"))?
+        std::thread::spawn(move || tokio::runtime::Builder::new_current_thread().enable_all().build()?.block_on(async move {
+            #[cfg(windows)] {
+                use tokio::net::windows::named_pipe::ClientOptions;
+                let name = pipe_name(&root);
+                let started = tokio::time::Instant::now();
+                let mut pipe = loop {
+                    match ClientOptions::new().open(&name) {
+                        Ok(pipe) => break pipe,
+                        Err(e) if e.raw_os_error() == Some(231) && started.elapsed() < Duration::from_millis(300) => {
+                            tokio::time::sleep(Duration::from_millis(20)).await;
+                        }
+                        Err(e) => return Err(e).with_context(|| format!("IPC_OPEN: связь со службой для {}", root.display())),
+                    }
+                };
+                verify_server_user(&pipe).context("IPC_VERIFY: проверка владельца службы")?;
+                let mut bytes = serde_json::to_vec(&json!({"ProtocolVersion":1,"RequestId":uuid::Uuid::new_v4().simple().to_string(),"Command":command,"Arguments":args}))?;
+                bytes.push(b'\n');
+                pipe.write_all(&bytes).await?;
+                let raw = tokio::time::timeout(Duration::from_secs(deadline), line(&mut pipe)).await??;
+                let response: Value = serde_json::from_slice(&raw)?;
+                if response["Ok"] != true {
+                    let code = response["Code"].as_str().unwrap_or("OPERATION_FAILED");
+                    let error = response["Error"].as_str().unwrap_or("Supervisor rejected the operation");
+                    if error.split(':').next() == Some(code) { bail!("{error}"); }
+                    bail!("{code}: {error}");
+                }
+                Ok(response["Data"].clone())
+            }
+            #[cfg(not(windows))] {let _=(root,command,args,deadline);bail!("Windows named pipes required")}
+        })).join().map_err(|_|anyhow::anyhow!("IPC worker panicked"))?
     }
     pub fn status(&self) -> Result<bscp_launcher_core::ProcessView> {
         Ok(serde_json::from_value(
@@ -68,7 +94,14 @@ pub fn ensure_host(layout: &Layout) -> Result<HostClient> {
             break;
         }
     }
-    if let Ok(status) = c.status() {
+    let status = match c.status() {
+        Ok(status) => Some(status),
+        Err(error) if error.downcast_ref::<std::io::Error>().is_some_and(|error| error.raw_os_error() == Some(5)) => {
+            return Err(error).context("HOST_ACCESS: Windows отказала в доступе к уже запущенной службе лаунчера");
+        }
+        Err(_) => None,
+    };
+    if let Some(status) = status {
         let expected = bscp_launcher_core::sha(&exe)?;
         let raw = c.call("status", &BTreeMap::new())?;
         if raw["HostBuild"].as_str() == Some(&expected) {

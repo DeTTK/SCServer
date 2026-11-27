@@ -9,7 +9,7 @@ use iroh::{
 };
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     sync::{Arc, Mutex},
     time::{Duration, Instant},
 };
@@ -17,6 +17,7 @@ use std::{
 const ALPN: &[u8] = b"bscp/server-directory/1";
 const TTL: Duration = Duration::from_secs(70);
 const DEADLINE: Duration = Duration::from_secs(7);
+const CONFIG_REFRESH: Duration = Duration::from_secs(120);
 const MAX_LISTINGS: usize = 64;
 const CATALOG_URL: &str =
     "https://raw.githubusercontent.com/DeTTK/SCServer/main/launcher/server-directory.json";
@@ -35,7 +36,7 @@ pub struct PublicServer {
     pub icon: Option<String>,
 }
 
-#[derive(PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct DirectoryAddress {
     endpoint: EndpointId,
@@ -47,35 +48,61 @@ impl DirectoryAddress {
         EndpointAddr::new(self.endpoint).with_relay_url(self.relay.clone())
     }
 
-    async fn load(layout: &Layout) -> Result<Self> {
-        let bytes = match std::fs::read(layout.at("config/server-directory.json")) {
-            Ok(bytes) => bytes,
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
-                let downloaded: Result<Vec<u8>> = async {
-                    let mut response = reqwest::Client::builder()
-                        .timeout(Duration::from_secs(4))
-                        .redirect(reqwest::redirect::Policy::none())
-                        .build()?
-                        .get(CATALOG_URL)
-                        .send()
-                        .await?
-                        .error_for_status()?;
-                    let mut bytes = Vec::new();
-                    while let Some(chunk) = response.chunk().await? {
-                        ensure!(chunk.len() <= 4096 - bytes.len(), "DIRECTORY_CONFIG_SIZE");
-                        bytes.extend_from_slice(&chunk);
-                    }
-                    Ok(bytes)
-                }
-                .await;
-                downloaded.unwrap_or_else(|_| EMBEDDED_ADDRESS.as_bytes().to_vec())
-            }
-            Err(error) => return Err(error.into()),
-        };
+    fn parse(bytes: &[u8]) -> Result<Self> {
         ensure!(bytes.len() <= 4096, "DIRECTORY_CONFIG_SIZE");
-        let address: Self = serde_json::from_slice(&bytes)?;
+        let address: Self = serde_json::from_slice(bytes)?;
         ensure!(relay::relay_origin(&address.relay), "DIRECTORY_RELAY");
         Ok(address)
+    }
+
+    async fn download() -> Result<Self> {
+        let mut response = reqwest::Client::builder()
+            .timeout(Duration::from_secs(4))
+            .redirect(reqwest::redirect::Policy::none())
+            .build()?
+            .get(CATALOG_URL)
+            .send()
+            .await?
+            .error_for_status()?;
+        let mut bytes = Vec::new();
+        while let Some(chunk) = response.chunk().await? {
+            ensure!(chunk.len() <= 4096 - bytes.len(), "DIRECTORY_CONFIG_SIZE");
+            bytes.extend_from_slice(&chunk);
+        }
+        Self::parse(&bytes)
+    }
+}
+
+#[derive(Default)]
+struct DirectoryConfig {
+    downloaded: Option<DirectoryAddress>,
+    last_fetch: Option<Instant>,
+    fetch: Option<tokio::task::JoinHandle<Result<DirectoryAddress>>>,
+}
+
+impl DirectoryConfig {
+    async fn address(&mut self, layout: &Layout) -> Result<DirectoryAddress> {
+        match std::fs::read(layout.at("config/server-directory.json")) {
+            Ok(bytes) => return DirectoryAddress::parse(&bytes),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            Err(error) => return Err(error.into()),
+        }
+        if self.fetch.as_ref().is_some_and(|fetch| fetch.is_finished()) {
+            if let Ok(Ok(address)) = self.fetch.take().unwrap().await {
+                self.downloaded = Some(address);
+            }
+        }
+        if self
+            .last_fetch
+            .is_none_or(|last| last.elapsed() >= CONFIG_REFRESH)
+        {
+            self.last_fetch = Some(Instant::now());
+            self.fetch = Some(tokio::spawn(DirectoryAddress::download()));
+        }
+        match &self.downloaded {
+            Some(address) => Ok(address.clone()),
+            None => DirectoryAddress::parse(EMBEDDED_ADDRESS.as_bytes()),
+        }
     }
 }
 
@@ -208,31 +235,51 @@ async fn exchange<T: DeserializeOwned>(
     .context("DIRECTORY_TIMEOUT")?
 }
 
-pub(crate) async fn advertise(
-    layout: &Layout,
-    ep: &Endpoint,
-    server: Option<PublicServer>,
-) -> Result<()> {
-    let address = DirectoryAddress::load(layout).await?;
-    let request = server.map_or(Request::Remove, Request::Publish);
-    let result: Result<Response> = if ep.addr().relay_urls().any(|relay| *relay == address.relay) {
-        exchange(ep, address.address(), request, 128).await
-    } else {
-        // Keep the authenticated game identity while using the directory's
-        // relay and its TLS trust independently of the game's route.
-        let link = endpoint(&address.relay, Some(ep.secret_key().clone())).await?;
-        let result = exchange(&link, address.address(), request, 128).await;
-        link.close().await;
-        result
-    };
-    let response = result?;
-    ensure!(matches!(response, Response::Ok), "DIRECTORY_REJECTED");
-    Ok(())
+#[derive(Default)]
+pub(crate) struct Publisher {
+    config: DirectoryConfig,
+    link: Option<(RelayUrl, Endpoint)>,
+}
+
+impl Publisher {
+    pub(crate) async fn advertise(
+        &mut self,
+        layout: &Layout,
+        ep: &Endpoint,
+        server: Option<PublicServer>,
+    ) -> Result<()> {
+        let address = self.config.address(layout).await?;
+        let request = server.map_or(Request::Remove, Request::Publish);
+        let outbound =
+            if !ep.is_closed() && ep.addr().relay_urls().any(|relay| *relay == address.relay) {
+                ep
+            } else {
+                // The directory relay has its own TLS trust. Use the game identity on that route,
+                // including when removing a listing after the game endpoint has closed.
+                if self.link.as_ref().is_none_or(|(relay, link)| {
+                    *relay != address.relay || link.id() != ep.id() || link.is_closed()
+                }) {
+                    if let Some((_, old)) = self.link.take() {
+                        tokio::spawn(async move { old.close().await });
+                    }
+                    let link = endpoint(&address.relay, Some(ep.secret_key().clone())).await?;
+                    self.link = Some((address.relay.clone(), link));
+                }
+                &self.link.as_ref().expect("publication link initialized").1
+            };
+        let response: Response = exchange(outbound, address.address(), request, 128).await?;
+        ensure!(matches!(response, Response::Ok), "DIRECTORY_REJECTED");
+        Ok(())
+    }
 }
 
 pub struct Browser {
     runtime: tokio::runtime::Runtime,
+    config: DirectoryConfig,
     link: Option<(DirectoryAddress, Endpoint)>,
+    failures: u8,
+    probing: Arc<Mutex<HashSet<String>>>,
+    probe_slots: Arc<tokio::sync::Semaphore>,
 }
 
 impl Browser {
@@ -242,31 +289,48 @@ impl Browser {
                 .worker_threads(2)
                 .enable_all()
                 .build()?,
+            config: DirectoryConfig::default(),
             link: None,
+            failures: 0,
+            probing: Arc::default(),
+            probe_slots: Arc::new(tokio::sync::Semaphore::new(8)),
         })
     }
 
     pub fn list(&mut self, layout: &Layout) -> Result<Vec<PublicServer>> {
         let link = &mut self.link;
+        let config = &mut self.config;
+        let failures = &mut self.failures;
         self.runtime.block_on(async {
-            let address = DirectoryAddress::load(layout).await?;
+            let address = config.address(layout).await?;
             if link
                 .as_ref()
                 .is_none_or(|(prior, ep)| *prior != address || ep.is_closed())
             {
                 let ep = endpoint(&address.relay, None).await?;
                 if let Some((_, old)) = link.replace((address, ep)) {
-                    old.close().await;
+                    tokio::spawn(async move { old.close().await });
                 }
+                *failures = 0;
             }
             let (address, ep) = link.as_ref().expect("directory link initialized");
-            let mut result = exchange(ep, address.address(), Request::List, 2 * 1024 * 1024).await;
-            if result.is_err() {
-                // The first connection can spend its budget establishing the relay transport.
-                // Keep the same endpoint so the retry can use the connection it just opened.
-                result = exchange(ep, address.address(), Request::List, 2 * 1024 * 1024).await;
-            }
-            let Response::List(mut servers) = result? else {
+            let response = exchange(ep, address.address(), Request::List, 2 * 1024 * 1024).await;
+            let Response::List(mut servers) = (match response {
+                Ok(response) => {
+                    *failures = 0;
+                    response
+                }
+                Err(error) => {
+                    *failures += 1;
+                    // Give the relay a chance to reconnect, then discard a stuck endpoint.
+                    if *failures >= 2 {
+                        if let Some((_, old)) = link.take() {
+                            tokio::spawn(async move { old.close().await });
+                        }
+                    }
+                    return Err(error);
+                }
+            }) else {
                 anyhow::bail!("DIRECTORY_REJECTED")
             };
             servers.truncate(MAX_LISTINGS);
@@ -275,34 +339,37 @@ impl Browser {
         })
     }
 
-    pub fn measure(&self, servers: &[PublicServer], mut measured: impl FnMut(usize, Option<u64>)) {
-        self.runtime.block_on(async {
-            let mut tasks = tokio::task::JoinSet::new();
-            for (index, server) in servers.iter().enumerate() {
-                if tasks.len() >= 8 {
-                    if let Some(Ok((index, ping))) = tasks.join_next().await {
-                        measured(index, ping);
-                    }
+    pub fn measure(
+        &self,
+        servers: &[PublicServer],
+        measured: impl Fn(String, Option<u64>) + Clone + Send + 'static,
+    ) {
+        for server in servers {
+            let invite = server.invite.clone();
+            {
+                let mut probing = self.probing.lock().unwrap();
+                if probing.len() >= MAX_LISTINGS || !probing.insert(invite.clone()) {
+                    continue;
                 }
-                let invite = server.invite.clone();
-                tasks.spawn(async move {
+            }
+            let probing = self.probing.clone();
+            let slots = self.probe_slots.clone();
+            let measured = measured.clone();
+            self.runtime.spawn(async move {
+                if let Ok(_slot) = slots.acquire().await {
                     let result = tokio::time::timeout(DEADLINE, async {
                         let (_, relay) = relay::public_ticket(&invite)?;
                         let ep = endpoint(&relay, None).await?;
                         let ping = relay::public_ping(&ep, &invite).await;
-                        ep.close().await;
+                        tokio::spawn(async move { ep.close().await });
                         ping
                     })
                     .await;
-                    (index, result.ok().and_then(Result::ok))
-                });
-            }
-            while let Some(result) = tasks.join_next().await {
-                if let Ok((index, ping)) = result {
-                    measured(index, ping);
+                    probing.lock().unwrap().remove(&invite);
+                    measured(invite, result.ok().and_then(Result::ok));
                 }
-            }
-        });
+            });
+        }
     }
 }
 
@@ -491,11 +558,18 @@ mod tests {
             icon: Some(encode_icon(&[255; ICON_BYTES])?),
         };
         let endpoint = host.directory_endpoint();
-        advertise(&layout, &endpoint, Some(server.clone())).await?;
+        let mut publisher = Publisher::default();
+        let started = Instant::now();
+        publisher
+            .advertise(&layout, &endpoint, Some(server.clone()))
+            .await?;
+        let publish_ms = started.elapsed().as_millis();
         let result: Result<()> = async {
-            let address = DirectoryAddress::load(&layout).await?;
+            let address = DirectoryConfig::default().address(&layout).await?;
             let reader = super::endpoint(&address.relay, None).await?;
+            let started = Instant::now();
             let reply: Response = exchange(&reader, address.address(), Request::List, 2*1024*1024).await?;
+            let list_ms = started.elapsed().as_millis();
             ensure!(matches!(reply, Response::List(list) if list.iter().any(|row|
                 row.invite == server.invite && row.players == 2 && row.icon == server.icon)));
             let (_, game_relay) = relay::public_ticket(&server.invite)?;
@@ -509,17 +583,136 @@ mod tests {
             let mut expected = [0; 5];
             tokio::time::timeout(DEADLINE, stream.read_exact(&mut expected)).await??;
             ensure!(&expected == b"ready");
-            println!("Open world listed with an icon, 2 players, and {ping} ms to the game host");
-            advertise(&layout, &endpoint, None).await?;
+            println!("World published in {publish_ms} ms, listed in {list_ms} ms, ping {ping} ms, TCP data received");
+            publisher.advertise(&layout, &endpoint, None).await?;
             let reply: Response = exchange(&reader, address.address(), Request::List, 2*1024*1024).await?;
             ensure!(matches!(reply, Response::List(list) if list.iter().all(|row| row.invite != server.invite)));
             reader.close().await;
             Ok(())
         }.await;
         if result.is_err() {
-            let _ = advertise(&layout, &endpoint, None).await;
+            let _ = publisher.advertise(&layout, &endpoint, None).await;
         }
         tcp.abort();
+        result
+    }
+
+    #[test]
+    #[ignore = "uses a public game relay for an isolated directory and game tunnels"]
+    fn isolated_directory_refreshes_during_ping_timeouts_and_recovers_after_restart() -> Result<()>
+    {
+        use std::sync::mpsc;
+        let relay_url =
+            std::env::var("BSCP_DIRECTORY_QA_RELAY").context("BSCP_DIRECTORY_QA_RELAY")?;
+        let relay: RelayUrl = relay_url.parse()?;
+        let rt = tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(2)
+            .enable_all()
+            .build()?;
+        let temp = tempfile::tempdir()?;
+        let layout = Layout::new(temp.path());
+        layout.init()?;
+        let key = SecretKey::generate();
+        let public = DirectoryAddress {
+            endpoint: key.public(),
+            relay: relay.clone(),
+        };
+        write_json(&layout.at("config/server-directory.json"), &public)?;
+        let start_directory = || {
+            rt.block_on(async {
+                let link = endpoint(&relay, Some(key.clone())).await?;
+                tokio::time::timeout(Duration::from_secs(15), link.online()).await?;
+                let task = tokio::spawn(serve(link.clone(), Arc::default()));
+                Ok::<_, anyhow::Error>((link, task))
+            })
+        };
+        let (service, task) = start_directory()?;
+        let (a, b) = rt.block_on(async {
+            tokio::try_join!(
+                relay::Tunnel::host(29991, &relay_url, &layout.root),
+                relay::Tunnel::host(29994, &relay_url, &layout.root)
+            )
+        })?;
+        let result = (|| {
+            let mut row_a = listing(a.directory_endpoint().id());
+            row_a.invite = a.public_invite()?;
+            let mut row_b = listing(b.directory_endpoint().id());
+            row_b.name = "Мир Б".to_owned();
+            row_b.invite = b.public_invite()?;
+            row_b.players = 1;
+            let mut pub_a = Publisher::default();
+            let mut pub_b = Publisher::default();
+            let mut browser = Browser::new()?;
+            assert!(browser.list(&layout)?.is_empty());
+            let started = Instant::now();
+            rt.block_on(pub_a.advertise(&layout, &a.directory_endpoint(), Some(row_a.clone())))?;
+            assert_eq!(browser.list(&layout)?.first().unwrap().invite, row_a.invite);
+            println!(
+                "First isolated listing visible in {} ms",
+                started.elapsed().as_millis()
+            );
+
+            let dead: Vec<_> = (0..24)
+                .map(|_| listing(SecretKey::generate().public()))
+                .collect();
+            let (send, probes) = mpsc::channel();
+            browser.measure(&dead, move |_, delay| {
+                let _ = send.send(delay);
+            });
+            let started = Instant::now();
+            rt.block_on(pub_b.advertise(&layout, &b.directory_endpoint(), Some(row_b.clone())))?;
+            assert_eq!(browser.list(&layout)?.len(), 2);
+            println!(
+                "Second listing visible in {} ms with 24 unresponsive ping targets",
+                started.elapsed().as_millis()
+            );
+            assert!(
+                probes.try_iter().count() < dead.len(),
+                "listing was blocked by ping probes"
+            );
+            row_b.players = 3;
+            rt.block_on(pub_b.advertise(&layout, &b.directory_endpoint(), Some(row_b.clone())))?;
+            let rows = browser.list(&layout)?;
+            assert_eq!(rows[0].invite, row_b.invite);
+            assert_eq!(rows[0].players, 3);
+            assert_eq!(rows[0].icon, row_b.icon);
+
+            rt.block_on(async {
+                task.abort();
+                service.close().await;
+            });
+            let outage = Instant::now();
+            assert!(browser.list(&layout).is_err());
+            assert!(browser.list(&layout).is_err());
+            assert!(
+                browser.link.is_none(),
+                "two failures must discard the stale connection"
+            );
+            println!(
+                "Both failed reads returned in {} ms total",
+                outage.elapsed().as_millis()
+            );
+            let (service, task) = start_directory()?;
+            let recovered = Instant::now();
+            rt.block_on(pub_a.advertise(&layout, &a.directory_endpoint(), Some(row_a.clone())))?;
+            assert_eq!(browser.list(&layout)?.first().unwrap().invite, row_a.invite);
+            println!(
+                "Previous browser sees the re-published world {} ms after restart",
+                recovered.elapsed().as_millis()
+            );
+            let closed = a.directory_endpoint();
+            rt.block_on(closed.close());
+            rt.block_on(pub_a.advertise(&layout, &closed, None))?;
+            assert!(browser.list(&layout)?.is_empty());
+            rt.block_on(async {
+                task.abort();
+                service.close().await;
+            });
+            Ok(())
+        })();
+        rt.block_on(async {
+            drop((a, b));
+        });
         result
     }
 }

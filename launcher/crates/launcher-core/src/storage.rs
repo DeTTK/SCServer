@@ -282,7 +282,8 @@ pub fn write_json<T: Serialize>(path: &Path, value: &T) -> Result<()> {
 }
 pub fn atomic_write(path: &Path, bytes: &[u8]) -> Result<()> {
     no_links(path)?;
-    fs::create_dir_all(path.parent().context("missing parent")?)?;
+    let parent = path.parent().context("missing parent")?;
+    fs::create_dir_all(parent).with_context(|| format!("FILE_WRITE: создание папки {}", parent.display()))?;
     let temp = path.with_extension(format!("{}.tmp", Uuid::new_v4().simple()));
     let result = (|| {
         let mut f = OpenOptions::new()
@@ -297,8 +298,31 @@ pub fn atomic_write(path: &Path, bytes: &[u8]) -> Result<()> {
     if temp.exists() {
         let _ = fs::remove_file(temp);
     }
-    result
+    result.with_context(|| format!("FILE_WRITE: сохранение {}", path.display()))
 }
+
+#[cfg(all(test, windows))]
+#[test]
+fn atomic_write_waits_for_a_temporary_windows_file_lock() {
+    use std::os::windows::fs::OpenOptionsExt;
+    let folder = tempfile::tempdir().unwrap();
+    let path = folder.path().join("settings.json");
+    atomic_write(&path, b"original").unwrap();
+    let locked = OpenOptions::new().read(true).share_mode(1).open(&path).unwrap();
+    let (begin, release) = std::sync::mpsc::channel();
+    let reader = std::thread::spawn(move || {
+        release.recv().unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(90));
+        drop(locked);
+    });
+    begin.send(()).unwrap();
+    let result = atomic_write(&path, b"updated");
+    reader.join().unwrap();
+    result.unwrap();
+    assert_eq!(fs::read(path).unwrap(), b"updated");
+    assert_eq!(fs::read(folder.path().join("settings.json.bak")).unwrap(), b"original");
+}
+
 fn replace_file(temp: &Path, path: &Path) -> Result<()> {
     #[cfg(windows)]
     {
@@ -315,8 +339,9 @@ fn replace_file(temp: &Path, path: &Path) -> Result<()> {
         let t = wide(temp);
         let p = wide(path);
         let bak = wide(&PathBuf::from(format!("{}.bak", path.display())));
-        let ok = unsafe {
-            if path.exists() {
+        for delay_ms in [20, 50, 100, 200, 0] {
+            let exists = path.try_exists()?;
+            let ok = unsafe { if exists {
                 ReplaceFileW(
                     p.as_ptr(),
                     t.as_ptr(),
@@ -327,10 +352,14 @@ fn replace_file(temp: &Path, path: &Path) -> Result<()> {
                 )
             } else {
                 MoveFileExW(t.as_ptr(), p.as_ptr(), MOVEFILE_WRITE_THROUGH)
+            }};
+            if ok != 0 { break; }
+            let error = std::io::Error::last_os_error();
+            // A short-lived lock can delay the replacement. Preserve the source and its ACL.
+            if delay_ms == 0 || !matches!(error.raw_os_error(), Some(5 | 32 | 33)) {
+                return Err(error.into());
             }
-        };
-        if ok == 0 {
-            return Err(std::io::Error::last_os_error().into());
+            std::thread::sleep(std::time::Duration::from_millis(delay_ms));
         }
     }
     #[cfg(not(windows))]

@@ -95,6 +95,11 @@ public final class ClientSceneCodec implements AutoCloseable {
         incident=new NativeSceneIncident(loader,runtimeRoot,bindings.resolveSibling("native-scene-incident-context.json"));
         encaged=new NativeSceneEncaged(loader,runtimeRoot,bindings.resolveSibling("native-scene-encaged-context.json"));
         Class<?> language=Class.forName("600030218",true,loader),realm=Class.forName("1974661934",true,loader);language.getField("volatile").set(null,realm.getField("RU").get(null));Class.forName("1993742576",true,loader).getMethod("interface").invoke(null);
+        // Scene factories share the native stats registry. Its bank must initialize
+        // first, otherwise the cyclic initializer reads the half-built effect keys.
+        NativeMedicineRelease.verify(runtimeRoot);
+        Class.forName("964863275",true,loader);
+        Class.forName("1924679062",true,loader);
         for(var value:manifest.getAsJsonArray("bindings")){var row=value.getAsJsonObject();String type=row.get("type").getAsString();if(!manifest.getAsJsonObject("classesSha256").has(type))throw new IOException("scene_default_unpinned_binding");if(row.has("functionClass")){String constructor=row.get("functionClass").getAsString();if(!manifest.getAsJsonObject("classesSha256").has(constructor))throw new IOException("scene_default_unpinned_constructor");Object function=Class.forName(constructor,true,loader).getField(row.get("functionField").getAsString()).get(null);factoryType.getMethod("volatile",String.class,Class.class,java.util.function.Function.class).invoke(null,row.get("behavior").getAsString(),Class.forName(type,false,loader),function);}else factoryType.getMethod("protected",String.class,Class.class).invoke(null,row.get("behavior").getAsString(),type.equals("913250395")?incident.type():Class.forName(type,false,loader));}
         prepareItemNames(bindings.resolveSibling("native-scene-item-names.json"));prepareRepairs(bindings.resolveSibling("native-scene-clock-context.json"));supplyContext=bindings.resolveSibling("native-scene-supply-context.json");defaultsPrepared=true;
     }
@@ -123,13 +128,39 @@ public final class ClientSceneCodec implements AutoCloseable {
     private String properties(SceneRegistry.Definition definition)throws Exception{
         if(definition.behaviour().equals("incident/spider"))incident.prepare();
         if(definition.behaviour().equals("encaged_crate"))encaged.prepare();
-        var properties=definition.definition();if(definition.behaviour().equals("radar_spotter")){
+        var properties=definition.definition();
+        if(definition.name().equals("keys/safe_default")&&properties.has("required_key_item")
+                &&properties.get("required_key_item").getAsString().equals("key.safe.mines_1")){
+            var manager=Class.forName("498192453",true,loader);
+            Object items=manager.getField("class").get(manager.getField("long").get(null));
+            var names=(Map<?,?>)Class.forName("985191831",true,loader).getField("finally").get(items);
+            if(!names.containsKey("key.safe.mines_1")){
+                properties=properties.deepCopy();
+                // Outside the native unsigned-short item ID domain. The safe remains locked.
+                properties.addProperty("required_key_item",65536);
+            }
+        }
+        if(definition.behaviour().equals("radar_spotter")){
             properties=properties.deepCopy();var repair=properties.get("repair_item");if(repair==null||repair.isJsonNull())throw new IOException("scene_repair_item_missing");Integer id=repairNames.get(repair.getAsString());if(id==null)throw new IOException("scene_repair_item_unreviewed:"+repair.getAsString());
             Class<?> factory=Class.forName("1366800141",true,loader);Object[] registered=(Object[])factory.getField("import").get(null);if(registered[id]==null)factory.getConstructor(int.class).newInstance(id);else if(!registered[id].getClass().equals(factory))throw new IOException("scene_repair_factory_conflict");properties.addProperty("repair_item",Integer.toString(id));return properties.toString();
         }
         if(!definition.behaviour().equals("special_weapon_supply"))return properties.toString();prepareSupply();properties=properties.deepCopy();var weapon=properties.getAsJsonObject("givenWeapon");if(weapon==null||!weapon.has("id"))throw new IOException("scene_supply_weapon_missing");var value=weapon.get("id");int id;if(value.getAsJsonPrimitive().isNumber())id=value.getAsInt();else{Integer resolved=supplyNames.get(value.getAsString());if(resolved==null)throw new IOException("scene_supply_weapon_name:"+value.getAsString());id=resolved;}
         Object[] registry=(Object[])Class.forName("1366800141",true,loader).getField("import").get(null);if(id<1||id>=registry.length||registry[id]==null)throw new IOException("scene_supply_weapon_factory:"+id);Object state=itemState(registry[id]);
-        if(weapon.has("tag")&&weapon.getAsJsonObject("tag").has("attach")){var attached=weapon.getAsJsonObject("tag").getAsJsonObject("attach").getAsJsonObject("value");Method resolver=Arrays.stream(state.getClass().getMethods()).filter(method->method.getName().equals("catch")&&Arrays.equals(method.getParameterTypes(),new Class<?>[]{String.class})&&method.getReturnType().getName().equals("1173269411")).findFirst().orElseThrow(()->new IOException("scene_supply_slot_resolver:"+state.getClass().getName()));for(String slot:attached.keySet())if(resolver.invoke(state,slot)==null)throw new IOException("scene_supply_unknown_slot:"+slot);}
+        if(weapon.has("tag")&&weapon.getAsJsonObject("tag").has("attach")){
+            var attached=weapon.getAsJsonObject("tag").getAsJsonObject("attach").getAsJsonObject("value");
+            Method resolver=Arrays.stream(state.getClass().getMethods()).filter(method->method.getName().equals("catch")&&Arrays.equals(method.getParameterTypes(),new Class<?>[]{String.class})&&method.getReturnType().getName().equals("1173269411")).findFirst().orElseThrow(()->new IOException("scene_supply_slot_resolver:"+state.getClass().getName()));
+            for(var entry:attached.entrySet()){
+                String slot=entry.getKey();
+                if(resolver.invoke(state,slot)!=null)continue;
+                // The current runtime has no advanced1 attachment slot. For the
+                // two stock calldown weapons keep the game's own importer behavior.
+                if(slot.equals("advanced1")&&(id==9251||id==9252)){
+                    int module=entry.getValue().getAsJsonObject().getAsJsonObject("value").getAsJsonObject("id").get("value").getAsInt();
+                    if(module==(id==9251?21811:21802))continue;
+                }
+                throw new IOException("scene_supply_unknown_slot:"+slot);
+            }
+        }
         weapon.addProperty("id",id);return properties.toString();
     }
     /** Seed generic fields from a validated ordinary envelope; real game factories own behavior defaults. */

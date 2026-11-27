@@ -55,6 +55,14 @@ public final class ScaleAgent {
                         if(name.equals(CAMERA)&&method.equals("szmods$flight$enum")&&opcode==GETFIELD&&owner.equals("1987590071")&&Set.of("assert","byte","catch").contains(field)&&fieldDesc.equals("F")){
                             visitVarInsn(ALOAD,0);visitMethodInsn(INVOKESTATIC,"playerscale/ScaleRuntime","camera","(FLjava/lang/Object;)F",false);changes[0]++;
                         }
+                        if(name.equals("576005245")&&method.equals("do")&&desc.equals("(L1502780592;J)V")&&opcode==PUTFIELD&&owner.equals("153304200")&&field.equals("void")&&fieldDesc.equals("D")){
+                            visitVarInsn(ALOAD,8);visitVarInsn(ALOAD,3);visitVarInsn(FLOAD,7);
+                            super.visitMethodInsn(INVOKESTATIC,"playerscale/ScaleRuntime","shotOrigin","(Ljava/lang/Object;Ljava/lang/Object;F)V",false);changes[0]++;
+                        }
+                        if(name.equals("1775200393")&&opcode==GETSTATIC&&owner.equals("89824967")&&fieldDesc.equals("D")&&(field.equals("long")||field.equals("boolean"))){
+                            visitVarInsn(ALOAD,0);super.visitFieldInsn(GETFIELD,name,"byte","L1943200621;");
+                            super.visitMethodInsn(INVOKESTATIC,"playerscale/ScaleRuntime","jumpImpulse","(DLjava/lang/Object;)D",false);changes[0]++;
+                        }
                     }
                     public void visitLdcInsn(Object value){
                         super.visitLdcInsn(value);
@@ -63,13 +71,19 @@ public final class ScaleAgent {
                         }
                     }
                     public void visitMethodInsn(int opcode,String owner,String target,String targetDesc,boolean itf){
-                        if(name.equals("873944585")&&method.equals("szmods$animation$transient")&&desc.equals("(L351062380;)L578131936;")&&owner.equals("578131936")&&targetDesc.equals("(F)V")&&(target.equals("finally")||target.equals("float"))){
-                            visitVarInsn(ALOAD,1);super.visitMethodInsn(INVOKESTATIC,"playerscale/ScaleRuntime",target.equals("finally")?"animationSpeed":"animationCoefficient","(FLjava/lang/Object;)F",false);changes[0]++;
+                        boolean animation=name.equals("873944585")&&method.equals("szmods$animation$transient")&&desc.equals("(L351062380;)L578131936;");
+                        if(animation&&owner.equals("578131936")&&target.equals("float")&&targetDesc.equals("(F)V")){
+                            visitVarInsn(ALOAD,1);super.visitMethodInsn(INVOKESTATIC,"playerscale/ScaleRuntime","animationCoefficient","(FLjava/lang/Object;)F",false);changes[0]++;
                         }
                         if(name.equals("803707421")&&method.equals("assert")&&desc.equals("(L200241649;)L771745706;")&&owner.equals("1363883020")&&target.equals("super")&&targetDesc.equals("(L153304200;FF)V")){
                             visitVarInsn(ALOAD,1);super.visitMethodInsn(INVOKESTATIC,"playerscale/ScaleRuntime","hit","(Ljava/lang/Object;Ljava/lang/Object;FFLjava/lang/Object;)V",false);changes[0]++;return;
                         }
                         super.visitMethodInsn(opcode,owner,target,targetDesc,itf);
+                        if(animation&&owner.equals("1943200621")&&target.equals("this")&&targetDesc.equals("()F")){
+                            visitVarInsn(ALOAD,1);visitVarInsn(ALOAD,0);super.visitFieldInsn(GETFIELD,name,"class","L578131936;");
+                            super.visitMethodInsn(INVOKEVIRTUAL,"578131936","this","()Z",false);
+                            super.visitMethodInsn(INVOKESTATIC,"playerscale/ScaleRuntime","animationSpeed","(FLjava/lang/Object;Z)F",false);changes[0]++;
+                        }
                         if(name.equals("656386660")&&method.equals("goto")&&desc.equals("(Z)Z")&&owner.equals("1597325473")&&target.equals("transient")&&targetDesc.equals("(L1217489680;F)V")){
                             // The native outer push/finally owns this matrix. Scale after
                             // world-to-foot placement, before local body offsets and pivots.
@@ -80,7 +94,7 @@ public final class ScaleAgent {
             }
             public void visitEnd(){if(name.equals("175605189"))renderWrapper(cv);super.visitEnd();}
         },0);
-        int expected=switch(name){case "175605189","803707421","981501872","656386660","szmods/runtime/ModLoader"->1;case "873944585"->2;case "1943200621",CAMERA->3;default->throw new IllegalArgumentException(name);};
+        int expected=switch(name){case "175605189","803707421","981501872","656386660","576005245","szmods/runtime/ModLoader"->1;case "873944585"->2;case "1943200621","1775200393",CAMERA->3;default->throw new IllegalArgumentException(name);};
         if(changes[0]!=expected)throw new IllegalStateException("character_scale_hook_count:"+name+":"+changes[0]);return writer.toByteArray();
     }
     private static void renderWrapper(ClassVisitor visitor){

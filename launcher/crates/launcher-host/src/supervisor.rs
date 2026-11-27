@@ -46,10 +46,17 @@ struct Running {
     client_tunnel: Option<crate::relay::Tunnel>,
     blocked: Option<String>,
 }
+#[derive(Default, Deserialize, Serialize)]
+pub struct ServerSummary {
+    pub players: Option<Vec<String>>,
+    pub uptime_ms: Option<u64>,
+    pub heap_used: Option<u64>,
+}
 pub struct Supervisor {
     pub layout: Layout,
     pub exit: Arc<Notify>,
     lifecycle: AsyncMutex<()>,
+    relay_start: AsyncMutex<()>,
     running: Mutex<Running>,
     view: Mutex<Value>,
     java_root: Option<PathBuf>,
@@ -64,6 +71,12 @@ fn read_json<T: serde::de::DeserializeOwned>(p: &Path) -> Result<T> {
 }
 fn write_json(p: &Path, v: &impl Serialize) -> Result<()> {
     bscp_launcher_core::write_json(p, v)
+}
+fn create_session_folder(path: &Path) -> Result<()> {
+    std::fs::create_dir_all(path)
+        .with_context(|| format!("AGENT_SESSION_CREATE: создание папки запуска {}", path.display()))?;
+    owner_only(path, true)
+        .with_context(|| format!("AGENT_SESSION_ACCESS: защита папки запуска {}", path.display()))
 }
 #[cfg(windows)]
 pub fn process_time(pid: u32) -> Option<u64> {
@@ -131,6 +144,7 @@ impl Supervisor {
             layout,
             exit: Arc::new(Notify::new()),
             lifecycle: AsyncMutex::new(()),
+            relay_start: AsyncMutex::new(()),
             running: Mutex::new(Running::default()),
             view: Mutex::new(
                 json!({"State":"Stopped","Pid":null,"SessionId":"","WorldId":"","Detail":"Готов к запуску","ClientRunning":false,"HostBuild":sha(&exe)?}),
@@ -208,15 +222,27 @@ impl Supervisor {
         v
     }
     async fn enable_relay(&self, base: u16) {
+        let Ok(_start) = self.relay_start.try_lock() else { return };
         let s = self.layout.load().unwrap_or_default();
-        if !s.relay_enabled || self.running.lock().unwrap().server_tunnel.is_some() {
+        if !s.relay_enabled {
             return;
         }
+        let owner = {
+            let running = self.running.lock().unwrap();
+            if running.server_tunnel.is_some() { return; }
+            running.server.clone().filter(|server| server.admin_port.checked_sub(100) == Some(base) && alive(server))
+        };
+        let Some(owner) = owner else { return };
         self.view.lock().unwrap()["RelayStatus"] = json!("Проверяем ретрансляторы…");
         match crate::relay::Tunnel::host(base, &s.relay_url, &self.layout.root).await {
             Ok(t) => {
                 let host = t.relay_host();
-                self.running.lock().unwrap().server_tunnel = Some(t);
+                let mut running = self.running.lock().unwrap();
+                if !running.server.as_ref().is_some_and(|server| server.pid == owner.pid && server.started == owner.started && alive(server)) {
+                    return;
+                }
+                running.server_tunnel = Some(t);
+                drop(running);
                 self.view.lock().unwrap()["RelayStatus"] = json!(match host {
                     Some(host) => format!("Приглашение готово · {host}"),
                     None => "Приглашение готово".into(),
@@ -437,6 +463,29 @@ impl Supervisor {
             },
         }
     }
+    async fn server_summary(&self, owned: &Owned, include_legacy_jvm: bool) -> Result<ServerSummary> {
+        match self.admin(owned, "server/summary", false).await {
+            Ok(summary) => return Ok(serde_json::from_value(summary)?),
+            Err(error) if error.downcast_ref::<reqwest::Error>()
+                .and_then(reqwest::Error::status) == Some(reqwest::StatusCode::NOT_FOUND) => {}
+            Err(error) => return Err(error),
+        }
+        // Older installed servers expose these values only through diagnostics.
+        let (health, server) = tokio::join!(
+            self.admin(owned, "health", false),
+            async {
+                if include_legacy_jvm { self.bridge_metrics(owned, "server").await.unwrap_or_default() }
+                else { Value::Null }
+            },
+        );
+        let health = health?;
+        Ok(ServerSummary {
+            players: health["game"]["players"].as_array().map(|rows| rows.iter()
+                .filter_map(|row| row["name"].as_str().map(str::to_owned)).collect()),
+            uptime_ms: server["uptimeMs"].as_u64().or_else(|| health["uptimeMs"].as_u64()),
+            heap_used: server["heapUsed"].as_u64().or_else(|| health["jvm"]["heapUsed"].as_u64()),
+        })
+    }
     pub async fn recover(&self) -> Result<()> {
         for kind in ["server", "client"] {
             let file = self
@@ -494,6 +543,7 @@ impl Supervisor {
             }
             if kind == "server" {
                 let h = self.admin(&o, "health", false).await?;
+                o.ready.store(h["ready"] == true, Ordering::Release);
                 self.state(
                     if h["ready"] == true {
                         "Ready"
@@ -517,6 +567,13 @@ impl Supervisor {
         };
         match cmd {
             "status" => return Ok(self.status()),
+            "server-summary" => {
+                let owned = self.running.lock().unwrap().server.clone();
+                let Some(owned) = owned.filter(alive) else {
+                    return Ok(serde_json::to_value(ServerSummary::default())?);
+                };
+                return Ok(serde_json::to_value(self.server_summary(&owned, true).await?)?);
+            }
             "metrics" => {
                 let (owned_server, owned_client) = {
                     let r = self.running.lock().unwrap();
@@ -720,8 +777,6 @@ impl Supervisor {
         native: Option<&str>,
         world: &str,
     ) -> Result<()> {
-        std::fs::create_dir_all(folder).context("AGENT_SESSION_CREATE: создание папки запуска")?;
-        owner_only(folder, true).context("AGENT_SESSION_ACCESS: защита папки запуска")?;
         let s = self.layout.load()?;
         let mut p = std::collections::BTreeMap::<String, String>::from([
             ("kind".into(), kind.into()),
@@ -767,11 +822,11 @@ impl Supervisor {
                 ),
             );
         }
-        std::fs::write(
-            folder.join("agent.properties"),
+        atomic_write(
+            &folder.join("agent.properties"),
             p.iter()
                 .map(|(k, v)| format!("{k}={}\n", launch::prop(v)))
-                .collect::<String>(),
+                .collect::<String>().as_bytes(),
         )
         .context("AGENT_CONFIG_WRITE: запись конфигурации Java")?;
         Ok(())
@@ -854,7 +909,7 @@ impl Supervisor {
             .root
             .join("state/sessions")
             .join(uuid::Uuid::new_v4().simple().to_string());
-        std::fs::create_dir_all(&session)?;
+        create_session_folder(&session)?;
         self.state("Preparing", "Проверка карты и портов");
         if world.schema_version == 1 && map_digest(&map)? != world.map_hash {
             self.state("Failed", "Базовая карта изменилась");
@@ -984,8 +1039,7 @@ impl Supervisor {
             .root
             .join("state/sessions")
             .join(format!("client-{}", uuid::Uuid::new_v4().simple()));
-        std::fs::create_dir_all(&folder)?;
-        owner_only(&folder, true)?;
+        create_session_folder(&folder)?;
         let alias_supported = local_starting
             && native_parallel_start_supported(&self.layout.bundle(&s, "server")?).unwrap_or(false);
         let (proxy, native) = if local_starting {
@@ -1123,61 +1177,79 @@ impl Supervisor {
     }
 
     pub async fn refresh_public_listing(self: Arc<Self>) {
-        use crate::directory::{ICON_PATH, PublicServer, advertise};
+        use crate::directory::{ICON_PATH, PublicServer, Publisher, decode_icon};
+        let logger = RotatingLog::new(self.layout.at("logs"), "public-directory-host");
+        let mut publisher = Publisher::default();
         let mut advertised = None::<iroh::Endpoint>;
-        let mut last_sent = None::<Instant>;
+        let mut next_send = Instant::now();
+        let mut next_relay = Instant::now();
         let mut was_enabled = false;
         loop {
             let settings = self.layout.load().unwrap_or_default();
             let enabled = settings.relay_enabled && settings.public_listing;
-            let active = if enabled && self.status()["State"] == "Ready" {
+            let stopping = self.view.lock().unwrap()["State"] == "Stopping";
+            let (owned, tunnel) = if enabled && !stopping {
                 let running = self.running.lock().unwrap();
-                running.server.as_ref().filter(|server| alive(server))
-                    .zip(running.server_tunnel.as_ref())
-                    .and_then(|(server, tunnel)| Some((server.clone(), tunnel.directory_endpoint(), tunnel.public_invite().ok()?)))
+                let world = running.server.as_ref()
+                    .filter(|server| server.ready.load(Ordering::Acquire) && alive(server)).cloned();
+                let tunnel = running.server_tunnel.as_ref()
+                    .map(|tunnel| (tunnel.directory_endpoint(), tunnel.public_invite()));
+                (world, tunnel)
             } else {
-                None
+                (None, None)
             };
+            if let Some(server) = owned.as_ref().filter(|_| tunnel.is_none() && Instant::now() >= next_relay) {
+                next_relay = Instant::now() + Duration::from_secs(10);
+                let host = self.clone();
+                let base = server.admin_port - 100;
+                tokio::spawn(async move { host.enable_relay(base).await });
+            }
+            let active = owned.zip(tunnel);
             if let Some(previous) = &advertised {
-                if active.as_ref().is_none_or(|(_, endpoint, _)| endpoint.id() != previous.id()) {
-                    if !previous.is_closed() {
-                        let _ = advertise(&self.layout, previous, None).await;
+                if active.as_ref().is_none_or(|(_, (endpoint, _))| endpoint.id() != previous.id()) {
+                    if let Err(error) = publisher.advertise(&self.layout, previous, None).await {
+                        let _ = logger.line(&redact(&format!("Listing withdrawal failed: {error:#}")));
                     }
                     advertised = None;
-                    last_sent = None;
+                    next_send = Instant::now();
                 }
             }
             let status = match active {
-                Some((server, endpoint, invite)) if last_sent.is_none_or(|last| last.elapsed() >= Duration::from_secs(20)) => {
-                    last_sent = Some(Instant::now());
-                    if !crate::relay::public_ticket(&invite).is_ok_and(|(_, relay)| crate::directory::public_relay(&relay)) {
-                        self.view.lock().unwrap()["DirectoryStatus"] = json!("Для публикации нужен ретранслятор из публичного списка BSCPCRAFT");
-                        was_enabled = enabled;
-                        tokio::time::sleep(Duration::from_secs(2)).await;
-                        continue;
-                    }
-                    advertised = Some(endpoint.clone());
+                Some((server, (endpoint, invite))) if Instant::now() >= next_send => {
                     let submission: Result<()> = async {
-                        let health = self.admin(&server, "health", false).await?;
-                        let players = health["game"]["players"].as_array().context("DIRECTORY_PLAYERS")?;
+                        let invite = invite?;
+                        let (_, relay) = crate::relay::public_ticket(&invite)?;
+                        anyhow::ensure!(crate::directory::public_relay(&relay), "DIRECTORY_PUBLIC_RELAY");
+                        let players = self.server_summary(&server, false).await?.players.context("DIRECTORY_PLAYERS")?;
                         let world = self.worlds()?.get(&server.world)?;
-                        let icon = read_json::<String>(&self.layout.at(ICON_PATH)).ok().filter(|icon| !icon.is_empty());
-                        advertise(&self.layout, &endpoint, Some(PublicServer {
+                        let icon = read_json::<String>(&self.layout.at(ICON_PATH)).ok().filter(|icon| decode_icon(icon).is_ok());
+                        advertised = Some(endpoint.clone());
+                        publisher.advertise(&self.layout, &endpoint, Some(PublicServer {
                             name: world.name,
                             invite,
                             icon,
                             players: players.len().min(u16::MAX as usize) as u16,
                         })).await
                     }.await;
-                    if submission.is_ok() {
-                        Some("Сервер опубликован")
-                    } else {
-                        Some("Публикация недоступна. Повторим автоматически.")
+                    match submission {
+                        Ok(()) => {
+                            next_send = Instant::now() + Duration::from_secs(7);
+                            Some("Сервер опубликован")
+                        }
+                        Err(error) => {
+                            next_send = Instant::now() + Duration::from_secs(2);
+                            let _ = logger.line(&redact(&format!("Listing publication failed: {error:#}")));
+                            if error.to_string() == "DIRECTORY_PUBLIC_RELAY" {
+                                Some("Для публикации нужен ретранслятор из публичного списка BSCPCRAFT")
+                            } else {
+                                Some("Публикация недоступна. Повторим автоматически.")
+                            }
+                        }
                     }
                 }
                 Some(_) => None,
                 None if enabled => {
-                    last_sent = None;
+                    next_send = Instant::now();
                     Some("Публикация начнётся, когда мир и ретранслятор будут готовы")
                 }
                 None if was_enabled => Some(""),
@@ -1187,7 +1259,7 @@ impl Supervisor {
                 self.view.lock().unwrap()["DirectoryStatus"] = json!(status);
             }
             was_enabled = enabled;
-            tokio::time::sleep(Duration::from_secs(2)).await;
+            tokio::time::sleep(Duration::from_secs(1)).await;
         }
     }
     fn relay_udp_metrics(&self) -> Value {

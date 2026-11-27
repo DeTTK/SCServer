@@ -1,6 +1,6 @@
 """Overlay reviewed camera compatibility classes; retain every other agent entry."""
 from pathlib import Path
-import argparse,hashlib,os,shutil,struct,subprocess,tempfile,zipfile
+import argparse,hashlib,json,os,shutil,struct,subprocess,tempfile,zipfile
 
 def shade(raw):
  assert raw[:4]==b'\xca\xfe\xba\xbe';count=struct.unpack_from('>H',raw,8)[0];at=10;i=1;out=bytearray(raw[:10])
@@ -23,10 +23,16 @@ def main():
     a.output.parent.mkdir(parents=True,exist_ok=True)
     if a.output.resolve()==a.base_agent.resolve():parser.error('Output must not overwrite the input agent')
     with tempfile.TemporaryDirectory(prefix='camera-compile-',dir=a.output.parent)as scratch:
-        sources=[here/'src/gamecompat'/n for n in ['ResourceCompatibilityAgent.java','PerspectivePolicyTransformer.java','ContainerMotifIconTransformer.java','ContainerMotifModels.java']];cp=os.pathsep.join(str(f.resolve())for f in [a.asm,a.asm_tree,a.base_agent]);subprocess.run([tool('javac'),'--release','17','-proc:none','-encoding','UTF-8','-cp',cp,'-d',scratch,*map(str,sources)],check=True)
+        manifest=json.loads((root/'bootstrap/input-manifest.json').read_text('utf8'))
+        native=manifest['objects']['runtime/libraries.jar']
+        libraries=Path(scratch)/'libraries.jar'
+        libraries.write_bytes(b''.join((root/part).read_bytes() for part in native['parts']))
+        if hashlib.sha256(libraries.read_bytes()).hexdigest()!=native['sha256']:parser.error('Checksum mismatch: runtime/libraries.jar')
+        patched=('ResourceCompatibilityAgent','PerspectivePolicyTransformer','ContainerMotifIconTransformer','ContainerMotifModels','AmdAlphaTestTransformer','SceneSelectionTransformer','SceneVariantTransformer','SceneSafeTransformer','SceneDamageModelTransformer')
+        sources=[here/'src/gamecompat'/f'{name}.java' for name in patched];cp=os.pathsep.join(str(f.resolve())for f in [a.asm,a.asm_tree,a.base_agent,libraries]);subprocess.run([tool('javac'),'--release','17','-proc:none','-encoding','UTF-8','-cp',cp,'-d',scratch,*map(str,sources)],check=True)
         if a.native_camera:
             tests=here/'tests/gamecompat/PerspectivePolicyTests.java';run_cp=scratch+os.pathsep+cp;subprocess.run([tool('javac'),'--release','17','-proc:none','-encoding','UTF-8','-cp',run_cp,'-d',scratch,str(tests)],check=True);subprocess.run([tool('java'),'-cp',run_cp,'gamecompat.PerspectivePolicyTests',str(a.native_camera)],check=True)
-        changed=lambda n:n.startswith(('gamecompat/ResourceCompatibilityAgent','gamecompat/PerspectivePolicyTransformer','gamecompat/ContainerMotifIconTransformer','gamecompat/ContainerMotifModels'))and n.endswith('.class')
+        changed=lambda n:n.startswith(tuple('gamecompat/'+name for name in patched))and n.endswith('.class')
         with zipfile.ZipFile(a.base_agent)as old,zipfile.ZipFile(a.output,'w',zipfile.ZIP_DEFLATED)as out:
             for e in old.infolist():
                 if not changed(e.filename):out.writestr(e,old.read(e.filename))
