@@ -7,6 +7,9 @@ import scvehicles.protocol.VehicleSeats;
 import szmods.api.*;
 import java.util.*;
 import static scvehicles.NativeAccess.*;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_E;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_SHIFT;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_SHIFT;
 
 /** Native SC transport. Only the confirmed driver advances physics. */
 public final class VehicleMod implements ClientMod {
@@ -52,7 +55,7 @@ public final class VehicleMod implements ClientMod {
     private boolean graphics,doorsOpen;
 
     @Override public void onLoad(ModContext context){log=context;rider.actions=actions;observer.actions=actions;log.log("SC Vehicles 0.9.19");}
-    @Override public void registerKeybinds(KeybindRegistry keys){keys.register("previous-type","Предыдущая машина",91);keys.register("next-type","Следующая машина",93);keys.register("spawn","Создать выбранный транспорт (администратор)",298);keys.register("enter","Сесть в транспорт",69);keys.register("engine","Запуск двигателя",82);keys.register("exit","Выйти из транспорта",71);keys.register("doors","Открыть / закрыть двери",74);keys.register("remove","Убрать свою машину",297);keys.register("lean","Высунуться из окна / вернуться",86);}
+    @Override public void registerKeybinds(KeybindRegistry keys){keys.register("previous-type","Предыдущая машина",91);keys.register("next-type","Следующая машина",93);keys.register("spawn","Создать выбранный транспорт (администратор)",298);keys.register("enter","Сесть в транспорт (с Shift)",GLFW_KEY_E);keys.register("engine","Запуск двигателя",82);keys.register("exit","Выйти из транспорта",71);keys.register("doors","Открыть / закрыть двери",74);keys.register("remove","Убрать свою машину",297);keys.register("lean","Высунуться из окна / вернуться",86);}
     @Override public void registerSettings(SettingsRegistry settings){var tab=settings.registerTab("vehicles","Транспорт");volume=tab.numberSetting("volume","Громкость транспорта, %",30,0,100);soundEffectsVolume=tab.numberSetting("sound-effects-volume","Механика, колёса и удары, %",65,0,100);cameraMotion=tab.numberSetting("camera-motion","Движение гоночной камеры, %",70,0,100);wheelEffects=tab.booleanSetting("wheel-effects","Дым, пыль и брызги из-под колёс",true);}
     @Override public void registerHud(HudRegistry hud){hud.register("vehicle-info",(h,w,height,pt)->{
         if(player==null)return;
@@ -63,7 +66,7 @@ public final class VehicleMod implements ClientMod {
                 call(font,"static","double",line,24,height-88,0xffe8eee1);
             }
             if(System.nanoTime()-actionNoticeUntil>=0)return;
-            String controls=driving==null?"[ / ] — "+VehicleFleet.get(selectedModel).name+"    F9 — создать    E — сесть    F8 — убрать свою машину"
+            String controls=driving==null?"[ / ] — "+VehicleFleet.get(selectedModel).name+"    F9 — создать    Shift+E — сесть    F8 — убрать свою машину"
                 :windowView()?"ЛКМ — огонь    ПКМ — прицел    R — перезарядка    V — вернуться"
                 :isDriver()?"W/S — газ / тормоз / назад    A/D — руль    Пробел — ручник    R — мотор    J — двери"
                 :"Пассажир • место "+(seatIndex+1)+"/"+VehicleSeats.COUNT[physics.model];
@@ -79,6 +82,7 @@ public final class VehicleMod implements ClientMod {
         try{return (Boolean)Class.forName("StandardJvmBootstrap").getMethod("controlKeyDown",int.class).invoke(null,code);}catch(ReflectiveOperationException ignored){return false;}
     }
     private boolean edge(int code)throws Exception{boolean down=key(code),before=held.contains(code);if(down)held.add(code);else held.remove(code);return down&&!before;}
+    private boolean boardingModifier()throws Exception{return key(GLFW_KEY_LEFT_SHIFT)||key(GLFW_KEY_RIGHT_SHIFT);}
     @Override public void onInput(InputSnapshot input)throws Exception{
         if(driving==null)return;
         physics.throttle=0;physics.turn=0;physics.handbrake=isDriver();if(!isDriver())return;
@@ -115,7 +119,7 @@ public final class VehicleMod implements ClientMod {
         if(driving!=null&&now-lastReply>3_000_000_000L){stop();notice("Связь с транспортом потеряна");}
         boolean previous=edge(91),next=edge(93);
         if(driving==null&&!menu()&&(previous||next)){selectedModel=Math.floorMod(selectedModel+(next?1:-1),VehicleFleet.ALL.length);notice("Выбрано: "+VehicleFleet.get(selectedModel).name);soundScene.action(VehicleSoundScene.Event.SELECT);}
-        boolean spawn=edge(298),enter=edge(69),remove=edge(297),engine=edge(82),exit=edge(71),doors=edge(74),lean=edge(86);
+        boolean spawn=edge(298),enter=edge(GLFW_KEY_E)&&boardingModifier(),remove=edge(297),engine=edge(82),exit=edge(71),doors=edge(74),lean=edge(86);
         if(!menu()){
             if(driving==null&&pending==null){
                 if(spawn&&selectedModel!=0&&!fleetSupported)notice("Для других машин нужен сервер SC Vehicles 0.6.0");
@@ -263,8 +267,8 @@ public final class VehicleMod implements ClientMod {
             if(hook.equals("input.key.v1")&&Set.of(91,93,297,298).contains((Integer)args[0]))return Boolean.FALSE;
             if(hook.equals("input.action-block.v1")&&!menu()&&(key(91)||key(93)||key(297)||key(298)))return Boolean.TRUE;
         }
-        if(hook.equals("input.action-block.v1")&&driving==null&&player!=null&&world!=null&&!menu()&&key(69)&&nearest()!=null)return Boolean.TRUE;
-        if(hook.equals("input.key.v1")&&driving==null&&(Integer)args[0]==69&&player!=null&&world!=null&&!menu()&&nearest()!=null)return Boolean.FALSE;
+        if(hook.equals("input.action-block.v1")&&driving==null&&player!=null&&world!=null&&!replicas.isEmpty()&&!menu()&&key(GLFW_KEY_E)&&boardingModifier())return Boolean.TRUE;
+        if(hook.equals("input.key.v1")&&driving==null&&(Integer)args[0]==GLFW_KEY_E&&player!=null&&world!=null&&!replicas.isEmpty()&&!menu()&&boardingModifier())return Boolean.FALSE;
         if(driving==null)return null;
         if(hook.equals("camera.perspective.v1")&&args[0]==camera)return Class.forName("1308185038").getField(windowView()?"FIRST_PERSON":"THIRD_PERSON_BACK").get(null);
         if(hook.equals("fp.screen-pass.v1")&&args[0]==player)return windowView()?null:Boolean.TRUE;
