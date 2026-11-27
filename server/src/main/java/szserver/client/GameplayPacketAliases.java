@@ -8,6 +8,7 @@ import szserver.net.InventoryPackets;
  * permissions, inventory admission and durable acknowledgements. */
 public final class GameplayPacketAliases {
     public static final int WEAPON_MODULE=1221;
+    public static final int STREAM_FIRE=1635;
     private static final Map<String,Integer> IDS=Map.ofEntries(
         Map.entry(AlliancePackets.JOIN,AlliancePackets.JOIN_ID),
         Map.entry(NativeAdminPackets.GIVE_CLASS,NativeAdminPackets.GIVE_ID),
@@ -25,7 +26,7 @@ public final class GameplayPacketAliases {
         Map.entry("23110596",212),Map.entry("1932940545",1527),
         Map.entry("1859052360",1449),Map.entry("309659025",WEAPON_MODULE),Map.entry("953021737",366),
         Map.entry("446599111",598),Map.entry("1950979903",1138),
-        Map.entry("1995052022",271),Map.entry("1732415882",280),
+        Map.entry("1995052022",271),Map.entry("738572698",STREAM_FIRE),Map.entry("1732415882",280),
         Map.entry("1603754623",928),Map.entry("1619370828",240),
         Map.entry("1308160046",1022),Map.entry("365897350",1435),
         Map.entry("1689493828",1464),Map.entry("1960490407",718),

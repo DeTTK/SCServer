@@ -7,6 +7,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import szserver.inventory.ItemCatalog;
@@ -186,10 +187,30 @@ public final class NativeConfigSourceChecks {
             var mosinProfile=items.weaponProfile(mosin);
             check(mosinProfile.reloadTiming(0,1).complete()>0&&mosinProfile.reloadTiming(1,1).complete()>0,
                     "stepwise weapon uses genuine cartridge timings");
-            var questFlamethrower=items.createStack(8271,1,0,new JsonObject());
-            var questMagazine=items.weaponMagazineRules(questFlamethrower);
-            check(questMagazine.capacity()==150000&&questMagazine.ammunition().contains(12742),
-                    "native grant accepts contextual capacity independently of combat profile");
+            for(int[] row:new int[][]{{20951,150,12742},{8271,150000,12742},{8285,15000,12742},{20956,160,12742},{9250,300,12750}}){
+                var stream=items.createStack(row[0],1,0,new JsonObject());
+                var magazine=items.weaponMagazineRules(stream);
+                var combat=items.weaponProfile(stream);
+                var rules=items.streamWeapon(row[0],row[2]);
+                check(magazine.capacity()==row[1]&&combat.capacity()==row[1]&&magazine.ammunition().equals(List.of(row[2])),
+                        "native grant and combat agree on stream-weapon capacity and fuel "+row[0]);
+                check(items.fullReloadAmmunition(row[2])&&combat.reloadTiming(0,row[1]).complete()>0
+                                &&combat.reloadTiming(1,row[1]-1).complete()>0,
+                        "fuel swaps a full canister with both native reload timelines "+row[0]);
+                check(rules.primary().equals(row[0]==20956?"TEAR":"BURN")&&rules.secondary().equals(row[0]==20956?"FREEZE":"DEFAULT"),
+                        "native damage channels for stream weapon "+row[0]);
+                var loaded=stream.state(items.magazine(stream,row[2],row[1]));
+                var spent=loaded.state(items.resizeLoadedMagazine(loaded,row[1]-1));
+                check(items.inspectMagazine(spent).rounds()==row[1]-1&&items.identity(spent).equals(items.identity(stream)),
+                        "native magazine count and identity survive large round-count changes "+row[0]);
+                try{
+                    items.unloadWeapon(loaded);
+                    throw new AssertionError("full-reload fuel cannot be extracted as individual rounds "+row[0]);
+                }catch(java.io.IOException denied){
+                    check(denied.getMessage().equals("Из этого магазина нельзя извлечь патроны."),
+                            "native fuel refuses unloading "+row[0]);
+                }
+            }
             var knifeOne = items.createStack(9174, 1, 0, new JsonObject());
             var knifeTwo = items.createStack(9174, 1, 0, new JsonObject());
             check(!items.identity(knifeOne).equals(items.identity(knifeTwo)), "fresh identity from native default");

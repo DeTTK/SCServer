@@ -66,7 +66,9 @@ public final class GameInventory implements AutoCloseable {
             persist(id,c,plan,progress,p->{try{delivery.publish().run();success.accept(p);}catch(RuntimeException error){failure.accept(Objects.toString(error.getMessage(),"creative_delivery_failed"));}},failure);
         }catch(RuntimeException error){c.busy=false;denied++;failure.accept(Objects.toString(error.getMessage(),"creative_give_failed"));}
     }
-    public record Weapon(int factory,int ammo,int capacity,int rounds,UUID identity,byte[][] magazines,WeaponProfile profile,GameItems.Launcher launcher,byte[][] launcherMagazines,GameItems.Jamming jamming) {}
+    public record Weapon(int factory,int ammo,int capacity,int rounds,UUID identity,MagazineStates magazines,WeaponProfile profile,GameItems.Launcher launcher,MagazineStates launcherMagazines,GameItems.Jamming jamming,boolean fullReload,StreamWeapon stream) {
+        public byte[] magazineState(int rounds){return magazines.state(rounds);}
+    }
     public GameInventory(Path root,Path data,Path runtime,Path registry)throws Exception {
         this(root,data,runtime,registry,0);
     }
@@ -275,8 +277,12 @@ public final class GameInventory implements AutoCloseable {
             Map<Integer,byte[]> prepared=Map.copyOf(appearances);Map<Integer,UUID> preparedIdentities=Map.copyOf(identities);var summary=items.equipmentSummary(working.items().entrySet().stream().filter(entry->entry.getKey().aggregate()==0).map(Map.Entry::getValue).toList());Map<String,Float> stats=summary.total();
             WeaponProfile profile=items.weaponProfile(selected);if(profile==null){completion(()->publishBuiltinWeapon(id,c,upgrade,()->{c.quickSlots=preparedQuick;c.appearances=prepared;c.identities=preparedIdentities;c.stats=stats;c.artifactStats=summary.artifacts();c.busy=false;ready.accept(null);},failure));return;}
             var info=items.inspectMagazine(selected);WeaponProfile configured=profile;int capacity=configured.capacity();int ammo=requestedAmmo!=0&&info.rounds()==0?requestedAmmo:info.ammo()==0?(requestedAmmo==0?profile.ammunition().get(0):requestedAmmo):info.ammo();if(!profile.ammunition().contains(ammo)||requestedAmmo!=0&&ammo!=requestedAmmo)throw new IllegalArgumentException("weapon_ammunition_type");
-            if(info.rounds()<0||info.rounds()>capacity)throw new IllegalArgumentException("magazine_rounds");byte[][] magazines=new byte[capacity+1][];for(int n=0;n<=capacity;n++)magazines[n]=items.magazine(selected,ammo,n);
-            GameItems.Launcher launcher=items.inspectLauncher(selected);byte[][] launcherMagazines=launcher==null?null:new byte[capacity+1][];if(launcher!=null)for(int n=0;n<=capacity;n++)launcherMagazines[n]=items.launcherMagazine(selected.state(magazines[n]),0,false);Weapon weapon=new Weapon(stack.id(),ammo,capacity,info.rounds(),info.identity(),magazines,configured,launcher,launcherMagazines,items.jamming(selected));completion(()->publishBuiltinWeapon(id,c,upgrade,()->{c.quickSlots=preparedQuick;c.appearances=prepared;c.identities=preparedIdentities;c.stats=stats;c.artifactStats=summary.artifacts();c.busy=false;ready.accept(weapon);},failure));
+            if(info.rounds()<0||info.rounds()>capacity)throw new IllegalArgumentException("magazine_rounds");
+            MagazineStates.Resizer resize=(loaded,n)->items.resizeLoadedMagazine(selected.state(loaded),n);
+            MagazineStates magazines=MagazineStates.prepare(capacity,n->items.magazine(selected,ammo,n),resize);
+            GameItems.Launcher launcher=items.inspectLauncher(selected);
+            MagazineStates launcherMagazines=launcher==null?null:MagazineStates.prepare(capacity,n->items.launcherMagazine(selected.state(magazines.state(n)),0,false),resize);
+            Weapon weapon=new Weapon(stack.id(),ammo,capacity,info.rounds(),info.identity(),magazines,configured,launcher,launcherMagazines,items.jamming(selected),items.fullReloadAmmunition(ammo),items.streamWeapon(stack.id(),ammo));completion(()->publishBuiltinWeapon(id,c,upgrade,()->{c.quickSlots=preparedQuick;c.appearances=prepared;c.identities=preparedIdentities;c.stats=stats;c.artifactStats=summary.artifacts();c.busy=false;ready.accept(weapon);},failure));
         }catch(Exception | LinkageError e){e.printStackTrace();completion(()->{c.busy=false;failure.accept(Objects.toString(e.getMessage(),"native_weapon_failed"));});}});}catch(RejectedExecutionException e){c.busy=false;failure.accept("inventory_factory_queue_full");}
     }
     private void publishBuiltinWeapon(UUID id,Character c,Inventory.Plan upgrade,Runnable ready,Consumer<String> failure){

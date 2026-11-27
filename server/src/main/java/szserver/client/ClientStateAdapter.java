@@ -435,6 +435,40 @@ public final class ClientStateAdapter implements AutoCloseable {
         return encode(c,state);
     }
 
+    public boolean fullReloadAmmunition(int ammo)throws Exception{
+        if(!moduleFactoryClasses.containsKey(ammo))return false;
+        Class<?> type=Class.forName("657970419",true,loader);
+        Object factory=cosmetics.factory(ammo);
+        return type.isInstance(factory)&&type.getField("package").getBoolean(factory);
+    }
+    public szserver.inventory.StreamWeapon streamWeapon(int item,int ammo)throws Exception{
+        String definition=moduleFactoryClasses.get(item);
+        Class<?> stream=Class.forName("735172966",false,loader);
+        if(definition==null||!stream.isAssignableFrom(Class.forName(definition,false,loader)))return null;
+        Object gun=moduleFactory(item),fuel=cosmetics.factory(ammo);
+        Class<?> type=stream.getSuperclass(),bullet=Class.forName("657970419",false,loader);
+        Enum<?> primary=(Enum<?>)type.getField("ap").get(gun),secondary=(Enum<?>)type.getField("bu").get(gun);
+        float factor=type.getField("bt").getFloat(gun);
+        if(bullet.isInstance(fuel)){
+            Enum<?> override=(Enum<?>)bullet.getField("void").get(fuel);
+            if(override!=null)secondary=override;
+            float ammoFactor=bullet.getField("try").getFloat(fuel);
+            if(ammoFactor>0)factor=ammoFactor;
+        }
+        return new szserver.inventory.StreamWeapon(primary.name(),secondary.name(),factor,
+                type.getField("bv").getFloat(gun),type.getField("bw").getInt(gun),
+                (long)(1e9*type.getField("bx").getFloat(gun)),type.getField("af").getFloat(gun),
+                type.getField("m").getFloat(gun),type.getField("finally").getFloat(gun));
+    }
+    byte[] resizeLoadedMagazine(String kind,byte[] input,int rounds)throws Exception{
+        Codec codec=codec(kind);
+        Object state=decode(codec,input);
+        Object stack=state.getClass().getField("void").get(state);
+        if(stack==null||rounds<=0)throw new IOException("magazine_resize_state");
+        stack.getClass().getMethod("finally",int.class).invoke(stack,rounds);
+        return encode(codec,state);
+    }
+
     public record Magazine(UUID identity,int ammo,int rounds,int magazineFactory) {}
     record UnloadedMagazine(byte[] state,byte[] ammunition){}
     UnloadedMagazine unloadMagazine(String kind,byte[] input)throws Exception{
@@ -445,10 +479,7 @@ public final class ClientStateAdapter implements AutoCloseable {
         Object ammunition=loaded.get(state);
         if(ammunition==null)throw new IOException("В оружии нет патронов.");
         int ammoId=moduleId(ammunition);
-        String definition=moduleFactoryClasses.get(ammoId);
-        Class<?> magazine=Class.forName("657970419",true,loader);
-        if(definition!=null&&magazine.isAssignableFrom(Class.forName(definition,false,loader))
-                &&magazine.getField("package").getBoolean(cosmetics.factory(ammoId)))
+        if(fullReloadAmmunition(ammoId))
             throw new IOException("Из этого магазина нельзя извлечь патроны.");
         byte[] stack=moduleWire(ammunition);
         loaded.set(state,null);

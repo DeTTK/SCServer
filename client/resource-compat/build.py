@@ -28,7 +28,7 @@ def main():
         libraries=Path(scratch)/'libraries.jar'
         libraries.write_bytes(b''.join((root/part).read_bytes() for part in native['parts']))
         if hashlib.sha256(libraries.read_bytes()).hexdigest()!=native['sha256']:parser.error('Checksum mismatch: runtime/libraries.jar')
-        patched=('ResourceCompatibilityAgent','PerspectivePolicyTransformer','ContainerMotifIconTransformer','ContainerMotifModels','AmdAlphaTestTransformer','SceneSelectionTransformer','SceneVariantTransformer','SceneSafeTransformer','SceneDamageModelTransformer','VoiceLogTransformer')
+        patched=('ResourceCompatibilityAgent','PerspectivePolicyTransformer','ContainerMotifIconTransformer','ContainerMotifModels','AmdAlphaTestTransformer','SceneSelectionTransformer','SceneVariantTransformer','SceneSafeTransformer','SceneDamageModelTransformer','VoiceLogTransformer','FlamethrowerEffectTransformer','FlamethrowerEffectHooks')
         sources=[here/'src/gamecompat'/f'{name}.java' for name in patched]
         sources.extend((root/'shared/voice/src').rglob('*.java'))
         cp=os.pathsep.join(str(f.resolve())for f in [a.asm,a.asm_tree,a.base_agent,libraries]);subprocess.run([tool('javac'),'--release','17','-proc:none','-encoding','UTF-8','-cp',cp,'-d',scratch,*map(str,sources)],check=True)

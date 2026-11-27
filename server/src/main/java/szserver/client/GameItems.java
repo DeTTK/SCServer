@@ -357,6 +357,11 @@ public final class GameItems implements AutoCloseable {
     }
     public ClientStateAdapter.Magazine inspectMagazine(szserver.inventory.ItemStack item)throws Exception{return adapter.inspectMagazine(stateKind(item),item.state());}
     public byte[] magazine(szserver.inventory.ItemStack item,int ammo,int rounds)throws Exception{return adapter.magazine(stateKind(item),item.state(),ammo,rounds);}
+    public boolean fullReloadAmmunition(int ammo)throws Exception{return adapter.fullReloadAmmunition(ammo);}
+    public szserver.inventory.StreamWeapon streamWeapon(int item,int ammo)throws Exception{return adapter.streamWeapon(item,ammo);}
+    public byte[] resizeLoadedMagazine(szserver.inventory.ItemStack item,int rounds)throws Exception{
+        return adapter.resizeLoadedMagazine(stateKind(item),item.state(),rounds);
+    }
     public record UnloadedWeapon(szserver.inventory.ItemStack weapon,szserver.inventory.ItemStack ammo){}
     public UnloadedWeapon unloadWeapon(szserver.inventory.ItemStack item)throws Exception{
         if(!firearm(item.id())||item.count()!=1)throw new IllegalArgumentException("weapon_unload_target");
