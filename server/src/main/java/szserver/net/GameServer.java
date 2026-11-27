@@ -71,6 +71,9 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
     }
     private record QuickIntent(szserver.client.ClientStateAdapter.QuickBindRequest binding,Integer use,ItemStack source){}
     static final class Session {
+        CompletableFuture<byte[]> voiceReply;
+        long nextVoiceRequest;
+        szserver.voice.VoicePackets.Request lastVoiceRequest;
         float characterScale=1,configuredScale=1;boolean scaleCapable,scaleSaving,scaleRestore;long scaleHelloAt;ScaleChange scaleChange;
         final PlayerAnimation animation=new PlayerAnimation();final PlayerReplication replication=new PlayerReplication();final PlayerReplication botReplication=new PlayerReplication();final PlayerReplication cloneReplication=new PlayerReplication();final PlayerMotion motion=new PlayerMotion();String forcedAnimation;long lastCompletion;final Map<Integer,String> poses=new HashMap<>();
         boolean vehicleCapable,vehicleArticulation,vehicleFleet,vehicleContacts,vehicleInteractions;long vehicleCommandAt;
@@ -304,7 +307,14 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         this(root,data,runtime,registry,httpPort,gatewayPort,udpPort,world,terrain,spawn,commands,worldEditors,playerRules,routes,chunkSettings,fpvSettings,true);
     }
     /** Prepare native codecs, inventories, stores and bound sockets without starting gameplay. */
+    private final szserver.voice.VoiceTokens voiceTokens;
+
     public GameServer(Path root,Path data,Path runtime,Path registry,int httpPort,int gatewayPort,int udpPort,WorldLoop world,szserver.world.Terrain terrain,double[] spawn,CommandService commands,Set<UUID> worldEditors,PlayerRules playerRules,ConnectionRoutes routes,ChunkStreamingSettings chunkSettings,FpvPlacementSettings fpvSettings,boolean autoStart)throws Exception{
+        this(root,data,runtime,registry,httpPort,gatewayPort,udpPort,world,terrain,spawn,commands,worldEditors,playerRules,routes,chunkSettings,fpvSettings,autoStart,null);
+    }
+
+    public GameServer(Path root,Path data,Path runtime,Path registry,int httpPort,int gatewayPort,int udpPort,WorldLoop world,szserver.world.Terrain terrain,double[] spawn,CommandService commands,Set<UUID> worldEditors,PlayerRules playerRules,ConnectionRoutes routes,ChunkStreamingSettings chunkSettings,FpvPlacementSettings fpvSettings,boolean autoStart,szserver.voice.VoiceTokens voiceTokens)throws Exception{
+        this.voiceTokens=voiceTokens;
         szserver.client.NpcVisuals.prepare(runtime);
         NpcEditorHooks.prepare(this,data,runtime);
         ArrayDeque<AutoCloseable> rollback=new ArrayDeque<>();List<Thread> started=new ArrayList<>();rollback.push(screenshots);
@@ -585,6 +595,25 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         }
         if(!parseReady.isEmpty())applicationBudgetYields++;
     }
+    private void voiceRequest(Session session,byte[] body)throws IOException {
+        if(voiceTokens==null||session.voiceReply!=null)return;
+        var request=szserver.voice.VoicePackets.read(body);
+        if(request==null)return;
+        long now=System.nanoTime();
+        if(session.lastVoiceRequest!=null&&session.lastVoiceRequest.action()==request.action()&&now-session.nextVoiceRequest<0)return;
+        session.lastVoiceRequest=request;
+        session.nextVoiceRequest=now+200_000_000L;
+        session.voiceReply=voiceTokens.request(request,session.grant.name()).exceptionally(failure->null);
+    }
+
+    private void advanceVoice(Session session) {
+        if(session.voiceReply==null||!session.voiceReply.isDone())return;
+        var pending=session.voiceReply;
+        session.voiceReply=null;
+        byte[] reply=pending.getNow(null);
+        if(reply!=null)enqueue(session,0,reply);
+    }
+
     private void application(Session s,int id,byte[] body)throws Exception{
         if(s.ready&&NpcEditorHooks.application(this,s,id,body))return;
         if(applicationCounts.containsKey(id)||applicationCounts.size()<512)applicationCounts.merge(id,1L,Long::sum);
@@ -595,7 +624,12 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         }
         if(!s.ready)return;
         if(id==1501)id=5; // Current native dynamic envelope (legacy peers use 5).
-        if(id==5){var dynamic=Wire.input(body);int registered=GameplayPacketAliases.registered(dynamic.readUTF());if(registered!=0){id=registered;body=dynamic.readAllBytes();}}
+        if(id==5){
+            var dynamic=Wire.input(body);String name=dynamic.readUTF();
+            if(szserver.voice.VoicePackets.REQUEST_CLASS.equals(name)){voiceRequest(s,dynamic.readAllBytes());return;}
+            int registered=GameplayPacketAliases.registered(name);if(registered!=0){id=registered;body=dynamic.readAllBytes();}
+        }
+        if(id==szserver.voice.VoicePackets.REQUEST_ID){voiceRequest(s,body);return;}
         if(id==ScreenshotPackets.RESPONSE){screenshots.receive(s.incarnation,body);return;}
         if(id==ScreenshotPackets.ENVELOPE){byte[] capture=ScreenshotPackets.envelope(body);if(capture!=null){screenshots.receive(s.incarnation,capture);return;}}
         if(id==1070){grenadeStart(s,GrenadePackets.start(body));return;}
@@ -1529,7 +1563,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
     }
     private void join(Session s,UUID protocol){
         if(sessions.get(s.address)!=s)return;
-        enqueue(s,0,Wire.concat(GamePackets.context(protocol,locationName.current()),GamePackets.snapshot(),szserver.client.ChunkDistancePackets.frame(s.window.radius()),scaledReady(s),GamePackets.vitals(tick,0,s.hp,s.maxHp,s.animation.aiming())));
+        enqueue(s,0,Wire.concat(GamePackets.context(protocol,locationName.current(),voiceTokens!=null),GamePackets.snapshot(),szserver.client.ChunkDistancePackets.frame(s.window.radius()),scaledReady(s),GamePackets.vitals(tick,0,s.hp,s.maxHp,s.animation.aiming())));
         enqueue(s,0,GamePackets.attributes(tick,0,equipment(s)));inventorySnapshot(s,0);syncLoadoutHand(s);
         var initialEnvironment=environment.state();enqueue(s,0,EnvironmentPackets.clock(environment.clockAnchor(),System.currentTimeMillis()));
         enqueue(s,0,inventories.quickSlotsFrame(character(s)));sendEffects(s,List.of(),s.effects.active(System.currentTimeMillis()));sendPulseEffects(s,List.of(),s.pulses.effects(System.currentTimeMillis()));sendSickness(s,true);
@@ -2960,7 +2994,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         boolean saved=locationName.publish();
         boolean failed=locationNameSave.isCompletedExceptionally();locationNameSave=null;
         if(saved)for(Session other:new ArrayList<>(sessions.values()))if(other.ready)
-            enqueueOrRetire(other,GamePackets.context(other.loginProtocol,locationName.current()));
+            enqueueOrRetire(other,GamePackets.context(other.loginProtocol,locationName.current(),voiceTokens!=null));
         if(sessions.get(requester.address)==requester)
             enqueue(requester,0,GamePackets.chat(failed?"Не удалось сохранить название локации.":"Локация: "+locationName.current()));
     }
@@ -2996,6 +3030,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
             if(sessions.get(s.address)!=s)continue;
             try{
                 if(s.ready){
+                    advanceVoice(s);
                     Lane output=s.lanes[0];
                     if(output.queued.size()>32||output.sent.size()>=WINDOW){replicationDeferred++;}
                     else{
