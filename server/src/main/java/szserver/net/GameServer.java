@@ -595,10 +595,8 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         }
         if(!parseReady.isEmpty())applicationBudgetYields++;
     }
-    private void voiceRequest(Session session,byte[] body)throws IOException {
+    private void voiceRequest(Session session,szserver.voice.VoicePackets.Request request) {
         if(voiceTokens==null||session.voiceReply!=null)return;
-        var request=szserver.voice.VoicePackets.read(body);
-        if(request==null)return;
         long now=System.nanoTime();
         if(session.lastVoiceRequest!=null&&session.lastVoiceRequest.action()==request.action()&&now-session.nextVoiceRequest<0)return;
         session.lastVoiceRequest=request;
@@ -626,10 +624,20 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         if(id==1501)id=5; // Current native dynamic envelope (legacy peers use 5).
         if(id==5){
             var dynamic=Wire.input(body);String name=dynamic.readUTF();
-            if(szserver.voice.VoicePackets.REQUEST_CLASS.equals(name)){voiceRequest(s,dynamic.readAllBytes());return;}
+            if(szserver.voice.VoicePackets.REQUEST_CLASS.equals(name)){
+                var voice=szserver.voice.VoicePackets.read(dynamic.readAllBytes(),false);
+                if(voice!=null)voiceRequest(s,voice);return;
+            }
+            if(szserver.voice.VoicePackets.WORLD_RPC_CLASS.equals(name)){
+                var voice=szserver.voice.VoicePackets.read(dynamic.readAllBytes(),true);
+                if(voice!=null){voiceRequest(s,voice);return;}
+            }
             int registered=GameplayPacketAliases.registered(name);if(registered!=0){id=registered;body=dynamic.readAllBytes();}
         }
-        if(id==szserver.voice.VoicePackets.REQUEST_ID){voiceRequest(s,body);return;}
+        if(id==szserver.voice.VoicePackets.REQUEST_ID||id==szserver.voice.VoicePackets.WORLD_RPC_ID){
+            var voice=szserver.voice.VoicePackets.read(body,id==szserver.voice.VoicePackets.WORLD_RPC_ID);
+            if(voice!=null){voiceRequest(s,voice);return;}
+        }
         if(id==ScreenshotPackets.RESPONSE){screenshots.receive(s.incarnation,body);return;}
         if(id==ScreenshotPackets.ENVELOPE){byte[] capture=ScreenshotPackets.envelope(body);if(capture!=null){screenshots.receive(s.incarnation,capture);return;}}
         if(id==1070){grenadeStart(s,GrenadePackets.start(body));return;}

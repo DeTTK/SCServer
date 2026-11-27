@@ -24,13 +24,16 @@ public final class VoiceTests {
         var signer = new VoiceSigner(config, "a".repeat(64));
         for (boolean named : new boolean[]{false, true}) {
             for (var action : VoicePackets.Action.values()) {
-                var request = VoicePackets.read(request(action, named, 7));
+                var request = VoicePackets.read(request(action, named, 7), false);
                 check(request != null && request.action() == action && request.named() == named);
                 byte[] payload = signer.credentials(action, room, "Player");
-                verifyReply(request.reply(payload), action, named, payload);
+                verifyReply(request.reply(payload), action, named, false, payload);
+                var wrapped = VoicePackets.read(wrapped(request(action, named, 7)), true);
+                check(wrapped != null && wrapped.action() == action && wrapped.wrapped());
+                verifyReply(wrapped.reply(payload), action, named, true, payload);
             }
-            check(VoicePackets.read(request(VoicePackets.Action.JOIN, named, 1)) == null);
-            check(VoicePackets.read(request(VoicePackets.Action.JOIN, named, 6)) == null);
+            check(VoicePackets.read(request(VoicePackets.Action.JOIN, named, 1), false) == null);
+            check(VoicePackets.read(wrapped(request(VoicePackets.Action.JOIN, named, 6)), true) == null);
         }
         var setup = Wire.input(signer.credentials(VoicePackets.Action.SETUP, room, "Player"));
         check(setup.readUTF().equals(config.getProperty("endpoint")));
@@ -66,13 +69,27 @@ public final class VoiceTests {
         });
     }
 
-    private static void verifyReply(byte[] wrapped, VoicePackets.Action action, boolean named, byte[] payload) throws Exception {
-        var frame = ByteBuffer.wrap(Wire.readFrame(Wire.input(wrapped)));
-        check(Wire.varint(frame) == 5);
+    private static byte[] wrapped(byte[] request) {
+        return Wire.bytes(out -> {
+            Wire.varint(out, VoicePackets.REQUEST_ID);
+            out.write(request);
+            out.writeBoolean(true);
+        });
+    }
+
+    private static void verifyReply(byte[] packet, VoicePackets.Action action, boolean named, boolean wrapped, byte[] payload) throws Exception {
+        var frame = ByteBuffer.wrap(Wire.readFrame(Wire.input(packet)));
+        if (wrapped) {
+            check(Wire.varint(frame) == VoicePackets.WORLD_RPC_ID);
+            check(Wire.varint(frame) == 1524);
+            check(frame.get(frame.limit()-1) == 0);
+            frame.limit(frame.limit()-1);
+        } else check(Wire.varint(frame) == 5);
         byte[] inner = new byte[frame.remaining()];
         frame.get(inner);
         var data = Wire.input(inner);
-        check(data.readUTF().equals("811671987") && data.readInt() == 271);
+        if (!wrapped) check(data.readUTF().equals("811671987"));
+        check(data.readInt() == 271);
         check(named ? data.readUTF().equals(action.replyClass) : data.readUnsignedShort() == action.replyId);
         check(MessageDigest.isEqual(data.readAllBytes(), payload));
     }
