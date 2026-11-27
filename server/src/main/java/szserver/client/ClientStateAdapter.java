@@ -3,6 +3,7 @@ package szserver.client;
 import java.io.*;
 import java.lang.reflect.*;
 import java.net.*;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -264,6 +265,16 @@ public final class ClientStateAdapter implements AutoCloseable {
     public boolean hasAppearanceCodec(String factory)throws Exception {
         return Class.forName("989274007",false,loader).isAssignableFrom(Class.forName(factory,false,loader));
     }
+    private static void writeAppearanceName(DataOutput out, String name) throws IOException {
+        byte[] encoded = name == null ? null : name.getBytes(StandardCharsets.UTF_8);
+        // The client reads a signed byte length and uses -1 for an absent cosmetic.
+        if (encoded == null || encoded.length > Byte.MAX_VALUE) {
+            out.writeByte(-1);
+            return;
+        }
+        out.writeByte(encoded.length);
+        out.write(encoded);
+    }
     /** Headless boundary for 1745367406.package: native state, slot and property codecs. */
     public byte[] firearmAppearance(byte[] raw)throws Exception {
         Class<?> stackType=Class.forName("211097523",true,loader);
@@ -274,7 +285,7 @@ public final class ClientStateAdapter implements AutoCloseable {
         ByteArrayOutputStream bytes=new ByteArrayOutputStream();DataOutputStream out=new DataOutputStream(bytes);
         Class.forName("1160390453",true,loader).getMethod("long",stackType,DataOutput.class).invoke(null,stack,out);
         String name=(String)state.getClass().getMethod("transient").invoke(state);
-        if(name==null)out.writeByte(-1);else{byte[] encoded=name.getBytes(java.nio.charset.Charset.defaultCharset());if(name.length()>127||encoded.length!=name.length())throw new IOException("appearance_name_encoding");out.writeByte(encoded.length);out.write(encoded);}
+        writeAppearanceName(out,name);
         Map<?,?> modules=(Map<?,?>)state.getClass().getMethod("for").invoke(state);if(modules.size()>127)throw new IOException("appearance_module_count");out.writeByte(modules.size());
         Class<?> slotType=Class.forName("1173269411",true,loader);Method slotWriter=Class.forName("1046176253",true,loader).getMethod("while",slotType,DataOutput.class);
         Method itemId=Arrays.stream(stackType.getMethods()).filter(m->m.getName().equals("continue")&&m.getParameterCount()==0&&m.getReturnType()==int.class).findFirst().orElseThrow();
@@ -289,7 +300,9 @@ public final class ClientStateAdapter implements AutoCloseable {
         Class<?> stackType=Class.forName("211097523",true,loader),base=Class.forName("154675812",true,loader);Object stack=stackType.getConstructor(DataInput.class).newInstance(new BoundedNativeInput(raw));
         Method stateGetter=Arrays.stream(stackType.getMethods()).filter(m->m.getName().equals("finally")&&m.getParameterCount()==0&&m.getReturnType()==base).findFirst().orElseThrow();Object state=stateGetter.invoke(stack);
         ByteArrayOutputStream bytes=new ByteArrayOutputStream();DataOutputStream out=new DataOutputStream(bytes);Class.forName("1160390453",true,loader).getMethod("long",stackType,DataOutput.class).invoke(null,stack,out);
-        Class<?> visual=Class.forName("865153858",true,loader);for(String getter:List.of("transient","static")){String name=(String)visual.getMethod(getter).invoke(state);if(name==null)out.writeByte(-1);else{byte[] encoded=name.getBytes(java.nio.charset.Charset.defaultCharset());if(name.length()>127||encoded.length!=name.length())throw new IOException("appearance_name_encoding");out.writeByte(encoded.length);out.write(encoded);}}
+        Class<?> visual=Class.forName("865153858",true,loader);
+        writeAppearanceName(out,(String)visual.getMethod("transient").invoke(state));
+        writeAppearanceName(out,(String)visual.getMethod("static").invoke(state));
         if(kind.equals("1865555906")){Class<?> key=Class.forName("520353426",true,loader);Method get=Arrays.stream(stackType.getMethods()).filter(m->m.getName().equals("do")&&Arrays.equals(m.getParameterTypes(),new Class<?>[]{key})&&m.getReturnType()==int.class).findFirst().orElseThrow();out.writeShort((Integer)get.invoke(stack,Class.forName("241793746",true,loader).getField("enum").get(null)));}
         Map<?,?> attachments=(Map<?,?>)state.getClass().getMethod("for").invoke(state);Method id=Arrays.stream(stackType.getMethods()).filter(m->m.getName().equals("continue")&&m.getParameterCount()==0&&m.getReturnType()==int.class).findFirst().orElseThrow();
         for(int slot=0;slot<2;slot++){Object attached=attachments.get(cosmeticKey(kind,slot));out.writeShort(attached==null?0:(Integer)id.invoke(attached));}
