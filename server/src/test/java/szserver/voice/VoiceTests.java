@@ -57,7 +57,48 @@ public final class VoiceTests {
         byte[] disabled = GamePackets.context(room, "BSCPCRAFT");
         byte[] enabled = GamePackets.context(room, "BSCPCRAFT", true);
         check(disabled.length == enabled.length && disabled[disabled.length-1] == 0 && enabled[enabled.length-1] == 1);
+        verifyHostedVoice(signer, testKey);
         System.out.println("PASS positional-only native voice RPC, world flag, scope and Vivox token signing");
+    }
+
+    private static void verifyHostedVoice(VoiceSigner signer, String testKey) throws Exception {
+        var identity = VoiceHostProof.identity();
+        var other = VoiceHostProof.identity();
+        String name = "Сталкер_1";
+        byte[] packet = VoiceHostProof.encode(VoicePackets.Action.JOIN, name);
+        String proof = VoiceHostProof.sign(identity, packet);
+        String host = VoiceHostProof.verify(VoiceHostProof.publicKey(identity), proof, packet);
+        String another = VoiceHostProof.verify(VoiceHostProof.publicKey(other), VoiceHostProof.sign(other, packet), packet);
+        check(!host.equals(another));
+        byte[] altered = packet.clone();
+        altered[altered.length-1] ^= 1;
+        try {
+            VoiceHostProof.verify(VoiceHostProof.publicKey(identity), proof, altered);
+            throw new AssertionError("accepted modified proof");
+        } catch (java.security.SignatureException expected) {}
+        long now = java.time.Instant.now().getEpochSecond();
+        var request = VoiceHostProof.decode(packet, now);
+        check(request.action() == VoicePackets.Action.JOIN && request.player().equals(name));
+        try {
+            VoiceHostProof.decode(packet, now + 90);
+            throw new AssertionError("accepted expired proof");
+        } catch (java.io.IOException expected) {}
+        var broker = new VoiceBroker(signer);
+        check(broker.allowIp("127.0.0.1", now));
+        check(broker.authorize(host, request.nonce(), now));
+        check(!broker.authorize(host, request.nonce(), now));
+        check(broker.authorize(another, request.nonce(), now));
+        var setup = Wire.input(signer.hostCredentials(VoicePackets.Action.SETUP, host, name));
+        setup.readUTF();
+        setup.readUTF();
+        String namespace = setup.readUTF();
+        String account = setup.readUTF();
+        check(account.equals(VoiceAccountNames.scopedAccount(namespace, name)));
+        check(VoiceAccountNames.scopedAccount("bscp-test", name) == null);
+        var first = Wire.input(signer.hostCredentials(VoicePackets.Action.JOIN, host, name));
+        var second = Wire.input(signer.hostCredentials(VoicePackets.Action.JOIN, another, name));
+        check(!first.readUTF().equals(second.readUTF()));
+        check(!claims(first.readUTF(), testKey).get("f").equals(claims(second.readUTF(), testKey).get("f")));
     }
 
     private static byte[] request(VoicePackets.Action action, boolean named, int slot) {

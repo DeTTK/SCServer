@@ -91,11 +91,19 @@ public final class VoiceSigner {
         // Same account-name codec used by the client when resolving a nearby speaker.
         String encoded = BASE64.encodeToString(player.getBytes(StandardCharsets.UTF_8)).replaceAll("[^a-zA-Z0-9]", "");
         if (encoded.isEmpty()) throw new IllegalArgumentException("voice_account");
-        String account = "." + issuer + "." + encoded + ".";
-        if (action == VoicePackets.Action.SETUP) return VoicePackets.strings(endpoint, domain, issuer, account);
+        return credentials(action, room.toString().replace("-", ""), issuer, encoded);
+    }
+
+    byte[] hostCredentials(VoicePackets.Action action, String scope, String player) {
+        return credentials(action, scope, issuer + "." + scope, VoiceAccountNames.label(player));
+    }
+
+    private byte[] credentials(VoicePackets.Action action, String room, String namespace, String label) {
+        String account = "." + namespace + "." + label + ".";
+        if (action == VoicePackets.Action.SETUP) return VoicePackets.strings(endpoint, domain, namespace, account);
         String from = "sip:" + account + "@" + domain;
         if (action == VoicePackets.Action.LOGIN) return VoicePackets.strings(token("login", from, null));
-        String channel = "sip:confctl-d-" + issuer + ".bscp-" + room.toString().replace("-", "")
+        String channel = "sip:confctl-d-" + issuer + ".bscp-" + room
             + "!p-50-3-1.000-1@" + domain;
         return VoicePackets.strings(channel, token("join", from, channel));
     }

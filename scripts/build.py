@@ -76,8 +76,8 @@ def jar(name,classes,extra=(),embedded_classes=None):
     return target
 
 def server(private_resources=False):
-    deps=dependencies();classes=compile_java('server',[*(ROOT/'server/src/main/java').rglob('*.java'),*(ROOT/'shared/player-scale/src').rglob('*.java')],deps)
-    extra=[]
+    deps=dependencies();classes=compile_java('server',[*(ROOT/'server/src/main/java').rglob('*.java'),*(ROOT/'shared/player-scale/src').rglob('*.java'),*(ROOT/'shared/voice/src').rglob('*.java')],deps)
+    extra=[(ROOT/'launcher/crates/launcher-host/assets/tomke-relay-ca.txt','szserver/voice/broker-ca.txt')]
     if private_resources:
         for name,digest in json.loads((ROOT/'config/private-resources.lock.json').read_text('utf8')).items():
             path=ROOT/'.local/server-resources'/name

@@ -134,7 +134,7 @@ def build(output):
     subprocess.run([sys.executable,str(ROOT/'client-compat/character-scale/build.py')],check=True)
     for name in ('startup-guard','character-scale'):copy(ROOT/'build'/(name+'.jar'),player/'Client/compat'/(name+'.jar'))
     spec=importlib.util.spec_from_file_location('compat',ROOT/'client/resource-compat/build.py');compat=importlib.util.module_from_spec(spec);spec.loader.exec_module(compat)
-    classes=tools.compile_java('player-resource-compat',(ROOT/'client/resource-compat/src').rglob('*.java'),[asm,tree,kotlin,*libraries,*tools.dependencies()])
+    classes=tools.compile_java('player-resource-compat',[*(ROOT/'client/resource-compat/src').rglob('*.java'),*(ROOT/'shared/voice/src').rglob('*.java')],[asm,tree,kotlin,*libraries,*tools.dependencies()])
     cp=os.pathsep.join(map(str,[classes,inputs/'agent-resources',asm,tree,*libraries]))
     subprocess.run([tools.tool('java'),'-cp',cp,'gamecompat.ResourceSchemaTransformer',str(classes/'gamecompat/MultisetArtefact.class')],check=True)
     values={n:compat.shade(body) for n,body in entries(classes).items()}

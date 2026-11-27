@@ -123,6 +123,9 @@ def prepare():
         'mods/command-completion/command-completion.jar':player/'Client/mods/command-completion.jar'}
     OUT.mkdir(parents=True,exist_ok=False)
     for name,src in files.items():dst=OUT/name;dst.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(src,dst)
+    if os.environ.get('GITHUB_REF_NAME') == 'test':
+        with (OUT/'server/server.template.properties').open('a', encoding='utf8') as config:
+            config.write('\nvoice.brokerUrl=https://tomke.myddns.me:29732/v1/host-token\n')
     # Optional mods are compiled from ordinary Git sources and published separately.
     api=ROOT/'build/mod-api.jar'
     runtime=player/'Bootstrap/runtime'
