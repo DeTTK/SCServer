@@ -3752,6 +3752,381 @@
       "size": 46076,
       "sha256": "626b256f9090ee48bdf45500fc29da4ea0dbf4a0338c3697c199ed99bcc4e73e",
       "kind": "client-mod-asset"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/air-brake.wav": {
+      "size": 57374,
+      "sha256": "95a2483cee7508e84524c6f62776c06dc032b7429df5bd9a38c68839998921c5",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/brake-release.wav": {
+      "size": 35324,
+      "sha256": "147678becac237694febb2c10704b8f614713d3c48e68a05c6ca9fda71cd74f0",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/brake-set.wav": {
+      "size": 14156,
+      "sha256": "b2155bc7965372eb45d30745707b0bc536e768b727c5bbac3c5548c8363d1cf9",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/denied.wav": {
+      "size": 15920,
+      "sha256": "ec6dbaf60e988d96528964f76c16f0468c848b6fbecb27a0a2543c52d850451f",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/diesel-clatter.wav": {
+      "size": 344024,
+      "sha256": "567e7e3643fe76f1de1e91eda66d81a0bd64c211773c112900b703517b9a3a6a",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/dirt-hit.wav": {
+      "size": 200202,
+      "sha256": "21ca30ea7670fe5526206a4f99ad157ce9bd515c05ef7bedef1b00dac951df36",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/door-close.wav": {
+      "size": 62922,
+      "sha256": "c772b06b978e6a0c1ea237ca52da05909ba4a79477f473adb5776b6e14cabcff",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/door-open.wav": {
+      "size": 87156,
+      "sha256": "dca149efea78a469d696b1d7276fc1e1a863e531b1b4eda14c15063222676aac",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/ds8-1.wav": {
+      "size": 287588,
+      "sha256": "09c793af46b7977a7fef125c7f2e9aa5ffc56c9e9bf1d63427af9cbf7aee383e",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/ds8-2.wav": {
+      "size": 298162,
+      "sha256": "9bbc1bb4505990c49bb3cc311f4f05c50ac9790baf66bc5743e21f2883c458b4",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/ds8-3.wav": {
+      "size": 299036,
+      "sha256": "82cc486bbbd3c6b2cf1314220768e3f0f95bdb1ed271773a91fbad47f5fff448",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/ds8-4.wav": {
+      "size": 319326,
+      "sha256": "b90168df89f5d0308ed285668b88712c86fdcaa98e14c2d11569da6bfd457d99",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/ds8-5.wav": {
+      "size": 324514,
+      "sha256": "7f5e8884cc47086ea56b5e445ac0de023f74ae2c4ffa311b7d54e39578bb3f6c",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/enter.wav": {
+      "size": 28268,
+      "sha256": "018e90be0018bec1bc35abaa44c4410b667979b44062f73dce60eb64d3911c7a",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/exit.wav": {
+      "size": 33560,
+      "sha256": "8434a0d252260eb11cc9fa53c0b244d236a7c26d1854f1bbc7ce2d575211c39f",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/failed-start.wav": {
+      "size": 97064,
+      "sha256": "b34baf524996641d40d192482cdc47ea87260366c2e256e3ed8125d6ee68a881",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/gear.wav": {
+      "size": 17530,
+      "sha256": "b631230dc0b42f5b453f2d8150d86a272b5178367ed82839dafdfe902e23691e",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/gravel.wav": {
+      "size": 53012,
+      "sha256": "1e59147c9b49ab8786b5bbf3c59f72189337d7e269317521ee6cf6106f6a4757",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/gv8-1.wav": {
+      "size": 192324,
+      "sha256": "c489f63e4f2183e3787a320acc95f25caa2a88998190fc7e27e3f7e4074622e1",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/gv8-2.wav": {
+      "size": 344024,
+      "sha256": "fcfcee3ae30aa4bf5483356d54328005aedc4be840a9e18f7c96eaa94f03e93c",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/gv8-3.wav": {
+      "size": 301690,
+      "sha256": "cad4120e149dcd242a663c45d45f661e6b6dad981c01324e9556eecfc837f15d",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/gv8-4.wav": {
+      "size": 303454,
+      "sha256": "f48791aa25b4a1a5268efd3661c75e9047caf46772d4c5119e98fb31cbc9b5be",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/gv8-5.wav": {
+      "size": 300280,
+      "sha256": "179230dfd9e6db1f02d9d6da3822668ff00b06ecc43f027bfbedb01599ac9200",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/impact-heavy.wav": {
+      "size": 25448,
+      "sha256": "4f50e99144a849376a5de4c695e314c0a9d3c13992cf907db1faa3f8865f3015",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/impact-light.wav": {
+      "size": 35326,
+      "sha256": "c0dbc463231930d82dc15ed2c9cda1104482cf635a578f0a68641dd78255a3e3",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/mud.wav": {
+      "size": 245182,
+      "sha256": "624dba273c7c362c201bca151f71ec4f251fcd83fa13ddfb089d38d62e5d39df",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/remove.wav": {
+      "size": 7982,
+      "sha256": "c2de5dafe3d455ad4df2fb0ce2adf63940beb71f31c8c111d99e009343961d11",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/road.wav": {
+      "size": 194082,
+      "sha256": "c1296d1dc92717d0d635ecaaf47d18aec64d1df67247770b7b2e4d7ab1f8a47c",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/sand.wav": {
+      "size": 53012,
+      "sha256": "79b76a3036f6b1e7df3da365bd0674cd677909c06583f7e718b9679bec7365bf",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/scrape.wav": {
+      "size": 311104,
+      "sha256": "91bda36d6ed7dc38e463315f1034d78bf4871fe91719d09c66e0a88d208e4a0d",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/select.wav": {
+      "size": 4894,
+      "sha256": "490593cdd5cf282681ccf01b6ed17bc67599a7dfb9c306553692b728e2d8049e",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/skid.wav": {
+      "size": 255824,
+      "sha256": "201bb18a44e4415599fa713360f33cbd8db6195e99614c24ea3ec1467cb5fdf3",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/snow.wav": {
+      "size": 53012,
+      "sha256": "035b961bd0b82931a8805d763cc13d2573cb6c6127f2e790f4114565e70aac4d",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/soil.wav": {
+      "size": 53012,
+      "sha256": "770fc10614994f2c8c2873abdc81b0d68dc666611d9f2e6db5a1a09caef4fdf6",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/spawn.wav": {
+      "size": 12392,
+      "sha256": "713cac3cb7c54962e22850ec2a79f62b237ad4f70b87bb25bc19144b0db56c34",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/splash.wav": {
+      "size": 136110,
+      "sha256": "199dc3163d3696dc5b3383553bc6e120790a98212474bff8e1aba26e0cf924ac",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/start-diesel.wav": {
+      "size": 194084,
+      "sha256": "06a7603425a3a9b61d7fccde9ab0b6c8d811e8be0f1fa53ce0e2223213245d89",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/start.wav": {
+      "size": 158568,
+      "sha256": "7820ecdf415ab5652856b999ff888a1076e32af7b7540c0f635a2cf1b05d13a7",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/stop.wav": {
+      "size": 97064,
+      "sha256": "440f2aba11b8770fcfaa4731b9e2092ef11c8d9f229fde35cdb5796d745b705e",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/su-low-1.wav": {
+      "size": 344024,
+      "sha256": "66e6ee89b263ea3a57a02d50cd8cc7005ede0968865fc89b68ca09f3fa6b7a83",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/su-low-2.wav": {
+      "size": 344024,
+      "sha256": "60cdfec8d6599dc1bdd0286367b95164c3de51d7ffd1942cd8a8423b29a0093f",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/su-low-3.wav": {
+      "size": 344024,
+      "sha256": "470cc367636b3c49a61b71bf1db46fecfe0070467bc38ebd0f4e3b95acaf4d79",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/su-low-4.wav": {
+      "size": 344024,
+      "sha256": "1db2d3390bb3a19af111c38546aa44eb5d0854083e061dc8b223f8a0530e5a4b",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/su-low-5.wav": {
+      "size": 344024,
+      "sha256": "39b467c270994253ae9dd0743700ba53b3720c8198bd020b24c0af76042d0d9d",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/suspension.wav": {
+      "size": 16802,
+      "sha256": "14d55941237f9c5898fee552371f60b01795263f6869fc52171b0b40eca7d574",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/switch.wav": {
+      "size": 9746,
+      "sha256": "a92cc8bc596205b24bb03217cec8a96c5b0706406bdf8935082dc093abf613df",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/toy.wav": {
+      "size": 202904,
+      "sha256": "f2393a492ef6a5874c3546a7eba625d6e6afd7962916f7ebc536d57c63f85b76",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/track.wav": {
+      "size": 53012,
+      "sha256": "d1b220f195f06edda31588cefd227eec90b03e52a8f5fb4dd4f5aa3696b28ebf",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/transmission.wav": {
+      "size": 176444,
+      "sha256": "1852becb545776dc7b95d731a3c4f091aea66777eeca9112ab42199b46d901ea",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/tsu-1.wav": {
+      "size": 344024,
+      "sha256": "267f3f671750cd88d8235e6819dd2b890eb8f159fd19f0c6169e65bb83397ee1",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/tsu-2.wav": {
+      "size": 344024,
+      "sha256": "177646c3670f2511b94da6fa294ea75cc00b15c7dad2d8486ca7af7c8e652f8b",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/tsu-3.wav": {
+      "size": 344024,
+      "sha256": "a54ee2c81c4d318c9ecf075bb4f16e16c944f5667900ac2f0edf7fc2aa2818b1",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/tsu-4.wav": {
+      "size": 344024,
+      "sha256": "15f5eb4bc6519e7af84ee9d140aa912b34584858166a524477d9a26ec2707efd",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/tsu-5.wav": {
+      "size": 344024,
+      "sha256": "f7b37ca872118841a6b0c02c61105c2324d9c8cadbb3c7028b3a6f167500b3ff",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/v12d-1.wav": {
+      "size": 323866,
+      "sha256": "277139ae315aac5770d80570dff2907aa0a0310e1e7b98d93f57dc3607085edf",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/v12d-2.wav": {
+      "size": 315800,
+      "sha256": "8b8ca7a01dc252957af7341de9d4085b321794016a261cc19e59ccd3fcbe34f2",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/v12d-3.wav": {
+      "size": 304044,
+      "sha256": "a44a820008e9458ccecddebd3d97ee15df3dcfd6aad8896c691373377f06e986",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/v12d-4.wav": {
+      "size": 308744,
+      "sha256": "a4cd32248ec2c24ebc1c790088ae4c6598fb7eddc9511ef75276fc70330f6332",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/v12d-5.wav": {
+      "size": 317214,
+      "sha256": "178e6b4122e7fbbbecc7afd1af59a6fa93a0643b0e3c05a4db1e1f87b8e887e9",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/water.wav": {
+      "size": 262992,
+      "sha256": "eb32df4741b8546ff2ac73b8639210f517c418ca6ccc2a80854e93bb9dda6fff",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/wind.wav": {
+      "size": 229364,
+      "sha256": "08f340ea274000c13a5b22d5944301deab287133b77eb7d3cb11935996025bc7",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/cabins.json": {
+      "size": 10528,
+      "sha256": "350411f16a2cf515057577da495288dc1f236440db1495e347ca0b735a1c4fa5",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/entry-fit.json": {
+      "size": 9730,
+      "sha256": "5b35bab6f9ed3d3271bb9ae57e74b584efd539fcea7b85bc43bd92c89203ae3a",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/fleet.json": {
+      "size": 172772,
+      "sha256": "1f97cfecf81ad992eb3b8b5a62a8f9deb795a68466edc81ccf8d96ecfc2c3b7d",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/interaction-profiles.json": {
+      "size": 13777,
+      "sha256": "b3a33ed27a4815a45eef06293fa0eda627baed76a587be885e12704b58d2c0e9",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/player-bind-rig.json": {
+      "size": 17884,
+      "sha256": "9a0f1ae4972c18dfb992a7a43ff74f535ed4c42a01c0bab29301a1a27f0d9afc",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/seating-fit.json": {
+      "size": 5084,
+      "sha256": "7cdcbab772b4f6e9b06ce6ea79062cddede1977dd9873fc3cbf872d848b08eed",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/seating.json": {
+      "size": 16298,
+      "sha256": "ff77f851ff726b8fb45125e5f1f436297a0dc975778a898a20340fb3922ef7bd",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/vehicle-clips-sources.json": {
+      "size": 7782,
+      "sha256": "4f7692796c2260d9615cddf1d9faf26f702a427bec0d6db3d4475b7ae37775f6",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/vehicle-clips.bin": {
+      "size": 537902,
+      "sha256": "2ac3feb7260f95493d5cc59eaf624caf79c9248fa9177144908603063edf39aa",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/vehicle-lit.frag": {
+      "size": 1712,
+      "sha256": "10cb8195e464c5cf50dad15057f0a32a3f798ab6361b533b870816d076270ced",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/vehicle-lit.vert": {
+      "size": 1672,
+      "sha256": "3a812b8ffbfb1ff4981f1acdcb3f14d4fe0ac9371154000922c89f55d2d66f50",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/licenses/Automobility-MIT.txt": {
+      "size": 1038,
+      "sha256": "7363fc7e2596998f3fc0109b6908575bf1cd8f6fa2fc97aff6bd9d17177f50bb",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/licenses/engine-audio-source.txt": {
+      "size": 506,
+      "sha256": "9bef3aa04531c3d8fd6e54ec097ddf09aa060dc6bee7a64033ad8d612fdb0f6c",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/licenses/fleet-audio-sources.txt": {
+      "size": 3730,
+      "sha256": "1fb7f796ffe3770f12c85b06cc7529cd787749577047f7dbea63d3a1ca33909b",
+      "kind": "vehicle-mod-resource"
     }
   },
   "objects": {
@@ -8857,6 +9232,531 @@
       "sha256": "626b256f9090ee48bdf45500fc29da4ea0dbf4a0338c3697c199ed99bcc4e73e",
       "parts": [
         "bootstrap/inputs/client-assets/customitems/textures/items/fpv_drone.ol"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/air-brake.wav": {
+      "size": 57374,
+      "sha256": "95a2483cee7508e84524c6f62776c06dc032b7429df5bd9a38c68839998921c5",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/air-brake.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/brake-release.wav": {
+      "size": 35324,
+      "sha256": "147678becac237694febb2c10704b8f614713d3c48e68a05c6ca9fda71cd74f0",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/brake-release.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/brake-set.wav": {
+      "size": 14156,
+      "sha256": "b2155bc7965372eb45d30745707b0bc536e768b727c5bbac3c5548c8363d1cf9",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/brake-set.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/denied.wav": {
+      "size": 15920,
+      "sha256": "ec6dbaf60e988d96528964f76c16f0468c848b6fbecb27a0a2543c52d850451f",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/denied.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/diesel-clatter.wav": {
+      "size": 344024,
+      "sha256": "567e7e3643fe76f1de1e91eda66d81a0bd64c211773c112900b703517b9a3a6a",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/diesel-clatter.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/dirt-hit.wav": {
+      "size": 200202,
+      "sha256": "21ca30ea7670fe5526206a4f99ad157ce9bd515c05ef7bedef1b00dac951df36",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/dirt-hit.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/door-close.wav": {
+      "size": 62922,
+      "sha256": "c772b06b978e6a0c1ea237ca52da05909ba4a79477f473adb5776b6e14cabcff",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/door-close.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/door-open.wav": {
+      "size": 87156,
+      "sha256": "dca149efea78a469d696b1d7276fc1e1a863e531b1b4eda14c15063222676aac",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/door-open.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/ds8-1.wav": {
+      "size": 287588,
+      "sha256": "09c793af46b7977a7fef125c7f2e9aa5ffc56c9e9bf1d63427af9cbf7aee383e",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/ds8-1.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/ds8-2.wav": {
+      "size": 298162,
+      "sha256": "9bbc1bb4505990c49bb3cc311f4f05c50ac9790baf66bc5743e21f2883c458b4",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/ds8-2.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/ds8-3.wav": {
+      "size": 299036,
+      "sha256": "82cc486bbbd3c6b2cf1314220768e3f0f95bdb1ed271773a91fbad47f5fff448",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/ds8-3.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/ds8-4.wav": {
+      "size": 319326,
+      "sha256": "b90168df89f5d0308ed285668b88712c86fdcaa98e14c2d11569da6bfd457d99",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/ds8-4.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/ds8-5.wav": {
+      "size": 324514,
+      "sha256": "7f5e8884cc47086ea56b5e445ac0de023f74ae2c4ffa311b7d54e39578bb3f6c",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/ds8-5.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/enter.wav": {
+      "size": 28268,
+      "sha256": "018e90be0018bec1bc35abaa44c4410b667979b44062f73dce60eb64d3911c7a",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/enter.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/exit.wav": {
+      "size": 33560,
+      "sha256": "8434a0d252260eb11cc9fa53c0b244d236a7c26d1854f1bbc7ce2d575211c39f",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/exit.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/failed-start.wav": {
+      "size": 97064,
+      "sha256": "b34baf524996641d40d192482cdc47ea87260366c2e256e3ed8125d6ee68a881",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/failed-start.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/gear.wav": {
+      "size": 17530,
+      "sha256": "b631230dc0b42f5b453f2d8150d86a272b5178367ed82839dafdfe902e23691e",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/gear.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/gravel.wav": {
+      "size": 53012,
+      "sha256": "1e59147c9b49ab8786b5bbf3c59f72189337d7e269317521ee6cf6106f6a4757",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/gravel.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/gv8-1.wav": {
+      "size": 192324,
+      "sha256": "c489f63e4f2183e3787a320acc95f25caa2a88998190fc7e27e3f7e4074622e1",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/gv8-1.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/gv8-2.wav": {
+      "size": 344024,
+      "sha256": "fcfcee3ae30aa4bf5483356d54328005aedc4be840a9e18f7c96eaa94f03e93c",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/gv8-2.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/gv8-3.wav": {
+      "size": 301690,
+      "sha256": "cad4120e149dcd242a663c45d45f661e6b6dad981c01324e9556eecfc837f15d",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/gv8-3.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/gv8-4.wav": {
+      "size": 303454,
+      "sha256": "f48791aa25b4a1a5268efd3661c75e9047caf46772d4c5119e98fb31cbc9b5be",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/gv8-4.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/gv8-5.wav": {
+      "size": 300280,
+      "sha256": "179230dfd9e6db1f02d9d6da3822668ff00b06ecc43f027bfbedb01599ac9200",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/gv8-5.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/impact-heavy.wav": {
+      "size": 25448,
+      "sha256": "4f50e99144a849376a5de4c695e314c0a9d3c13992cf907db1faa3f8865f3015",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/impact-heavy.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/impact-light.wav": {
+      "size": 35326,
+      "sha256": "c0dbc463231930d82dc15ed2c9cda1104482cf635a578f0a68641dd78255a3e3",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/impact-light.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/mud.wav": {
+      "size": 245182,
+      "sha256": "624dba273c7c362c201bca151f71ec4f251fcd83fa13ddfb089d38d62e5d39df",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/mud.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/remove.wav": {
+      "size": 7982,
+      "sha256": "c2de5dafe3d455ad4df2fb0ce2adf63940beb71f31c8c111d99e009343961d11",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/remove.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/road.wav": {
+      "size": 194082,
+      "sha256": "c1296d1dc92717d0d635ecaaf47d18aec64d1df67247770b7b2e4d7ab1f8a47c",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/road.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/sand.wav": {
+      "size": 53012,
+      "sha256": "79b76a3036f6b1e7df3da365bd0674cd677909c06583f7e718b9679bec7365bf",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/sand.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/scrape.wav": {
+      "size": 311104,
+      "sha256": "91bda36d6ed7dc38e463315f1034d78bf4871fe91719d09c66e0a88d208e4a0d",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/scrape.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/select.wav": {
+      "size": 4894,
+      "sha256": "490593cdd5cf282681ccf01b6ed17bc67599a7dfb9c306553692b728e2d8049e",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/select.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/skid.wav": {
+      "size": 255824,
+      "sha256": "201bb18a44e4415599fa713360f33cbd8db6195e99614c24ea3ec1467cb5fdf3",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/skid.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/snow.wav": {
+      "size": 53012,
+      "sha256": "035b961bd0b82931a8805d763cc13d2573cb6c6127f2e790f4114565e70aac4d",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/snow.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/soil.wav": {
+      "size": 53012,
+      "sha256": "770fc10614994f2c8c2873abdc81b0d68dc666611d9f2e6db5a1a09caef4fdf6",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/soil.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/spawn.wav": {
+      "size": 12392,
+      "sha256": "713cac3cb7c54962e22850ec2a79f62b237ad4f70b87bb25bc19144b0db56c34",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/spawn.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/splash.wav": {
+      "size": 136110,
+      "sha256": "199dc3163d3696dc5b3383553bc6e120790a98212474bff8e1aba26e0cf924ac",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/splash.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/start-diesel.wav": {
+      "size": 194084,
+      "sha256": "06a7603425a3a9b61d7fccde9ab0b6c8d811e8be0f1fa53ce0e2223213245d89",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/start-diesel.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/start.wav": {
+      "size": 158568,
+      "sha256": "7820ecdf415ab5652856b999ff888a1076e32af7b7540c0f635a2cf1b05d13a7",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/start.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/stop.wav": {
+      "size": 97064,
+      "sha256": "440f2aba11b8770fcfaa4731b9e2092ef11c8d9f229fde35cdb5796d745b705e",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/stop.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/su-low-1.wav": {
+      "size": 344024,
+      "sha256": "66e6ee89b263ea3a57a02d50cd8cc7005ede0968865fc89b68ca09f3fa6b7a83",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/su-low-1.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/su-low-2.wav": {
+      "size": 344024,
+      "sha256": "60cdfec8d6599dc1bdd0286367b95164c3de51d7ffd1942cd8a8423b29a0093f",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/su-low-2.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/su-low-3.wav": {
+      "size": 344024,
+      "sha256": "470cc367636b3c49a61b71bf1db46fecfe0070467bc38ebd0f4e3b95acaf4d79",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/su-low-3.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/su-low-4.wav": {
+      "size": 344024,
+      "sha256": "1db2d3390bb3a19af111c38546aa44eb5d0854083e061dc8b223f8a0530e5a4b",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/su-low-4.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/su-low-5.wav": {
+      "size": 344024,
+      "sha256": "39b467c270994253ae9dd0743700ba53b3720c8198bd020b24c0af76042d0d9d",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/su-low-5.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/suspension.wav": {
+      "size": 16802,
+      "sha256": "14d55941237f9c5898fee552371f60b01795263f6869fc52171b0b40eca7d574",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/suspension.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/switch.wav": {
+      "size": 9746,
+      "sha256": "a92cc8bc596205b24bb03217cec8a96c5b0706406bdf8935082dc093abf613df",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/switch.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/toy.wav": {
+      "size": 202904,
+      "sha256": "f2393a492ef6a5874c3546a7eba625d6e6afd7962916f7ebc536d57c63f85b76",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/toy.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/track.wav": {
+      "size": 53012,
+      "sha256": "d1b220f195f06edda31588cefd227eec90b03e52a8f5fb4dd4f5aa3696b28ebf",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/track.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/transmission.wav": {
+      "size": 176444,
+      "sha256": "1852becb545776dc7b95d731a3c4f091aea66777eeca9112ab42199b46d901ea",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/transmission.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/tsu-1.wav": {
+      "size": 344024,
+      "sha256": "267f3f671750cd88d8235e6819dd2b890eb8f159fd19f0c6169e65bb83397ee1",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/tsu-1.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/tsu-2.wav": {
+      "size": 344024,
+      "sha256": "177646c3670f2511b94da6fa294ea75cc00b15c7dad2d8486ca7af7c8e652f8b",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/tsu-2.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/tsu-3.wav": {
+      "size": 344024,
+      "sha256": "a54ee2c81c4d318c9ecf075bb4f16e16c944f5667900ac2f0edf7fc2aa2818b1",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/tsu-3.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/tsu-4.wav": {
+      "size": 344024,
+      "sha256": "15f5eb4bc6519e7af84ee9d140aa912b34584858166a524477d9a26ec2707efd",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/tsu-4.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/tsu-5.wav": {
+      "size": 344024,
+      "sha256": "f7b37ca872118841a6b0c02c61105c2324d9c8cadbb3c7028b3a6f167500b3ff",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/tsu-5.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/v12d-1.wav": {
+      "size": 323866,
+      "sha256": "277139ae315aac5770d80570dff2907aa0a0310e1e7b98d93f57dc3607085edf",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/v12d-1.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/v12d-2.wav": {
+      "size": 315800,
+      "sha256": "8b8ca7a01dc252957af7341de9d4085b321794016a261cc19e59ccd3fcbe34f2",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/v12d-2.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/v12d-3.wav": {
+      "size": 304044,
+      "sha256": "a44a820008e9458ccecddebd3d97ee15df3dcfd6aad8896c691373377f06e986",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/v12d-3.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/v12d-4.wav": {
+      "size": 308744,
+      "sha256": "a4cd32248ec2c24ebc1c790088ae4c6598fb7eddc9511ef75276fc70330f6332",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/v12d-4.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/v12d-5.wav": {
+      "size": 317214,
+      "sha256": "178e6b4122e7fbbbecc7afd1af59a6fa93a0643b0e3c05a4db1e1f87b8e887e9",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/v12d-5.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/water.wav": {
+      "size": 262992,
+      "sha256": "eb32df4741b8546ff2ac73b8639210f517c418ca6ccc2a80854e93bb9dda6fff",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/water.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/wind.wav": {
+      "size": 229364,
+      "sha256": "08f340ea274000c13a5b22d5944301deab287133b77eb7d3cb11935996025bc7",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/wind.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/cabins.json": {
+      "size": 10528,
+      "sha256": "350411f16a2cf515057577da495288dc1f236440db1495e347ca0b735a1c4fa5",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/cabins.json"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/entry-fit.json": {
+      "size": 9730,
+      "sha256": "5b35bab6f9ed3d3271bb9ae57e74b584efd539fcea7b85bc43bd92c89203ae3a",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/entry-fit.json"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/fleet.json": {
+      "size": 172772,
+      "sha256": "1f97cfecf81ad992eb3b8b5a62a8f9deb795a68466edc81ccf8d96ecfc2c3b7d",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/fleet.json"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/interaction-profiles.json": {
+      "size": 13777,
+      "sha256": "b3a33ed27a4815a45eef06293fa0eda627baed76a587be885e12704b58d2c0e9",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/interaction-profiles.json"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/player-bind-rig.json": {
+      "size": 17884,
+      "sha256": "9a0f1ae4972c18dfb992a7a43ff74f535ed4c42a01c0bab29301a1a27f0d9afc",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/player-bind-rig.json"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/seating-fit.json": {
+      "size": 5084,
+      "sha256": "7cdcbab772b4f6e9b06ce6ea79062cddede1977dd9873fc3cbf872d848b08eed",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/seating-fit.json"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/seating.json": {
+      "size": 16298,
+      "sha256": "ff77f851ff726b8fb45125e5f1f436297a0dc975778a898a20340fb3922ef7bd",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/seating.json"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/vehicle-clips-sources.json": {
+      "size": 7782,
+      "sha256": "4f7692796c2260d9615cddf1d9faf26f702a427bec0d6db3d4475b7ae37775f6",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/vehicle-clips-sources.json"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/vehicle-clips.bin": {
+      "size": 537902,
+      "sha256": "2ac3feb7260f95493d5cc59eaf624caf79c9248fa9177144908603063edf39aa",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/vehicle-clips.bin"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/vehicle-lit.frag": {
+      "size": 1712,
+      "sha256": "10cb8195e464c5cf50dad15057f0a32a3f798ab6361b533b870816d076270ced",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/vehicle-lit.frag"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/vehicle-lit.vert": {
+      "size": 1672,
+      "sha256": "3a812b8ffbfb1ff4981f1acdcb3f14d4fe0ac9371154000922c89f55d2d66f50",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/vehicle-lit.vert"
+      ]
+    },
+    "mod-resources/sc-vehicles/licenses/Automobility-MIT.txt": {
+      "size": 1038,
+      "sha256": "7363fc7e2596998f3fc0109b6908575bf1cd8f6fa2fc97aff6bd9d17177f50bb",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/licenses/Automobility-MIT.txt"
+      ]
+    },
+    "mod-resources/sc-vehicles/licenses/engine-audio-source.txt": {
+      "size": 506,
+      "sha256": "9bef3aa04531c3d8fd6e54ec097ddf09aa060dc6bee7a64033ad8d612fdb0f6c",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/licenses/engine-audio-source.txt"
+      ]
+    },
+    "mod-resources/sc-vehicles/licenses/fleet-audio-sources.txt": {
+      "size": 3730,
+      "sha256": "1fb7f796ffe3770f12c85b06cc7529cd787749577047f7dbea63d3a1ca33909b",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/licenses/fleet-audio-sources.txt"
       ]
     }
   }

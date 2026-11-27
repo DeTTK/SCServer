@@ -1,0 +1,71 @@
+SC Vehicles adaptive sound bank 0.9.0
+
+This bank is an acoustic approximation by engine/drivetrain family. The donor
+recordings are not claimed to be recordings of the exact Soviet vehicle models.
+Processed assets, hashes, source URLs and modifications are recorded in
+results/audio-assets-0.9.0.json and tools/prepare-audio.py.
+
+ENGINE BANKS: tsu-1..5, su-low-1..5, gv8-1..5, ds8-1..5, v12d-1..5
+Author: CryHam. Creative Commons Attribution 4.0 International.
+https://creativecommons.org/licenses/by/4.0/
+Steady RPM engine-sim captures, with donor EQ, from Stunt Rally 3:
+https://github.com/stuntrally/stuntrally3/tree/fe3ecd73fff671c3d75ecaeadccea5c5e6afe0d8/data/sounds
+Provenance: data/sounds/_sounds.txt and sounds.cfg at that revision.
+Original creation: engine-sim 0.1.14, December 24, 2024.
+Additional changes here: mono PCM conversion, high/low-pass filtering, DC removal,
+bounded duration, loop seam crossfade and restrained RMS/peak normalization.
+
+GEAR / IMPACT / SCRAPE: gear, impact-light, impact-heavy, scrape
+Original recordings: Halleck. CC BY 4.0; cuts/edits by CryHam / Stunt Rally 3.
+https://freesound.org/people/Halleck/sounds/121668/
+https://freesound.org/people/Halleck/sounds/121665/
+https://freesound.org/people/Halleck/sounds/121664/
+https://freesound.org/people/Halleck/sounds/121685/
+https://freesound.org/people/Halleck/sounds/121621/
+https://freesound.org/people/Halleck/sounds/121622/
+https://freesound.org/people/Halleck/sounds/121655/
+https://freesound.org/people/Halleck/sounds/121669/
+https://creativecommons.org/licenses/by/4.0/
+Provenance: Stunt Rally data/sounds/_crash.txt; gear is a cut of crash/01.wav.
+Additional changes: filtering, conversion, normalization, loop seam for scrape.
+
+WATER / MUD / LANDING:
+splash: CGEffex, large splashes, CC BY 4.0.
+https://freesound.org/people/CGEffex/sounds/98335/
+water: JustinBW, water spigget onto mud 1, CC BY 4.0.
+https://freesound.org/people/JustinBW/sounds/70206/
+mud: JustinBW, water spigget onto mud 2, CC BY 4.0.
+https://freesound.org/people/JustinBW/sounds/70207/
+dirt-hit: Halleck, hit with dirt spray body, CC BY 4.0.
+https://freesound.org/people/Halleck/sounds/121642/
+https://creativecommons.org/licenses/by/4.0/
+Donor edits by CryHam / Stunt Rally 3. Additional changes: filtering, conversion,
+normalization, bounded loop crossfades for continuous layers.
+
+START / DOORS:
+Author: looneybits. CC0 1.0 Public Domain Dedication.
+https://opengameart.org/content/car-engine-start-up-02
+https://opengameart.org/content/cardoorsfx
+https://creativecommons.org/publicdomain/zero/1.0/
+Files: engine_start_up_01.wav, door_opening.wav, door_closing.wav.
+Changes: mono conversion, filtering, gain normalization and edge fades.
+
+TYRE SKID:
+Author: audible-edge (Tom Haigh), loop edit submitted by qubodup. CC BY 3.0.
+https://opengameart.org/content/car-tire-squeal-skid-loop
+https://creativecommons.org/licenses/by/3.0/
+Changes: resampling/mono conversion, strong high-frequency reduction, restrained
+normalization and loop crossfade.
+
+INSTALLED SC FOLEY:
+diesel-clatter, start-diesel, stop, failed-start, enter, exit, gravel, soil, sand, snow, track
+are selected processed excerpts from this user's installed SC assets at
+the installed game modassets/assets directory. Original game asset rights remain with their
+respective owners. They are not relicensed as CC0 or CC BY by this mod.
+Exact paths and source hashes are in the asset manifest. Local conversion:
+mono PCM, filtered, short excerpts, normalized, loops crossfaded where needed.
+
+ORIGINAL PROCEDURAL FOLEY:
+switch, select, denied, spawn, remove, brake-set, brake-release, air-brake,
+suspension, wind, road, transmission, toy: generated for SC Vehicles by
+tools/prepare-audio.py; CC0 1.0.

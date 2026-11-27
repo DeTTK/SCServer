@@ -87,6 +87,29 @@ def build_vr_mod(tools,source,classpath,runtime):
     return jar
 
 
+def build_vehicle_mod(tools, source, classpath, game_jar, resources):
+    protocol = ROOT / 'server/src/main/java/scvehicles/protocol'
+    classes = tools.compile_java('catalogue-sc-vehicles', [
+        *(source / 'src').rglob('*.java'), *protocol.glob('*.java'),
+    ], classpath)
+    asm_tree = ROOT / '.local/delivery-inputs' / LOCK['asmTree']['file']
+    generators = tools.compile_java('vehicle-adapters', (source / 'tools').glob('*.java'), [asm_tree, *classpath])
+    cp = os.pathsep.join(map(str, [generators, asm_tree, *classpath]))
+    run(tools.tool('java'), '-cp', cp, 'BuildVehicleCollider', classes)
+    with tempfile.TemporaryDirectory(prefix='vehicle-abi-') as tmp, zipfile.ZipFile(game_jar) as game:
+        for entry in ('251809992.class', '242639986.class', '1943200621.class'):
+            game.extract(entry, tmp)
+        for generator in ('BuildVehicleRampSolver', 'BuildPlayerCoordinates'):
+            run(tools.tool('java'), '-cp', cp, generator, tmp, classes)
+    files = [(path, path.relative_to(resources).as_posix()) for path in sorted(resources.rglob('*')) if path.is_file()]
+    files.append((source / 'stalcraft-mod.properties', 'stalcraft-mod.properties'))
+    jar = tools.jar('catalogue-sc-vehicles', classes, files)
+    test_cp = [jar, *classpath]
+    tests = tools.compile_java('vehicle-package-test', (source / 'tests').glob('*.java'), test_cp)
+    run(tools.tool('java'), '-cp', os.pathsep.join(map(str, [tests, *test_cp])), 'scvehicles.PackageTest')
+    return jar
+
+
 def prepare():
     tools=source_tool();(ROOT/'build').mkdir(exist_ok=True)
     spec=importlib.util.spec_from_file_location('player_build',ROOT/'scripts/build_player.py');module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
@@ -109,6 +132,8 @@ def prepare():
         source=ROOT/item['source'];ident=item['id']
         if ident=='stalcraft-vr':
             jar=build_vr_mod(tools,source,classpath,runtime)
+        elif ident=='sc-vehicles':
+            jar=build_vehicle_mod(tools,source,classpath,runtime/'game.jar',player.parent/'inputs/mod-resources/sc-vehicles')
         else:
             classes=tools.compile_java('catalogue-'+ident,(source/'src').rglob('*.java'),classpath)
             jar=tools.jar('catalogue-'+ident,classes,[(source/'stalcraft-mod.properties','stalcraft-mod.properties')])

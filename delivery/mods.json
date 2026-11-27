@@ -38,5 +38,13 @@
     "side": "client",
     "required": false,
     "source": "mods/stalcraft-vr"
+  },
+  {
+    "id": "sc-vehicles",
+    "name": "Автомобили",
+    "description": "26 моделей транспорта с водительскими и пассажирскими местами. F9 — создать машину (для администратора), Shift+E — сесть, G — выйти.",
+    "side": "client",
+    "required": false,
+    "source": "mods/sc-vehicles"
   }
 ]

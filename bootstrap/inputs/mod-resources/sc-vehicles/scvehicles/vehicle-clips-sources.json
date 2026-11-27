@@ -1,0 +1,280 @@
+{
+  "game": "Warzone / Call of Duty HQ cod25",
+  "steamApp": 1938090,
+  "steamBuild": "26183560",
+  "extractor": "GrayWolf v0.5.0",
+  "extractorUrl": "https://github.com/Kenshin9977/GrayWolf",
+  "sourceSkeleton": "body_c_jup_mp_alpha",
+  "sourceSkeletonBones": 147,
+  "jointNames": [
+    "j_mainroot",
+    "j_spinelower",
+    "j_spineupper",
+    "j_spine4",
+    "j_neck",
+    "j_helmet",
+    "j_clavicle_le",
+    "j_shoulder_le",
+    "j_elbow_le",
+    "j_wrist_le",
+    "j_clavicle_ri",
+    "j_shoulder_ri",
+    "j_elbow_ri",
+    "j_wrist_ri",
+    "j_hip_le",
+    "j_knee_le",
+    "j_ankle_le",
+    "j_ball_le",
+    "j_hip_ri",
+    "j_knee_ri",
+    "j_ankle_ri",
+    "j_ball_ri",
+    "j_head",
+    "rt_pelvis_x",
+    "rt_pelvis_y",
+    "rt_head_x",
+    "rt_head_y",
+    "rt_l_thigh_x",
+    "rt_l_thigh_y",
+    "rt_r_thigh_x",
+    "rt_r_thigh_y",
+    "rt_l_calf_x",
+    "rt_l_calf_y",
+    "rt_r_calf_x",
+    "rt_r_calf_y",
+    "rt_l_foot_x",
+    "rt_l_foot_y",
+    "rt_r_foot_x",
+    "rt_r_foot_y"
+  ],
+  "clips": [
+    {
+      "id": "car_enter",
+      "source": "iw9_veh_mp_sedan_hatchback_1985_seat_0_entry",
+      "authoredComposite": false,
+      "sha256": "5900cb6d5b16ac263f39f6877e69c34f758e41b4afb9114bba612dd7da677132",
+      "originalFrames": 79,
+      "trim": [
+        0,
+        78
+      ],
+      "originalFps": 30.0,
+      "duration": 2.6,
+      "frames": 79,
+      "animatedBones": 76
+    },
+    {
+      "id": "car_exit",
+      "source": "mp_sat_veh_ob_enemy_technical_truck_seat_0_exit",
+      "authoredComposite": false,
+      "sha256": "95170ca6f88c359dd6494da11fe60c1c5efea02ba96d8644193d64e1a829c7ca",
+      "originalFrames": 83,
+      "trim": [
+        0,
+        67
+      ],
+      "originalFps": 30.0,
+      "duration": 2.2333333333333334,
+      "frames": 68,
+      "animatedBones": 75
+    },
+    {
+      "id": "truck_enter",
+      "source": "iw9_mp_veh_mil_cargo_truck_seat_0_getin",
+      "authoredComposite": false,
+      "sha256": "eb26fe00e45e647765f5c59d0601237fb02f37ca3e7e9a0e00233f95f5cee778",
+      "originalFrames": 81,
+      "trim": [
+        0,
+        80
+      ],
+      "originalFps": 30.0,
+      "duration": 2.6666666666666665,
+      "frames": 81,
+      "animatedBones": 76
+    },
+    {
+      "id": "truck_exit",
+      "source": "iw9_veh_cargo_truck_seat_0_exit",
+      "authoredComposite": false,
+      "sha256": "6592b0a6d4a10f8f0e2b1a831bd18c60422d056941fe5c2b51d01781798ebd49",
+      "originalFrames": 219,
+      "trim": [
+        10,
+        150
+      ],
+      "originalFps": 30.0,
+      "duration": 4.666666666666667,
+      "frames": 141,
+      "animatedBones": 76
+    },
+    {
+      "id": "lean_out",
+      "source": "sc_veh_seated_to_window",
+      "authoredComposite": true,
+      "sha256": "648028a09eee76fc9e2bd1720a9f597884b9bb095768cded6d5e1246d5ad9055",
+      "originalFrames": 45,
+      "trim": [
+        0,
+        44
+      ],
+      "originalFps": 30.0,
+      "duration": 1.4666666666666666,
+      "frames": 45,
+      "animatedBones": 147
+    },
+    {
+      "id": "lean_idle",
+      "source": "sc_veh_seated_to_window",
+      "authoredComposite": true,
+      "sha256": "648028a09eee76fc9e2bd1720a9f597884b9bb095768cded6d5e1246d5ad9055",
+      "originalFrames": 45,
+      "trim": [
+        44,
+        44
+      ],
+      "originalFps": 30.0,
+      "duration": 3.0,
+      "frames": 91,
+      "animatedBones": 147
+    },
+    {
+      "id": "lean_in",
+      "source": "sc_veh_window_to_seated",
+      "authoredComposite": true,
+      "sha256": "f15b856ac913a514725a4def3d5340129634e8bf91f31f87a2fe2f9403d2363b",
+      "originalFrames": 59,
+      "trim": [
+        0,
+        58
+      ],
+      "originalFps": 30.0,
+      "duration": 1.9333333333333333,
+      "frames": 59,
+      "animatedBones": 147
+    },
+    {
+      "id": "roof_up",
+      "source": "iw9_veh_jltv_seat_4_entry",
+      "authoredComposite": false,
+      "sha256": "ab5653e483d7e4623d0f6ab52a68a8d8680bfec83c62d91b7a166a2ed97ab1e8",
+      "originalFrames": 134,
+      "trim": [
+        5,
+        126
+      ],
+      "originalFps": 30.0,
+      "duration": 4.033333333333333,
+      "frames": 122,
+      "animatedBones": 76
+    },
+    {
+      "id": "roof_idle",
+      "source": "iw9_veh_lowcrouch_idle01",
+      "authoredComposite": false,
+      "sha256": "053be61558e0ab1dd11e5bcc8cf93bd6c97a2ceeb20d8c99c55f36618cdb06ce",
+      "originalFrames": 1090,
+      "trim": [
+        0,
+        90
+      ],
+      "originalFps": 30.0,
+      "duration": 3.0,
+      "frames": 91,
+      "animatedBones": 76
+    },
+    {
+      "id": "armored_enter",
+      "source": "iw9_ai_veh_jltv_seat_0_getin_nodoor",
+      "authoredComposite": false,
+      "sha256": "25380ccc61ab552ce8e3c612d146d4c492300071b4fb17ef8d34809c3aab9110",
+      "originalFrames": 59,
+      "trim": [
+        0,
+        58
+      ],
+      "originalFps": 30.0,
+      "duration": 1.7,
+      "frames": 52,
+      "animatedBones": 76
+    },
+    {
+      "id": "armored_exit",
+      "source": "iw9_veh_cargo_truck_seat_0_exit_nodoor",
+      "authoredComposite": false,
+      "sha256": "aa3c7753faf39565176949f654c6eda0ff9f0d607008efbc55c749ef32e4cced",
+      "originalFrames": 208,
+      "trim": [
+        0,
+        207
+      ],
+      "originalFps": 30.0,
+      "duration": 1.65,
+      "frames": 51,
+      "animatedBones": 76
+    },
+    {
+      "id": "open_enter",
+      "source": "sdr_veh_jltv_seat_0_combat_entry_stand",
+      "authoredComposite": false,
+      "sha256": "bcf90d908c46eff5e13cd43baa7aced8a4865175f53779cf0f0381567dc578d4",
+      "originalFrames": 136,
+      "trim": [
+        0,
+        135
+      ],
+      "originalFps": 30.0,
+      "duration": 1.15,
+      "frames": 36,
+      "animatedBones": 76
+    },
+    {
+      "id": "seated",
+      "source": "iw9_mp_veh_sedan_hatchback_1985_seat_0_idle",
+      "authoredComposite": false,
+      "sha256": "5d2121b5ca3e4fca05c19f3a9c95eb3e7fef52fd66d4181069636e90224d817c",
+      "originalFrames": 386,
+      "trim": [
+        0,
+        120
+      ],
+      "originalFps": 30.0,
+      "duration": 4.0,
+      "frames": 121,
+      "animatedBones": 76
+    },
+    {
+      "id": "truck_seated",
+      "source": "iw9_mp_veh_mil_cargo_truck_seat_0_idle",
+      "authoredComposite": false,
+      "sha256": "4867df5aa95d5404386f0545e157b3cd35e1d1ce62ce31e05f705f97137028a3",
+      "originalFrames": 128,
+      "trim": [
+        0,
+        80
+      ],
+      "originalFps": 30.0,
+      "duration": 2.6666666666666665,
+      "frames": 81,
+      "animatedBones": 76
+    }
+  ],
+  "bakedSha256": "2ac3feb7260f95493d5cc59eaf624caf79c9248fa9177144908603063edf39aa",
+  "authoredTransitions": {
+    "authored": true,
+    "description": "New transition between seated idle and a window aiming pose; not the original CoD lean-out clip",
+    "start": "iw9_mp_veh_sedan_hatchback_1985_seat_0_idle.seanim",
+    "startFrame": 0,
+    "end": "mp_sat_veh_ob_enemy_technical_truck_seat_2_window_scrub_neutral.seanim",
+    "endFrame": 180,
+    "pelvisOutwardRollDegrees": 10,
+    "lumbarToNeckOutwardTiltDegrees": 30,
+    "sourceWindowSide": "negative SC X, mirrored in positive-X seats",
+    "rootPositionHeld": true,
+    "blend": "local rotations SLERP with smoothstep, relative translations linear with smoothstep",
+    "inputs": {
+      "iw9_mp_veh_sedan_hatchback_1985_seat_0_idle.seanim": "5d2121b5ca3e4fca05c19f3a9c95eb3e7fef52fd66d4181069636e90224d817c",
+      "mp_sat_veh_ob_enemy_technical_truck_seat_2_window_scrub_neutral.seanim": "d8d3dfe4d225c94bda7f28c00ba989eafaf75f8b95aa91aeecd29cbcf4c5108e"
+    }
+  }
+}

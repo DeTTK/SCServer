@@ -1,7 +1,7 @@
 {
   "sc-vehicles": {
-    "status": "source-only; not in independent CI",
-    "assetsIncluded": false
+    "status": "source-built optional signed catalogue",
+    "assetsIncluded": true
   },
   "fpv-drones": {
     "status": "source-built optional signed catalogue",
