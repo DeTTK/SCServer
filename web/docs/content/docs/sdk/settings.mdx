@@ -1,0 +1,99 @@
+---
+title: "Настройки и клавиши"
+description: "Вкладка настроек, сохранение значений и привязки клавиш"
+---
+
+# Настройки и клавиши
+
+`SettingsRegistry` создаёт вкладку в штатном экране настроек (ESC).
+`KeybindRegistry` объявляет клавиши, а действие выполняется в `onInput`.
+
+## Вкладка настроек
+
+```java
+@Override
+public void registerSettings(SettingsRegistry settings) throws Exception {
+    SettingsRegistry.SettingsTab tab = settings.registerTab("my-mod", "Мой мод");
+
+    tab.section("general", "Основное");
+
+    SettingsRegistry.BooleanSetting enabled =
+        tab.booleanSetting("enabled", "Включено", true);
+
+    SettingsRegistry.NumberSetting fov =
+        tab.numberSetting("fov", "Угол обзора", 90, 60, 130);
+
+    SettingsRegistry.ChoiceSetting mode =
+        tab.choiceSetting("mode", "Режим", "Быстрый", List.of("Быстрый", "Точный"));
+
+    enabled.onChange(value -> onEnabledChanged(value));
+}
+```
+
+- ID вкладки и значений — `[a-z][a-z0-9_-]{0,63}`.
+- Заголовок вкладки — до 80 символов, значения — до 120.
+- Дубликаты ID и число вне диапазона дают исключение при регистрации.
+- `set(value)` проверяет диапазон, сохраняет файл целиком атомарной заменой и
+  вызывает подписчиков `onChange`.
+- `reset()` возвращает значение по умолчанию.
+
+<Callout title="Сохранённые значения">
+  Значения из `settings.properties` имеют приоритет над значениями по умолчанию
+  и применяются после `registerSettings`, но до `onClientReady`. Некорректное
+  сохранённое значение молча игнорируется.
+</Callout>
+
+`booleanValue` / `number` / `choice` — устаревшая форма объявления без обратной
+связи. В новом коде используйте `booleanSetting`, `numberSetting`,
+`choiceSetting`.
+
+Заголовки вкладок и строк попадают в родное окно настроек через
+`SettingsBridge`. При смене версии клиента мост может не найти классы и записать
+в лог одну ошибку, не ломая игру.
+
+## Файлы
+
+Загрузчик создаёт `mods/config/<id>/settings.properties`. Мод может хранить рядом
+свои данные через `ModContext.configDirectory()`.
+
+- Не пишите в каталог клиента.
+- Не используйте абсолютные пути из конфигов.
+- Профиль может быть перенесён на другой компьютер.
+
+## Клавиши
+
+```java
+@Override
+public void registerKeybinds(KeybindRegistry keys) {
+    keys.register("toggle", "Включить мой мод", 70); // F
+}
+```
+
+`register` только объявляет кнопку: ID, подпись и код GLFW по умолчанию.
+Повторная регистрация того же ID — исключение. Действие пишется отдельно, в
+`onInput`:
+
+```java
+private boolean wasDown;
+
+@Override
+public void onInput(InputSnapshot input) {
+    boolean down = input.keyDown(70);
+    if (down && !wasDown) toggle();
+    wasDown = down;
+}
+```
+
+<Callout title="Ограничение API 1">
+  `InputSnapshot.keys()` заполняется фиксированным набором кодов: `32, 65, 67,
+  68, 69, 70, 81, 82, 83, 87, 88, 90, 340, 341, 342, 344, 345` (пробел, A, C, D,
+  E, F, Q, R, S, W, X, Z, Shift и Ctrl). Остальные клавиши в снимок не попадают.
+</Callout>
+
+Интерфейс `KeybindRegistry` умеет только объявлять кнопку; UI переназначения в
+runtime нет, прочитать назначенную клавишу из регистра нельзя. Для остальных
+клавиш используйте хук `input.key.v1` или собственный опрос GLFW на игровом
+потоке.
+
+`InputSnapshot` — снимок состояния, а не события. Для действия на нажатие
+храните предыдущее состояние, как в примере выше.

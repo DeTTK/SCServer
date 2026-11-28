@@ -1,3 +1,7 @@
+---
+title: "Native runtime diagnostics"
+---
+
 # Native runtime diagnostics
 
 Dashboard: https://vividshark1612.grafana.net/d/bscp-native-runtime/bscpcraft-c2b7-native-runtime-diagnostics

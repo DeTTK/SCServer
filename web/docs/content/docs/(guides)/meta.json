@@ -1,0 +1,11 @@
+{
+  "title": "Гайды",
+  "description": "Установка, запуск и первая сборка",
+  "root": true,
+  "pages": [
+    "index",
+    "locations",
+    "faq",
+    "contributing"
+  ]
+}

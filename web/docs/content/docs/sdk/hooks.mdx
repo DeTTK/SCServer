@@ -1,0 +1,147 @@
+---
+title: "Хуки"
+description: "onClientHook: контракт, приоритеты и список хуков"
+---
+
+# Хуки
+
+`onClientHook(String hook, Object... args)` — единственный способ вмешаться в
+родные пути рендера, камеры и ввода.
+
+## Контракт
+
+- `null` — «не вмешиваюсь», родное поведение продолжается.
+- Первое непустое значение выигрывает, остальные моды этот хук уже не получают.
+- Исключение отключает мод.
+- Аргументы — родные объекты конкретной сборки клиента. Типы между версиями не
+  стабильны.
+- Загрузчик проверяет возвращаемое значение и при несоответствии молча
+  откатывается на родное поведение.
+
+<Callout title="Порядок">
+  Общий порядок — порядок загрузки модов. Исключение: `camera.third-person.v1` и
+  `camera.fov.v1`, где `fpv-drones` получает приоритет, чтобы полноэкранный вид
+  дрона не перекрывался камерой от плеча.
+</Callout>
+
+## Ввод, камера и оружие
+
+| Хук | Аргументы | Возврат |
+| --- | --- | --- |
+| `input.key.v1` | `int key`, `boolean original` | `Boolean` — новое решение |
+| `input.action-block.v1` | — | `Boolean.TRUE` — заблокировать действия |
+| `input.ui-capture.v1` | — | `Boolean.TRUE`, пока меню мода владеет указателем |
+| `camera.perspective.v1` | `camera`, `original` | объект того же класса |
+| `camera.third-person.v1` | `player`, `eye`, `float yaw`, `float pitch`, `mode` | `double[3]` — позиция камеры |
+| `camera.fov.v1` | `camera`, `float original` | `Number` в диапазоне 20…120 |
+| `camera.native-view.v1` | `camera`, `matrix` | `Boolean.TRUE`, если мод сам выставил вид |
+| `weapon.aim.v1` | `player`, `origin`, `end` | `double[3]` или `double[6]`, конечные числа |
+| `weapon.tracer-offset.v1` | `int shooter`, `int local` | `Boolean.FALSE` — отключить родной сдвиг |
+| `view.block-body-look.v1` | `game` | `Boolean.TRUE` — заблокировать поворот тела |
+| `view.subject.v1` | `original` | объект того же класса |
+| `player.movement-intent.v1` | `original` | объект того же класса |
+
+## HUD и интерфейс
+
+| Хук | Аргументы | Возврат |
+| --- | --- | --- |
+| `hud.crosshair.v1` | `hud`, `int width`, `int height` | `Boolean.TRUE` — скрыть родной прицел |
+| `hud.hide-native.v1` | — | `Boolean.TRUE` — скрыть родной HUD |
+| `fp.screen-pass.v1` | `player` | `Boolean.TRUE` |
+| `fp.effect-bone.v1` | `context`, `String bone` | `float[16]` — матрица |
+| `audio.local-player.v1` | `owner` | `Boolean` |
+
+## Чат и предметы
+
+| Хук | Аргументы | Возврат |
+| --- | --- | --- |
+| `chat.catalog.v1` | `connection`, `byte[]` | — |
+| `chat.key.v1` | `chat`, `int key` | `Boolean.TRUE` — клавиша обработана |
+| `chat.render.v1` | `chat` | — |
+| `chat.replace-tab.v1` | — | `Boolean.TRUE` — подменить вкладку инвентаря |
+| `fpv.item.usable.v1` | `definition` | `Boolean` |
+| `fpv.item.use.v1` | `stack` | `Boolean` |
+| `fpv.item.profile.v1` | `definition` | `Object` |
+| `fpv.item.renderer.v1` | `stack` | `Object`; `null` оставляет родной |
+| `fpv.item.place.v1` | `address`, `stack` | `Boolean` |
+
+## Сеть и транспорт
+
+| Хук | Аргументы | Возврат |
+| --- | --- | --- |
+| `network.fpv.snapshot.v1` | `connection`, `byte[]` | — |
+| `network.vehicle.snapshot.v1` | `connection`, `byte[91]` | `Boolean.TRUE` |
+| `network.vr.weapon.v1` | `connection`, `byte[]` | — |
+| `scene.drones.v1` | `camera`, `float delta` | не используется |
+
+## Видео, VR и сцена
+
+| Хук | Аргументы | Возврат |
+| --- | --- | --- |
+| `video.before-post.v1` | — | не используется |
+| `video.photo-filter.v1` | — | `Object` — профиль фильтра |
+| `video.photo-enabled.v1` | — | `Boolean` |
+| `video.photo-blend.v1` | `pipeline`, `profile`, `int width`, `int height` | `Boolean.TRUE` |
+| `video.night-vision.v1` | `effect`, `parameters` | `Boolean.TRUE` |
+| `vr.render-world.v1` | `renderer`, `float partial` | `Boolean.TRUE` — отменить проход |
+| `vr.render-view-ready.v1` | `renderer` | — |
+| `vr.projection.v1` | `camera`, `matrix` | — |
+| `vr.effects-prepared.v1` | — | `Boolean.TRUE` |
+| `vr.second-eye.v1` | — | `Boolean.TRUE` — второй глаз уже отрисован |
+| `vr.desktop-ui.v1` | `renderer`, `float partial` | — |
+| `vr.action-focus.v1` | — | `Boolean.TRUE` — забрать фокус действий |
+
+## Хуки только из `mods/`
+
+Эти хуки встречаются в исходниках модов, но не имеют call site в этом
+репозитории. Их обслуживает совместимый клиент, и наличие/типы аргументов здесь
+не проверяются:
+
+`player.animation.v1`, `model.actor-visible.v1`, `model.body-visible.v1`,
+`model.mesh-visible.v2`, `fp.body-visible.v1`, `camera.director-active.v1`,
+`hud.arc.*`, `replay.*`, `weapon.workbench-*`.
+
+Опираться на них в стороннем моде рискованно.
+
+## Пакеты `szmods.bridge.*`
+
+Сетевые пакеты модов объявлены в приватной части совместимого клиента, а не в
+SDK. Мод создаёт объект по полному имени и отправляет штатным конвертом.
+
+Используются: `CommandRequest`, `CommandCatalog`, `MedicineUse`, `FpvInput`,
+`FpvSnapshot`, `PlayerAnimation`, `VehicleInput`, `VehicleSnapshot`, `VrWeapon`,
+`VrWeaponReply`, `EnvironmentInput`, `EnvironmentSnapshot`, `NpcEditorInput`,
+`NpcEditorSnapshot`, а также `LegacyAdapter`.
+
+Со стороны сервера эти имена — часть контракта (`szserver.net.*`,
+`docs/COMPATIBILITY_NAMES.md`). Переименование ломает установленные моды.
+
+## Слой `szmods.runtime`
+
+Компилированные моды обращаются к `szmods.runtime.*` напрямую:
+`ModLoader.clientHook`, `NativeFlightHooks.actionBlocked`, `FpvPackets`,
+`AnimationHooks`, `ClientHits` и т.п. Это полу-публичный слой: он есть в
+исходниках и работает, но его сигнатуры не входят в API `1`.
+
+- `ModLoader.clientHook(hook, args)` — вызвать хук из своего кода.
+- `FpvPackets.rawCodec(packet)` — точка, по которой клиент решает, что пакет
+  относится к моду. Патчи привязаны к имени и дескриптору; сигнатуру менять нельзя.
+- `ClientHits.capture(shot)` / `write(shot, out)` — снимок попадания; сервер
+  принимает повторную отправку только с тем же попаданием.
+- `FpvAudioHooks.setListener(double[12])` — позиция, скорость, направление и
+  «верх» слушателя для нативного аудио.
+- `VrFrameHooks.interval(native)` — при `-Dsz.vr.active=true` отдаёт `0`, чтобы
+  пейсингом управлял OpenXR.
+
+## Javaagent
+
+Три проекта (`network-replay`, `npc-director`, `world-environment`) кроме JAR
+содержат `premain`-агент на `java.lang.instrument`, который правит байткод уже
+загружаемых классов. Он подключается через `-javaagent:` в аргументах JVM, а не
+через папку `mods`.
+
+Такой агент опирается на конкретные имена и дескрипторы методов. Например,
+агент NPC-директора перехватывает
+`szmods.runtime.FpvPackets.rawCodec(Ljava/lang/Object;)Z`. Переименование или
+смена сигнатуры тихо отключает патч. Для обычного мода используйте
+`onClientHook`.

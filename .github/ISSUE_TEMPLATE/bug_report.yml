@@ -9,6 +9,10 @@ body:
       options:
         - label: Я проверил существующие Issuses и не нашёл аналогичных обращений.
           required: true
+        - label: Я обращался на [форум](https://t.me/stalzone_local) за поддержкой и не получил ответа.
+          required: true
+        - label: Я подтверждаю, что выбрал нужную категорию issue.
+          required: true
   - type: input
     id: version
     attributes:

@@ -1,0 +1,68 @@
+name: Docs site
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'web/docs/**'
+      - '.github/workflows/docs-pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/docs/package-lock.json
+      - name: Require custom domain
+        env:
+          SITE_URL: ${{ vars.SITE_URL }}
+        run: |
+          if [ -z "$SITE_URL" ]; then
+            echo "Set repository variable SITE_URL, for example https://docs.stalzone.gay" >&2
+            exit 1
+          fi
+          echo "NEXT_PUBLIC_SITE_URL=$SITE_URL" >> "$GITHUB_ENV"
+      - run: npm ci
+        working-directory: web/docs
+      - run: npm run build
+        working-directory: web/docs
+      - name: Prepare static output
+        working-directory: web/docs
+        env:
+          SITE_URL: ${{ vars.SITE_URL }}
+        run: |
+          touch out/.nojekyll
+          domain="${SITE_URL#https://}"
+          domain="${domain#http://}"
+          domain="${domain%%/*}"
+          printf '%s\n' "$domain" > out/CNAME
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web/docs/out
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
