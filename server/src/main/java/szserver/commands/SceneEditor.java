@@ -5,6 +5,7 @@ import szserver.util.Json;
 import szserver.world.*;
 import szserver.net.*;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 /** Administrative scene edits with bounded source-copy collapse and exact placement undo. */
@@ -100,9 +101,21 @@ final class SceneEditor {
         Resident resident(ResidentMapRuntime runtime)throws Exception{
             Map<ResidentChunks.Key,List<SceneEdits.Change>> groups=new LinkedHashMap<>();for(var change:changes)groups.computeIfAbsent(new ResidentChunks.Key(change.x(),change.z()),ignored->new ArrayList<>()).add(change);
             Map<ResidentChunks.Key,szserver.client.NativeResidentChunkCodec.PreparedScenes> nativeChunks=new LinkedHashMap<>();
-            for(var group:groups.entrySet()){
-                var snapshot=world.submit(w->runtime.load(group.getKey())).thenCompose(future->future).get(5,TimeUnit.SECONDS);Map<UUID,ScenePayload.Entry> next=new LinkedHashMap<>();for(var change:group.getValue()){if(!Objects.equals(snapshot.scenes().get(change.id()),change.before()))throw new IllegalArgumentException("scene_edit_conflicts_with_later_edit");next.put(change.id(),change.after());}
-                nativeChunks.put(group.getKey(),szserver.client.NativeResidentChunkCodec.prepareScenes(snapshot,next,runtime.sceneRegistry()));
+            var keys=new ArrayList<>(groups.keySet());
+            for(int offset=0;offset<keys.size();offset+=16){
+                var batch=keys.subList(offset,Math.min(offset+16,keys.size()));
+                var loads=world.submit(w->batch.stream().map(runtime::load).toList()).get(5,TimeUnit.SECONDS);
+                CompletableFuture.allOf(loads.toArray(CompletableFuture[]::new)).get(5,TimeUnit.SECONDS);
+                for(int index=0;index<batch.size();index++){
+                    var key=batch.get(index);
+                    var snapshot=loads.get(index).join();
+                    Map<UUID,ScenePayload.Entry> next=new LinkedHashMap<>();
+                    for(var change:groups.get(key)){
+                        if(!Objects.equals(snapshot.scenes().get(change.id()),change.before()))throw new IllegalArgumentException("scene_edit_conflicts_with_later_edit");
+                        next.put(change.id(),change.after());
+                    }
+                    nativeChunks.put(key,szserver.client.NativeResidentChunkCodec.prepareScenes(snapshot,next,runtime.sceneRegistry()));
+                }
             }
             var view=world.submit(World::sceneMetadataView).get(5,TimeUnit.SECONDS);if(!digest.equals(view.owner().sceneRegistryDigest()))throw new IllegalArgumentException("scene_edit_registry_changed");return new Resident(Map.copyOf(nativeChunks),World.prepareSceneMetadata(view,overlays(),locations,existed,finish,portals));
         }

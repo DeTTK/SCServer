@@ -5,6 +5,7 @@ import java.nio.file.*;
 import java.util.*;
 import szserver.util.Json;
 import szserver.persistence.*;
+import szserver.inventory.*;
 
 /** CLI layout and recovery guarantees, with small opaque payloads instead of game assets. */
 public final class PortableWorldTests {
@@ -46,6 +47,91 @@ public final class PortableWorldTests {
             var rows=new ArrayList<String>();active.replay(e->rows.add(e.get("type").getAsString())).get();
             check(rows.equals(List.of("give"))&&active.receipts().receipt("old-map-edit")!=null,"business recovery and lazy legacy receipt");
         }
-        System.out.println("PASS portable worlds, template disconnection, independent copies, region corruption, rollback, detached mixed journal");
+        residentCharacters(root.resolve("character-cohort"));
+        storedChunkCoverage(root.resolve("coverage"));
+        System.out.println("PASS portable worlds, template disconnection, independent copies, region corruption, rollback, detached mixed journal, resident character generations");
+    }
+
+    private static void storedChunkCoverage(Path path)throws Exception{
+        Files.createDirectories(path);
+        var table=java.nio.ByteBuffer.allocate(16400+41);
+        table.putInt(0x535a5231).putInt(-1).putInt(0).putInt(1);
+        table.position(16+31*16);table.putLong(16400).putInt(41);
+        Files.write(path.resolve("r.-1.0.szr"),table.array());
+        try(var terrain=new RegionTerrain(path,16,63,null)){
+            terrain.savedChunks(()->Set.of(new ResidentChunks.Key(-1,1),new ResidentChunks.Key(48,-1)));
+            var coverage=terrain.storedChunkMasks();
+            var first=coverage.get(BlockOverlays.key(-1,0));
+            check(first.cardinality()==2&&first.get(31)&&first.get(63)&&!first.get(30),"negative chunks, saved overlay and a hole in the map");
+            var second=coverage.get(BlockOverlays.key(1,-1));
+            check(coverage.size()==2&&second.cardinality()==1&&second.get(1008),"saved-only region, without synthetic flat chunks");
+        }
+    }
+    private static void residentCharacters(Path root)throws Exception{
+        Files.createDirectories(root);
+        var catalogFile=root.resolve("item-definitions.json");
+        Files.writeString(catalogFile,"{\"1\":{\"type\":\"bullet\",\"stack_size\":100}}");
+        var catalog=ItemCatalog.legacyGeometry(catalogFile);
+        var legacy=root.resolve("characters.sjournal");
+        var character=UUID.randomUUID();
+        var first=new World.Vec(4,67,8);
+        var current=new World.Vec(6,68,10);
+        var discarded=new World.Vec(9,69,9);
+        var point=new Inventory.Address(1,0,0);
+        try(var old=new InventoryJournal(legacy,catalog);var locations=new CharacterLocations(root,"character-world")){
+            var history=new com.google.gson.JsonObject();
+            history.add(AdminGiveReceipt.PROGRESS,new com.google.gson.JsonObject());
+            old.commit(character,old.load(character).give(new ItemStack(1,2,0,new byte[0])),history).get();
+            old.compact().get();
+            locations.teleport(character,first).get();
+            locations.importLegacyPlayer(character,Json.tree(Map.of("character_id",character.toString(),"obsolete","fixture"))).get();
+        }
+        try(var packed=Journal.streaming(legacy)){
+            packed.pinOffsets();check(packed.packHistory().get().get("status").equals("complete"),"packed migration fixture");
+        }
+        Path locationFile;
+        try(var paths=Files.list(root)){locationFile=paths.filter(p->p.getFileName().toString().matches("locations-[0-9a-f]{64}\\.sjournal")).findFirst().orElseThrow();}
+        byte[] oldInventory=Files.readAllBytes(legacy),oldLocations=Files.readAllBytes(locationFile);
+        var inventoryPages=new ResidentPlayerPages("inventory");var locationPages=new ResidentPlayerPages("locations");
+        var key=new ResidentChunks.Key(0,0);
+        var generations=root.resolve("map");
+        try(var inventory=InventoryJournal.resident(legacy,catalog,null);
+            var locations=CharacterLocations.resident(root,"character-world",null);
+            var disk=new RegionSnapshotStore(generations,"character-world",k->null)){
+            check(inventory.load(character).at(point).count()==2&&locations.position(character).equals(first),"migrate both legacy roots");
+            check(locations.legacyPlayer(character)==null,"old compatibility payload stays in its archive");
+            inventory.commit(character,inventory.load(character).give(new ItemStack(1,3,0,new byte[0]))).get();
+            locations.observe(character,current);
+            var inv=inventory.capture().get();var loc=locations.capture().get();
+            var files=new ArrayList<ResidentChunks.StateFile>();
+            files.addAll(inventoryPages.encode(1,inv.rows(),Set.of()).files());
+            files.addAll(locationPages.encode(1,loc.rows(),Set.of()).files());
+            // These updates are live but belong to a later save.
+            inventory.commit(character,inventory.load(character).give(new ItemStack(1,5,0,new byte[0]))).get();
+            locations.observe(character,discarded);
+            disk.save(List.of(new ResidentChunks.Write(key,1,new byte[]{7})),new ResidentChunks.StateDelta(1,files,Set.of()));
+
+            var later=new ArrayList<ResidentChunks.StateFile>();
+            later.addAll(inventoryPages.encode(2,inventory.capture().get().rows(),Set.of()).files());
+            later.addAll(locationPages.encode(2,locations.capture().get().rows(),Set.of()).files());
+            // Simulate a damaged current generation with a missing character page.
+            later.removeIf(file->file.name().equals("players-locations-0.bin"));
+            disk.save(List.of(new ResidentChunks.Write(key,2,new byte[]{8})),
+                    new ResidentChunks.StateDelta(2,later,Set.of("players-locations-0.bin")));
+        }
+        try(var disk=new RegionSnapshotStore(generations,"character-world",k->null)){
+            disk.bootstrapState(files->{
+                try(var restored=InventoryJournal.resident(legacy,catalog,inventoryPages.reader(files));
+                    var locations=CharacterLocations.resident(root,"character-world",locationPages.reader(files))){
+                    check(restored.load(character).at(point).count()==5,"restore inventory from the map generation");
+                    check(!restored.gameplay(character).has(AdminGiveReceipt.PROGRESS),"operation history excluded from the save");
+                    check(locations.position(character).equals(current),"restore most recent captured position");
+                }
+                return null;
+            });
+            check(disk.load(key).bytes()[0]==7,"character recovery also selects the previous region generation");
+        }
+        check(Arrays.equals(oldInventory,Files.readAllBytes(legacy))&&Arrays.equals(oldLocations,Files.readAllBytes(locationFile)),
+                "migration and later RAM updates leave both source journals untouched");
     }
 }

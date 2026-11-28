@@ -1,4 +1,4 @@
-use anyhow::{Result, bail};
+use anyhow::{Context, Result, bail};
 use bscp_launcher_core::{
     GameLayout, Settings, component_base, component_file, runtime_part, runtime_root,
 };
@@ -43,19 +43,38 @@ pub fn need(p: &Path) -> Result<()> {
     }
     Ok(())
 }
+// The portable JVM uses arguments owned by this launcher. User-wide JVM options
+// can hide modules during detection or prevent a client/server from starting.
+const INHERITED_JAVA_OPTIONS: [&str; 3] =
+    ["JDK_JAVA_OPTIONS", "JAVA_TOOL_OPTIONS", "_JAVA_OPTIONS"];
+
 pub fn java(root: &Path) -> Result<PathBuf> {
     need(&root.join("bin/java.exe"))?;
     need(&root.join("jmods/jdk.jfr.jmod")).or_else(|_| {
         let mut c = std::process::Command::new(root.join("bin/java.exe"));
         c.arg("--list-modules");
+        for name in INHERITED_JAVA_OPTIONS {
+            c.env_remove(name);
+        }
         #[cfg(windows)]
         {
             use std::os::windows::process::CommandExt;
             c.creation_flags(0x08000000);
         }
-        let r = c.output()?;
-        if !r.status.success() || !String::from_utf8_lossy(&r.stdout).contains("jdk.jfr@") {
-            bail!("JAVA_JFR: Java 17 with JFR is required")
+        let r = c
+            .output()
+            .context("JAVA_JFR: inspect the bundled JVM modules")?;
+        if !r.status.success() {
+            bail!(
+                "JAVA_JFR: the bundled JVM could not list its modules ({})",
+                r.status
+            )
+        }
+        if !String::from_utf8_lossy(&r.stdout)
+            .lines()
+            .any(|line| line.starts_with("jdk.jfr@"))
+        {
+            bail!("JAVA_JFR: jdk.jfr is missing from the bundled JVM")
         }
         Ok(())
     })?;
@@ -64,6 +83,9 @@ pub fn java(root: &Path) -> Result<PathBuf> {
 pub fn base(java: &Path, session: &Path) -> Result<tokio::process::Command> {
     std::fs::create_dir_all(session.join("temp"))?;
     let mut c = tokio::process::Command::new(java);
+    for name in INHERITED_JAVA_OPTIONS {
+        c.env_remove(name);
+    }
     c.current_dir(session)
         .stdin(std::process::Stdio::null())
         .stdout(std::process::Stdio::piped())
@@ -232,7 +254,13 @@ pub fn client(
         need(&component_file(source, name)?)?;
     }
     std::fs::create_dir_all(profile.join("game"))?;
-    let mut c = base(java, session)?;
+    let game_exe = component_file(source, "compat/bscp-game.exe")?;
+    let jli = java.with_file_name("jli.dll");
+    let use_game_exe = game_exe.is_file() && jli.is_file();
+    let mut c = base(if use_game_exe { &game_exe } else { java }, session)?;
+    if use_game_exe {
+        c.env("BSCP_GAME_JLI", &jli);
+    }
     c.current_dir(profile.join("game"));
     if let Some(guard) = qa {
         need(guard)?;

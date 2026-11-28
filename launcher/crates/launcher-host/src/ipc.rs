@@ -1,4 +1,6 @@
 use anyhow::{Context, Result, bail};
+#[cfg(windows)]
+use bscp_launcher_core::storage::{current_user_sid, process_user_sid};
 use bscp_launcher_core::Layout;
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
@@ -38,15 +40,41 @@ impl HostClient {
         let root = self.root.clone();
         let command = command.to_owned();
         let args = args.clone();
-        let deadline = if matches!(command.as_str(), "status" | "metrics" | "probe") {
+        let deadline = if matches!(command.as_str(), "status" | "metrics" | "probe" | "server-summary") {
             5
         } else {
             1800
         };
-        std::thread::spawn(move||tokio::runtime::Builder::new_current_thread().enable_all().build()?.block_on(async move {
- #[cfg(windows)] {let mut p=tokio::net::windows::named_pipe::ClientOptions::new().open(pipe_name(&root))?;verify_server_user(&p)?;let mut bytes=serde_json::to_vec(&json!({"ProtocolVersion":1,"RequestId":uuid::Uuid::new_v4().simple().to_string(),"Command":command,"Arguments":args}))?;bytes.push(b'\n');p.write_all(&bytes).await?;let raw=tokio::time::timeout(Duration::from_secs(deadline),line(&mut p)).await??;let v:Value=serde_json::from_slice(&raw)?;if v["Ok"]!=true {let code=v["Code"].as_str().unwrap_or("OPERATION_FAILED");let error=v["Error"].as_str().unwrap_or("Supervisor rejected the operation");if error.split(':').next()==Some(code){bail!("{error}")}bail!("{code}: {error}")} Ok(v["Data"].clone())}
- #[cfg(not(windows))] {let _=(root,command,args);bail!("Windows named pipes required")}
- })).join().map_err(|_|anyhow::anyhow!("IPC worker panicked"))?
+        std::thread::spawn(move || tokio::runtime::Builder::new_current_thread().enable_all().build()?.block_on(async move {
+            #[cfg(windows)] {
+                use tokio::net::windows::named_pipe::ClientOptions;
+                let name = pipe_name(&root);
+                let started = tokio::time::Instant::now();
+                let mut pipe = loop {
+                    match ClientOptions::new().open(&name) {
+                        Ok(pipe) => break pipe,
+                        Err(e) if e.raw_os_error() == Some(231) && started.elapsed() < Duration::from_millis(300) => {
+                            tokio::time::sleep(Duration::from_millis(20)).await;
+                        }
+                        Err(e) => return Err(e).with_context(|| format!("IPC_OPEN: связь со службой для {}", root.display())),
+                    }
+                };
+                verify_server_user(&pipe).context("IPC_VERIFY: проверка владельца службы")?;
+                let mut bytes = serde_json::to_vec(&json!({"ProtocolVersion":1,"RequestId":uuid::Uuid::new_v4().simple().to_string(),"Command":command,"Arguments":args}))?;
+                bytes.push(b'\n');
+                pipe.write_all(&bytes).await?;
+                let raw = tokio::time::timeout(Duration::from_secs(deadline), line(&mut pipe)).await??;
+                let response: Value = serde_json::from_slice(&raw)?;
+                if response["Ok"] != true {
+                    let code = response["Code"].as_str().unwrap_or("OPERATION_FAILED");
+                    let error = response["Error"].as_str().unwrap_or("Supervisor rejected the operation");
+                    if error.split(':').next() == Some(code) { bail!("{error}"); }
+                    bail!("{code}: {error}");
+                }
+                Ok(response["Data"].clone())
+            }
+            #[cfg(not(windows))] {let _=(root,command,args,deadline);bail!("Windows named pipes required")}
+        })).join().map_err(|_|anyhow::anyhow!("IPC worker panicked"))?
     }
     pub fn status(&self) -> Result<bscp_launcher_core::ProcessView> {
         Ok(serde_json::from_value(
@@ -66,7 +94,14 @@ pub fn ensure_host(layout: &Layout) -> Result<HostClient> {
             break;
         }
     }
-    if let Ok(status) = c.status() {
+    let status = match c.status() {
+        Ok(status) => Some(status),
+        Err(error) if error.downcast_ref::<std::io::Error>().is_some_and(|error| error.raw_os_error() == Some(5)) => {
+            return Err(error).context("HOST_ACCESS: Windows отказала в доступе к уже запущенной службе лаунчера");
+        }
+        Err(_) => None,
+    };
+    if let Some(status) = status {
         let expected = bscp_launcher_core::sha(&exe)?;
         let raw = c.call("status", &BTreeMap::new())?;
         if raw["HostBuild"].as_str() == Some(&expected) {
@@ -221,57 +256,6 @@ mod tests {
         assert!(pipe_name(std::path::Path::new("X:/one")).contains("bscp-rust-"));
     }
 }
-#[cfg(windows)]
-fn current_user_sid() -> Result<String> {
-    process_user_sid(unsafe { windows_sys::Win32::System::Threading::GetCurrentProcess() })
-}
-#[cfg(windows)]
-fn process_user_sid(process: windows_sys::Win32::Foundation::HANDLE) -> Result<String> {
-    use windows_sys::Win32::{
-        Foundation::{CloseHandle, LocalFree},
-        Security::{
-            Authorization::ConvertSidToStringSidW, GetTokenInformation, TOKEN_QUERY, TOKEN_USER,
-            TokenUser,
-        },
-        System::Threading::OpenProcessToken,
-    };
-    unsafe {
-        let mut token = std::ptr::null_mut();
-        if OpenProcessToken(process, TOKEN_QUERY, &mut token) == 0 {
-            return Err(std::io::Error::last_os_error().into());
-        }
-        let mut needed = 0;
-        GetTokenInformation(token, TokenUser, std::ptr::null_mut(), 0, &mut needed);
-        // usize storage guarantees alignment for TOKEN_USER and its embedded SID.
-        let mut info = vec![0usize; (needed as usize).div_ceil(std::mem::size_of::<usize>())];
-        if GetTokenInformation(
-            token,
-            TokenUser,
-            info.as_mut_ptr().cast(),
-            needed,
-            &mut needed,
-        ) == 0
-        {
-            CloseHandle(token);
-            return Err(std::io::Error::last_os_error().into());
-        }
-        let user = &*(info.as_ptr() as *const TOKEN_USER);
-        let mut raw = std::ptr::null_mut();
-        if ConvertSidToStringSidW(user.User.Sid, &mut raw) == 0 {
-            CloseHandle(token);
-            return Err(std::io::Error::last_os_error().into());
-        }
-        let mut len = 0;
-        while *raw.add(len) != 0 {
-            len += 1
-        }
-        let result = String::from_utf16(std::slice::from_raw_parts(raw, len))?;
-        LocalFree(raw.cast());
-        CloseHandle(token);
-        Ok(result)
-    }
-}
-
 #[cfg(windows)]
 fn verify_server_user(pipe: &tokio::net::windows::named_pipe::NamedPipeClient) -> Result<()> {
     use std::os::windows::io::AsRawHandle;

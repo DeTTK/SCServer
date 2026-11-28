@@ -10,7 +10,9 @@ public final class NativeAdapterCheck {
         Path runtime=Path.of(args[0]),jar=Path.of(args[1]);List<URL> urls=new ArrayList<>();urls.add(jar.toUri().toURL());
         for(String dir:List.of("classes","bootstrap","libs","imgui-compat"))urls.add(runtime.resolve(dir).toUri().toURL());
         try(var files=Files.list(runtime.resolve("dependencies"))){for(Path p:files.filter(p->p.toString().endsWith(".jar")).toList())urls.add(p.toUri().toURL());}
-        Map<String,byte[]> patched=new HashMap<>();for(String name:List.of("175605189","803707421","1943200621","1389510037","981501872","656386660","873944585"))patched.put(name,ScaleAgent.patch(name,Files.readAllBytes(runtime.resolve("classes/"+name+".class"))));
+        Map<String,byte[]> patched=new HashMap<>();var hashes=new Properties();
+        try(var input=ScaleAgent.class.getResourceAsStream("/playerscale-native.properties")){hashes.load(input);}
+        for(String name:hashes.stringPropertyNames())patched.put(name,ScaleAgent.patch(name,Files.readAllBytes(runtime.resolve("classes/"+name+".class"))));
         // Our own loader's stable frame callback runs even when the external mods directory is empty.
         patched.put("szmods.runtime.ModLoader",ScaleAgent.patch("szmods/runtime/ModLoader",Files.readAllBytes(runtime.resolve("bootstrap/szmods/runtime/ModLoader.class"))));
         try(var loader=new URLClassLoader(urls.toArray(URL[]::new),ClassLoader.getPlatformClassLoader()){
@@ -30,6 +32,6 @@ public final class NativeAdapterCheck {
             snapshot.getMethod("extends",java.io.DataInput.class).invoke(reply,new java.io.DataInputStream(new java.io.ByteArrayInputStream(payload)));
             if(!Arrays.equals((byte[])snapshot.getField("payload").get(reply),payload))throw new AssertionError("native snapshot bridge");
         }
-        System.out.println("Native adapters: 7 game classes, own frame callback and 2 dynamic bridges PASS; no gameplay or rendering executed");
+        System.out.println("Native adapters: "+hashes.size()+" game classes, own frame callback and 2 dynamic bridges PASS; no gameplay or rendering executed");
     }
 }

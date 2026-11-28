@@ -2114,13 +2114,13 @@
       "kind": "default-map-region"
     },
     "map/data/region/r.-1.-4.szr": {
-      "size": 262622,
-      "sha256": "ec8ba4a299cdba1965e2bfaa716f9009b5524f486e3e0a700d8832bd9ce45228",
+      "size": 262628,
+      "sha256": "0061827ce46011f1d2fb03aae626e9be6625df3e27cb1115d27d77f974e5fbab",
       "kind": "default-map-region"
     },
     "map/data/region/r.-1.-5.szr": {
       "size": 42828,
-      "sha256": "31f972ebd28a277a05adcff60b800c060d26f13621a62e6d3bb856f15b1d1557",
+      "sha256": "50b64841d076dae1414cf5520bb36b87d0ab972af38be994eb59139ec3d82a44",
       "kind": "default-map-region"
     },
     "map/data/region/r.-1.-7.szr": {
@@ -2195,12 +2195,12 @@
     },
     "map/data/region/r.-10.6.szr": {
       "size": 1872185,
-      "sha256": "70737d998eff17c05b364f05e0fcbedd1ae655c6493b77ccf3930c6f5f5c8aed",
+      "sha256": "430e97bbc492161d24721214ae87f520bddc782a0914601aabaf4b7604870927",
       "kind": "default-map-region"
     },
     "map/data/region/r.-10.7.szr": {
-      "size": 2593303,
-      "sha256": "1f70b08e05cf24364d2cea4014ba8ba812122e07e0b197a4836ada87cff4fee9",
+      "size": 2593294,
+      "sha256": "c23621fe56bfc68f83f6e9c35cb7107e654845b44c2fab7270573473f30ba243",
       "kind": "default-map-region"
     },
     "map/data/region/r.-10.8.szr": {
@@ -2275,7 +2275,7 @@
     },
     "map/data/region/r.-11.6.szr": {
       "size": 584494,
-      "sha256": "ff3b5740daad0500de738e4649f0ea3ea9f2047bf0728a7347983ed61b2d9733",
+      "sha256": "c1aa59e5e92a5e2b8b974537a336414ea26111c4a5e9a769811e792dd5dea1b4",
       "kind": "default-map-region"
     },
     "map/data/region/r.-11.7.szr": {
@@ -2519,13 +2519,13 @@
       "kind": "default-map-region"
     },
     "map/data/region/r.-2.-4.szr": {
-      "size": 120954,
-      "sha256": "afce8d04779a19063fb7430d0a04553a19e25f58ea023b4416ce20db98a1ac4b",
+      "size": 120957,
+      "sha256": "49984f33ab9a3509a3b259a7bdf560403f2fd460f394f5af202cd9178ad2d85b",
       "kind": "default-map-region"
     },
     "map/data/region/r.-2.-5.szr": {
       "size": 16843,
-      "sha256": "1eb3ef590f23a9e8861f93c478d0e6685946975618d898586446bfbd9515c4a5",
+      "sha256": "95d4bec101c909fce1616c14cdaef33083ba5960600cd93e2c24a122d6a13097",
       "kind": "default-map-region"
     },
     "map/data/region/r.-2.0.szr": {
@@ -2630,12 +2630,12 @@
     },
     "map/data/region/r.-3.-6.szr": {
       "size": 170914,
-      "sha256": "73eb7d31cc730f030bd2455a2403a9fec742b5ea68e73497e70610326af398cc",
+      "sha256": "d98f6aa87e5650f1f9fb0e5e91b57813399d5d75ebc16e0e08549d5bf0f03501",
       "kind": "default-map-region"
     },
     "map/data/region/r.-3.-7.szr": {
-      "size": 1016608,
-      "sha256": "7ec71df093bbb26f2175293245eb634ede8d82c929a5e25322ea933083044b90",
+      "size": 1016679,
+      "sha256": "f9b5ac23e35d5e0a2e8bb7d93bde2e4889877354b95ab0697609b5d7ecc9e10e",
       "kind": "default-map-region"
     },
     "map/data/region/r.-3.0.szr": {
@@ -2839,8 +2839,8 @@
       "kind": "default-map-region"
     },
     "map/data/region/r.-8.2.szr": {
-      "size": 2050227,
-      "sha256": "1aa1f33d8d6f98a54f60787d65039572851a2466c3d24ce2015e961500d65026",
+      "size": 2050219,
+      "sha256": "1d0e7190f5de53b8b36429c7b9a9a035bc1eb47f56796186ebff8d5520588d0e",
       "kind": "default-map-region"
     },
     "map/data/region/r.-8.3.szr": {
@@ -2914,8 +2914,8 @@
       "kind": "default-map-region"
     },
     "map/data/region/r.-9.2.szr": {
-      "size": 3642900,
-      "sha256": "6c222ce35fa0d418c2dcd6d47be96352e9e52d917efc8960564531d2ce981d43",
+      "size": 3642899,
+      "sha256": "cd71be55d097fa2ff7efa39d7c6273e735431d2d78afda85c6c4eec9f17c1c07",
       "kind": "default-map-region"
     },
     "map/data/region/r.-9.3.szr": {
@@ -3030,12 +3030,12 @@
     },
     "map/data/region/r.10.-4.szr": {
       "size": 748341,
-      "sha256": "c12e36148ca9d11dae4afbbf9a7b8909dde0b7f6b8641314b6faef0408703ff0",
+      "sha256": "427b1afe916adea1cc84c8810c27f1869b870fe3b500fa8f2c1a6eeeb71861e8",
       "kind": "default-map-region"
     },
     "map/data/region/r.10.-5.szr": {
       "size": 755701,
-      "sha256": "d32a09fa9fcec4fc561eb6e62cbef2995f0d0ab5b0da1046f09fe845eeabbc94",
+      "sha256": "5b2589e6afe8a75c602326316ed1bddd8883dc5232604983618cf214f9fc10e3",
       "kind": "default-map-region"
     },
     "map/data/region/r.10.-8.szr": {
@@ -3050,12 +3050,12 @@
     },
     "map/data/region/r.10.5.szr": {
       "size": 1028255,
-      "sha256": "769b71362cfce8982826eca5bcfdf4f82b7a2e286dc2caae80991f62db268cad",
+      "sha256": "4bc6ff6f93cd5b3f20b54ecf578624b7aa7331f6072bf10b02ba245a2606d729",
       "kind": "default-map-region"
     },
     "map/data/region/r.10.6.szr": {
       "size": 1818278,
-      "sha256": "e1e2aab2cf2bd6033971449cdf5dc8aeb9bf3ce46dd38f2bf728bffd18a317f9",
+      "sha256": "7e00f61bbad4c7001a8c70bf26a8ecac5994aead19c570f7b1fd33c843c2f5c8",
       "kind": "default-map-region"
     },
     "map/data/region/r.10.7.szr": {
@@ -3090,12 +3090,12 @@
     },
     "map/data/region/r.11.5.szr": {
       "size": 289777,
-      "sha256": "45f78eb0e8b0e631a03b778c7d2690bb9a7c94470fd346588f42973f79fa6768",
+      "sha256": "8d4180c58cd0ddfbd48b944a90dff2d42e6296c08eced6866c2c23c48614ac7b",
       "kind": "default-map-region"
     },
     "map/data/region/r.11.6.szr": {
       "size": 316158,
-      "sha256": "53c0138f588312596e46ff7e6823d16c4b9909d7330426dfd3e90735e74381d7",
+      "sha256": "1eef22c92d92e69245693ac6e590e1ae725de4e4f7a9a536199384f1c042f187",
       "kind": "default-map-region"
     },
     "map/data/region/r.11.7.szr": {
@@ -3125,12 +3125,12 @@
     },
     "map/data/region/r.13.-5.szr": {
       "size": 775863,
-      "sha256": "ac38e01530cea5c7dc7daba9c5972681786b0cbb921e214a42112fc869224d01",
+      "sha256": "2401447dd42791bbaa935d24abf89f929ee44460d91f8da957a0ced61154d2df",
       "kind": "default-map-region"
     },
     "map/data/region/r.13.-6.szr": {
       "size": 700022,
-      "sha256": "0b7482e7ec669784793923f1d5afdfa7e178a975860b0cd603a6c65aed1a3c9a",
+      "sha256": "4d5f30fa90b00152ff57fbd3cd7eef4e053ebaba514a7c0ed1e939d9b0c01a2e",
       "kind": "default-map-region"
     },
     "map/data/region/r.13.-7.szr": {
@@ -3245,7 +3245,7 @@
     },
     "map/data/region/r.5.-10.szr": {
       "size": 1105311,
-      "sha256": "4c0d1e27f020c5f151c708752613248878cc06d7a4843023630b2a97c951ae27",
+      "sha256": "842436882c4fd412097437081c244dcc080e4224c4d850fe96fa1d700142ee9e",
       "kind": "default-map-region"
     },
     "map/data/region/r.5.-9.szr": {
@@ -3300,17 +3300,17 @@
     },
     "map/data/region/r.8.5.szr": {
       "size": 267101,
-      "sha256": "d0f447a9e6e8d410575fcef2c7d41145cd2b4f036c174832595159bb067ca2ab",
+      "sha256": "7a8ef229e26766856e032cd1708cd3bf85273802a2b073a3e181797fa9e53bf5",
       "kind": "default-map-region"
     },
     "map/data/region/r.8.6.szr": {
       "size": 403603,
-      "sha256": "c657433bf14adca77bce251f08adba7b75be507e6a48502b2b326c5e6d609762",
+      "sha256": "93e314c7e75f73468d48646adbf11538af956c01f4c4cff4533a04f27cd83f31",
       "kind": "default-map-region"
     },
     "map/data/region/r.8.7.szr": {
       "size": 159047,
-      "sha256": "88c2531fa6099503768a20db26a2ac5b5471615de21f627fbb26c9edb8e553d5",
+      "sha256": "245cab27f0165df3433ae160127876f7c883fcf11548bc06b48fc2de30d70ab0",
       "kind": "default-map-region"
     },
     "map/data/region/r.9.-10.szr": {
@@ -3320,12 +3320,12 @@
     },
     "map/data/region/r.9.-4.szr": {
       "size": 678031,
-      "sha256": "2e89dd33ac3b408673246fc8145be819546a05a99a1b3c535531192f3ce3ebee",
+      "sha256": "8374f9914e08033858b1d305ab335e574b1a8e45dac1eb534884036b75b5095b",
       "kind": "default-map-region"
     },
     "map/data/region/r.9.-5.szr": {
       "size": 720037,
-      "sha256": "1c44384a99aa53bb57c527ffc44dcd03cb6ec46e9f7f3784bbb7005ce5cc2b30",
+      "sha256": "8e9c2df443257e0d728ce4da732a45be03dc0a1d1b55649a2dad96759b1ec544",
       "kind": "default-map-region"
     },
     "map/data/region/r.9.-9.szr": {
@@ -3335,17 +3335,17 @@
     },
     "map/data/region/r.9.5.szr": {
       "size": 1061223,
-      "sha256": "095caee65fee13dc9542a0d86ae539480a289835a480b70baad74b6489c78026",
+      "sha256": "75ff2b9c741eb652ba781e5b32829b04071266d1260be06b8570940034dcd971",
       "kind": "default-map-region"
     },
     "map/data/region/r.9.6.szr": {
-      "size": 2297289,
-      "sha256": "0cf512d86577117a745641ca5e387c4cfd0147062aa2382dcfce9fb4cc6ba5b2",
+      "size": 2297291,
+      "sha256": "97a58e6946998171a4d2cd75a2f3e31a0a88ad28cd09c559d84ec6af520b45d1",
       "kind": "default-map-region"
     },
     "map/data/region/r.9.7.szr": {
       "size": 892105,
-      "sha256": "29edb87048bc5af6b224d875bb2d7a509db00126a04f626d365daf625973e874",
+      "sha256": "c82013d9217bfdea87203ad35d645a51d61f731c48565d16c0f72428b5cc194f",
       "kind": "default-map-region"
     },
     "map/data/registry.json": {
@@ -3359,8 +3359,8 @@
       "kind": "default-map-metadata"
     },
     "map/data/map-info.json": {
-      "size": 18455,
-      "sha256": "11103f920a8e0dac8a13e80dac03d4c8da10d050a69402d38f2a406d459f75c4",
+      "size": 191456,
+      "sha256": "93ae058a4261625cc0b0b39e9655dc61d9ede8e52e9bdb9e692b019c99a559d1",
       "kind": "default-map-metadata"
     },
     "bootstrap/inputs/asset-overrides/configs/assets/bundle/radio/global/tracklists/rock1_radio_en.json": {
@@ -3752,6 +3752,381 @@
       "size": 46076,
       "sha256": "626b256f9090ee48bdf45500fc29da4ea0dbf4a0338c3697c199ed99bcc4e73e",
       "kind": "client-mod-asset"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/air-brake.wav": {
+      "size": 57374,
+      "sha256": "95a2483cee7508e84524c6f62776c06dc032b7429df5bd9a38c68839998921c5",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/brake-release.wav": {
+      "size": 35324,
+      "sha256": "147678becac237694febb2c10704b8f614713d3c48e68a05c6ca9fda71cd74f0",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/brake-set.wav": {
+      "size": 14156,
+      "sha256": "b2155bc7965372eb45d30745707b0bc536e768b727c5bbac3c5548c8363d1cf9",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/denied.wav": {
+      "size": 15920,
+      "sha256": "ec6dbaf60e988d96528964f76c16f0468c848b6fbecb27a0a2543c52d850451f",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/diesel-clatter.wav": {
+      "size": 344024,
+      "sha256": "567e7e3643fe76f1de1e91eda66d81a0bd64c211773c112900b703517b9a3a6a",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/dirt-hit.wav": {
+      "size": 200202,
+      "sha256": "21ca30ea7670fe5526206a4f99ad157ce9bd515c05ef7bedef1b00dac951df36",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/door-close.wav": {
+      "size": 62922,
+      "sha256": "c772b06b978e6a0c1ea237ca52da05909ba4a79477f473adb5776b6e14cabcff",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/door-open.wav": {
+      "size": 87156,
+      "sha256": "dca149efea78a469d696b1d7276fc1e1a863e531b1b4eda14c15063222676aac",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/ds8-1.wav": {
+      "size": 287588,
+      "sha256": "09c793af46b7977a7fef125c7f2e9aa5ffc56c9e9bf1d63427af9cbf7aee383e",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/ds8-2.wav": {
+      "size": 298162,
+      "sha256": "9bbc1bb4505990c49bb3cc311f4f05c50ac9790baf66bc5743e21f2883c458b4",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/ds8-3.wav": {
+      "size": 299036,
+      "sha256": "82cc486bbbd3c6b2cf1314220768e3f0f95bdb1ed271773a91fbad47f5fff448",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/ds8-4.wav": {
+      "size": 319326,
+      "sha256": "b90168df89f5d0308ed285668b88712c86fdcaa98e14c2d11569da6bfd457d99",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/ds8-5.wav": {
+      "size": 324514,
+      "sha256": "7f5e8884cc47086ea56b5e445ac0de023f74ae2c4ffa311b7d54e39578bb3f6c",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/enter.wav": {
+      "size": 28268,
+      "sha256": "018e90be0018bec1bc35abaa44c4410b667979b44062f73dce60eb64d3911c7a",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/exit.wav": {
+      "size": 33560,
+      "sha256": "8434a0d252260eb11cc9fa53c0b244d236a7c26d1854f1bbc7ce2d575211c39f",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/failed-start.wav": {
+      "size": 97064,
+      "sha256": "b34baf524996641d40d192482cdc47ea87260366c2e256e3ed8125d6ee68a881",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/gear.wav": {
+      "size": 17530,
+      "sha256": "b631230dc0b42f5b453f2d8150d86a272b5178367ed82839dafdfe902e23691e",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/gravel.wav": {
+      "size": 53012,
+      "sha256": "1e59147c9b49ab8786b5bbf3c59f72189337d7e269317521ee6cf6106f6a4757",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/gv8-1.wav": {
+      "size": 192324,
+      "sha256": "c489f63e4f2183e3787a320acc95f25caa2a88998190fc7e27e3f7e4074622e1",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/gv8-2.wav": {
+      "size": 344024,
+      "sha256": "fcfcee3ae30aa4bf5483356d54328005aedc4be840a9e18f7c96eaa94f03e93c",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/gv8-3.wav": {
+      "size": 301690,
+      "sha256": "cad4120e149dcd242a663c45d45f661e6b6dad981c01324e9556eecfc837f15d",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/gv8-4.wav": {
+      "size": 303454,
+      "sha256": "f48791aa25b4a1a5268efd3661c75e9047caf46772d4c5119e98fb31cbc9b5be",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/gv8-5.wav": {
+      "size": 300280,
+      "sha256": "179230dfd9e6db1f02d9d6da3822668ff00b06ecc43f027bfbedb01599ac9200",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/impact-heavy.wav": {
+      "size": 25448,
+      "sha256": "4f50e99144a849376a5de4c695e314c0a9d3c13992cf907db1faa3f8865f3015",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/impact-light.wav": {
+      "size": 35326,
+      "sha256": "c0dbc463231930d82dc15ed2c9cda1104482cf635a578f0a68641dd78255a3e3",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/mud.wav": {
+      "size": 245182,
+      "sha256": "624dba273c7c362c201bca151f71ec4f251fcd83fa13ddfb089d38d62e5d39df",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/remove.wav": {
+      "size": 7982,
+      "sha256": "c2de5dafe3d455ad4df2fb0ce2adf63940beb71f31c8c111d99e009343961d11",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/road.wav": {
+      "size": 194082,
+      "sha256": "c1296d1dc92717d0d635ecaaf47d18aec64d1df67247770b7b2e4d7ab1f8a47c",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/sand.wav": {
+      "size": 53012,
+      "sha256": "79b76a3036f6b1e7df3da365bd0674cd677909c06583f7e718b9679bec7365bf",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/scrape.wav": {
+      "size": 311104,
+      "sha256": "91bda36d6ed7dc38e463315f1034d78bf4871fe91719d09c66e0a88d208e4a0d",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/select.wav": {
+      "size": 4894,
+      "sha256": "490593cdd5cf282681ccf01b6ed17bc67599a7dfb9c306553692b728e2d8049e",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/skid.wav": {
+      "size": 255824,
+      "sha256": "201bb18a44e4415599fa713360f33cbd8db6195e99614c24ea3ec1467cb5fdf3",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/snow.wav": {
+      "size": 53012,
+      "sha256": "035b961bd0b82931a8805d763cc13d2573cb6c6127f2e790f4114565e70aac4d",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/soil.wav": {
+      "size": 53012,
+      "sha256": "770fc10614994f2c8c2873abdc81b0d68dc666611d9f2e6db5a1a09caef4fdf6",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/spawn.wav": {
+      "size": 12392,
+      "sha256": "713cac3cb7c54962e22850ec2a79f62b237ad4f70b87bb25bc19144b0db56c34",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/splash.wav": {
+      "size": 136110,
+      "sha256": "199dc3163d3696dc5b3383553bc6e120790a98212474bff8e1aba26e0cf924ac",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/start-diesel.wav": {
+      "size": 194084,
+      "sha256": "06a7603425a3a9b61d7fccde9ab0b6c8d811e8be0f1fa53ce0e2223213245d89",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/start.wav": {
+      "size": 158568,
+      "sha256": "7820ecdf415ab5652856b999ff888a1076e32af7b7540c0f635a2cf1b05d13a7",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/stop.wav": {
+      "size": 97064,
+      "sha256": "440f2aba11b8770fcfaa4731b9e2092ef11c8d9f229fde35cdb5796d745b705e",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/su-low-1.wav": {
+      "size": 344024,
+      "sha256": "66e6ee89b263ea3a57a02d50cd8cc7005ede0968865fc89b68ca09f3fa6b7a83",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/su-low-2.wav": {
+      "size": 344024,
+      "sha256": "60cdfec8d6599dc1bdd0286367b95164c3de51d7ffd1942cd8a8423b29a0093f",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/su-low-3.wav": {
+      "size": 344024,
+      "sha256": "470cc367636b3c49a61b71bf1db46fecfe0070467bc38ebd0f4e3b95acaf4d79",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/su-low-4.wav": {
+      "size": 344024,
+      "sha256": "1db2d3390bb3a19af111c38546aa44eb5d0854083e061dc8b223f8a0530e5a4b",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/su-low-5.wav": {
+      "size": 344024,
+      "sha256": "39b467c270994253ae9dd0743700ba53b3720c8198bd020b24c0af76042d0d9d",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/suspension.wav": {
+      "size": 16802,
+      "sha256": "14d55941237f9c5898fee552371f60b01795263f6869fc52171b0b40eca7d574",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/switch.wav": {
+      "size": 9746,
+      "sha256": "a92cc8bc596205b24bb03217cec8a96c5b0706406bdf8935082dc093abf613df",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/toy.wav": {
+      "size": 202904,
+      "sha256": "f2393a492ef6a5874c3546a7eba625d6e6afd7962916f7ebc536d57c63f85b76",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/track.wav": {
+      "size": 53012,
+      "sha256": "d1b220f195f06edda31588cefd227eec90b03e52a8f5fb4dd4f5aa3696b28ebf",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/transmission.wav": {
+      "size": 176444,
+      "sha256": "1852becb545776dc7b95d731a3c4f091aea66777eeca9112ab42199b46d901ea",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/tsu-1.wav": {
+      "size": 344024,
+      "sha256": "267f3f671750cd88d8235e6819dd2b890eb8f159fd19f0c6169e65bb83397ee1",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/tsu-2.wav": {
+      "size": 344024,
+      "sha256": "177646c3670f2511b94da6fa294ea75cc00b15c7dad2d8486ca7af7c8e652f8b",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/tsu-3.wav": {
+      "size": 344024,
+      "sha256": "a54ee2c81c4d318c9ecf075bb4f16e16c944f5667900ac2f0edf7fc2aa2818b1",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/tsu-4.wav": {
+      "size": 344024,
+      "sha256": "15f5eb4bc6519e7af84ee9d140aa912b34584858166a524477d9a26ec2707efd",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/tsu-5.wav": {
+      "size": 344024,
+      "sha256": "f7b37ca872118841a6b0c02c61105c2324d9c8cadbb3c7028b3a6f167500b3ff",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/v12d-1.wav": {
+      "size": 323866,
+      "sha256": "277139ae315aac5770d80570dff2907aa0a0310e1e7b98d93f57dc3607085edf",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/v12d-2.wav": {
+      "size": 315800,
+      "sha256": "8b8ca7a01dc252957af7341de9d4085b321794016a261cc19e59ccd3fcbe34f2",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/v12d-3.wav": {
+      "size": 304044,
+      "sha256": "a44a820008e9458ccecddebd3d97ee15df3dcfd6aad8896c691373377f06e986",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/v12d-4.wav": {
+      "size": 308744,
+      "sha256": "a4cd32248ec2c24ebc1c790088ae4c6598fb7eddc9511ef75276fc70330f6332",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/v12d-5.wav": {
+      "size": 317214,
+      "sha256": "178e6b4122e7fbbbecc7afd1af59a6fa93a0643b0e3c05a4db1e1f87b8e887e9",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/water.wav": {
+      "size": 262992,
+      "sha256": "eb32df4741b8546ff2ac73b8639210f517c418ca6ccc2a80854e93bb9dda6fff",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/wind.wav": {
+      "size": 229364,
+      "sha256": "08f340ea274000c13a5b22d5944301deab287133b77eb7d3cb11935996025bc7",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/cabins.json": {
+      "size": 10528,
+      "sha256": "350411f16a2cf515057577da495288dc1f236440db1495e347ca0b735a1c4fa5",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/entry-fit.json": {
+      "size": 9730,
+      "sha256": "5b35bab6f9ed3d3271bb9ae57e74b584efd539fcea7b85bc43bd92c89203ae3a",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/fleet.json": {
+      "size": 172772,
+      "sha256": "1f97cfecf81ad992eb3b8b5a62a8f9deb795a68466edc81ccf8d96ecfc2c3b7d",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/interaction-profiles.json": {
+      "size": 13777,
+      "sha256": "b3a33ed27a4815a45eef06293fa0eda627baed76a587be885e12704b58d2c0e9",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/player-bind-rig.json": {
+      "size": 17884,
+      "sha256": "9a0f1ae4972c18dfb992a7a43ff74f535ed4c42a01c0bab29301a1a27f0d9afc",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/seating-fit.json": {
+      "size": 5084,
+      "sha256": "7cdcbab772b4f6e9b06ce6ea79062cddede1977dd9873fc3cbf872d848b08eed",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/seating.json": {
+      "size": 16298,
+      "sha256": "ff77f851ff726b8fb45125e5f1f436297a0dc975778a898a20340fb3922ef7bd",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/vehicle-clips-sources.json": {
+      "size": 7782,
+      "sha256": "4f7692796c2260d9615cddf1d9faf26f702a427bec0d6db3d4475b7ae37775f6",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/vehicle-clips.bin": {
+      "size": 537902,
+      "sha256": "2ac3feb7260f95493d5cc59eaf624caf79c9248fa9177144908603063edf39aa",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/vehicle-lit.frag": {
+      "size": 1712,
+      "sha256": "10cb8195e464c5cf50dad15057f0a32a3f798ab6361b533b870816d076270ced",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/vehicle-lit.vert": {
+      "size": 1672,
+      "sha256": "3a812b8ffbfb1ff4981f1acdcb3f14d4fe0ac9371154000922c89f55d2d66f50",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/licenses/Automobility-MIT.txt": {
+      "size": 1038,
+      "sha256": "7363fc7e2596998f3fc0109b6908575bf1cd8f6fa2fc97aff6bd9d17177f50bb",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/licenses/engine-audio-source.txt": {
+      "size": 506,
+      "sha256": "9bef3aa04531c3d8fd6e54ec097ddf09aa060dc6bee7a64033ad8d612fdb0f6c",
+      "kind": "vehicle-mod-resource"
+    },
+    "bootstrap/inputs/mod-resources/sc-vehicles/licenses/fleet-audio-sources.txt": {
+      "size": 3730,
+      "sha256": "1fb7f796ffe3770f12c85b06cc7529cd787749577047f7dbea63d3a1ca33909b",
+      "kind": "vehicle-mod-resource"
     }
   },
   "objects": {
@@ -6542,15 +6917,15 @@
       ]
     },
     "map/region/r.-1.-4.szr": {
-      "size": 262622,
-      "sha256": "ec8ba4a299cdba1965e2bfaa716f9009b5524f486e3e0a700d8832bd9ce45228",
+      "size": 262628,
+      "sha256": "0061827ce46011f1d2fb03aae626e9be6625df3e27cb1115d27d77f974e5fbab",
       "parts": [
         "map/data/region/r.-1.-4.szr"
       ]
     },
     "map/region/r.-1.-5.szr": {
       "size": 42828,
-      "sha256": "31f972ebd28a277a05adcff60b800c060d26f13621a62e6d3bb856f15b1d1557",
+      "sha256": "50b64841d076dae1414cf5520bb36b87d0ab972af38be994eb59139ec3d82a44",
       "parts": [
         "map/data/region/r.-1.-5.szr"
       ]
@@ -6655,14 +7030,14 @@
     },
     "map/region/r.-10.6.szr": {
       "size": 1872185,
-      "sha256": "70737d998eff17c05b364f05e0fcbedd1ae655c6493b77ccf3930c6f5f5c8aed",
+      "sha256": "430e97bbc492161d24721214ae87f520bddc782a0914601aabaf4b7604870927",
       "parts": [
         "map/data/region/r.-10.6.szr"
       ]
     },
     "map/region/r.-10.7.szr": {
-      "size": 2593303,
-      "sha256": "1f70b08e05cf24364d2cea4014ba8ba812122e07e0b197a4836ada87cff4fee9",
+      "size": 2593294,
+      "sha256": "c23621fe56bfc68f83f6e9c35cb7107e654845b44c2fab7270573473f30ba243",
       "parts": [
         "map/data/region/r.-10.7.szr"
       ]
@@ -6767,7 +7142,7 @@
     },
     "map/region/r.-11.6.szr": {
       "size": 584494,
-      "sha256": "ff3b5740daad0500de738e4649f0ea3ea9f2047bf0728a7347983ed61b2d9733",
+      "sha256": "c1aa59e5e92a5e2b8b974537a336414ea26111c4a5e9a769811e792dd5dea1b4",
       "parts": [
         "map/data/region/r.-11.6.szr"
       ]
@@ -7109,15 +7484,15 @@
       ]
     },
     "map/region/r.-2.-4.szr": {
-      "size": 120954,
-      "sha256": "afce8d04779a19063fb7430d0a04553a19e25f58ea023b4416ce20db98a1ac4b",
+      "size": 120957,
+      "sha256": "49984f33ab9a3509a3b259a7bdf560403f2fd460f394f5af202cd9178ad2d85b",
       "parts": [
         "map/data/region/r.-2.-4.szr"
       ]
     },
     "map/region/r.-2.-5.szr": {
       "size": 16843,
-      "sha256": "1eb3ef590f23a9e8861f93c478d0e6685946975618d898586446bfbd9515c4a5",
+      "sha256": "95d4bec101c909fce1616c14cdaef33083ba5960600cd93e2c24a122d6a13097",
       "parts": [
         "map/data/region/r.-2.-5.szr"
       ]
@@ -7264,14 +7639,14 @@
     },
     "map/region/r.-3.-6.szr": {
       "size": 170914,
-      "sha256": "73eb7d31cc730f030bd2455a2403a9fec742b5ea68e73497e70610326af398cc",
+      "sha256": "d98f6aa87e5650f1f9fb0e5e91b57813399d5d75ebc16e0e08549d5bf0f03501",
       "parts": [
         "map/data/region/r.-3.-6.szr"
       ]
     },
     "map/region/r.-3.-7.szr": {
-      "size": 1016608,
-      "sha256": "7ec71df093bbb26f2175293245eb634ede8d82c929a5e25322ea933083044b90",
+      "size": 1016679,
+      "sha256": "f9b5ac23e35d5e0a2e8bb7d93bde2e4889877354b95ab0697609b5d7ecc9e10e",
       "parts": [
         "map/data/region/r.-3.-7.szr"
       ]
@@ -7557,8 +7932,8 @@
       ]
     },
     "map/region/r.-8.2.szr": {
-      "size": 2050227,
-      "sha256": "1aa1f33d8d6f98a54f60787d65039572851a2466c3d24ce2015e961500d65026",
+      "size": 2050219,
+      "sha256": "1d0e7190f5de53b8b36429c7b9a9a035bc1eb47f56796186ebff8d5520588d0e",
       "parts": [
         "map/data/region/r.-8.2.szr"
       ]
@@ -7662,8 +8037,8 @@
       ]
     },
     "map/region/r.-9.2.szr": {
-      "size": 3642900,
-      "sha256": "6c222ce35fa0d418c2dcd6d47be96352e9e52d917efc8960564531d2ce981d43",
+      "size": 3642899,
+      "sha256": "cd71be55d097fa2ff7efa39d7c6273e735431d2d78afda85c6c4eec9f17c1c07",
       "parts": [
         "map/data/region/r.-9.2.szr"
       ]
@@ -7824,14 +8199,14 @@
     },
     "map/region/r.10.-4.szr": {
       "size": 748341,
-      "sha256": "c12e36148ca9d11dae4afbbf9a7b8909dde0b7f6b8641314b6faef0408703ff0",
+      "sha256": "427b1afe916adea1cc84c8810c27f1869b870fe3b500fa8f2c1a6eeeb71861e8",
       "parts": [
         "map/data/region/r.10.-4.szr"
       ]
     },
     "map/region/r.10.-5.szr": {
       "size": 755701,
-      "sha256": "d32a09fa9fcec4fc561eb6e62cbef2995f0d0ab5b0da1046f09fe845eeabbc94",
+      "sha256": "5b2589e6afe8a75c602326316ed1bddd8883dc5232604983618cf214f9fc10e3",
       "parts": [
         "map/data/region/r.10.-5.szr"
       ]
@@ -7852,14 +8227,14 @@
     },
     "map/region/r.10.5.szr": {
       "size": 1028255,
-      "sha256": "769b71362cfce8982826eca5bcfdf4f82b7a2e286dc2caae80991f62db268cad",
+      "sha256": "4bc6ff6f93cd5b3f20b54ecf578624b7aa7331f6072bf10b02ba245a2606d729",
       "parts": [
         "map/data/region/r.10.5.szr"
       ]
     },
     "map/region/r.10.6.szr": {
       "size": 1818278,
-      "sha256": "e1e2aab2cf2bd6033971449cdf5dc8aeb9bf3ce46dd38f2bf728bffd18a317f9",
+      "sha256": "7e00f61bbad4c7001a8c70bf26a8ecac5994aead19c570f7b1fd33c843c2f5c8",
       "parts": [
         "map/data/region/r.10.6.szr"
       ]
@@ -7908,14 +8283,14 @@
     },
     "map/region/r.11.5.szr": {
       "size": 289777,
-      "sha256": "45f78eb0e8b0e631a03b778c7d2690bb9a7c94470fd346588f42973f79fa6768",
+      "sha256": "8d4180c58cd0ddfbd48b944a90dff2d42e6296c08eced6866c2c23c48614ac7b",
       "parts": [
         "map/data/region/r.11.5.szr"
       ]
     },
     "map/region/r.11.6.szr": {
       "size": 316158,
-      "sha256": "53c0138f588312596e46ff7e6823d16c4b9909d7330426dfd3e90735e74381d7",
+      "sha256": "1eef22c92d92e69245693ac6e590e1ae725de4e4f7a9a536199384f1c042f187",
       "parts": [
         "map/data/region/r.11.6.szr"
       ]
@@ -7957,14 +8332,14 @@
     },
     "map/region/r.13.-5.szr": {
       "size": 775863,
-      "sha256": "ac38e01530cea5c7dc7daba9c5972681786b0cbb921e214a42112fc869224d01",
+      "sha256": "2401447dd42791bbaa935d24abf89f929ee44460d91f8da957a0ced61154d2df",
       "parts": [
         "map/data/region/r.13.-5.szr"
       ]
     },
     "map/region/r.13.-6.szr": {
       "size": 700022,
-      "sha256": "0b7482e7ec669784793923f1d5afdfa7e178a975860b0cd603a6c65aed1a3c9a",
+      "sha256": "4d5f30fa90b00152ff57fbd3cd7eef4e053ebaba514a7c0ed1e939d9b0c01a2e",
       "parts": [
         "map/data/region/r.13.-6.szr"
       ]
@@ -8125,7 +8500,7 @@
     },
     "map/region/r.5.-10.szr": {
       "size": 1105311,
-      "sha256": "4c0d1e27f020c5f151c708752613248878cc06d7a4843023630b2a97c951ae27",
+      "sha256": "842436882c4fd412097437081c244dcc080e4224c4d850fe96fa1d700142ee9e",
       "parts": [
         "map/data/region/r.5.-10.szr"
       ]
@@ -8202,21 +8577,21 @@
     },
     "map/region/r.8.5.szr": {
       "size": 267101,
-      "sha256": "d0f447a9e6e8d410575fcef2c7d41145cd2b4f036c174832595159bb067ca2ab",
+      "sha256": "7a8ef229e26766856e032cd1708cd3bf85273802a2b073a3e181797fa9e53bf5",
       "parts": [
         "map/data/region/r.8.5.szr"
       ]
     },
     "map/region/r.8.6.szr": {
       "size": 403603,
-      "sha256": "c657433bf14adca77bce251f08adba7b75be507e6a48502b2b326c5e6d609762",
+      "sha256": "93e314c7e75f73468d48646adbf11538af956c01f4c4cff4533a04f27cd83f31",
       "parts": [
         "map/data/region/r.8.6.szr"
       ]
     },
     "map/region/r.8.7.szr": {
       "size": 159047,
-      "sha256": "88c2531fa6099503768a20db26a2ac5b5471615de21f627fbb26c9edb8e553d5",
+      "sha256": "245cab27f0165df3433ae160127876f7c883fcf11548bc06b48fc2de30d70ab0",
       "parts": [
         "map/data/region/r.8.7.szr"
       ]
@@ -8230,14 +8605,14 @@
     },
     "map/region/r.9.-4.szr": {
       "size": 678031,
-      "sha256": "2e89dd33ac3b408673246fc8145be819546a05a99a1b3c535531192f3ce3ebee",
+      "sha256": "8374f9914e08033858b1d305ab335e574b1a8e45dac1eb534884036b75b5095b",
       "parts": [
         "map/data/region/r.9.-4.szr"
       ]
     },
     "map/region/r.9.-5.szr": {
       "size": 720037,
-      "sha256": "1c44384a99aa53bb57c527ffc44dcd03cb6ec46e9f7f3784bbb7005ce5cc2b30",
+      "sha256": "8e9c2df443257e0d728ce4da732a45be03dc0a1d1b55649a2dad96759b1ec544",
       "parts": [
         "map/data/region/r.9.-5.szr"
       ]
@@ -8251,21 +8626,21 @@
     },
     "map/region/r.9.5.szr": {
       "size": 1061223,
-      "sha256": "095caee65fee13dc9542a0d86ae539480a289835a480b70baad74b6489c78026",
+      "sha256": "75ff2b9c741eb652ba781e5b32829b04071266d1260be06b8570940034dcd971",
       "parts": [
         "map/data/region/r.9.5.szr"
       ]
     },
     "map/region/r.9.6.szr": {
-      "size": 2297289,
-      "sha256": "0cf512d86577117a745641ca5e387c4cfd0147062aa2382dcfce9fb4cc6ba5b2",
+      "size": 2297291,
+      "sha256": "97a58e6946998171a4d2cd75a2f3e31a0a88ad28cd09c559d84ec6af520b45d1",
       "parts": [
         "map/data/region/r.9.6.szr"
       ]
     },
     "map/region/r.9.7.szr": {
       "size": 892105,
-      "sha256": "29edb87048bc5af6b224d875bb2d7a509db00126a04f626d365daf625973e874",
+      "sha256": "c82013d9217bfdea87203ad35d645a51d61f731c48565d16c0f72428b5cc194f",
       "parts": [
         "map/data/region/r.9.7.szr"
       ]
@@ -8285,8 +8660,8 @@
       ]
     },
     "map/map-info.json": {
-      "size": 18455,
-      "sha256": "11103f920a8e0dac8a13e80dac03d4c8da10d050a69402d38f2a406d459f75c4",
+      "size": 191456,
+      "sha256": "93ae058a4261625cc0b0b39e9655dc61d9ede8e52e9bdb9e692b019c99a559d1",
       "parts": [
         "map/data/map-info.json"
       ]
@@ -8857,6 +9232,531 @@
       "sha256": "626b256f9090ee48bdf45500fc29da4ea0dbf4a0338c3697c199ed99bcc4e73e",
       "parts": [
         "bootstrap/inputs/client-assets/customitems/textures/items/fpv_drone.ol"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/air-brake.wav": {
+      "size": 57374,
+      "sha256": "95a2483cee7508e84524c6f62776c06dc032b7429df5bd9a38c68839998921c5",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/air-brake.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/brake-release.wav": {
+      "size": 35324,
+      "sha256": "147678becac237694febb2c10704b8f614713d3c48e68a05c6ca9fda71cd74f0",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/brake-release.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/brake-set.wav": {
+      "size": 14156,
+      "sha256": "b2155bc7965372eb45d30745707b0bc536e768b727c5bbac3c5548c8363d1cf9",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/brake-set.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/denied.wav": {
+      "size": 15920,
+      "sha256": "ec6dbaf60e988d96528964f76c16f0468c848b6fbecb27a0a2543c52d850451f",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/denied.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/diesel-clatter.wav": {
+      "size": 344024,
+      "sha256": "567e7e3643fe76f1de1e91eda66d81a0bd64c211773c112900b703517b9a3a6a",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/diesel-clatter.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/dirt-hit.wav": {
+      "size": 200202,
+      "sha256": "21ca30ea7670fe5526206a4f99ad157ce9bd515c05ef7bedef1b00dac951df36",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/dirt-hit.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/door-close.wav": {
+      "size": 62922,
+      "sha256": "c772b06b978e6a0c1ea237ca52da05909ba4a79477f473adb5776b6e14cabcff",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/door-close.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/door-open.wav": {
+      "size": 87156,
+      "sha256": "dca149efea78a469d696b1d7276fc1e1a863e531b1b4eda14c15063222676aac",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/door-open.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/ds8-1.wav": {
+      "size": 287588,
+      "sha256": "09c793af46b7977a7fef125c7f2e9aa5ffc56c9e9bf1d63427af9cbf7aee383e",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/ds8-1.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/ds8-2.wav": {
+      "size": 298162,
+      "sha256": "9bbc1bb4505990c49bb3cc311f4f05c50ac9790baf66bc5743e21f2883c458b4",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/ds8-2.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/ds8-3.wav": {
+      "size": 299036,
+      "sha256": "82cc486bbbd3c6b2cf1314220768e3f0f95bdb1ed271773a91fbad47f5fff448",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/ds8-3.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/ds8-4.wav": {
+      "size": 319326,
+      "sha256": "b90168df89f5d0308ed285668b88712c86fdcaa98e14c2d11569da6bfd457d99",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/ds8-4.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/ds8-5.wav": {
+      "size": 324514,
+      "sha256": "7f5e8884cc47086ea56b5e445ac0de023f74ae2c4ffa311b7d54e39578bb3f6c",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/ds8-5.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/enter.wav": {
+      "size": 28268,
+      "sha256": "018e90be0018bec1bc35abaa44c4410b667979b44062f73dce60eb64d3911c7a",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/enter.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/exit.wav": {
+      "size": 33560,
+      "sha256": "8434a0d252260eb11cc9fa53c0b244d236a7c26d1854f1bbc7ce2d575211c39f",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/exit.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/failed-start.wav": {
+      "size": 97064,
+      "sha256": "b34baf524996641d40d192482cdc47ea87260366c2e256e3ed8125d6ee68a881",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/failed-start.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/gear.wav": {
+      "size": 17530,
+      "sha256": "b631230dc0b42f5b453f2d8150d86a272b5178367ed82839dafdfe902e23691e",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/gear.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/gravel.wav": {
+      "size": 53012,
+      "sha256": "1e59147c9b49ab8786b5bbf3c59f72189337d7e269317521ee6cf6106f6a4757",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/gravel.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/gv8-1.wav": {
+      "size": 192324,
+      "sha256": "c489f63e4f2183e3787a320acc95f25caa2a88998190fc7e27e3f7e4074622e1",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/gv8-1.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/gv8-2.wav": {
+      "size": 344024,
+      "sha256": "fcfcee3ae30aa4bf5483356d54328005aedc4be840a9e18f7c96eaa94f03e93c",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/gv8-2.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/gv8-3.wav": {
+      "size": 301690,
+      "sha256": "cad4120e149dcd242a663c45d45f661e6b6dad981c01324e9556eecfc837f15d",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/gv8-3.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/gv8-4.wav": {
+      "size": 303454,
+      "sha256": "f48791aa25b4a1a5268efd3661c75e9047caf46772d4c5119e98fb31cbc9b5be",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/gv8-4.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/gv8-5.wav": {
+      "size": 300280,
+      "sha256": "179230dfd9e6db1f02d9d6da3822668ff00b06ecc43f027bfbedb01599ac9200",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/gv8-5.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/impact-heavy.wav": {
+      "size": 25448,
+      "sha256": "4f50e99144a849376a5de4c695e314c0a9d3c13992cf907db1faa3f8865f3015",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/impact-heavy.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/impact-light.wav": {
+      "size": 35326,
+      "sha256": "c0dbc463231930d82dc15ed2c9cda1104482cf635a578f0a68641dd78255a3e3",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/impact-light.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/mud.wav": {
+      "size": 245182,
+      "sha256": "624dba273c7c362c201bca151f71ec4f251fcd83fa13ddfb089d38d62e5d39df",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/mud.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/remove.wav": {
+      "size": 7982,
+      "sha256": "c2de5dafe3d455ad4df2fb0ce2adf63940beb71f31c8c111d99e009343961d11",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/remove.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/road.wav": {
+      "size": 194082,
+      "sha256": "c1296d1dc92717d0d635ecaaf47d18aec64d1df67247770b7b2e4d7ab1f8a47c",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/road.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/sand.wav": {
+      "size": 53012,
+      "sha256": "79b76a3036f6b1e7df3da365bd0674cd677909c06583f7e718b9679bec7365bf",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/sand.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/scrape.wav": {
+      "size": 311104,
+      "sha256": "91bda36d6ed7dc38e463315f1034d78bf4871fe91719d09c66e0a88d208e4a0d",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/scrape.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/select.wav": {
+      "size": 4894,
+      "sha256": "490593cdd5cf282681ccf01b6ed17bc67599a7dfb9c306553692b728e2d8049e",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/select.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/skid.wav": {
+      "size": 255824,
+      "sha256": "201bb18a44e4415599fa713360f33cbd8db6195e99614c24ea3ec1467cb5fdf3",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/skid.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/snow.wav": {
+      "size": 53012,
+      "sha256": "035b961bd0b82931a8805d763cc13d2573cb6c6127f2e790f4114565e70aac4d",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/snow.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/soil.wav": {
+      "size": 53012,
+      "sha256": "770fc10614994f2c8c2873abdc81b0d68dc666611d9f2e6db5a1a09caef4fdf6",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/soil.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/spawn.wav": {
+      "size": 12392,
+      "sha256": "713cac3cb7c54962e22850ec2a79f62b237ad4f70b87bb25bc19144b0db56c34",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/spawn.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/splash.wav": {
+      "size": 136110,
+      "sha256": "199dc3163d3696dc5b3383553bc6e120790a98212474bff8e1aba26e0cf924ac",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/splash.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/start-diesel.wav": {
+      "size": 194084,
+      "sha256": "06a7603425a3a9b61d7fccde9ab0b6c8d811e8be0f1fa53ce0e2223213245d89",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/start-diesel.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/start.wav": {
+      "size": 158568,
+      "sha256": "7820ecdf415ab5652856b999ff888a1076e32af7b7540c0f635a2cf1b05d13a7",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/start.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/stop.wav": {
+      "size": 97064,
+      "sha256": "440f2aba11b8770fcfaa4731b9e2092ef11c8d9f229fde35cdb5796d745b705e",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/stop.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/su-low-1.wav": {
+      "size": 344024,
+      "sha256": "66e6ee89b263ea3a57a02d50cd8cc7005ede0968865fc89b68ca09f3fa6b7a83",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/su-low-1.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/su-low-2.wav": {
+      "size": 344024,
+      "sha256": "60cdfec8d6599dc1bdd0286367b95164c3de51d7ffd1942cd8a8423b29a0093f",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/su-low-2.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/su-low-3.wav": {
+      "size": 344024,
+      "sha256": "470cc367636b3c49a61b71bf1db46fecfe0070467bc38ebd0f4e3b95acaf4d79",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/su-low-3.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/su-low-4.wav": {
+      "size": 344024,
+      "sha256": "1db2d3390bb3a19af111c38546aa44eb5d0854083e061dc8b223f8a0530e5a4b",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/su-low-4.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/su-low-5.wav": {
+      "size": 344024,
+      "sha256": "39b467c270994253ae9dd0743700ba53b3720c8198bd020b24c0af76042d0d9d",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/su-low-5.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/suspension.wav": {
+      "size": 16802,
+      "sha256": "14d55941237f9c5898fee552371f60b01795263f6869fc52171b0b40eca7d574",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/suspension.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/switch.wav": {
+      "size": 9746,
+      "sha256": "a92cc8bc596205b24bb03217cec8a96c5b0706406bdf8935082dc093abf613df",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/switch.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/toy.wav": {
+      "size": 202904,
+      "sha256": "f2393a492ef6a5874c3546a7eba625d6e6afd7962916f7ebc536d57c63f85b76",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/toy.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/track.wav": {
+      "size": 53012,
+      "sha256": "d1b220f195f06edda31588cefd227eec90b03e52a8f5fb4dd4f5aa3696b28ebf",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/track.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/transmission.wav": {
+      "size": 176444,
+      "sha256": "1852becb545776dc7b95d731a3c4f091aea66777eeca9112ab42199b46d901ea",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/transmission.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/tsu-1.wav": {
+      "size": 344024,
+      "sha256": "267f3f671750cd88d8235e6819dd2b890eb8f159fd19f0c6169e65bb83397ee1",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/tsu-1.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/tsu-2.wav": {
+      "size": 344024,
+      "sha256": "177646c3670f2511b94da6fa294ea75cc00b15c7dad2d8486ca7af7c8e652f8b",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/tsu-2.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/tsu-3.wav": {
+      "size": 344024,
+      "sha256": "a54ee2c81c4d318c9ecf075bb4f16e16c944f5667900ac2f0edf7fc2aa2818b1",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/tsu-3.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/tsu-4.wav": {
+      "size": 344024,
+      "sha256": "15f5eb4bc6519e7af84ee9d140aa912b34584858166a524477d9a26ec2707efd",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/tsu-4.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/tsu-5.wav": {
+      "size": 344024,
+      "sha256": "f7b37ca872118841a6b0c02c61105c2324d9c8cadbb3c7028b3a6f167500b3ff",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/tsu-5.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/v12d-1.wav": {
+      "size": 323866,
+      "sha256": "277139ae315aac5770d80570dff2907aa0a0310e1e7b98d93f57dc3607085edf",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/v12d-1.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/v12d-2.wav": {
+      "size": 315800,
+      "sha256": "8b8ca7a01dc252957af7341de9d4085b321794016a261cc19e59ccd3fcbe34f2",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/v12d-2.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/v12d-3.wav": {
+      "size": 304044,
+      "sha256": "a44a820008e9458ccecddebd3d97ee15df3dcfd6aad8896c691373377f06e986",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/v12d-3.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/v12d-4.wav": {
+      "size": 308744,
+      "sha256": "a4cd32248ec2c24ebc1c790088ae4c6598fb7eddc9511ef75276fc70330f6332",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/v12d-4.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/v12d-5.wav": {
+      "size": 317214,
+      "sha256": "178e6b4122e7fbbbecc7afd1af59a6fa93a0643b0e3c05a4db1e1f87b8e887e9",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/v12d-5.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/water.wav": {
+      "size": 262992,
+      "sha256": "eb32df4741b8546ff2ac73b8639210f517c418ca6ccc2a80854e93bb9dda6fff",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/water.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/audio/fleet/wind.wav": {
+      "size": 229364,
+      "sha256": "08f340ea274000c13a5b22d5944301deab287133b77eb7d3cb11935996025bc7",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/audio/fleet/wind.wav"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/cabins.json": {
+      "size": 10528,
+      "sha256": "350411f16a2cf515057577da495288dc1f236440db1495e347ca0b735a1c4fa5",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/cabins.json"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/entry-fit.json": {
+      "size": 9730,
+      "sha256": "5b35bab6f9ed3d3271bb9ae57e74b584efd539fcea7b85bc43bd92c89203ae3a",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/entry-fit.json"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/fleet.json": {
+      "size": 172772,
+      "sha256": "1f97cfecf81ad992eb3b8b5a62a8f9deb795a68466edc81ccf8d96ecfc2c3b7d",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/fleet.json"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/interaction-profiles.json": {
+      "size": 13777,
+      "sha256": "b3a33ed27a4815a45eef06293fa0eda627baed76a587be885e12704b58d2c0e9",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/interaction-profiles.json"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/player-bind-rig.json": {
+      "size": 17884,
+      "sha256": "9a0f1ae4972c18dfb992a7a43ff74f535ed4c42a01c0bab29301a1a27f0d9afc",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/player-bind-rig.json"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/seating-fit.json": {
+      "size": 5084,
+      "sha256": "7cdcbab772b4f6e9b06ce6ea79062cddede1977dd9873fc3cbf872d848b08eed",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/seating-fit.json"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/seating.json": {
+      "size": 16298,
+      "sha256": "ff77f851ff726b8fb45125e5f1f436297a0dc975778a898a20340fb3922ef7bd",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/seating.json"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/vehicle-clips-sources.json": {
+      "size": 7782,
+      "sha256": "4f7692796c2260d9615cddf1d9faf26f702a427bec0d6db3d4475b7ae37775f6",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/vehicle-clips-sources.json"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/vehicle-clips.bin": {
+      "size": 537902,
+      "sha256": "2ac3feb7260f95493d5cc59eaf624caf79c9248fa9177144908603063edf39aa",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/vehicle-clips.bin"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/vehicle-lit.frag": {
+      "size": 1712,
+      "sha256": "10cb8195e464c5cf50dad15057f0a32a3f798ab6361b533b870816d076270ced",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/vehicle-lit.frag"
+      ]
+    },
+    "mod-resources/sc-vehicles/scvehicles/vehicle-lit.vert": {
+      "size": 1672,
+      "sha256": "3a812b8ffbfb1ff4981f1acdcb3f14d4fe0ac9371154000922c89f55d2d66f50",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/scvehicles/vehicle-lit.vert"
+      ]
+    },
+    "mod-resources/sc-vehicles/licenses/Automobility-MIT.txt": {
+      "size": 1038,
+      "sha256": "7363fc7e2596998f3fc0109b6908575bf1cd8f6fa2fc97aff6bd9d17177f50bb",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/licenses/Automobility-MIT.txt"
+      ]
+    },
+    "mod-resources/sc-vehicles/licenses/engine-audio-source.txt": {
+      "size": 506,
+      "sha256": "9bef3aa04531c3d8fd6e54ec097ddf09aa060dc6bee7a64033ad8d612fdb0f6c",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/licenses/engine-audio-source.txt"
+      ]
+    },
+    "mod-resources/sc-vehicles/licenses/fleet-audio-sources.txt": {
+      "size": 3730,
+      "sha256": "1fb7f796ffe3770f12c85b06cc7529cd787749577047f7dbea63d3a1ca33909b",
+      "parts": [
+        "bootstrap/inputs/mod-resources/sc-vehicles/licenses/fleet-audio-sources.txt"
       ]
     }
   }

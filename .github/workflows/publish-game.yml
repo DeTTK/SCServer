@@ -36,6 +36,8 @@ jobs:
             .local/deps
             .local/delivery-inputs
           key: delivery-inputs-${{ hashFiles('bootstrap/base.lock.json', 'bootstrap/input-manifest.json', 'dependencies.lock.json') }}
+      - run: sudo apt-get update && sudo apt-get install -y gcc-mingw-w64-x86-64
+        if: steps.source.outputs.current == 'true'
       - run: python scripts/delivery.py prepare
         if: steps.source.outputs.current == 'true'
       - name: Publish only successful current source

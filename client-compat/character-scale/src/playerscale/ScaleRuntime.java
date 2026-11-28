@@ -15,8 +15,11 @@ public final class ScaleRuntime {
     public static volatile String lastError="";public static long received,rendered,bodyUpdates,hitUpdates,cameraOffsets,firstPersonBodies;
     private ScaleRuntime(){}
     public static long graphInputs;public static float graphSpeed,graphCoefficient;
-    /** This writer receives fresh physical velocity; network graph packets are normalized separately on the server. */
-    public static float animationSpeed(float speed,Object entity){graphInputs++;return graphSpeed=speed/factor(entity);}
+    /** The scaled local first-person graph takes its locomotion mode from the native state. */
+    public static float animationSpeed(float speed,Object entity,boolean firstPerson){
+        float scale=factor(entity);graphInputs++;
+        return graphSpeed=firstPerson&&entity==player&&scale!=1?0:speed/scale;
+    }
     /** Only the local controller receives the server's scaled movement configuration. */
     public static float animationCoefficient(float value,Object entity){if(entity!=player)return value;return graphCoefficient=value/factor(entity);}
     public static byte[] read(DataInput in)throws IOException{return ScaleProtocol.read(in);}
@@ -66,6 +69,25 @@ public final class ScaleRuntime {
     }
     public static float eye(float original,Object state){try{return original*bodyFactor(state);}catch(Exception failure){error(failure);return original;}}
     public static float camera(float original,Object camera){try{float scale=factor(get(camera,"native"));if(scale!=1)cameraOffsets++;return original*scale;}catch(Exception failure){error(failure);return original;}}
+    public static void shotOrigin(Object origin,Object entity,float eyeOffset){
+        if(entity!=player)return;
+        float scale=factor(entity);if(scale==1)return;
+        try{
+            Object camera=call(entity,"enum","1389510037");
+            if(((Enum<?>)call(camera,"goto","1308185038")).name().equals("FIRST_PERSON")){
+                Object position=call(camera,"double","1738045740");
+                call(origin,"synchronized","153304200",position);
+                return;
+            }
+            // In third person the camera trails the player. Shots still leave the scaled eye.
+            set(origin,"void",((Number)get(origin,"void")).doubleValue()+eyeOffset*(scale-1));
+        }catch(Exception failure){error(failure);}
+    }
+    /** Height is proportional to the square of takeoff speed with the native gravity. */
+    public static double jumpImpulse(double original,Object state){
+        if(connection==null||!ScaleAgent.healthy)return original;
+        try{return original*Math.sqrt(bodyFactor(state));}catch(Exception failure){error(failure);return original;}
+    }
     /** Same native matrix-stack scale used by 368424395 for mobs. No GL hooks or asset edits. */
     public static boolean renderBegin(Object entity){
         try{bindEntity(entity);}catch(Exception failure){error(failure);}

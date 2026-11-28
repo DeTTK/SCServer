@@ -4,6 +4,7 @@ import java.util.*;
 
 /** Resource combat parameters. No prototype-wide damage, RPM or magazine constants. */
 public record WeaponProfile(int capacity,List<Integer> ammunition,double damage,double distantDamage,double range,double falloffStart,double falloffEnd,double rpm,double reload,double tacticalReload,double headMultiplier,List<Double> reloadByRounds,ReloadAnimation reloadAnimation) {
+    private static final int MAX_CAPACITY=1_000_000;
     public record ReloadTiming(float interrupt,float complete,float visual){
         public ReloadTiming{
             if(!Float.isFinite(interrupt)||!Float.isFinite(complete)||!Float.isFinite(visual)||interrupt<0||complete<0||visual<0)
@@ -31,7 +32,7 @@ public record WeaponProfile(int capacity,List<Integer> ammunition,double damage,
         return reloadAnimation==null?ReloadTiming.uniform((float)reloadDuration(rounds)):reloadAnimation.timing(rounds,added);
     }
     public int reloadSoundTimeline(){return reloadAnimation==null?-2:reloadAnimation.soundTimeline();}
-    public WeaponProfile{ammunition=List.copyOf(ammunition);reloadByRounds=List.copyOf(reloadByRounds);if(!reloadByRounds.isEmpty()&&(reloadByRounds.size()!=capacity+1||reloadByRounds.stream().anyMatch(v->!Double.isFinite(v)||v<0)))throw new IllegalArgumentException("invalid_reload_timeline");if(ammunition.isEmpty()||ammunition.stream().anyMatch(id->id<1||id>65535)||java.util.stream.DoubleStream.of(damage,distantDamage,range,falloffStart,falloffEnd,rpm,reload,tacticalReload,headMultiplier).anyMatch(v->!Double.isFinite(v))||capacity<1||capacity>1000||damage<=0||damage>1_000_000||distantDamage<0||distantDamage>1_000_000||rpm<=0||rpm>6000||range<=0||range>1024||reload<0||tacticalReload<0||headMultiplier<0)throw new IllegalArgumentException("invalid_weapon_profile");}
+    public WeaponProfile{ammunition=List.copyOf(ammunition);reloadByRounds=List.copyOf(reloadByRounds);if(!reloadByRounds.isEmpty()&&(reloadByRounds.size()!=capacity+1||reloadByRounds.stream().anyMatch(v->!Double.isFinite(v)||v<0)))throw new IllegalArgumentException("invalid_reload_timeline");if(ammunition.isEmpty()||ammunition.stream().anyMatch(id->id<1||id>65535)||java.util.stream.DoubleStream.of(damage,distantDamage,range,falloffStart,falloffEnd,rpm,reload,tacticalReload,headMultiplier).anyMatch(v->!Double.isFinite(v))||capacity<1||capacity>MAX_CAPACITY||damage<=0||damage>1_000_000||distantDamage<0||distantDamage>1_000_000||rpm<=0||rpm>6000||range<=0||range>1024||reload<0||tacticalReload<0||headMultiplier<0)throw new IllegalArgumentException("invalid_weapon_profile");}
     private static double value(JsonObject p,String name,double fallback){return p.has(name)?p.get(name).getAsDouble():fallback;}
     public static WeaponProfile from(JsonObject p){
         if(!p.has("clip_size")||!p.has("bullets_id"))return null;JsonElement bullets=p.get("bullets_id");List<Integer> ammo=new ArrayList<>();if(bullets.isJsonArray())for(JsonElement id:bullets.getAsJsonArray())ammo.add(id.getAsInt());else if(bullets.isJsonPrimitive())ammo.add(bullets.getAsInt());if(ammo.isEmpty())return null;
@@ -39,7 +40,6 @@ public record WeaponProfile(int capacity,List<Integer> ammunition,double damage,
         double distant=value(p,"damage_distant",damage),start=value(p,"damage_decrease_start",0),end=value(p,"damage_decrease_end",range),tactical=value(p,"reload_time_tactical",reload),head=value(p,"head_damage_modifier",1);
         // The authored admin Gauss deals 30000 damage. Keep bounded finite
         // resource validation without rejecting a legitimate equipped weapon.
-        if(java.util.stream.DoubleStream.of(damage,distant,range,start,end,rpm,reload,tactical,head).anyMatch(v->!Double.isFinite(v))||capacity<1||capacity>1000||damage<=0||damage>1_000_000||distant<0||distant>1_000_000||rpm<=0||rpm>6000||range<=0||range>1024||reload<0||tactical<0||head<0)throw new IllegalArgumentException("invalid_weapon_profile");
         return new WeaponProfile(capacity,List.copyOf(ammo),damage,distant,range,start,end,rpm,reload,tactical,head);
     }
     public double damageAt(double distance){double fraction=Math.max(0,Math.min(1,(distance-falloffStart)/Math.max(.001,falloffEnd-falloffStart)));return damage+fraction*(distantDamage-damage);}

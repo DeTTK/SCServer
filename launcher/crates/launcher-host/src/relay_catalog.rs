@@ -1,6 +1,7 @@
 use anyhow::{Result, ensure};
+use base64::{Engine, engine::general_purpose::STANDARD};
 use iroh::RelayUrl;
-use reqwest::{Client, Response, Url, redirect::Policy};
+use reqwest::{Certificate, Client, Response, Url, redirect::Policy};
 use serde::Deserialize;
 use std::time::{Duration, Instant};
 use tokio::task::JoinSet;
@@ -8,8 +9,39 @@ use tokio::task::JoinSet;
 const CATALOG_URL: &str =
     "https://raw.githubusercontent.com/DeTTK/SCServer/main/launcher/relays.json";
 const EMBEDDED_CATALOG: &str = include_str!("../../../relays.json");
+const TEST_CATALOG: &str = include_str!("../../../relays-test.json");
+
+pub(crate) fn test_relay() -> Result<RelayUrl> {
+    let mut relays = parse_catalog(TEST_CATALOG.as_bytes())?;
+    ensure!(relays.len() == 1, "RELAY_TEST_CATALOG");
+    Ok(relays.remove(0))
+}
 const MAX_CATALOG_BYTES: usize = 8192;
 const MAX_RELAYS: usize = 12;
+
+const BSCP_RELAY_CA: &str = include_str!("../assets/tomke-relay-ca.txt");
+
+/// Only the configured BSCPCRAFT relay may use this deployment CA.
+pub(crate) fn bscp_relay_ca(origin: &RelayUrl) -> Option<Vec<u8>> {
+    (origin.as_str() == "https://tomke.myddns.me:8843/").then(|| {
+        STANDARD
+            .decode(BSCP_RELAY_CA.trim())
+            .expect("embedded public relay CA")
+    })
+}
+fn http_client(origin: Option<&RelayUrl>) -> Result<Client> {
+    let mut builder = Client::builder()
+        .user_agent("BSCPCRAFT-relay/1")
+        .redirect(Policy::none())
+        .connect_timeout(Duration::from_secs(2))
+        .timeout(Duration::from_secs(3));
+    if let Some(ca) = origin.and_then(bscp_relay_ca) {
+        builder = builder
+            .tls_built_in_root_certs(false)
+            .add_root_certificate(Certificate::from_der(&ca)?);
+    }
+    Ok(builder.build()?)
+}
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -83,7 +115,14 @@ async fn download_catalog(client: &Client, url: &str) -> Result<Vec<RelayUrl>> {
 async fn rank(client: &Client, relays: Vec<RelayUrl>) -> Vec<RelayUrl> {
     let mut tasks = JoinSet::new();
     for relay in relays {
-        let client = client.clone();
+        let client = if bscp_relay_ca(&relay).is_some() {
+            match http_client(Some(&relay)) {
+                Ok(client) => client,
+                Err(_) => continue,
+            }
+        } else {
+            client.clone()
+        };
         tasks.spawn(async move {
             let rtt = tokio::time::timeout(Duration::from_secs(3), probe(&client, &relay))
                 .await
@@ -103,12 +142,7 @@ async fn rank(client: &Client, relays: Vec<RelayUrl>) -> Vec<RelayUrl> {
 }
 
 pub(crate) async fn ranked_relays() -> Result<Vec<RelayUrl>> {
-    let client = Client::builder()
-        .user_agent("BSCPCRAFT-relay/1")
-        .redirect(Policy::none())
-        .connect_timeout(Duration::from_secs(2))
-        .timeout(Duration::from_secs(3))
-        .build()?;
+    let client = http_client(None)?;
     let embedded = parse_catalog(EMBEDDED_CATALOG.as_bytes())?;
     if let Ok(updated) = download_catalog(&client, CATALOG_URL).await
         && updated != embedded
@@ -153,6 +187,23 @@ mod tests {
             1
         );
         assert!(parse_catalog(&[b' '; MAX_CATALOG_BYTES + 1]).is_err());
+    }
+
+    #[test]
+    fn bscp_certificate_is_scoped_to_its_exact_origin() {
+        for (url, matches) in [
+            ("https://tomke.myddns.me:8843/", true),
+            ("https://tomke.myddns.me/", false),
+            ("https://tomke.myddns.me:8843/healthz", false),
+            ("https://tomke.myddns.me:8843/?x=1", false),
+            ("https://tomke.myddns.me.example.net:8843/", false),
+        ] {
+            let url: RelayUrl = url.parse().unwrap();
+            assert_eq!(bscp_relay_ca(&url).is_some(), matches);
+            if matches {
+                http_client(Some(&url)).unwrap();
+            }
+        }
     }
 
     #[tokio::test]

@@ -7,14 +7,17 @@ import java.io.*;
 import java.util.*;
 import java.util.concurrent.*;
 
-/** Recovery is before listening; only the journal worker performs runtime disk IO. */
+/** Inventory transactions on one writer. Resident storage exports current state at a world cut. */
 public final class InventoryJournal implements AutoCloseable {
     private final Journal journal;
+    private final ThreadPoolExecutor memoryWriter;
+    private volatile long memoryRevision;
+    private volatile PlayerSnapshot sealed;
     private final WorldItemLedger physicalItems=new WorldItemLedger();
-    private final DiskWorldDrops drops;
+    private final WorldDropRoots drops;
     private final long dropCountLimit,dropByteLimit;
     private volatile long growthBytes,checkpointBaseBytes;
-    private final DiskInventoryRoots roots;
+    private final InventoryRoots roots;
     private final InventoryTransactionArchive transactions;
     private final java.util.concurrent.atomic.AtomicBoolean compacting=new java.util.concurrent.atomic.AtomicBoolean();
     private CompletableFuture<Void> checkpointFuture=CompletableFuture.completedFuture(null);
@@ -26,13 +29,42 @@ public final class InventoryJournal implements AutoCloseable {
     /** Optional deployment budgets; zero preserves the old Store's uncapped archive. */
     public InventoryJournal(Path file,ItemCatalog catalog,long testDelayMillis,long countLimit,long byteLimit)throws Exception{
         if(countLimit<0||byteLimit<0)throw new IllegalArgumentException("world_drop_budget");
-        this.catalog=catalog;dropCountLimit=countLimit;dropByteLimit=byteLimit;
+        this.catalog=catalog;dropCountLimit=countLimit;dropByteLimit=byteLimit;memoryWriter=null;
         transactions=new InventoryTransactionArchive(file);
         journal=new Journal(file,testDelayMillis,event->{});DiskWorldDrops prepared=null;DiskInventoryRoots preparedRoots=null;
         try{prepared=new DiskWorldDrops(file);drops=prepared;preparedRoots=new DiskInventoryRoots(file,catalog);roots=preparedRoots;journal.replay(this::recover).get();
             if(roots.incomplete()||drops.ownerIds().stream().anyMatch(id->!roots.contains(id)))throw new IllegalStateException("incomplete_inventory_checkpoint");
             checkpointBaseBytes=Files.size(file);
         }catch(Throwable error){if(preparedRoots!=null)try{preparedRoots.close();}catch(Throwable cleanup){error.addSuppressed(cleanup);}if(prepared!=null)try{prepared.close();}catch(Throwable cleanup){error.addSuppressed(cleanup);}try{journal.close();}catch(Throwable cleanup){error.addSuppressed(cleanup);}throw error;}
+    }
+    /** Every live mutation updates a materialized root in RAM. Reads during migration never open a writer. */
+    public static InventoryJournal resident(Path legacy,ItemCatalog catalog,Journal.SnapshotReader snapshot)throws Exception{
+        return new InventoryJournal(legacy,catalog,snapshot);
+    }
+    private InventoryJournal(Path legacy,ItemCatalog catalog,Journal.SnapshotReader snapshot)throws Exception{
+        this.catalog=catalog;dropCountLimit=0;dropByteLimit=0;journal=null;
+        transactions=new InventoryTransactionArchive(legacy,false);
+        roots=new MemoryInventoryRoots(catalog);drops=new MemoryWorldDrops();
+        if(snapshot!=null)snapshot.read(this::recover);
+        else if(Files.exists(legacy,LinkOption.NOFOLLOW_LINKS))Journal.replayReadOnly(legacy,this::recover);
+        if(roots.incomplete()||drops.ownerIds().stream().anyMatch(id->!roots.contains(id)))
+            throw new IllegalStateException("incomplete_inventory_checkpoint");
+        memoryWriter=szserver.util.Workers.pool("inventory-memory",1,128);
+    }
+    private <T> CompletableFuture<T> read(Callable<T> action){
+        if(journal!=null)return journal.readDerived(action);
+        var result=new CompletableFuture<T>();
+        try{memoryWriter.execute(()->{try{result.complete(action.call());}catch(Throwable failure){result.completeExceptionally(failure);}});}
+        catch(RejectedExecutionException closed){result.completeExceptionally(closed);}
+        return result.copy();
+    }
+    private CompletableFuture<Void> write(JsonObject event,boolean large,Runnable validate,Runnable publish){
+        if(journal==null)return read(()->{validate.run();publish.run();memoryRevision++;return null;});
+        long[] bytes={0};
+        return journal.appendPreparedChecked(()->{
+            var stored=large?transactions.store(event):event;
+            bytes[0]=szserver.util.Json.bytes(stored).length;return stored;
+        },validate,()->{publish.run();appended(bytes[0]);});
     }
     private void recover(JsonObject event){
         try{event=transactions.hydrate(event);}catch(IOException failure){throw new UncheckedIOException(failure);}
@@ -45,7 +77,7 @@ public final class InventoryJournal implements AutoCloseable {
         Inventory.Plan plan=previous.replace(readChanges(event),0);WorldDrop drop=event.has("drop")?WorldDrop.read(event.getAsJsonObject("drop")):null;
         if(drop!=null){validateDropMutation(id,previous,plan,drop);validateDrop(drop);}
         List<WorldDrop> granted=new ArrayList<>();if(event.has("grantedDrops")){if(drop!=null)throw new IllegalArgumentException("mixed_drop_transaction");for(var row:event.getAsJsonArray("grantedDrops"))granted.add(WorldDrop.read(row.getAsJsonObject()));validateGrantedDrops(id,plan,granted);}
-        physicalItems.validate(event,id,previous,plan,catalog);
+        physicalItems.validate(event,id,previous,plan,catalog,true);
         roots.record(event,plan.after(),event.has("gameplay")?event.getAsJsonObject("gameplay"):before.gameplay());
         if(drop!=null)publishDrop(drop);for(WorldDrop grant:granted)publishDrop(grant);physicalItems.apply(event);
     }
@@ -53,13 +85,13 @@ public final class InventoryJournal implements AutoCloseable {
     public boolean hasDrops(UUID id){return drops.hasOwner(id);}
     public CompletableFuture<Void> deleteCharacter(UUID id){
         JsonObject event=new JsonObject();event.addProperty("deleteCharacter",id.toString());
-        return journal.appendChecked(event,()->{if(hasDrops(id))throw new IllegalArgumentException("character_has_world_drops");},()->{roots.delete(id);appended(szserver.util.Json.bytes(event).length);});
+        return write(event,false,()->{if(hasDrops(id))throw new IllegalArgumentException("character_has_world_drops");},()->roots.delete(id));
     }
     public Inventory load(UUID id){return roots.get(id).inventory();}
     public JsonObject gameplay(UUID id){return roots.get(id).gameplay().deepCopy();}
     public final class Lease implements AutoCloseable {
-        private final UUID id;private final DiskInventoryRoots.Pin pin;private final CompletableFuture<Void> ready;private final java.util.concurrent.atomic.AtomicBoolean released=new java.util.concurrent.atomic.AtomicBoolean();
-        private Lease(UUID id){this.id=id;pin=roots.reserve(id);ready=pin.snapshot!=null?CompletableFuture.completedFuture(null):journal.readDerived(()->{roots.prepare(id,pin);return null;});ready.whenComplete((v,e)->{if(e!=null)close();});}
+        private final UUID id;private final InventoryRoots.Pin pin;private final CompletableFuture<Void> ready;private final java.util.concurrent.atomic.AtomicBoolean released=new java.util.concurrent.atomic.AtomicBoolean();
+        private Lease(UUID id){this.id=id;pin=roots.reserve(id);ready=pin.snapshot!=null?CompletableFuture.completedFuture(null):read(()->{roots.prepare(id,pin);return null;});ready.whenComplete((v,e)->{if(e!=null)close();});}
         public boolean isDone(){return ready.isDone();}
         public long residentBytes(){var value=pin.snapshot;return value==null?0:value.bytes();}
         public void join(){if(!ready.isDone()&&(Thread.currentThread().getName().equals("native-game-owner")||Thread.currentThread().getName().equals("world-tick")))throw new IllegalStateException("inventory_lease_not_ready");ready.join();if(released.get())throw new IllegalStateException("inventory_lease_closed");}
@@ -84,14 +116,14 @@ public final class InventoryJournal implements AutoCloseable {
     public CompletableFuture<Void> commit(UUID id,Inventory.Plan plan,JsonObject progress){return commit(id,plan,progress,null);}
     public Map<UUID,WorldItem> physicalItems(){return physicalItems.view();}
     public CompletableFuture<Void> commitWorldItem(UUID id,Inventory.Plan plan,WorldItem spawn,UUID claim){return commit(id,plan,null,null,spawn,claim);}
-    public CompletableFuture<Void> settleWorldItem(UUID id,double x,double y,double z){JsonObject pose=new JsonObject();pose.addProperty("id",id.toString());pose.addProperty("x",x);pose.addProperty("y",y);pose.addProperty("z",z);JsonObject event=new JsonObject();event.add("worldItemPose",pose);return journal.appendChecked(event,()->{WorldItem before=physicalItems.view().get(id);if(before!=null)before.resting(x,y,z);},()->{physicalItems.standalone(event);appended(szserver.util.Json.bytes(event).length);});}
-    public CompletableFuture<Void> expireWorldItem(UUID id,long now){JsonObject event=new JsonObject();event.addProperty("worldItemExpire",id.toString());event.addProperty("at",now);return journal.appendChecked(event,()->{WorldItem item=physicalItems.view().get(id);if(item!=null&&now<item.expires())throw new IllegalArgumentException("world_item_early_expiry");},()->{physicalItems.standalone(event);appended(szserver.util.Json.bytes(event).length);});}
+    public CompletableFuture<Void> settleWorldItem(UUID id,double x,double y,double z){JsonObject pose=new JsonObject();pose.addProperty("id",id.toString());pose.addProperty("x",x);pose.addProperty("y",y);pose.addProperty("z",z);JsonObject event=new JsonObject();event.add("worldItemPose",pose);return write(event,false,()->{WorldItem before=physicalItems.view().get(id);if(before!=null)before.resting(x,y,z);},()->physicalItems.standalone(event));}
+    public CompletableFuture<Void> expireWorldItem(UUID id,long now){JsonObject event=new JsonObject();event.addProperty("worldItemExpire",id.toString());event.addProperty("at",now);return write(event,false,()->{WorldItem item=physicalItems.view().get(id);if(item!=null&&now<item.expires())throw new IllegalArgumentException("world_item_early_expiry");},()->physicalItems.standalone(event));}
     public CompletableFuture<Void> commit(UUID id,Inventory.Plan plan,JsonObject progress,WorldDrop drop){return commit(id,plan,progress,drop,null,null);}
     private CompletableFuture<Void> commit(UUID id,Inventory.Plan plan,JsonObject progress,WorldDrop drop,WorldItem spawn,UUID claim){JsonObject event=new JsonObject();event.addProperty("character",id.toString());event.addProperty("revision",plan.after().revision());JsonArray changes=new JsonArray();
         if(drop!=null)event.add("drop",drop.json());if(spawn!=null)event.add("worldItemSpawn",spawn.json());if(claim!=null)event.addProperty("worldItemClaim",claim.toString());
         JsonObject saved=progress==null?null:progress.deepCopy();if(saved!=null)event.add("gameplay",saved);
         for(var e:plan.changes().entrySet())changes.add(row(e));event.add("changes",changes);
-        long[] bytes={0};return journal.appendPreparedChecked(()->{JsonObject stored=transactions.store(event);bytes[0]=szserver.util.Json.bytes(stored).length;return stored;},()->{Inventory previous=load(id);if(plan.after().revision()!=previous.revision()+1)throw new IllegalArgumentException("inventory_revision_conflict");physicalItems.validate(event,id,previous,plan,catalog);if(drop!=null){validateDropMutation(id,previous,plan,drop);validateDrop(drop);}},()->{roots.record(event,plan.after(),saved==null?roots.get(id).gameplay():saved);if(drop!=null)publishDrop(drop);physicalItems.apply(event);appended(bytes[0]);});
+        return write(event,true,()->{Inventory previous=load(id);if(plan.after().revision()!=previous.revision()+1)throw new IllegalArgumentException("inventory_revision_conflict");physicalItems.validate(event,id,previous,plan,catalog,false);if(drop!=null){validateDropMutation(id,previous,plan,drop);validateDrop(drop);}},()->{roots.record(event,plan.after(),saved==null?roots.get(id).gameplay():saved);if(drop!=null)publishDrop(drop);physicalItems.apply(event);});
     }
     private static void validateDropMutation(UUID id,Inventory previous,Inventory.Plan plan,WorldDrop drop){
         if(!id.equals(drop.character())||plan.changes().size()!=1)throw new IllegalArgumentException("world_drop_inventory_mismatch");
@@ -106,7 +138,7 @@ public final class InventoryJournal implements AutoCloseable {
     private void validateCapacity(long count,long bytes){if(dropCountLimit>0&&drops.count()+count>dropCountLimit||dropByteLimit>0&&drops.bytes()+bytes>dropByteLimit)throw new IllegalArgumentException("world_drop_capacity");}
     private void publishDrop(WorldDrop drop){try{drops.add(drop);}catch(IOException error){throw new UncheckedIOException(error);}}
     /** Offline seed of already removed old items, preserving their original UUID and state. */
-    public CompletableFuture<Void> importDrop(WorldDrop drop){JsonObject event=new JsonObject();event.add("dropSnapshot",drop.json());szserver.util.Json.parse(szserver.util.Json.bytes(event));return journal.appendChecked(event,()->{if(!roots.contains(drop.character()))throw new IllegalArgumentException("world_drop_character_missing");validateDrop(drop);},()->{publishDrop(drop);appended(szserver.util.Json.bytes(event).length);});}
+    public CompletableFuture<Void> importDrop(WorldDrop drop){JsonObject event=new JsonObject();event.add("dropSnapshot",drop.json());szserver.util.Json.parse(szserver.util.Json.bytes(event));return write(event,false,()->{if(!roots.contains(drop.character()))throw new IllegalArgumentException("world_drop_character_missing");validateDrop(drop);},()->publishDrop(drop));}
     public List<WorldDrop> drops(UUID character){try{return drops.list(character);}catch(IOException error){throw new UncheckedIOException(error);}}
     /** Worker-only archive iteration; keeps large exports/checkpoints independent of archive body size. */
     public void visitDrops(java.util.function.Consumer<WorldDrop> visitor)throws Exception{drops.visit(visitor::accept);}
@@ -119,19 +151,13 @@ public final class InventoryJournal implements AutoCloseable {
         JsonArray rows=new JsonArray();
         for(WorldItem item:requested)rows.add(item.json());
         event.add("worldItemGrants",rows);
-        long[] bytes={0};
-        return journal.appendPreparedChecked(()->{
-            JsonObject stored=transactions.store(event);
-            bytes[0]=szserver.util.Json.bytes(stored).length;
-            return stored;
-        },()->{
+        return write(event,true,()->{
             Inventory previous=load(id);
             if(plan.after().revision()!=previous.revision()+1)throw new IllegalArgumentException("inventory_revision_conflict");
-            physicalItems.validate(event,id,previous,plan,catalog);
+            physicalItems.validate(event,id,previous,plan,catalog,false);
         },()->{
             roots.record(event,plan.after(),roots.get(id).gameplay());
             physicalItems.apply(event);
-            appended(bytes[0]);
         });
     }
     private void validateGrantedDrops(UUID id,Inventory.Plan plan,List<WorldDrop> granted){
@@ -142,9 +168,34 @@ public final class InventoryJournal implements AutoCloseable {
     private static JsonObject row(Map.Entry<Inventory.Address,ItemStack> e){JsonObject row=new JsonObject();row.addProperty("aggregate",e.getKey().aggregate());row.addProperty("container",e.getKey().container());row.addProperty("slot",e.getKey().slot());row.addProperty("deleted",e.getValue()==null);if(e.getValue()!=null)row.add("stack",e.getValue().json());return row;}
     /** Coalesced callers await the real publication; cancelling a caller's copy cannot cancel storage work. */
     public synchronized CompletableFuture<Void> compact(){
+        if(journal==null)return read(()->null);
         if(compacting.get())return checkpointFuture.copy();compacting.set(true);CompletableFuture<Void> owned=new CompletableFuture<>();checkpointFuture=owned;
         journal.compactStreaming(this::checkpoint).whenComplete((ignored,error)->{if(error==null){compactions++;compactionError="";growthBytes=0;checkpointBaseBytes=8+((Number)journal.metrics().get("checkpointBytes")).longValue();}else{compactionFailures++;compactionError=error.getClass().getSimpleName();}compacting.set(false);if(error==null)owned.complete(null);else owned.completeExceptionally(error);});
         return owned.copy();
+    }
+    public long memoryRevision(){return memoryRevision;}
+    public record PlayerSnapshot(long revision,Journal.StreamingCheckpoint rows){}
+    /** The copy holds immutable values, so a later mutation cannot enter this save. */
+    public CompletableFuture<PlayerSnapshot> capture(){
+        if(journal!=null)return CompletableFuture.failedFuture(new IllegalStateException("inventory_not_resident"));
+        var finalState=sealed;if(finalState!=null)return CompletableFuture.completedFuture(finalState);
+        return read(()->{
+            var players=new LinkedHashMap<UUID,InventoryRoots.Snapshot>();
+            roots.visit(players::put);var items=physicalItems.view();
+            var archived=new ArrayList<WorldDrop>();drops.visit(archived::add);
+            return new PlayerSnapshot(memoryRevision,sink->{
+                for(var row:players.entrySet()){
+                    var gameplay=row.getValue().gameplay().deepCopy();
+                    gameplay.remove(AdminGiveReceipt.PROGRESS);
+                    gameplay.remove(FpvReceipt.PROGRESS);
+                    gameplay.remove(GrenadeReceipt.PROGRESS);
+                    gameplay.remove(GrenadeApplications.KEY);
+                    writeRoot(row.getKey(),row.getValue().inventory(),gameplay,sink);
+                }
+                for(var item:items.values()){var event=new JsonObject();event.add("worldItemSnapshot",item.json());sink.accept(event);}
+                for(var drop:archived){var event=new JsonObject();event.add("dropSnapshot",drop.json());sink.accept(event);}
+            });
+        });
     }
     /** Durable maps change only on the same journal owner. No owner/gameplay lock or whole-store JSON list. */
     private void checkpoint(Journal.CheckpointSink sink)throws Exception {
@@ -167,6 +218,11 @@ public final class InventoryJournal implements AutoCloseable {
     private long checkpointGrowthThreshold(){return Math.max(4L*1024*1024,checkpointBaseBytes/2);}
     /** Runs only after fsync on the inventory journal owner, never from a game tick. */
     private void appended(long bytes){appends++;growthBytes+=8+bytes;if(growthBytes>=checkpointGrowthThreshold())compact();}
-    public Map<String,Object> metrics(){var m=new LinkedHashMap<String,Object>();m.put("writer",journal.metrics());m.put("rootDirectory",roots.metrics());m.put("compactions",compactions);m.put("compacting",compacting.get());m.put("compactionFailures",compactionFailures);m.put("compactionError",compactionError);m.put("drops",drops.metrics().get("rows"));m.put("dropBytes",drops.metrics().get("jsonBytes"));m.put("dropArchive",drops.metrics());m.put("dropCountLimit",dropCountLimit);m.put("dropByteLimit",dropByteLimit);m.put("checkpointGrowthBytes",growthBytes);m.put("checkpointGrowthThreshold",checkpointGrowthThreshold());return Collections.unmodifiableMap(m);}
-    @Override public void close()throws Exception{journal.closeWith(()->{try{roots.close();}finally{drops.close();}});}
+    public Map<String,Object> metrics(){var m=new LinkedHashMap<String,Object>();m.put("writer",journal==null?Map.of("healthy",!memoryWriter.isShutdown(),"storage","memory","revision",memoryRevision):journal.metrics());m.put("rootDirectory",roots.metrics());m.put("compactions",compactions);m.put("compacting",compacting.get());m.put("compactionFailures",compactionFailures);m.put("compactionError",compactionError);m.put("drops",drops.metrics().get("rows"));m.put("dropBytes",drops.metrics().get("jsonBytes"));m.put("dropArchive",drops.metrics());m.put("dropCountLimit",dropCountLimit);m.put("dropByteLimit",dropByteLimit);m.put("checkpointGrowthBytes",growthBytes);m.put("checkpointGrowthThreshold",checkpointGrowthThreshold());return Collections.unmodifiableMap(m);}
+    @Override public void close()throws Exception{
+        AutoCloseable derived=()->{try{roots.close();}finally{drops.close();}};
+        if(journal!=null)journal.closeWith(derived);
+        else try{sealed=capture().get(10,TimeUnit.SECONDS);}
+        finally{try{szserver.util.Workers.stop(memoryWriter);}finally{derived.close();}}
+    }
 }

@@ -1,0 +1,10 @@
+Legacy asset used through SC Vehicles 0.8.2; removed from the 0.9.0 sound bank.
+Car Engine Loop 96kHz, 4s by qubodup
+https://opengameart.org/content/car-engine-loop-96khz-4s
+Used under Creative Commons Attribution 3.0:
+https://creativecommons.org/licenses/by/3.0/
+
+Changes: mono conversion, DC and sub-bass removal, low-pass filtering,
+loop crossfade, lower level, variable playback speed, cabin filtering
+and smooth throttle-dependent volume. The source does not identify
+the recorded car as a Lada Niva.

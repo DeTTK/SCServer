@@ -1,4 +1,4 @@
-import { WorldRow, ServerRow, ChangeRow } from "api.slint";
+import { WorldRow, ServerRow, PublicServerRow, ChangeRow } from "api.slint";
 import { Theme } from "theme.slint";
 import { Action, Entry, EmptyState, Hint, Icon, Label, Rule, RowButton, SectionTitle, Scroller } from "controls.slint";
 
@@ -6,6 +6,9 @@ export component Home inherits HorizontalLayout {
     in property <[WorldRow]> worlds;
     in property <[ServerRow]> favorites;
     in property <[ServerRow]> server-history;
+    in property <[PublicServerRow]> public-servers;
+    in property <string> directory-message;
+    in-out property <string> server-tab;
     in property <[ChangeRow]> changes;
     in property <string> world-id;
     in property <string> world-title;
@@ -17,7 +20,9 @@ export component Home inherits HorizontalLayout {
     callback connect(string);
     callback add-favorite;
     callback remove-favorite(string);
-    private property <bool> show-history;
+    private property <bool> show-history: root.server-tab == "history";
+    private property <bool> show-public: root.server-tab == "public";
+    private property <bool> show-favorites: !root.show-history && !root.show-public;
     private property <[ServerRow]> servers: show-history ? server-history : favorites;
     spacing: 22px;
     VerticalLayout {
@@ -86,15 +91,28 @@ export component Home inherits HorizontalLayout {
             SectionTitle { text: "Серверы"; height: 30px; }
             HorizontalLayout {
                 spacing: 6px; height: 38px; alignment: start;
-                Action { label: "Избранные"; kind: "plain"; selected: !root.show-history; activated => { root.show-history = false; } }
-                Action { label: "История"; kind: "plain"; selected: root.show-history; activated => { root.show-history = true; } }
+                Action { label: "Избранные"; kind: "plain"; selected: root.show-favorites; activated => { root.server-tab = "favorites"; } }
+                Action { label: "История"; kind: "plain"; selected: root.show-history; activated => { root.server-tab = "history"; } }
+                Action { label: "Открытые"; kind: "plain"; selected: root.show-public; activated => { root.server-tab = "public"; } }
             }
             Rule {}
+            if root.show-public && root.public-servers.length > 0 && root.directory-message != "":
+                Hint { text: root.directory-message; wrap: word-wrap; }
             Scroller {
                 vertical-stretch: 1;
                 VerticalLayout {
                     spacing: 4px; alignment: start;
-                    if root.servers.length == 0: VerticalLayout {
+                    if root.show-public && root.public-servers.length == 0: EmptyState {
+                        title: root.directory-message == "" ? "Открытых серверов пока нет" : root.directory-message;
+                        detail: root.directory-message == "" ? "Здесь появятся миры, опубликованные игроками." : "";
+                    }
+                    for s in (root.show-public ? root.public-servers : []): RowButton {
+                        enabled: !root.busy; title: s.title; detail: s.players; meta: s.ping; online: s.online;
+                        glyph: "\u{e839}"; row-icon: s.icon; has-icon: s.has-icon; wrap-title: true;
+                        selected: s.address == root.address;
+                        activated => { root.address = s.address; }
+                    }
+                    if !root.show-public && root.servers.length == 0: VerticalLayout {
                         padding-top: 10px; spacing: 12px;
                         EmptyState {
                             title: root.show-history ? "История пока пуста" : "Нет избранных серверов";
@@ -105,7 +123,7 @@ export component Home inherits HorizontalLayout {
                             Action { label: "Добавить сервер"; glyph: "\u{e710}"; enabled: !root.busy; activated => { root.add-favorite(); } }
                         }
                     }
-                    for s in root.servers: HorizontalLayout {
+                    for s in (root.show-public ? [] : root.servers): HorizontalLayout {
                         spacing: 4px;
                         RowButton {
                             horizontal-stretch: 1;
@@ -114,7 +132,7 @@ export component Home inherits HorizontalLayout {
                             glyph: "\u{e839}"; selected: s.address == root.address && root.address != "";
                             activated => { root.address = s.address; }
                         }
-                        if !root.show-history: VerticalLayout {
+                        if root.show-favorites: VerticalLayout {
                             width: 32px; alignment: center;
                             Action {
                                 width: 32px; glyph: "\u{e74d}"; kind: "plain";
@@ -126,7 +144,7 @@ export component Home inherits HorizontalLayout {
                     }
                 }
             }
-            if !root.show-history && root.servers.length > 0: HorizontalLayout {
+            if root.show-favorites && root.servers.length > 0: HorizontalLayout {
                 alignment: start;
                 Action { label: "Добавить сервер"; glyph: "\u{e710}"; kind: "plain"; enabled: !root.busy; activated => { root.add-favorite(); } }
             }

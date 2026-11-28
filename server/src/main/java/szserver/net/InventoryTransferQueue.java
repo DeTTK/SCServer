@@ -11,6 +11,8 @@ public final class InventoryTransferQueue<O,T> {
     private final int ownerLimit,ownerBytes,globalLimit,globalBytes;
     private int count,bytes;private long admitted,duplicates,rejected,batches;
     public InventoryTransferQueue(int ownerLimit,int ownerBytes,int globalLimit,int globalBytes){if(ownerLimit<1||ownerBytes<1||globalLimit<ownerLimit||globalBytes<ownerBytes)throw new IllegalArgumentException("inventory_transfer_limits");this.ownerLimit=ownerLimit;this.ownerBytes=ownerBytes;this.globalLimit=globalLimit;this.globalBytes=globalBytes;}
+    public boolean hasWaiting(O owner){Lane<T> lane=lanes.get(owner);return lane!=null&&!lane.waiting.isEmpty();}
+    public boolean pending(O owner,Object key){Lane<T> lane=lanes.get(owner);return key!=null&&lane!=null&&lane.keys.contains(key);}
     public Admission offer(O owner,T value,Object key,int cost,long at){
         Objects.requireNonNull(owner);Objects.requireNonNull(value);if(cost<1)throw new IllegalArgumentException("inventory_transfer_bytes");Lane<T> lane=lanes.get(owner);
         if(key!=null&&lane!=null&&lane.keys.contains(key)){duplicates++;return Admission.DUPLICATE;}

@@ -13,12 +13,10 @@ import java.util.zip.CRC32;
 
 /** Disposable delta chains and UUID directory, rebuilt under the canonical journal lock.
  * Hot/pinned reads never acquire the disk monitor. Cold IO is forbidden on tick owners. */
-final class DiskInventoryRoots implements AutoCloseable {
+final class DiskInventoryRoots implements InventoryRoots {
     private static final int MAGIC=0x535a4958,HEADER=16,SLOT=64,INITIAL=8,CHANNELS=64,CACHE=128,DELTA_LIMIT=128;
-    record Snapshot(Inventory inventory,JsonObject gameplay,long bytes){Snapshot(Inventory inventory,JsonObject gameplay){this(inventory,gameplay,inventory.residentBytes()+128L+2L*Json.bytes(gameplay).length);}}
     private record Ref(UUID id,long at,long revision,int deltas,long gameplayAt,int markers){}
     private record Slot(long at,int state,Ref ref){}
-    static final class Pin {int references;volatile Snapshot snapshot;}
     private final ItemCatalog catalog;
     private final Path directory;
     private final FileChannel bodies;
@@ -95,7 +93,7 @@ final class DiskInventoryRoots implements AutoCloseable {
         write(f,old.at(),encode(ref==null?2:1,ref==null?new Ref(id,0,0,0,0,0):ref));if(old.state()==0)used[shard]++;if(ref!=null&&!wasLive){live[shard]++;count++;}if(ref==null&&wasLive){live[shard]--;count--;}
     }
     private Ref append(JsonObject event,Ref previous,int deltas)throws IOException{
-        UUID id=UUID.fromString(event.get("character").getAsString());byte[] raw=Json.bytes(event);if(raw.length<1||raw.length>65536)throw new IOException("inventory_body_record_size");long at=bodyBytes,prior=previous==null?0:previous.at();write(bodies,at,ByteBuffer.allocate(16+raw.length).putLong(prior).putInt(raw.length).putInt(bodyCrc(prior,raw)).put(raw).array());bodyBytes+=16+raw.length;chainRecords++;return new Ref(id,at,event.get("revision").getAsLong(),deltas,event.has("gameplay")?at:previous==null?0:previous.gameplayAt(),event.has("gameplay")?markers(event.getAsJsonObject("gameplay")):previous==null?0:previous.markers());
+        UUID id=UUID.fromString(event.get("character").getAsString());byte[] raw=Json.bytes(event);if(raw.length<1||raw.length>65536)throw new IOException("inventory_body_record_size");long at=bodyBytes,prior=previous==null?0:previous.at();write(bodies,at,ByteBuffer.allocate(16+raw.length).putLong(prior).putInt(raw.length).putInt(bodyCrc(prior,raw)).put(raw).array());bodyBytes+=16+raw.length;chainRecords++;return new Ref(id,at,event.get("revision").getAsLong(),deltas,event.has("gameplay")?at:previous==null?0:previous.gameplayAt(),event.has("gameplay")?InventoryRoots.markers(event.getAsJsonObject("gameplay")):previous==null?0:previous.markers());
     }
     private Snapshot materialize(Ref ref)throws IOException{
         if(ref==null)return new Snapshot(new Inventory(catalog),new JsonObject());
@@ -110,39 +108,36 @@ final class DiskInventoryRoots implements AutoCloseable {
         if(!snapshot&&revision!=0)throw new IOException("inventory_chain_incomplete");reads++;return new Snapshot(Inventory.restore(catalog,rows,ref.revision()),gameplay==null?new JsonObject():gameplay);
     }
     private void cached(UUID id,Snapshot snapshot){Pin pin=pins.get(id);if(pin!=null)pin.snapshot=snapshot;hot.put(id,snapshot);Snapshot old=order.remove(id);if(old!=null)hotBytes-=old.bytes();order.put(id,snapshot);hotBytes+=snapshot.bytes();while(order.size()>CACHE||hotBytes>HOT_BYTES){var it=order.entrySet().iterator();var oldest=it.next();hot.remove(oldest.getKey(),oldest.getValue());hotBytes-=oldest.getValue().bytes();it.remove();}publish();}
-    Snapshot get(UUID id){Pin pin=pins.get(id);if(pin!=null&&pin.snapshot!=null)return pin.snapshot;Snapshot value=hot.get(id);if(value!=null)return value;guard();synchronized(this){try{ensure();pin=pins.get(id);if(pin!=null&&pin.snapshot!=null)return pin.snapshot;value=hot.get(id);if(value==null){value=materialize(reference(id));cached(id,value);}return value;}catch(IOException error){throw new UncheckedIOException(error);}}}
-    synchronized boolean contains(UUID id){try{ensure();return reference(id)!=null;}catch(IOException error){throw new UncheckedIOException(error);}}
-    synchronized void record(JsonObject event,Inventory inventory,JsonObject gameplay){try{ensure();UUID id=UUID.fromString(event.get("character").getAsString());Ref previous=reference(id);Ref next;
+    public Snapshot get(UUID id){Pin pin=pins.get(id);if(pin!=null&&pin.snapshot!=null)return pin.snapshot;Snapshot value=hot.get(id);if(value!=null)return value;guard();synchronized(this){try{ensure();pin=pins.get(id);if(pin!=null&&pin.snapshot!=null)return pin.snapshot;value=hot.get(id);if(value==null){value=materialize(reference(id));cached(id,value);}return value;}catch(IOException error){throw new UncheckedIOException(error);}}}
+    public synchronized boolean contains(UUID id){try{ensure();return reference(id)!=null;}catch(IOException error){throw new UncheckedIOException(error);}}
+    public synchronized void record(JsonObject event,Inventory inventory,JsonObject gameplay){try{ensure();UUID id=UUID.fromString(event.get("character").getAsString());Ref previous=reference(id);Ref next;
         if(previous!=null&&previous.deltas()>=DELTA_LIMIT||Json.bytes(event).length>65536){Ref[] head={null};InventoryJournal.writeRoot(id,inventory,gameplay,part->head[0]=append(part,head[0],0));next=head[0];rebases++;}
         else next=append(event,previous,previous==null?1:previous.deltas()+1);
         root(id,next);cached(id,new Snapshot(inventory,gameplay.deepCopy()));
     }catch(Exception error){throw error instanceof RuntimeException r?r:new UncheckedIOException(new IOException(error));}}
-    synchronized void snapshot(JsonObject event){try{ensure();UUID id=UUID.fromString(event.get("character").getAsString());Ref previous;
+    public synchronized void snapshot(JsonObject event){try{ensure();UUID id=UUID.fromString(event.get("character").getAsString());Ref previous;
         if(event.get("first").getAsBoolean()){if(pending.containsKey(id))throw new IOException("inventory_checkpoint_duplicate_first");previous=null;event=event.deepCopy();if(!event.has("gameplay")){JsonObject state=get(id).gameplay();if(!state.isEmpty())event.add("gameplay",state.deepCopy());}}
         else{previous=pending.get(id);if(previous==null||previous.revision()!=event.get("revision").getAsLong())throw new IOException("inventory_checkpoint_order");}
         Ref next=append(event,previous,0);pending.put(id,next);if(event.get("last").getAsBoolean()){Snapshot value=materialize(next);root(id,next);cached(id,value);pending.remove(id);}
     }catch(IOException error){throw new UncheckedIOException(error);}}
-    synchronized void delete(UUID id){try{ensure();root(id,null);pending.remove(id);cached(id,new Snapshot(new Inventory(catalog),new JsonObject()));}catch(IOException error){throw new UncheckedIOException(error);}}
-    boolean incomplete(){return !pending.isEmpty();}
-    @FunctionalInterface interface Visitor {void accept(UUID id,Snapshot value)throws Exception;}
-    synchronized void visit(Visitor visitor)throws Exception{ensure();long visited=0;for(int shard=0;shard<4096;shard++){FileChannel f=channel(shard,false);if(f==null)continue;for(int n=0;n<capacities[shard];n++){Slot row=decode(shard,HEADER+(long)n*SLOT,read(f,HEADER+(long)n*SLOT,SLOT));if(row.state()==1){visitor.accept(row.ref().id(),get(row.ref().id()));visited++;}}}if(visited!=count)throw new IOException("inventory_directory_count");publish();}
-    private static int markers(JsonObject state){return (state.has(VitalsReceipt.KEY)?1:0)|(state.has(AdminGiveReceipt.PROGRESS)?2:0)|(state.has(FpvReceipt.PROGRESS)?4:0)|(state.has(GrenadeReceipt.PROGRESS)?8:0);}
-    @FunctionalInterface interface MarkerVisitor {void accept(UUID id,long revision,JsonObject state)throws Exception;}
+    public synchronized void delete(UUID id){try{ensure();root(id,null);pending.remove(id);cached(id,new Snapshot(new Inventory(catalog),new JsonObject()));}catch(IOException error){throw new UncheckedIOException(error);}}
+    public boolean incomplete(){return !pending.isEmpty();}
+    public synchronized void visit(Visitor visitor)throws Exception{ensure();long visited=0;for(int shard=0;shard<4096;shard++){FileChannel f=channel(shard,false);if(f==null)continue;for(int n=0;n<capacities[shard];n++){Slot row=decode(shard,HEADER+(long)n*SLOT,read(f,HEADER+(long)n*SLOT,SLOT));if(row.state()==1){visitor.accept(row.ref().id(),get(row.ref().id()));visited++;}}}if(visited!=count)throw new IOException("inventory_directory_count");publish();}
     /** Bootstrap repair skips roots without matching compact markers, never decodes item blobs. */
-    synchronized void visitMarkers(int mask,MarkerVisitor visitor)throws Exception{
+    public synchronized void visitMarkers(int mask,MarkerVisitor visitor)throws Exception{
         ensure();for(int shard=0;shard<4096;shard++){FileChannel f=channel(shard,false);if(f==null)continue;
             for(int n=0;n<capacities[shard];n++){
                 Slot row=decode(shard,HEADER+(long)n*SLOT,read(f,HEADER+(long)n*SLOT,SLOT));if(row.state()!=1||(row.ref().markers()&mask)==0)continue;
                 Ref ref=row.ref();long at=ref.gameplayAt();ByteBuffer h=ByteBuffer.wrap(read(bodies,at,16));long previous=h.getLong();int size=h.getInt(),crc=h.getInt();
                 if(size<1||size>65536||at>bodyBytes-16-size||previous<0||previous>=at)throw new IOException("inventory_marker_reference");byte[] raw=read(bodies,at+16,size);if(bodyCrc(previous,raw)!=crc)throw new IOException("inventory_marker_crc");
-                JsonObject event=Json.parse(raw);if(!ref.id().toString().equals(event.get("character").getAsString())||event.get("revision").getAsLong()>ref.revision()||!event.has("gameplay"))throw new IOException("inventory_marker_identity");JsonObject state=event.getAsJsonObject("gameplay");if(markers(state)!=ref.markers())throw new IOException("inventory_marker_flags");markerReads++;visitor.accept(ref.id(),ref.revision(),state.deepCopy());
+                JsonObject event=Json.parse(raw);if(!ref.id().toString().equals(event.get("character").getAsString())||event.get("revision").getAsLong()>ref.revision()||!event.has("gameplay"))throw new IOException("inventory_marker_identity");JsonObject state=event.getAsJsonObject("gameplay");if(InventoryRoots.markers(state)!=ref.markers())throw new IOException("inventory_marker_flags");markerReads++;visitor.accept(ref.id(),ref.revision(),state.deepCopy());
             }
         }publish();
     }
-    Pin reserve(UUID id){return pins.compute(id,(key,pin)->{if(pin==null)pin=new Pin();pin.references++;return pin;});}
-    void release(UUID id,Pin wanted){pins.computeIfPresent(id,(key,pin)->{if(pin!=wanted)throw new IllegalStateException("inventory_pin_identity");return --pin.references==0?null:pin;});}
-    synchronized void prepare(UUID id,Pin pin){Snapshot current=get(id);if(pins.get(id)==pin)pin.snapshot=current;publish();}
+    public Pin reserve(UUID id){return pins.compute(id,(key,pin)->{if(pin==null)pin=new Pin();pin.references++;return pin;});}
+    public void release(UUID id,Pin wanted){pins.computeIfPresent(id,(key,pin)->{if(pin!=wanted)throw new IllegalStateException("inventory_pin_identity");return --pin.references==0?null:pin;});}
+    public synchronized void prepare(UUID id,Pin pin){Snapshot current=get(id);if(pins.get(id)==pin)pin.snapshot=current;publish();}
     private void publish(){view=Map.of("rows",count,"bodyBytes",bodyBytes,"hotLimit",CACHE,"hotRoots",hot.size(),"openChannels",channels.size(),"openChannelLimit",CHANNELS,"coldReads",reads,"chainRecords",chainRecords,"rebases",rebases,"rehashes",rehashes);}
-    Map<String,Object> metrics(){var m=new LinkedHashMap<String,Object>(view);m.put("pins",pins.size());m.put("markerBodiesRead",markerReads);m.put("hotRoots",hot.size());m.put("hotBytes",hotBytes);m.put("hotByteLimit",HOT_BYTES);return Collections.unmodifiableMap(m);}
+    public Map<String,Object> metrics(){var m=new LinkedHashMap<String,Object>(view);m.put("pins",pins.size());m.put("markerBodiesRead",markerReads);m.put("hotRoots",hot.size());m.put("hotBytes",hotBytes);m.put("hotByteLimit",HOT_BYTES);return Collections.unmodifiableMap(m);}
     @Override public synchronized void close()throws IOException{if(closed)return;closed=true;IOException failure=null;for(FileChannel f:channels.values())try{f.close();}catch(IOException error){if(failure==null)failure=error;else failure.addSuppressed(error);}try{bodies.close();}catch(IOException error){if(failure==null)failure=error;else failure.addSuppressed(error);}channels.clear();hot.clear();order.clear();pins.clear();pending.clear();publish();if(failure!=null)throw failure;}
 }

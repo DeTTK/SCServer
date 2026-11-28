@@ -20,8 +20,6 @@ public final class CatalogDefinitions {
             for (var entry : live.entrySet()) {
                 JsonObject row=entry.getValue().getAsJsonObject();
                 JsonObject previous=rows.getAsJsonObject(entry.getKey());
-                // Families with exported state codecs keep their existing supported ID set.
-                if(previous==null&&!ItemResources.hasDynamicRegistration(row))continue;
                 if(previous!=null&&!previous.get("type").equals(row.get("type")))
                     throw new IOException("item_resource_id_conflict:"+entry.getKey());
                 rows.add(entry.getKey(),ItemResources.hasDynamicRegistration(row)?row:ItemResources.resolved(row,live));

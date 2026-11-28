@@ -22,4 +22,8 @@ final class ReliableRetryTiming {
         long base = smoothed == 0 ? 800_000_000L : Math.max(MIN_TIMEOUT, smoothed + 4 * variation);
         return Math.min(MAX_TIMEOUT, base << Math.min(3, Math.max(0, attempts - 1)));
     }
+
+    long gapDelay() {
+        return smoothed == 0 ? MIN_TIMEOUT : Math.max(20_000_000L, smoothed + variation);
+    }
 }

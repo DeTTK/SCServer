@@ -144,7 +144,7 @@ fn main() {
         {
             Some("start") => "start-server",
             Some("connect") => "connect",
-            Some("status" | "metrics" | "probe") => "rpc-observe",
+            Some("status" | "metrics" | "probe" | "server-summary") => "rpc-observe",
             Some(_) => "rpc-command",
             None => "start-host",
         };

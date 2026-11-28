@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use sha2::Digest;
 use std::{
-    io::Write,
+    io::{Read, Write},
     path::{Path, PathBuf},
     sync::{
         Arc, Mutex,
@@ -46,10 +46,17 @@ struct Running {
     client_tunnel: Option<crate::relay::Tunnel>,
     blocked: Option<String>,
 }
+#[derive(Default, Deserialize, Serialize)]
+pub struct ServerSummary {
+    pub players: Option<Vec<String>>,
+    pub uptime_ms: Option<u64>,
+    pub heap_used: Option<u64>,
+}
 pub struct Supervisor {
     pub layout: Layout,
     pub exit: Arc<Notify>,
     lifecycle: AsyncMutex<()>,
+    relay_start: AsyncMutex<()>,
     running: Mutex<Running>,
     view: Mutex<Value>,
     java_root: Option<PathBuf>,
@@ -64,6 +71,12 @@ fn read_json<T: serde::de::DeserializeOwned>(p: &Path) -> Result<T> {
 }
 fn write_json(p: &Path, v: &impl Serialize) -> Result<()> {
     bscp_launcher_core::write_json(p, v)
+}
+fn create_session_folder(path: &Path) -> Result<()> {
+    std::fs::create_dir_all(path)
+        .with_context(|| format!("AGENT_SESSION_CREATE: создание папки запуска {}", path.display()))?;
+    owner_only(path, true)
+        .with_context(|| format!("AGENT_SESSION_ACCESS: защита папки запуска {}", path.display()))
 }
 #[cfg(windows)]
 pub fn process_time(pid: u32) -> Option<u64> {
@@ -131,6 +144,7 @@ impl Supervisor {
             layout,
             exit: Arc::new(Notify::new()),
             lifecycle: AsyncMutex::new(()),
+            relay_start: AsyncMutex::new(()),
             running: Mutex::new(Running::default()),
             view: Mutex::new(
                 json!({"State":"Stopped","Pid":null,"SessionId":"","WorldId":"","Detail":"Готов к запуску","ClientRunning":false,"HostBuild":sha(&exe)?}),
@@ -208,15 +222,27 @@ impl Supervisor {
         v
     }
     async fn enable_relay(&self, base: u16) {
+        let Ok(_start) = self.relay_start.try_lock() else { return };
         let s = self.layout.load().unwrap_or_default();
-        if !s.relay_enabled || self.running.lock().unwrap().server_tunnel.is_some() {
+        if !s.relay_enabled {
             return;
         }
+        let owner = {
+            let running = self.running.lock().unwrap();
+            if running.server_tunnel.is_some() { return; }
+            running.server.clone().filter(|server| server.admin_port.checked_sub(100) == Some(base) && alive(server))
+        };
+        let Some(owner) = owner else { return };
         self.view.lock().unwrap()["RelayStatus"] = json!("Проверяем ретрансляторы…");
-        match crate::relay::Tunnel::host(base, &s.relay_url).await {
+        match crate::relay::Tunnel::host(base, &s.relay_url, &self.layout.root).await {
             Ok(t) => {
                 let host = t.relay_host();
-                self.running.lock().unwrap().server_tunnel = Some(t);
+                let mut running = self.running.lock().unwrap();
+                if !running.server.as_ref().is_some_and(|server| server.pid == owner.pid && server.started == owner.started && alive(server)) {
+                    return;
+                }
+                running.server_tunnel = Some(t);
+                drop(running);
                 self.view.lock().unwrap()["RelayStatus"] = json!(match host {
                     Some(host) => format!("Приглашение готово · {host}"),
                     None => "Приглашение готово".into(),
@@ -437,6 +463,29 @@ impl Supervisor {
             },
         }
     }
+    async fn server_summary(&self, owned: &Owned, include_legacy_jvm: bool) -> Result<ServerSummary> {
+        match self.admin(owned, "server/summary", false).await {
+            Ok(summary) => return Ok(serde_json::from_value(summary)?),
+            Err(error) if error.downcast_ref::<reqwest::Error>()
+                .and_then(reqwest::Error::status) == Some(reqwest::StatusCode::NOT_FOUND) => {}
+            Err(error) => return Err(error),
+        }
+        // Older installed servers expose these values only through diagnostics.
+        let (health, server) = tokio::join!(
+            self.admin(owned, "health", false),
+            async {
+                if include_legacy_jvm { self.bridge_metrics(owned, "server").await.unwrap_or_default() }
+                else { Value::Null }
+            },
+        );
+        let health = health?;
+        Ok(ServerSummary {
+            players: health["game"]["players"].as_array().map(|rows| rows.iter()
+                .filter_map(|row| row["name"].as_str().map(str::to_owned)).collect()),
+            uptime_ms: server["uptimeMs"].as_u64().or_else(|| health["uptimeMs"].as_u64()),
+            heap_used: server["heapUsed"].as_u64().or_else(|| health["jvm"]["heapUsed"].as_u64()),
+        })
+    }
     pub async fn recover(&self) -> Result<()> {
         for kind in ["server", "client"] {
             let file = self
@@ -494,6 +543,7 @@ impl Supervisor {
             }
             if kind == "server" {
                 let h = self.admin(&o, "health", false).await?;
+                o.ready.store(h["ready"] == true, Ordering::Release);
                 self.state(
                     if h["ready"] == true {
                         "Ready"
@@ -517,6 +567,13 @@ impl Supervisor {
         };
         match cmd {
             "status" => return Ok(self.status()),
+            "server-summary" => {
+                let owned = self.running.lock().unwrap().server.clone();
+                let Some(owned) = owned.filter(alive) else {
+                    return Ok(serde_json::to_value(ServerSummary::default())?);
+                };
+                return Ok(serde_json::to_value(self.server_summary(&owned, true).await?)?);
+            }
             "metrics" => {
                 let (owned_server, owned_client) = {
                     let r = self.running.lock().unwrap();
@@ -545,7 +602,7 @@ impl Supervisor {
                     }
                 }
                 return Ok(
-                    json!({"state":self.status(),"server":server,"client":client,"health":health,"metricErrors":{"server":server_error,"client":client_error},"addresses":network::local_addresses().iter().map(|a| format!("{a}:{}", self.layout.load().map(|s| s.base_port).unwrap_or(29545))).collect::<Vec<_>>()}),
+                    json!({"state":self.status(),"server":server,"client":client,"health":health,"metricErrors":{"server":server_error,"client":client_error},"relayUdp":self.relay_udp_metrics(),"addresses":network::local_addresses().iter().map(|a| format!("{a}:{}", self.layout.load().map(|s| s.base_port).unwrap_or(29545))).collect::<Vec<_>>()}),
                 );
             }
             "probe" => {
@@ -556,7 +613,13 @@ impl Supervisor {
                     let _activity = DeliveryActivity(self.deliveries.clone());
                     let settings = self.layout.load()?;
                     return Ok(
-                        match crate::relay::Tunnel::join(&address, &settings.relay_url).await {
+                        match crate::relay::Tunnel::join(
+                            &address,
+                            &settings.relay_url,
+                            &self.layout.root,
+                        )
+                        .await
+                        {
                             Ok(_) => {
                                 json!({"online":true,"detail":"Приглашение доступно"})
                             }
@@ -714,8 +777,6 @@ impl Supervisor {
         native: Option<&str>,
         world: &str,
     ) -> Result<()> {
-        std::fs::create_dir_all(folder)?;
-        owner_only(folder, true)?;
         let s = self.layout.load()?;
         let mut p = std::collections::BTreeMap::<String, String>::from([
             ("kind".into(), kind.into()),
@@ -751,7 +812,6 @@ impl Supervisor {
         }
         if let Some(n) = native {
             p.insert("nativeSession".into(), n.into());
-            p.insert("autoJoin".into(), "true".into());
             p.insert(
                 "clientLease".into(),
                 launch::path(
@@ -762,12 +822,13 @@ impl Supervisor {
                 ),
             );
         }
-        std::fs::write(
-            folder.join("agent.properties"),
+        atomic_write(
+            &folder.join("agent.properties"),
             p.iter()
                 .map(|(k, v)| format!("{k}={}\n", launch::prop(v)))
-                .collect::<String>(),
-        )?;
+                .collect::<String>().as_bytes(),
+        )
+        .context("AGENT_CONFIG_WRITE: запись конфигурации Java")?;
         Ok(())
     }
     async fn start(&self, id: &str, with_client: bool) -> Result<()> {
@@ -848,7 +909,7 @@ impl Supervisor {
             .root
             .join("state/sessions")
             .join(uuid::Uuid::new_v4().simple().to_string());
-        std::fs::create_dir_all(&session)?;
+        create_session_folder(&session)?;
         self.state("Preparing", "Проверка карты и портов");
         if world.schema_version == 1 && map_digest(&map)? != world.map_hash {
             self.state("Failed", "Базовая карта изменилась");
@@ -951,7 +1012,7 @@ impl Supervisor {
         let game = GameLayout::resolve(self.layout.resolve(&s.game_path))?;
         let java = self.java(&source)?;
         let tunnel = if crate::relay::is_invite(address) {
-            Some(crate::relay::Tunnel::join(address, &s.relay_url).await?)
+            Some(crate::relay::Tunnel::join(address, &s.relay_url, &self.layout.root).await?)
         } else {
             None
         };
@@ -978,8 +1039,7 @@ impl Supervisor {
             .root
             .join("state/sessions")
             .join(format!("client-{}", uuid::Uuid::new_v4().simple()));
-        std::fs::create_dir_all(&folder)?;
-        owner_only(&folder, true)?;
+        create_session_folder(&folder)?;
         let alias_supported = local_starting
             && native_parallel_start_supported(&self.layout.bundle(&s, "server")?).unwrap_or(false);
         let (proxy, native) = if local_starting {
@@ -1115,6 +1175,101 @@ impl Supervisor {
         }
         bail!("STOP_PENDING: server is saving; no force kill performed")
     }
+
+    pub async fn refresh_public_listing(self: Arc<Self>) {
+        use crate::directory::{ICON_PATH, PublicServer, Publisher, decode_icon};
+        let logger = RotatingLog::new(self.layout.at("logs"), "public-directory-host");
+        let mut publisher = Publisher::default();
+        let mut advertised = None::<iroh::Endpoint>;
+        let mut next_send = Instant::now();
+        let mut next_relay = Instant::now();
+        let mut was_enabled = false;
+        loop {
+            let settings = self.layout.load().unwrap_or_default();
+            let enabled = settings.relay_enabled && settings.public_listing;
+            let stopping = self.view.lock().unwrap()["State"] == "Stopping";
+            let (owned, tunnel) = if enabled && !stopping {
+                let running = self.running.lock().unwrap();
+                let world = running.server.as_ref()
+                    .filter(|server| server.ready.load(Ordering::Acquire) && alive(server)).cloned();
+                let tunnel = running.server_tunnel.as_ref()
+                    .map(|tunnel| (tunnel.directory_endpoint(), tunnel.public_invite()));
+                (world, tunnel)
+            } else {
+                (None, None)
+            };
+            if let Some(server) = owned.as_ref().filter(|_| tunnel.is_none() && Instant::now() >= next_relay) {
+                next_relay = Instant::now() + Duration::from_secs(10);
+                let host = self.clone();
+                let base = server.admin_port - 100;
+                tokio::spawn(async move { host.enable_relay(base).await });
+            }
+            let active = owned.zip(tunnel);
+            if let Some(previous) = &advertised {
+                if active.as_ref().is_none_or(|(_, (endpoint, _))| endpoint.id() != previous.id()) {
+                    if let Err(error) = publisher.advertise(&self.layout, previous, None).await {
+                        let _ = logger.line(&redact(&format!("Listing withdrawal failed: {error:#}")));
+                    }
+                    advertised = None;
+                    next_send = Instant::now();
+                }
+            }
+            let status = match active {
+                Some((server, (endpoint, invite))) if Instant::now() >= next_send => {
+                    let submission: Result<()> = async {
+                        let invite = invite?;
+                        let (_, relay) = crate::relay::public_ticket(&invite)?;
+                        anyhow::ensure!(crate::directory::public_relay(&relay), "DIRECTORY_PUBLIC_RELAY");
+                        let players = self.server_summary(&server, false).await?.players.context("DIRECTORY_PLAYERS")?;
+                        let world = self.worlds()?.get(&server.world)?;
+                        let icon = read_json::<String>(&self.layout.at(ICON_PATH)).ok().filter(|icon| decode_icon(icon).is_ok());
+                        advertised = Some(endpoint.clone());
+                        publisher.advertise(&self.layout, &endpoint, Some(PublicServer {
+                            name: world.name,
+                            invite,
+                            icon,
+                            players: players.len().min(u16::MAX as usize) as u16,
+                        })).await
+                    }.await;
+                    match submission {
+                        Ok(()) => {
+                            next_send = Instant::now() + Duration::from_secs(7);
+                            Some("Сервер опубликован")
+                        }
+                        Err(error) => {
+                            next_send = Instant::now() + Duration::from_secs(2);
+                            let _ = logger.line(&redact(&format!("Listing publication failed: {error:#}")));
+                            if error.to_string() == "DIRECTORY_PUBLIC_RELAY" {
+                                Some("Для публикации нужен ретранслятор из публичного списка BSCPCRAFT")
+                            } else {
+                                Some("Публикация недоступна. Повторим автоматически.")
+                            }
+                        }
+                    }
+                }
+                Some(_) => None,
+                None if enabled => {
+                    next_send = Instant::now();
+                    Some("Публикация начнётся, когда мир и ретранслятор будут готовы")
+                }
+                None if was_enabled => Some(""),
+                None => None,
+            };
+            if let Some(status) = status {
+                self.view.lock().unwrap()["DirectoryStatus"] = json!(status);
+            }
+            was_enabled = enabled;
+            tokio::time::sleep(Duration::from_secs(1)).await;
+        }
+    }
+    fn relay_udp_metrics(&self) -> Value {
+        let state = self.running.lock().unwrap();
+        json!({
+            "host": state.server_tunnel.as_ref().map(crate::relay::Tunnel::udp_metrics),
+            "client": state.client_tunnel.as_ref().map(crate::relay::Tunnel::udp_metrics)
+        })
+    }
+
     pub async fn record_diagnostics(self: Arc<Self>) {
         let logger = RotatingLog::new(self.layout.at("logs"), "performance");
         let outbox = TelemetryOutbox::new(&self.layout);
@@ -1182,7 +1337,7 @@ impl Supervisor {
                 last_queued = std::time::Instant::now() - Duration::from_secs(30);
             }
             let sample = json!({"type":"performance","run":server.as_ref().or(client.as_ref()).map(|o|o.session.as_str()),"serverPid":server.as_ref().map(|v|v.pid),"clientPid":client.as_ref().map(|v|v.pid),
-                "runGroup":context["runGroup"],"context":context,"time":chrono::Utc::now().to_rfc3339(),"health":health,"server":server_metrics,"client":client_metrics,"errors":{"server":server_error,"client":client_error}});
+                "runGroup":context["runGroup"],"context":context,"time":chrono::Utc::now().to_rfc3339(),"health":health,"server":server_metrics,"client":client_metrics,"errors":{"server":server_error,"client":client_error},"relayUdp":self.relay_udp_metrics()});
             let _ = logger.line(&sample.to_string());
             recent.push_back(sample.clone());
             while recent.len() > 12 {
@@ -1282,18 +1437,19 @@ impl Supervisor {
                         &Owned::default(),
                     );
                 }
-                let exited = r.server.as_ref().is_some_and(|o| !alive(o));
-                if exited {
-                    if let Some(o) = &r.server {
-                        let _=RotatingLog::new(self.layout.at("logs"),"lifecycle").line(&json!({"type":"unexpected-server-exit","pid":o.pid,"session":o.session}).to_string());
-                    }
+                let exited = r.server.as_ref().filter(|o| !alive(o)).cloned();
+                if let Some(o) = &exited {
+                    let _ = RotatingLog::new(self.layout.at("logs"), "lifecycle").line(
+                        &json!({"type":"unexpected-server-exit","pid":o.pid,"session":o.session})
+                            .to_string(),
+                    );
                     r.server = None;
                     r.world_lease = None;
                     r.server_tunnel = None;
                 }
                 (exited, r.server.clone())
             };
-            if exited {
+            if let Some(exited) = exited {
                 if let Some(client) = self.running.lock().unwrap().client.as_ref() {
                     let file = self.layout.at(&client.session).join("native-session.json");
                     if !file.exists() {
@@ -1301,10 +1457,21 @@ impl Supervisor {
                     }
                 }
                 self.view.lock().unwrap()["RelayStatus"] = json!("");
-                self.state(
-                    "Failed",
-                    "Процесс сервера завершился вне команды остановки; проверьте журнал",
-                );
+                let memory_failure =
+                    jvm_native_memory_failure(&self.layout.at(&exited.session), exited.pid);
+                let detail = if memory_failure {
+                    let message = "Windows не смогла выделить память для Java-сервера. Освободите память или уменьшите лимиты игры и сервера в настройках.";
+                    let _ = record_launcher_error(
+                        &self.layout,
+                        "host",
+                        "server-exit",
+                        &anyhow::anyhow!("SERVER_JVM_MEMORY: {message}"),
+                    );
+                    message
+                } else {
+                    "Процесс сервера завершился вне команды остановки; проверьте журнал"
+                };
+                self.state("Failed", detail);
             }
             if let Some(o) = server {
                 let starting = self.status()["State"] == "Starting";
@@ -1516,6 +1683,8 @@ fn compact_health(health: Value) -> Value {
             "maxTickMs",
             "tickTiming",
             "datagrams",
+            "reliableTransport",
+            "nativeAdmin",
             "connectionMismatch",
             "rejected",
             "running",
@@ -1725,6 +1894,25 @@ mod log_stream_tests {
         .unwrap();
         assert_eq!(child_start_time(&child), Some(creation));
         assert_eq!(child.wait().await.unwrap().code(), Some(7));
+    }
+
+    #[test]
+    fn server_exit_identifies_native_heap_reservation_failures() {
+        let run = tempfile::tempdir().unwrap();
+        let folder = run.path();
+        std::fs::write(
+            folder.join("server-stderr.log"),
+            "java.lang.OutOfMemoryError: Java heap space",
+        )
+        .unwrap();
+        assert!(!jvm_native_memory_failure(folder, 24));
+        std::fs::write(folder.join("hs_err_pid24.log"),
+            "# Native memory allocation (mmap) failed to map 165675008 bytes. Error detail: G1 virtual space").unwrap();
+        assert!(jvm_native_memory_failure(folder, 24));
+        assert!(!jvm_native_memory_failure(folder, 25));
+        std::fs::write(folder.join("server-stdout.log"),
+            "Error occurred during initialization of VM\nCould not reserve enough space for 4194304KB object heap").unwrap();
+        assert!(jvm_native_memory_failure(folder, 25));
     }
 
     #[test]
@@ -1964,6 +2152,24 @@ fn observed_client_frame(folder: &Path, pid: u32) -> bool {
             .and_then(|message| serde_json::from_str::<Value>(message).ok())
             .is_some_and(|stats| stats["pid"] == pid && stats["frames"].as_u64().unwrap_or(0) > 0)
     })
+}
+
+fn jvm_native_memory_failure(folder: &Path, pid: u32) -> bool {
+    let is_memory_failure = |bytes: &[u8]| {
+        let text = String::from_utf8_lossy(bytes);
+        text.contains("There is insufficient memory for the Java Runtime Environment to continue")
+            || text.contains("Native memory allocation") && text.contains("failed to map")
+            || text.contains("Could not reserve enough space for") && text.contains("object heap")
+    };
+    let mut header = Vec::new();
+    if let Ok(file) = std::fs::File::open(folder.join(format!("hs_err_pid{pid}.log"))) {
+        let _ = file.take(8192).read_to_end(&mut header);
+    }
+    is_memory_failure(&header)
+        || ["stdout", "stderr"].iter().any(|stream| {
+            diagnostic_tail(&folder.join(format!("server-{stream}.log")), 8192)
+                .is_ok_and(|tail| is_memory_failure(&tail))
+        })
 }
 
 fn launch_tail(layout: &Layout, folder: &Path, role: &str, stream: &str) -> String {

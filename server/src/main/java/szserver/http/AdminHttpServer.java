@@ -56,6 +56,14 @@ public final class AdminHttpServer implements AutoCloseable {
                 Map<String,Object> data=health.get();send(x,Boolean.TRUE.equals(data.get("healthy"))?200:503,data);requests.release();return;
             }
             if(!authorized(x)){send(x,401,Map.of("error","authorization_required"));requests.release();return;}
+            if(path.equals("/server/summary")&&method.equals("GET")){
+                Map<String,Object> summary=new LinkedHashMap<>();
+                if(game!=null&&game.ready())summary.put("players",game.connectedPlayerNames());
+                Runtime jvm=Runtime.getRuntime();
+                summary.put("heap_used",jvm.totalMemory()-jvm.freeMemory());
+                summary.put("uptime_ms",java.lang.management.ManagementFactory.getRuntimeMXBean().getUptime());
+                send(x,200,summary);requests.release();return;
+            }
             if(path.equals("/server")&&method.equals("GET")){
                 if(lifecycle==null)throw new IllegalStateException("lifecycle_unavailable");
                 send(x,200,lifecycle.status());requests.release();return;

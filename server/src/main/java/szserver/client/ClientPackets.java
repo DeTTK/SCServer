@@ -38,6 +38,24 @@ public final class ClientPackets implements AutoCloseable {
     public void statelessItem(int id)throws Exception{Class<?> factory=Class.forName("1366800141",true,loader);Object[] registry=(Object[])factory.getField("import").get(null);if(registry[id]==null)factory.getConstructor(int.class).newInstance(id);}
     public szserver.net.StaminaRules staminaRules()throws Exception{Class<?> settings=Class.forName("1957590987",true,loader);return new szserver.net.StaminaRules(settings.getField("while").getFloat(null),settings.getField("static").getFloat(null),settings.getField("char").getFloat(null),settings.getField("extends").getFloat(null),settings.getField("int").getFloat(null));}
     public byte[] roundTrip(String name,byte[] body)throws Exception{Object object=decode(name,body);return Wire.bytes(o->codecs.get(name).write.invoke(object,o));}
+    public byte[] playerProfile(String name,String faction,String status,long playedMillis,int deaths)throws Exception{
+        Class<?> profile=Class.forName("789817320",true,loader);
+        Class<?> packet=Class.forName("306768345",true,loader);
+        Object value=profile.getConstructor(String.class).newInstance(name);
+        profile.getField("goto").set(value,faction);
+        profile.getMethod("class",String.class).invoke(value,status);
+        Class<?> statRegistry=Class.forName("498192453",true,loader);
+        Class<?> stats=Class.forName("490118974",true,loader);
+        Object played=statRegistry.getField("try").get(null);
+        Object died=statRegistry.getField("abstract").get(null);
+        Object values=stats.getConstructor(Map.class).newInstance(Map.of(played,playedMillis,died,deaths));
+        profile.getField("short").set(value,Wire.bytes(out->stats.getMethod("switch",DataOutput.class).invoke(values,out)));
+        profile.getField("void").set(value,List.of("pla-tim","dea"));
+        Object response=packet.getConstructor().newInstance();
+        packet.getField("throw").set(response,value);
+        return Wire.bytes(out->packet.getMethod("switch",DataOutput.class).invoke(response,out));
+    }
+
     /** Genuine native outer effect packet reader; the gameplay callback is not invoked. */
     public byte[] effectRecords(byte[] body)throws Exception{return ((byte[])field(decode("456314467",body),"static")).clone();}
     public boolean explosiveFire(byte[] body)throws Exception{return (Boolean)field(decode("1176115659",body),"void");}

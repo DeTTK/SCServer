@@ -3,6 +3,7 @@ package szserver.net;
 import szserver.world.AnomalyZone;
 import szserver.world.World;
 import java.util.*;
+import java.util.function.Predicate;
 
 /** Thrown bolts trigger the first anomaly whose native shape contains the bolt point. */
 public final class BoltAnomalies {
@@ -34,9 +35,46 @@ public final class BoltAnomalies {
         }
         return first;
     }
+    public static Impact trampolineImpact(List<AnomalyZone> zones,World.Vec from,World.Vec to,
+                                           World.Vec velocity,Predicate<AnomalyZone> ready){
+        if(from.equals(to))return null;
+        World.Vec start=new World.Vec(from.x(),from.y()-BOLT_RADIUS,from.z());
+        World.Vec finish=new World.Vec(to.x(),to.y()-BOLT_RADIUS,to.z());
+        double height=2*BOLT_RADIUS;
+        Impact first=null;
+        for(var zone:zones){
+            if(!zone.kind().equals("tramp")||!ready.test(zone)
+                    ||!zone.nearby(start,finish,BOLT_RADIUS,height)
+                    ||!zone.touches(start,finish,BOLT_RADIUS,height))continue;
+            double low=0,high=0;
+            if(!zone.touches(start,start,BOLT_RADIUS,height)){
+                high=1;
+                for(int i=0;i<14;i++){
+                    double mid=(low+high)/2;
+                    if(zone.touches(start,interpolate(start,finish,mid),BOLT_RADIUS,height))high=mid;
+                    else low=mid;
+                }
+            }
+            if(first!=null&&first.time()<=high)continue;
+            // The native trampoline applies its transformed 0.74-block/tick impulse
+            // according to the instance's replace/add velocity setting.
+            double[] impulse=zone.impulse();
+            World.Vec rebound=zone.settings().setVelocity()
+                ?new World.Vec(impulse[0],impulse[1],impulse[2])
+                :new World.Vec(velocity.x()+impulse[0],velocity.y()+impulse[1],velocity.z()+impulse[2]);
+            first=new Impact(zone,high,interpolate(from,to,high),rebound);
+        }
+        return first;
+    }
+
+    private static World.Vec interpolate(World.Vec from,World.Vec to,double time){
+        return new World.Vec(from.x()+(to.x()-from.x())*time,from.y()+(to.y()-from.y())*time,
+            from.z()+(to.z()-from.z())*time);
+    }
+
     public static AnomalyZone containing(List<AnomalyZone> zones,World.Vec point){return containing(zones,point,point);}
     public static AnomalyZone containing(List<AnomalyZone> zones,World.Vec from,World.Vec to){
         World.Vec low=new World.Vec(from.x(),from.y()-HEIGHT,from.z()),high=new World.Vec(to.x(),to.y()+HEIGHT,to.z());
-        for(AnomalyZone zone:zones)if(zone.touches(low,high,WIDTH,HEIGHT))return zone;return null;
+        for(AnomalyZone zone:zones)if(!zone.kind().equals("tramp")&&zone.touches(low,high,WIDTH,HEIGHT))return zone;return null;
     }
 }

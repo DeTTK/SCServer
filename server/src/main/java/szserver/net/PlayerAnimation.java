@@ -10,7 +10,13 @@ public final class PlayerAnimation {
     private PlayerAnimationPackets.Pose pose;
     private PlayerAnimationPackets.Edge edge;
     private PlayerAnimationPackets.Transition transition;
-    public void input(PlayerAnimationPackets.Motion motion){heading=motion.heading();if(motion.jump()!=null)jump=motion.jump();if(motion.boosted()!=null)boosted=motion.boosted();if(motion.snapshot()){pose=motion.pose();edge=motion.edge();transition=motion.transition();}}
+    public void input(PlayerAnimationPackets.Motion motion){
+        heading=motion.heading();if(motion.jump()!=null)jump=motion.jump();if(motion.boosted()!=null)boosted=motion.boosted();
+        if(motion.snapshot()){
+            var next=motion.pose();pose=next==null?null:next.retainCrawlDirection(pose);
+            edge=motion.edge();transition=motion.transition();
+        }
+    }
     public boolean aiming(){return aiming;}
     public void aim(boolean enabled){aiming=enabled;}
     public void reload(float seconds){duration=seconds;reload=(reload+1)&255;aiming=false;}
@@ -18,6 +24,9 @@ public final class PlayerAnimation {
     public void cancel(){aiming=false;duration=0;}
     public void reset(){cancel();pose=null;edge=null;transition=null;heading=0;}
     public PlayerAnimationPackets.State snapshot(int locomotion,int previous,int mode,double speed,boolean ground,float yaw,boolean pilot){
-        return new PlayerAnimationPackets.State(pilot?11:locomotion,pilot?11:previous,pilot?0:mode,pilot?0:speed,ground,yaw, pilot?0:speed>1e-5||mode!=0?-heading:0,jump,boosted,!pilot&&aiming,reload,duration,swing,strike,pilot?null:edge,pilot?null:transition).pose(pilot?null:pose);
+        return snapshot(locomotion,previous,mode,speed,ground,yaw,pilot,1);
+    }
+    public PlayerAnimationPackets.State snapshot(int locomotion,int previous,int mode,double speed,boolean ground,float yaw,boolean pilot,float scale){
+        return new PlayerAnimationPackets.State(pilot?11:locomotion,pilot?11:previous,pilot?0:mode,pilot?0:speed,ground,yaw, pilot?0:speed>1e-5||mode!=0?-heading:0,jump,boosted,!pilot&&aiming,reload,duration,swing,strike,pilot?null:edge,pilot?null:transition).pose(pilot||pose==null?null:pose.scaled(scale));
     }
 }

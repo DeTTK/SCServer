@@ -19,6 +19,7 @@ public final class ResidentServerMap implements AutoCloseable {
     private final AtomicBoolean claimed=new AtomicBoolean();private final AtomicReference<ResidentMapRuntime> runtime=new AtomicReference<>();
     public Journal activeJournal(Journal original){return separatedJournal==null?original:separatedJournal;}
     public CommandService commands(){return commands;}
+    public ResidentCharacterState characters(){return bundle==null?null:bundle.characters();}
     public boolean enabled(){return storage!=null;}
     private ResidentServerMap(CommandService commands,RegionSnapshotStore storage,ResidentMapBootstrap.Bundle bundle){this.commands=commands;this.storage=storage;this.bundle=bundle;}
     public static ResidentServerMap open(Path data,Properties properties,WorldLoop world,Journal journal,GameItems items,SceneSeeds seeds,NativeActorMotion motion,SceneRegistry.Manifest registry)throws Exception{
@@ -65,7 +66,8 @@ public final class ResidentServerMap implements AutoCloseable {
             service.enableResidentRuntimeHistory(loaded.receipts(),result.runtime::get).get(10,TimeUnit.SECONDS);Set<String> names=new HashSet<>();for(String name:disk.stateIndex().files().keySet())if(name.equals(ResidentCommandCheckpoint.ROOT)||name.equals(ResidentCommandIndex.ROOT)||name.startsWith("command-page-")||name.startsWith("command-index-page-"))names.add(name);
             var settings=new ResidentMapRuntime.Settings(Integer.parseInt(properties.getProperty("world.resident.chunks","2048")),Long.parseLong(properties.getProperty("world.resident.bytes","536870912")),Integer.parseInt(properties.getProperty("world.resident.radius","8")),8,4,TimeUnit.SECONDS.toNanos(Long.parseLong(properties.getProperty("world.resident.saveSeconds","300"))),TimeUnit.SECONDS.toNanos(Long.parseLong(properties.getProperty("world.resident.idleSeconds","60"))));
             var codec=motion.residentChunkCodec();var historyRoot=loaded.history();CommandService ownerCommands=service;
-            world.ownerService(owner->{var history=new ResidentOperationLog(historyRoot,64L*1024*1024);var cohort=new ResidentCommandCohort(history,ownerCommands,names);var active=new ResidentMapRuntime(disk,codec,settings,delta->owner.validateBlock(delta.position(),delta.packed()>>>4,delta.packed()&15),change->{},history,historyRoot.revision(),registry,cohort);cohort.install(active,world);result.runtime.set(active);result.claimed.set(true);return active;});
+            terrain.savedChunks(disk::savedChunks);
+            world.ownerService(owner->{var history=new ResidentOperationLog(historyRoot,64L*1024*1024);var cohort=new ResidentCommandCohort(history,ownerCommands,names,result.characters());var active=new ResidentMapRuntime(disk,codec,settings,delta->owner.validateBlock(delta.position(),delta.packed()>>>4,delta.packed()&15),change->{},history,historyRoot.revision(),registry,cohort);cohort.install(active,world);result.runtime.set(active);result.claimed.set(true);return active;});
             return result;
         }catch(Throwable error){if(service!=null)try{service.close();}catch(Throwable close){error.addSuppressed(close);}if(loaded!=null)loaded.close();if(activeJournal!=journal)activeJournal.close();disk.close();throw error;}
     }

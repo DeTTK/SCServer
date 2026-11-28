@@ -9,7 +9,7 @@ final class WorldItemLedger {
     private volatile Map<UUID,WorldItem> active=Map.of();
     Map<UUID,WorldItem> view(){return active;}
     private static boolean same(Inventory a,Inventory b){if(!a.items().keySet().equals(b.items().keySet()))return false;for(var e:a.items().entrySet())if(!e.getValue().json().equals(b.at(e.getKey()).json()))return false;return true;}
-    void validate(JsonObject event,UUID character,Inventory previous,Inventory.Plan plan,ItemCatalog catalog){
+    void validate(JsonObject event,UUID character,Inventory previous,Inventory.Plan plan,ItemCatalog catalog,boolean replay){
         boolean spawn=event.has("worldItemSpawn"),claim=event.has("worldItemClaim"),grant=event.has("worldItemGrants");
         int operations=(spawn?1:0)+(claim?1:0)+(grant?1:0);
         if(operations>1||(operations==1&&(event.has("drop")||event.has("grantedDrops"))))throw new IllegalArgumentException("mixed_world_item_transaction");
@@ -30,7 +30,28 @@ final class WorldItemLedger {
                     throw new IllegalArgumentException("admin_ground_stack");
             }
         }
-        if(claim){WorldItem item=active.get(UUID.fromString(event.get("worldItemClaim").getAsString()));if(item==null)throw new IllegalArgumentException("world_item_already_claimed");if(!same(previous.give(item.stack()).after(),plan.after()))throw new IllegalArgumentException("world_item_credit");}
+        if(claim){
+            WorldItem item=active.get(UUID.fromString(event.get("worldItemClaim").getAsString()));
+            if(item==null)throw new IllegalArgumentException("world_item_already_claimed");
+            boolean credited=replay?recordedCredit(previous,plan,item.stack())
+                    :same(previous.give(item.stack()).after(),plan.after());
+            if(!credited)throw new IllegalArgumentException("world_item_credit");
+        }
+    }
+
+    /** The committed addresses belong to the layout used at pickup time. */
+    private static boolean recordedCredit(Inventory previous,Inventory.Plan plan,ItemStack picked){
+        long added=0;
+        for(var change:plan.changes().entrySet()){
+            var address=change.getKey();
+            ItemStack after=change.getValue(),before=previous.at(address);
+            if(address.aggregate()!=1||address.container()!=0||!picked.mergeable(after))return false;
+            ItemStack original=before==null?picked:before;
+            int count=before==null?0:before.count();
+            if(after.compareSortKey(original)!=0||after.count()<=count)return false;
+            added+=after.count()-count;
+        }
+        return added==picked.count();
     }
     void apply(JsonObject event){
         if(event.has("worldItemSpawn")){WorldItem item=WorldItem.read(event.getAsJsonObject("worldItemSpawn"));put(item);}

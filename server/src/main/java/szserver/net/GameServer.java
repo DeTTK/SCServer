@@ -8,6 +8,7 @@ import scvehicles.protocol.VehicleWire;
 import scvehicles.protocol.VehicleAction;
 import scvehicles.protocol.VehicleActionProfiles;
 import scvehicles.protocol.VehicleSeats;
+import scvehicles.protocol.VehicleTypes;
 import szserver.commands.CommandService;
 import szserver.commands.WorldEditChat;
 import szserver.util.*;
@@ -31,15 +32,18 @@ import com.google.gson.JsonObject;
 public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
     private static final int MAX_SESSIONS=32,WINDOW=128,MAX_QUEUE=2048;
     // The relay carries up to 1000 bytes of game UDP in one datagram.
-    private static final int FRAGMENT=1000-25;
+    // The launcher's Iroh relay splits UDP payloads above 1000 bytes.
+    private static final int UDP_BYTES=1000,FRAGMENT=UDP_BYTES-25;
+    private static final int CHUNK_REFILL=128;
     private static final int CHUNK_QUEUE=(256*1100+FRAGMENT-1)/FRAGMENT;
     private record LauncherReload(long deadline,long life,int hand,UUID firearm,UUID launcher,int ammo,ItemStack expected) {}
     private record ShotKey(long seed,int sequence){}
+    private record StreamHit(UUID firearm,int target,long targetLife,PlayerClones.Clone<Session> copy,BotKey bot,int count,long at){}
     private record Swing(int kind,int combo,ItemStack weapon,long ready,long expires,MeleeProfile profile){}
     private record BotKey(String id,long incarnation){}
     private record Recipient(InetSocketAddress address,UUID incarnation){}
     private final NativeEntityIds entityIds=new NativeEntityIds();
-    private final szserver.world.WorldItems worldItems;private final String itemWorld;private long itemCollected,itemDropped,itemFailures,itemRequests,boltTriggers;private String lastItemFailure="";private final Set<UUID> remoteItemExpiry=new HashSet<>(),boltTriggered=new HashSet<>();
+    private final szserver.world.WorldItems worldItems;private final String itemWorld;private long itemCollected,itemDropped,itemFailures,itemRequests,boltThrows,boltTriggers;private String lastItemFailure="";private final Set<UUID> remoteItemExpiry=new HashSet<>(),boltTriggered=new HashSet<>();
     private final CorpseLifecycle<Recipient> corpses=new CorpseLifecycle<>(entityIds);
     private record CorpseDonor(int entity,boolean release){}
     // Native ragdolls copy the donor skeleton asynchronously; retire both together.
@@ -59,7 +63,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
     public UUID creativeCharacter(Session session){return character(session);}
     public void creativeSend(Session session,byte[] packet){enqueueOrRetire(session,packet);}
     public void creativeDeny(Session session,String error){denyNativeGrant(session,error);}
-    private static final class Lane {boolean parsing;int rx,tx;final Map<Integer,byte[]> received=new HashMap<>();final LinkedHashMap<Integer,Sent> sent=new LinkedHashMap<>();final ArrayDeque<byte[]> queued=new ArrayDeque<>();final ReliableInput stream=new ReliableInput();}
+    private static final class Lane {boolean parsing;int rx,tx;long lastAck;final ReliableAcks acks=new ReliableAcks();final Map<Integer,byte[]> received=new HashMap<>();final LinkedHashMap<Integer,Sent> sent=new LinkedHashMap<>();final ReliableOutput queued=new ReliableOutput(FRAGMENT,MAX_QUEUE);final ReliableInput stream=new ReliableInput();}
     private record ScaleChange(Session requester,double[] position,playerscale.ScaleValue scale,CompletableFuture<Integer> query,long deadline){}
     private long scaleRevision;private String lastScaleError="";
     private static final class MedicineUse {
@@ -68,13 +72,17 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
     }
     private record QuickIntent(szserver.client.ClientStateAdapter.QuickBindRequest binding,Integer use,ItemStack source){}
     static final class Session {
+        StreamHit streamHit;
+        CompletableFuture<byte[]> voiceReply;
+        long nextVoiceRequest;
+        szserver.voice.VoicePackets.Request lastVoiceRequest;
         float characterScale=1,configuredScale=1;boolean scaleCapable,scaleSaving,scaleRestore;long scaleHelloAt;ScaleChange scaleChange;
         final PlayerAnimation animation=new PlayerAnimation();final PlayerReplication replication=new PlayerReplication();final PlayerReplication botReplication=new PlayerReplication();final PlayerReplication cloneReplication=new PlayerReplication();final PlayerMotion motion=new PlayerMotion();String forcedAnimation;long lastCompletion;final Map<Integer,String> poses=new HashMap<>();
         boolean vehicleCapable,vehicleArticulation,vehicleFleet,vehicleContacts,vehicleInteractions;long vehicleCommandAt;
         boolean fpvCapable;long fpvOwnerSent;final Map<UUID,Long> fpvWorldSent=new HashMap<>();final Set<UUID> fpvUsed=new HashSet<>();
-        final InetSocketAddress address;final UUID incarnation=UUID.randomUUID();final int id,clientId;final byte[] cookie;final long challengeStarted=System.nanoTime();final ReliableRetryTiming retryTiming=new ReliableRetryTiming();final Lane[] lanes={new Lane(),new Lane()};
+        final InetSocketAddress address;final UUID incarnation=UUID.randomUUID();final int id,clientId;final byte[] cookie;final long challengeStarted=System.nanoTime();final ReliableRetryTiming retryTiming=new ReliableRetryTiming();final Lane[] lanes={new Lane(),new Lane()};final ChunkSendWindow chunkSend=new ChunkSendWindow();
         SicknessState sickness=SicknessState.EMPTY;Map<String,SicknessRules.State> sicknessSent=Map.of();Map<String,Float> sicknessExposure=Map.of(),sicknessExposureSent=Map.of();long sicknessSendAt;CharacterEffects effects=new CharacterEffects();MedicineUse medicineUse;GrenadePulseEffects pulses=new GrenadePulseEffects();final AreaEffects areaEffects=new AreaEffects();List<AreaExposure.Contact> selectedAreas=List.of();Map<String,Float> stats=Map.of();long lastDamage,lastVitals,damageWall,deadUntil,effectsExpireBefore;double[] velocity=new double[3];CharacterLocations.PlayerState restoredState,lastStateRequest;CharacterLocations.StateSave stateSave,respawnStateSave;CompletableFuture<Void> joinVitals;boolean vitalsQueued;
-        byte[] movementConfiguration;float stamina=1,maxStamina=1,observedStamina=1;long lastInput,lastStaminaCorrection;Float reportedStamina;
+        byte[] movementConfiguration,lastMovementConfigurationSent;float stamina=1,maxStamina=1,observedStamina=1;long lastInput,lastStaminaCorrection;Float reportedStamina;
         final Set<BotKey> bots=new HashSet<>();final Map<BotKey,Float> botHealth=new HashMap<>(),botMaximum=new HashMap<>();final Map<BotKey,szserver.world.ActorPresentation> botAppearances=new HashMap<>();
         TerrainProjection.Prepared completeTiles;int completeTileAt;
         final ChunkFaults faults=new ChunkFaults();final ChunkDeliveryBook deliveries=new ChunkDeliveryBook();final Map<Long,UUID> cachedRequests=new HashMap<>();long manifestRetryAt;
@@ -83,22 +91,32 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         final WorldEditChat editor=new WorldEditChat();
         PlayerRules.Mode gameplayMode=PlayerRules.Mode.STALKER;String faction="stalker";
         boolean pointFunnelImpacts, boltImpactEffects, weaponActionEvents;
+        boolean nearbyCapable,profileEquipmentCapable;
+        long joinedNanos,nextNativeSquadPositions;
+        PlayerSquads.Roster nativeSquad;
+        List<NativeSocialPackets.Position> nativeSquadPositions=List.of();
+        int nearbyRadius=50,radarPlayers;
+        long nextRadarRefresh;
+        boolean mapSquadOnly;
+        PlayerMapSnapshot mapSnapshot;
+        long nextNearby;
         int visualHand=-1;long visualHandUntil;
-        final GrenadeUse grenadeUse=new GrenadeUse();int grenadePrediction=-1;
+        final GrenadeUse grenadeUse=new GrenadeUse();int grenadePrediction=-1;long nextVrBolt;
         UUID grenadeDeath;long reviveCheckAt;CorpseLifecycle.Corpse<Recipient> lastCorpse;Swing swing;long nextAttack,life,deathGeneration,drawUntil;Integer lastShotClientTick;
-        CompletableFuture<LocalAccounts.Grant> authentication;UUID loginProtocol;CompletableFuture<Integer> placement;CompletableFuture<Void> spawnSave;CompletableFuture<Integer> spawnCheck;long spawnDeadline,nextSpawnCheck;World.Vec requestedSpawn;UUID spawnScope;double[][] candidates;int candidate;long placementDeadline,nextPlacement;boolean positioned,inventoryReady,respawning;long last=System.nanoTime();boolean accepted,ready;final InventoryScreen inventoryScreen=new InventoryScreen();int handContainer=HandPackets.PRIMARY;HandPackets.HeldOverride handOverride;GameInventory.Weapon weapon;LocalAccounts.Grant grant;int entity,clientTick,sequence,rounds,reserve,reloadCount;long lastShot,reloadAt;Unjamming unjamming;boolean unjammingPending;float hp=100,maxHp=100,yaw,pitch;double[] pos;byte[][] magazines;final PlayerPosture posture=new PlayerPosture();int mode;double speed;boolean ground=true,holstered;UUID firearm;final ChunkSubscriptions chunks=new ChunkSubscriptions();final Map<Long,Long> chunkRevisions=new HashMap<>();TerrainProjection.Prepared deltas;long deltaChunk;int deltaAt;final Set<Long> pendingChunks=new LinkedHashSet<>();int chunkX=Integer.MIN_VALUE,chunkZ=Integer.MIN_VALUE;final Map<ShotKey,Long> seenShots=new LinkedHashMap<>();
+        CompletableFuture<LocalAccounts.Grant> authentication;UUID loginProtocol;CompletableFuture<Integer> placement;CompletableFuture<Void> spawnSave;CompletableFuture<Integer> spawnCheck;long spawnDeadline,nextSpawnCheck;World.Vec requestedSpawn;UUID spawnScope;double[][] candidates;int candidate;long placementDeadline,nextPlacement;boolean positioned,inventoryReady,respawning;long last=System.nanoTime();boolean accepted,ready;final InventoryScreen inventoryScreen=new InventoryScreen();int handContainer=HandPackets.PRIMARY;HandPackets.HeldOverride handOverride;GameInventory.Weapon weapon;LocalAccounts.Grant grant;int entity,clientTick,sequence,rounds,reserve,reloadCount;long lastShot,reloadAt;Unjamming unjamming;boolean unjammingPending;float hp=100,maxHp=100,yaw,pitch;double[] pos;final PlayerPosture posture=new PlayerPosture();int mode;double speed;boolean ground=true,holstered;UUID firearm;final ChunkSubscriptions chunks=new ChunkSubscriptions();final Map<Long,Long> chunkRevisions=new HashMap<>();TerrainProjection.Prepared deltas;long deltaChunk;int deltaAt;final Set<Long> pendingChunks=new LinkedHashSet<>();int chunkX=Integer.MIN_VALUE,chunkZ=Integer.MIN_VALUE;final Map<ShotKey,Long> seenShots=new LinkedHashMap<>();
         Session(InetSocketAddress address,int id,int clientId,byte[] cookie,ChunkStreamingSettings settings){this.address=address;this.id=id;this.clientId=clientId;this.cookie=cookie;window=new ChunkWindow(settings.distance(),settings.outstandingLimit());}
         long authenticationOrder;CompletableFuture<Boolean> accountPreparation;CompletableFuture<Void> inventoryPreparation;boolean inventoryPinned;CharacterLocations.Lease locationLease;UUID locationProtocol;Teleport teleport;final TeleportGuard teleportGuard=new TeleportGuard();CompletableFuture<Void> warpSave;String warpReply;CompletableFuture<World.Vec> warpRead;String warpReadName;long warpReadLife;
         final PortalLookup portalLookup=new PortalLookup();long portalUntil;final Map<UUID,PortalStatus> portalStatuses=new LinkedHashMap<>();CompletableFuture<JsonObject> sceneInteraction;long sceneInteractionAt;
         CompletableFuture<szserver.persistence.WorldEnvironment.State> environmentSave;boolean weatherCommand;final EnvironmentAccess.Client environmentClient=new EnvironmentAccess.Client();CompletableFuture<String> allianceChange;boolean factionChanging;
         final ArrayDeque<CompletableFuture<NativeBlockAccess.Outcome>> blockSaves=new ArrayDeque<>();final LinkedHashMap<Long,BlockRepair> blockRepairs=new LinkedHashMap<>();
         UUID anomalyStasis;long anomalyMirrorUntil;float anomalySlow=1;final Set<UUID> anomalyCircuses=new HashSet<>();
-        final Map<Integer,CompletableFuture<byte[]>> sceneReads=new LinkedHashMap<>();final UUID sceneWriter=UUID.randomUUID();final ArrayDeque<CompletableFuture<JsonObject>> sceneSaves=new ArrayDeque<>();
+        final Map<Integer,SceneRead> sceneReads=new LinkedHashMap<>();final UUID sceneWriter=UUID.randomUUID();final ArrayDeque<SceneSave> sceneSaves=new ArrayDeque<>();
+        long nextSceneErrorLog;
         PhysicalReload.Cycle physicalCycle;boolean physicalPending;PhysicalReload.Request physicalLast;UUID physicalIdentity;byte[] physicalReply;
         final WeaponActions weaponActions=new WeaponActions();LauncherReload launcherReload;
         Inventory.Address adminSelected;int creativeSelected;final Map<Integer,Integer> creativeHints=new HashMap<>();
         final ArrayDeque<NativeGrant> nativeGrants=new ArrayDeque<>();int nativeGrantBytes;boolean nativeGrantPending;
-        final Set<UUID> worldItemsSeen=new HashSet<>();int dropSequence=-1;long lastItemDrop;
+        final Map<UUID,ItemMotion> worldItemsSeen=new HashMap<>();int dropSequence=-1;long lastItemDrop,lastItemPickup;
         int lootboxItem=-1,lootSequence;final LinkedHashMap<Integer,LootReply> lootReplies=new LinkedHashMap<>();
     }
     private static final class BlockRepair {final Set<World.Block> points=new LinkedHashSet<>();CompletableFuture<NativeBlockAccess.Repair> future;}
@@ -110,7 +128,9 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
     private final NativeBlockAccess nativeBlocks;private long nativeBlockDenied,nativeBlockFailed,nativeBlockIntents,nativeBlockRepairs;
     private final CommandService commands;
     private final ZombieHorde zombies;
-    private final szserver.commands.SceneAccess sceneAccess;private long sceneDenied,sceneFailed;
+    private record SceneRead(UUID object,CompletableFuture<byte[]> future){}
+    private record SceneSave(long started,CompletableFuture<JsonObject> future){}
+    private final szserver.commands.SceneAccess sceneAccess;private long sceneDenied,sceneFailed,sceneUnplaced;private double sceneMaxWriteMs;
     private final AnomalySimulation anomalies;
     private CompletableFuture<szserver.world.MapObstructionAccess.AnomalyQuery> anomalyQuery;
     private szserver.world.MapObstructionAccess.AnomalyQuery anomalyScene;
@@ -120,12 +140,17 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
     private final LocalAccounts accounts;
     private final CharacterLocations locations;
     private final szserver.persistence.WarpStore warps;
+    private final PlayerSquads squads=new PlayerSquads();
+    private final WorldLocationName locationName;
+    private Session locationNameRequester;
+    private CompletableFuture<String> locationNameSave;
     private final szserver.persistence.WorldEnvironment environment;private final EnvironmentAccess environmentAccess;private long environmentRevision=-1,nextEnvironmentClock;
     private long teleports,teleportErrors,staleTeleportInputs;
     private long portalQueries,portalActivations,portalErrors;
     private long nextLocationFlush;
     private final GameInventory inventories;
     private final AllianceState allianceState;private long allianceRevision;
+    private final Path serverOwnerProfile=Optional.ofNullable(System.getProperty("bscp.serverOwnerProfile")).map(Path::of).orElse(null);
     private static final class VitalsTask {final UUID id;final Session session;final Runnable finished;CompletableFuture<Void> save;boolean held=true;VitalsTask(UUID id,Session session,Runnable finished){this.id=id;this.session=session;this.finished=finished;}}
     private record ReviveCheck(Session target,GrenadeAreaStore.Activation source,int profile,UUID death,long life,double[] position,CompletableFuture<Integer> placement){}
     private final Map<UUID,ReviveCheck> reviveChecks=new LinkedHashMap<>();private long revives,reviveDenied,reviveErrors;
@@ -134,6 +159,8 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
     private long vitalsCommits,vitalsCommitFailures;
     private final AdminInventories adminInventories;
     private record InventoryTransfer(int packet,InventoryPackets.Request request,int page){}
+    private record QueuedDrop(int sequence,long life,Inventory.Address source,ItemStack expected){}
+    private final InventoryTransferQueue<Session,QueuedDrop> itemDrops=new InventoryTransferQueue<>(64,256*1024,1024,4*1024*1024);
     private final InventoryTransferQueue<Session,InventoryTransfer> inventoryTransfers=new InventoryTransferQueue<>(256,512*1024,2048,8*1024*1024);
     private final ArrayBlockingQueue<Runnable> adminTasks=new ArrayBlockingQueue<>(64);
     private final ClientScreenshots screenshots=new ClientScreenshots();
@@ -164,6 +191,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
     private FpvExplosion fpvExplosion;
     private GameGrenades grenadeBridge;private final GrenadeOutbox grenadeOutbox;private final GrenadeAreaStore grenadeAreas;private final GrenadeCompletion grenadeCompletion;private final GrenadeAreaScenes grenadeAreaScenes;
     private final Map<Integer,GrenadeUse.Rules> boltRules;
+    private final ItemStack defaultBolt;
     private final Map<Integer,GrenadePackets.Profile> grenadeProfiles=new HashMap<>();private final Map<Integer,GrenadeUse.Rules> grenadeUseRules=new HashMap<>();
     private final AreaRelations areaRelations;private final int continuousEffectKind,instantEffectKind;private final Map<Integer,BlastRules> blastRules=new HashMap<>();
     private final Map<Integer,List<GrenadeAreaProfile>> grenadeAreaProfiles=new HashMap<>(),enabledAreaProfiles=new HashMap<>();
@@ -240,11 +268,16 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
     private final ChunkStreamingSettings chunkSettings;
     private final ChunkManifests chunkManifests;private long manifestsSent,manifestEntries,manifestStale,manifestFailures,chunkCacheHits,chunkFullResponses,chunkDuplicateDemands,chunkDeferredDemands,chunkReleased;
     private final Map<InetSocketAddress,Session> sessions=new LinkedHashMap<>();
-    private final byte[][] baseMagazines=new byte[31][];
+    private final byte[] starterMagazine;
     private final ConnectionRoutes routes;
     private volatile boolean running,closed;
     private volatile Map<String,Object> metrics=Map.of();
     private int tick;
+    private final Set<Session> ackPending=new HashSet<>();
+    private long outboundReliableDatagrams,reliableUdpDatagrams,reliableUdpBytes,ackOnlyDatagrams,mixedAckDatagrams,acknowledgedSegments,chunkPayloadBytes;
+    private long chunkPeakInFlight,chunkGapRetries;
+    private long shortMovementTicks,fullMovementTicks,chunkBackgroundDeferred;
+    private record ItemMotion(World.Vec position,World.Vec velocity) {}
     private long rejected,inputs,shots,hits,retries,retired,maxTickNanos,skipped,deaths,respawns,tileRefreshes,bulkBlockRefreshes;
     private final Map<String,Long> disconnectReasons=new LinkedHashMap<>();
     private final ArrayDeque<Map<String,Object>> recentDisconnects=new ArrayDeque<>();
@@ -276,7 +309,19 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         this(root,data,runtime,registry,httpPort,gatewayPort,udpPort,world,terrain,spawn,commands,worldEditors,playerRules,routes,chunkSettings,fpvSettings,true);
     }
     /** Prepare native codecs, inventories, stores and bound sockets without starting gameplay. */
+    private final szserver.voice.VoiceTokens voiceTokens;
+
     public GameServer(Path root,Path data,Path runtime,Path registry,int httpPort,int gatewayPort,int udpPort,WorldLoop world,szserver.world.Terrain terrain,double[] spawn,CommandService commands,Set<UUID> worldEditors,PlayerRules playerRules,ConnectionRoutes routes,ChunkStreamingSettings chunkSettings,FpvPlacementSettings fpvSettings,boolean autoStart)throws Exception{
+        this(root,data,runtime,registry,httpPort,gatewayPort,udpPort,world,terrain,spawn,commands,worldEditors,playerRules,routes,chunkSettings,fpvSettings,autoStart,null);
+    }
+
+    public GameServer(Path root,Path data,Path runtime,Path registry,int httpPort,int gatewayPort,int udpPort,WorldLoop world,szserver.world.Terrain terrain,double[] spawn,CommandService commands,Set<UUID> worldEditors,PlayerRules playerRules,ConnectionRoutes routes,ChunkStreamingSettings chunkSettings,FpvPlacementSettings fpvSettings,boolean autoStart,szserver.voice.VoiceTokens voiceTokens)throws Exception{
+        this(root,data,runtime,registry,httpPort,gatewayPort,udpPort,world,terrain,spawn,commands,worldEditors,playerRules,routes,chunkSettings,fpvSettings,autoStart,voiceTokens,null);
+    }
+
+    public GameServer(Path root,Path data,Path runtime,Path registry,int httpPort,int gatewayPort,int udpPort,WorldLoop world,szserver.world.Terrain terrain,double[] spawn,CommandService commands,Set<UUID> worldEditors,PlayerRules playerRules,ConnectionRoutes routes,ChunkStreamingSettings chunkSettings,FpvPlacementSettings fpvSettings,boolean autoStart,szserver.voice.VoiceTokens voiceTokens,szserver.world.ResidentCharacterState saved)throws Exception{
+        this.voiceTokens=voiceTokens;
+        boolean resident=saved!=null;
         szserver.client.NpcVisuals.prepare(runtime);
         NpcEditorHooks.prepare(this,data,runtime);
         ArrayDeque<AutoCloseable> rollback=new ArrayDeque<>();List<Thread> started=new ArrayList<>();rollback.push(screenshots);
@@ -284,6 +329,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         rollback.push(()->Workers.stop(logins));
         // SecureRandom lazily seeds on first use; keep that cold path off the game owner.
         random.nextBytes(new byte[20]);UUID.randomUUID();
+        locationName=new WorldLocationName(data);rollback.push(locationName);
         this.routes=Objects.requireNonNull(routes);this.chunkSettings=Objects.requireNonNull(chunkSettings);
         // Prepare the same session/challenge call sites before the transport owner receives its first hello.
         challengeBytes(new Session(new InetSocketAddress("127.0.0.1",0),0,0,new byte[20],this.chunkSettings));
@@ -294,17 +340,23 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         this.world=Objects.requireNonNull(world);this.regions=terrain instanceof szserver.world.RegionTerrain r?r:null;this.spawn=spawn.clone();
         Path liveConfigs=root.resolve("resources/configs");
         var anomalyResources=GameResources.isFile(liveConfigs.resolve("assets/anomalies/anomaly_config.json"))?liveConfigs:world.actorMotion() instanceof NativeActorMotion nativeMotion&&nativeMotion.anomalyResources()!=null?nativeMotion.anomalyResources():fpvSettings.boxes();anomalies=new AnomalySimulation(new Random(),szserver.world.NativeAnomalyDefaults.damage(anomalyResources));
-        fpvMap=new szserver.world.MapObstructionAccess(world,terrain,fpvSettings.boxes(),fpvSettings.baseBytes(),fpvSettings.editedBytes(),regions==null?szserver.world.SceneRegistry.load(registry.resolveSibling("active-stock-gameobjects.json")).names():regions.collisionDefinitions());rollback.push(fpvMap);zombies=new ZombieHorde(world,commands,fpvMap);fpvReceipts=new FpvReceipts(data);rollback.push(fpvReceipts);
+        fpvMap=new szserver.world.MapObstructionAccess(world,terrain,fpvSettings.boxes(),fpvSettings.baseBytes(),fpvSettings.editedBytes(),regions==null?szserver.world.SceneRegistry.load(registry.resolveSibling("active-stock-gameobjects.json")).names():regions.collisionDefinitions());rollback.push(fpvMap);zombies=new ZombieHorde(world,commands,fpvMap);fpvReceipts=resident?FpvReceipts.inMemory():new FpvReceipts(data);rollback.push(fpvReceipts);
         if(world.beforeStart())world.bootstrap(w->{w.actorMaps(fpvMap);return true;});else world.submit(w->{w.actorMaps(fpvMap);return true;}).get(5,TimeUnit.SECONDS);
-        locations=new CharacterLocations(data,regions==null?"flat:arena-v1":regions.identity());rollback.push(locations);allianceState=new AllianceState(data);rollback.push(allianceState);warps=new szserver.persistence.WarpStore(data);rollback.push(warps);environment=commands.environment();environmentAccess=new EnvironmentAccess(environment,new szserver.persistence.WeatherConfigurations(data,runtime));rollback.push(environmentAccess);
+        String worldIdentity=regions==null?"flat:arena-v1":regions.identity();
+        locations=resident?CharacterLocations.resident(data,worldIdentity,saved.locationRows()):new CharacterLocations(data,worldIdentity);rollback.push(locations);allianceState=new AllianceState(data);rollback.push(allianceState);warps=new szserver.persistence.WarpStore(data);rollback.push(warps);environment=commands.environment();environmentAccess=new EnvironmentAccess(environment,new szserver.persistence.WeatherConfigurations(data,runtime),regions);rollback.push(environmentAccess);
         packets=new GamePackets(root.resolve("fixtures/world-ready.b64"));nativePackets=new ClientPackets(runtime);rollback.push(nativePackets);nativePackets.input(Wire.bytes(o->{o.writeByte(7);o.writeFloat(0);o.writeInt(0);o.write(new byte[8]);o.writeInt(0);o.writeDouble(.5);o.writeDouble(1);o.writeDouble(.5);o.writeFloat(0);o.writeFloat(0);o.writeInt(1);o.writeInt(0);o.writeInt(1);o.writeFloat(.05f);o.writeByte(0);}),false);
-        fpvExplosion=new FpvExplosion(root.resolve("fixtures/fpv-fab100.bin"));nativePackets.roundTrip(FpvExplosion.PACKET,fpvExplosion.body(new FpvPackets.Vector(0,64,0)));staminaRules=nativePackets.staminaRules();terrainProjection=new TerrainProjection(world,regions,packets,256);rollback.push(terrainProjection);nativeBlocks=new NativeBlockAccess(world,regions,terrainProjection,commands);rollback.push(nativeBlocks);nativePackets.roundTrip("146340354",new byte[20]);
+        NativeSocialPackets.verify(nativePackets);
+        nativePackets.roundTrip("738572698",new byte[0]);
+        nativePackets.roundTrip("306768345",nativePackets.playerProfile("Player","stalkers","BSCPCRAFT",0,0));
+        fpvExplosion=new FpvExplosion(root.resolve("fixtures/fpv-fab100.bin"));nativePackets.roundTrip(FpvExplosion.PACKET,fpvExplosion.body(new FpvPackets.Vector(0,64,0)));staminaRules=nativePackets.staminaRules();terrainProjection=new TerrainProjection(world,regions,packets,TerrainProjection.STREAM_CACHE_ENTRIES);rollback.push(terrainProjection);nativeBlocks=new NativeBlockAccess(world,regions,terrainProjection,commands);rollback.push(nativeBlocks);nativePackets.roundTrip("146340354",new byte[20]);
         chunkManifests=new ChunkManifests(world,regions,packets);rollback.push(chunkManifests);nativePackets.roundTrip("1980173742",ChunkManifestPackets.body(List.of()));nativePackets.roundTrip("297896610",ChunkManifestPackets.body(List.of()));szserver.client.ChunkDistancePackets.warm(nativePackets,chunkSettings.distance());
         // No factory construction/codec cold path in the transport owner.
-        try(GameItems items=new GameItems(runtime,registry)){byte[] empty=items.create(20004,new JsonObject());for(int n=0;n<=30;n++)baseMagazines[n]=items.magazine(empty,12714,n);}
-        for(var e:com.google.gson.JsonParser.parseString(Files.readString(root.resolve("fixtures/equipment-appearances.json"))).getAsJsonObject().entrySet())appearances.put(Integer.parseInt(e.getKey()),HexFormat.of().parseHex(e.getValue().getAsString()));inventories=new GameInventory(root,data,runtime,registry);rollback.push(inventories);itemWorld=regions==null?"flat:arena-v1":regions.identity();worldItems=new szserver.world.WorldItems(fpvMap,itemWorld,entityIds::actor);rollback.push(worldItems);if(fpvSettings.toggleItemId()!=0)inventories.catalog().get(fpvSettings.toggleItemId());GrenadePackets.verifyRelease(root,runtime);LauncherPackets.verifyRelease(root,runtime);UnderbarrelPackets.verifyRelease(root,runtime);
+        try(GameItems items=new GameItems(runtime,registry)){byte[] empty=items.create(20004,new JsonObject());starterMagazine=items.magazine(empty,12714,30);}
+        for(var e:com.google.gson.JsonParser.parseString(Files.readString(root.resolve("fixtures/equipment-appearances.json"))).getAsJsonObject().entrySet())appearances.put(Integer.parseInt(e.getKey()),HexFormat.of().parseHex(e.getValue().getAsString()));inventories=new GameInventory(root,data,runtime,registry,0,saved);rollback.push(inventories);itemWorld=regions==null?"flat:arena-v1":regions.identity();worldItems=new szserver.world.WorldItems(fpvMap,itemWorld,entityIds::actor);rollback.push(worldItems);if(fpvSettings.toggleItemId()!=0)inventories.catalog().get(fpvSettings.toggleItemId());GrenadePackets.verifyRelease(root,runtime);LauncherPackets.verifyRelease(root,runtime);UnderbarrelPackets.verifyRelease(root,runtime);
         for(var e:inventories.explosives().entrySet())try{var definition=inventories.catalog().get(e.getKey()).properties();blastRules.put(e.getKey(),nativePackets.blastRules(definition.has("explosive_props")?definition.getAsJsonObject("explosive_props"):definition));var areas=nativePackets.grenadeAreas(e.getKey(),definition);if(!areas.isEmpty()){grenadeAreaProfiles.put(e.getKey(),areas);throw new IllegalArgumentException("grenade_area_gameplay_pending");}var profile=nativePackets.grenadeProfile(definition);if(e.getValue().radius()>128)throw new IllegalArgumentException("grenade_radius_budget");var use=nativePackets.grenadeUse(e.getKey(),definition);grenadeProfiles.put(e.getKey(),profile);grenadeUseRules.put(e.getKey(),use);}catch(IllegalArgumentException unsupported){grenadeUnavailable.put(e.getKey(),unsupported.getMessage());}
         boltRules=inventories.warmBolts();
+        defaultBolt=inventories.defaultBolt();
+        if(!boltRules.containsKey(defaultBolt.id()))throw new IllegalStateException("native_default_bolt_unregistered");
         Path compatibilityResources=root.resolve("fixtures/native-resources");
         SicknessPackets.verify(root,runtime,liveConfigs);
         AreaRelations.verify(root,runtime,liveConfigs);
@@ -321,8 +373,8 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         grenadeAreaScenes=new GrenadeAreaScenes(root,runtime,registry,fpvSettings.boxes(),regions==null?Map.of():regions.collisionDefinitions(),grenadeAreaProfiles,inventories.explosives(),regions==null?null:regions.sceneResources(),effectOnlyAreas);rollback.push(grenadeAreaScenes);
         for(int item:grenadeAreaScenes.items())try{var definition=inventories.catalog().get(item).properties();var profile=nativePackets.grenadeProfile(definition);var use=nativePackets.grenadeUse(item,definition);grenadeProfiles.put(item,profile);grenadeUseRules.put(item,use);enabledAreaProfiles.put(item,grenadeAreaProfiles.get(item));grenadeUnavailable.remove(item);}catch(IllegalArgumentException unsupported){grenadeUnavailable.put(item,unsupported.getMessage());}
         nativePackets.roundTrip(GrenadeAreaPackets.REMOVE,Wire.bytes(out->out.writeInt(Integer.MIN_VALUE)));
-        grenadeOutbox=new GrenadeOutbox(data,regions==null?"flat:arena-v1":regions.identity());rollback.push(grenadeOutbox);inventories.repairGrenadeReceipts(grenadeOutbox);
-        grenadeAreas=new GrenadeAreaStore(data,regions==null?"flat:arena-v1":regions.identity());rollback.push(grenadeAreas);grenadeCompletion=new GrenadeCompletion(grenadeOutbox,grenadeAreas);grenadeCompletion.recover(System.currentTimeMillis());grenadeBridge=new GameGrenades(inventories,world,grenadeOutbox,grenadeAreas,enabledAreaProfiles);
+        grenadeOutbox=resident?GrenadeOutbox.inMemory():new GrenadeOutbox(data,worldIdentity);rollback.push(grenadeOutbox);if(!resident)inventories.repairGrenadeReceipts(grenadeOutbox);
+        grenadeAreas=resident?GrenadeAreaStore.inMemory():new GrenadeAreaStore(data,worldIdentity);rollback.push(grenadeAreas);grenadeCompletion=new GrenadeCompletion(grenadeOutbox,grenadeAreas);grenadeCompletion.recover(System.currentTimeMillis());grenadeBridge=new GameGrenades(inventories,world,grenadeOutbox,grenadeAreas,enabledAreaProfiles);
         combatBarriers=new CombatBarrierQueue((from,to,at)->grenadeAreaScenes.shieldContact(grenadeAreas.states(),from,to,at),grenadeAreas::hitShield);
         for(var area:grenadeAreas.states())grenadeAreaScenes.validate(area);
         for(var restored:grenadeOutbox.states()){
@@ -335,12 +387,13 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         nativePackets.roundTrip(GrenadePackets.START,new byte[4]);nativePackets.roundTrip(GrenadePackets.THROW,new byte[16]);nativePackets.roundTrip(GrenadePackets.UPDATE,new byte[28]);nativePackets.roundTrip(GrenadePackets.PREDICTION,new byte[8]);
         medicines=inventories.medicines();statOrdinals=inventories.statOrdinals();warmAppearances();accounts=new LocalAccounts(httpPort,routes,data.resolve("local-accounts.json"),inventories::lobbyPreview,inventories::ensureDefaults,false);rollback.push(accounts);gateway=new ServerSocket();rollback.push(gateway);gateway.bind(new InetSocketAddress(routes.bindAddress(),gatewayPort),32);udp=new DatagramSocket(null);rollback.push(udp);udp.bind(new InetSocketAddress(routes.bindAddress(),udpPort));udp.setReceiveBufferSize(4*1024*1024);udp.setSoTimeout(2);
         CreativeGiveHooks.bind(this);
-        adminInventories=new AdminInventories(data,inventories,accounts::characterExists,this::adminTask,this::syncAdminInventory);rollback.push(adminInventories);commands.bindPlayerInventories(adminInventories);
+        adminInventories=new AdminInventories(data,inventories,accounts::characterExists,this::adminTask,this::syncAdminInventory,resident);rollback.push(adminInventories);commands.bindPlayerInventories(adminInventories);
         rollback.push(()->commands.unbindPlayerInventories(adminInventories));
         characterDeletions=new CharacterDeletions(inventories,locations,this::adminTask,id->{for(Session active:new ArrayList<>(sessions.values()))if(active.grant!=null&&id.equals(active.grant.characterId()))remove(active);});rollback.push(characterDeletions);
         accounts.bindCharacterDeletion(characterDeletions::prepare);
         accounts.recoverCharacterDeletions(id->inventories.deleteOffline(id).thenCompose(ignored->locations.deleteCharacter(id))).get(30,TimeUnit.SECONDS);
         inventories.repairVitalsReceipts(locations);
+        if(resident)saved.attach(inventories.characterState(),locations);
         acceptor=new Thread(this::accept,"gateway-accept");acceptor.setDaemon(true);transport=new Thread(this::run,"native-game-owner");transport.setDaemon(true);started.add(acceptor);started.add(transport);if(autoStart)start();
         System.out.println("Native arena HTTP="+httpPort+" TCP="+gatewayPort+" UDP="+udpPort);
         rollback.clear();
@@ -353,6 +406,11 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         catch(RuntimeException|Error failure){running=false;for(AutoCloseable socket:List.of(gateway,udp))try{socket.close();}catch(Exception cleanup){failure.addSuppressed(cleanup);}throw failure;}
     }
     public Map<String,Object> metrics(){var view=new LinkedHashMap<String,Object>(metrics);view.put("running",running);view.put("closed",closed);view.put("listenerPorts",Map.of("http",accounts.port(),"gateway",gateway.getLocalPort(),"world",udp.getLocalPort()));view.put("adminInventory",adminInventories.metrics());return Collections.unmodifiableMap(view);}
+    public List<String> connectedPlayerNames(){
+        if(!(metrics.get("players") instanceof List<?> players))return List.of();
+        return players.stream().filter(Map.class::isInstance).map(Map.class::cast)
+                .map(row->row.get("name")).filter(String.class::isInstance).map(String.class::cast).toList();
+    }
     public LocalAccounts developmentAccounts(){return accounts;}
     public CharacterLocations developmentLocations(){return locations;}
     public boolean healthy(){return running&&!closed&&environmentAccess.configurations.healthy()&&grenadeAreaScenes.healthy()&&grenadeBridge.healthy()&&acceptor.isAlive()&&transport.isAlive()&&accounts.healthy()&&locations.healthy()&&inventories.healthy()&&adminInventories.healthy()&&warps.healthy()&&environment.healthy()&&fpvMap.healthy()&&fpvReceipts.healthy()&&(regions==null||regions.healthy());}
@@ -378,6 +436,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
             catch(Exception e){rejected++;if(rejected<=5)System.err.println("native packet rejected: "+e);}
             maxSocketWaitNanos=Math.max(maxSocketWaitNanos,socketWait);maxReceiveNanos=Math.max(maxReceiveNanos,receiveWork);
             drainApplications(deadline);
+            if(System.nanoTime()<deadline)flushDueAcks(System.nanoTime());
             long completionBegin=System.nanoTime();inventories.drain();grenadeBridge.drain();advanceGrenades();advanceMines();advanceGrenadeAreas();advanceVitals();advancePlayerStates();advanceQuickSlots();drainAdminTasks();characterDeletions.advance();advanceFpvPlacements();drainCombat();long now=System.nanoTime(),completionWork=now-completionBegin;maxCompletionNanos=Math.max(maxCompletionNanos,completionWork);
             if(now>=deadline){
                 long late=now-deadline,gap=lastTickBegin==0?0:now-lastTickBegin;lastTickBegin=now;maxTickLateNanos=Math.max(maxTickLateNanos,late);maxTickGapNanos=Math.max(maxTickGapNanos,gap);
@@ -389,56 +448,139 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         }
     }
     private void sendRaw(Session s,byte[] bytes)throws IOException{udp.send(new DatagramPacket(bytes,bytes.length,s.address));}
-    private void enqueueOrRetire(Session s,byte[] stream){if(sessions.get(s.address)!=s)return;try{enqueue(s,0,stream);}catch(IllegalStateException slow){sessionError(s,"outbound_backpressure",slow);}}
-    private void reliable(Session s,int lane,int kind,int sequence,int time,byte[] payload)throws IOException{sendRaw(s,Wire.bytes(o->{o.writeInt(s.id);o.writeByte(lane);o.writeByte(kind);o.writeByte(0);o.writeShort(WINDOW);o.writeInt(time);o.writeInt(sequence);o.writeInt(s.lanes[lane].rx);o.writeInt((kind&7)==1?payload.length:1);o.write(payload);}));}
-    private void enqueue(Session s,int lane,byte[] stream){if(s.vehicleCapable)stream=VehicleEnvelope.current(stream);Lane l=s.lanes[lane];int count=(stream.length+FRAGMENT-1)/FRAGMENT;if(l.queued.size()+count>MAX_QUEUE)throw new IllegalStateException("reliable_output_limit");for(int i=0;i<stream.length;i+=FRAGMENT)l.queued.add(Arrays.copyOfRange(stream,i,Math.min(stream.length,i+FRAGMENT)));}
+    private void enqueueOrRetire(Session s,byte[] stream){enqueueOrRetire(s,0,stream);}
+    private void enqueueOrRetire(Session s,int lane,byte[] stream){if(sessions.get(s.address)!=s)return;try{enqueue(s,lane,stream);}catch(IllegalStateException slow){sessionError(s,"outbound_backpressure",slow);}}
+    private void enqueue(Session s,int lane,byte[] stream){
+        if(s.vehicleCapable)stream=VehicleEnvelope.current(stream);
+        s.lanes[lane].queued.append(stream);
+    }
+    private ByteBuffer reliablePacket(Session session,int lane){
+        return ByteBuffer.allocate(UDP_BYTES).putInt(session.id).put((byte)lane);
+    }
+    private void sendReliablePacket(Session session,ByteBuffer packet,boolean data,int acks)throws IOException{
+        udp.send(new DatagramPacket(packet.array(),packet.position(),session.address));
+        reliableUdpDatagrams++;reliableUdpBytes+=packet.position();acknowledgedSegments+=acks;
+        if(acks>0){if(data)mixedAckDatagrams++;else ackOnlyDatagrams++;}
+    }
+    private void sendAcks(Session session,int lane)throws IOException{
+        Lane output=session.lanes[lane];
+        while(!output.acks.isEmpty()){
+            ByteBuffer packet=reliablePacket(session,lane);
+            int acks=output.acks.writeTo(packet,WINDOW,output.rx);
+            sendReliablePacket(session,packet,false,acks);
+        }
+    }
+    private void flushDueAcks(long now){
+        for(var it=ackPending.iterator();it.hasNext();){
+            Session session=it.next();
+            if(sessions.get(session.address)!=session){it.remove();continue;}
+            try{
+                for(int lane=0;lane<2;lane++)if(session.lanes[lane].acks.due(now))sendAcks(session,lane);
+            }catch(IOException failure){sessionError(session,"transport_ack_failed",failure);}
+            if(sessions.get(session.address)!=session||(session.lanes[0].acks.isEmpty()&&session.lanes[1].acks.isEmpty()))it.remove();
+        }
+    }
+    private void acknowledge(Session s,int lane,int sequence,int timestamp,long now)throws IOException{
+        ReliableAcks acks=s.lanes[lane].acks;
+        acks.add(sequence,timestamp,now);
+        ackPending.add(s);
+        if(acks.size()>=WINDOW)sendAcks(s,lane);
+    }
+    private void sendReliableData(Session session,int lane,ByteBuffer packet,int kind,int sequence,int time,byte[] payload)throws IOException{
+        if(packet.remaining()<20+payload.length){
+            finishReliableData(session,lane,packet);
+            packet.clear().putInt(session.id).put((byte)lane);
+        }
+        packet.put((byte)kind).put((byte)0).putShort((short)WINDOW)
+            .putInt(time).putInt(sequence).putInt(session.lanes[lane].rx).putInt(payload.length).put(payload);
+    }
+    private void finishReliableData(Session session,int lane,ByteBuffer packet)throws IOException{
+        if(packet.position()==5)return;
+        Lane output=session.lanes[lane];
+        int acks=output.acks.writeTo(packet,WINDOW,output.rx);
+        sendReliablePacket(session,packet,true,acks);
+    }
     private void flush(Session s,long now)throws IOException{
         for(int lane=0;lane<2;lane++){
             Lane outgoing=s.lanes[lane];
-            int budget=16;
+            boolean mapLane=lane==1&&s.ready;
+            int budget=mapLane?s.chunkSend.budget(tick,sessions.size()):16;
+            ByteBuffer packet=null;
             for(var entry:outgoing.sent.entrySet()){
                 if(budget==0)break;
                 Sent sent=entry.getValue();
-                if(now-sent.last<s.retryTiming.timeout(sent.attempts))continue;
-                if(sent.attempts>=40||now-sent.first>=30_000_000_000L)throw new IOException("reliable_stalled");
-                reliable(s,lane,129,entry.getKey(),(int)(now/1_000_000),sent.payload);
+                long sinceSent=now-sent.last;
+                boolean timedOut=sinceSent>=s.retryTiming.timeout(sent.attempts);
+                boolean gap=mapLane&&sent.attempts==1&&s.chunkSend.likelyGap(entry.getKey())&&sinceSent>=s.retryTiming.gapDelay();
+                if(!timedOut&&!gap)continue;
+                if(sent.attempts>=40||now-sent.first>=30_000_000_000L){
+                    long lastAckMs=outgoing.lastAck==0?-1:(now-outgoing.lastAck)/1_000_000;
+                    throw new IOException("reliable_stalled lane="+lane+" seq="+Integer.toUnsignedString(entry.getKey())
+                            +" ageMs="+(now-sent.first)/1_000_000+" attempts="+sent.attempts+" lastAckMs="+lastAckMs
+                            +" unacked="+outgoing.sent.size()+" queued="+outgoing.queued.size()
+                            +" rtoMs="+s.retryTiming.timeout(1)/1_000_000);
+                }
+                if(packet==null)packet=reliablePacket(s,lane);
+                sendReliableData(s,lane,packet,129,entry.getKey(),(int)(now/1_000_000),sent.payload);
                 entry.setValue(new Sent(sent.payload,sent.first,now,sent.attempts+1));
                 retries++;
-                budget--;
+                if(mapLane){
+                    s.chunkSend.loss(now,s.retryTiming.timeout(1));
+                    s.chunkSend.sent();
+                    if(!timedOut)chunkGapRetries++;
+                }
+                budget=Math.min(budget-1,15);
             }
-            while(budget-->0&&outgoing.sent.size()<WINDOW&&!outgoing.queued.isEmpty()){
+            while(budget-->0&&!outgoing.queued.isEmpty()
+                &&(mapLane?s.chunkSend.allows(outgoing.tx,outgoing.sent.size()):outgoing.sent.size()<WINDOW)){
                 byte[] payload=outgoing.queued.remove();
                 int seq=outgoing.tx++;
-                reliable(s,lane,1,seq,(int)(now/1_000_000),payload);
+                if(packet==null)packet=reliablePacket(s,lane);
+                sendReliableData(s,lane,packet,1,seq,(int)(now/1_000_000),payload);
+                outboundReliableDatagrams++;
                 outgoing.sent.put(seq,new Sent(payload,now,now,1));
+                if(mapLane){
+                    s.chunkSend.sent();
+                    chunkPayloadBytes+=payload.length;
+                    chunkPeakInFlight=Math.max(chunkPeakInFlight,outgoing.sent.size());
+                }
             }
+            if(packet!=null)finishReliableData(s,lane,packet);
+            if(outgoing.acks.due(now))sendAcks(s,lane);
         }
     }
-    private static void observeAck(Session session,Sent packet,long now){
+    private static void observeAck(Session session,Lane lane,Sent packet,long now){
+        if(packet==null)return;
+        lane.lastAck=now;
         // A retransmitted packet's ACK cannot identify which send arrived.
-        if(packet!=null&&packet.attempts==1)session.retryTiming.observe(now-packet.last);
+        if(packet.attempts==1)session.retryTiming.observe(now-packet.last);
     }
     private void receive(InetSocketAddress address,byte[] raw)throws Exception{if(raw.length<5)throw new IOException("datagram_header");ByteBuffer b=ByteBuffer.wrap(raw);int connection=b.getInt(),type=b.get()&255;datagrams.merge(type,1L,Long::sum);Session s=sessions.get(address);
         if(type==20){if(raw.length<6||raw.length>512||b.get()!=1)throw new IOException("hello_version");if(s!=null&&s.clientId==connection){if(!s.accepted)challenge(s);return;}if(s!=null)remove(s,"udp_address_reused");if(sessions.size()>=MAX_SESSIONS)return;long began=System.nanoTime();byte[] cookie=new byte[20];random.nextBytes(cookie);int id=random.nextInt();long cookieEnd=System.nanoTime();s=new Session(address,id,connection,cookie,chunkSettings);sessions.put(address,s);long sessionEnd=System.nanoTime();challenge(s);long challengeEnd=System.nanoTime();maxHelloCookieNanos=Math.max(maxHelloCookieNanos,cookieEnd-began);maxHelloSessionNanos=Math.max(maxHelloSessionNanos,sessionEnd-cookieEnd);maxHelloChallengeNanos=Math.max(maxHelloChallengeNanos,challengeEnd-sessionEnd);return;}
         if(s==null||s.id!=connection){connectionMismatch++;return;}s.last=System.nanoTime();
         if(type==17){if(b.remaining()!=25||b.get()!=20)throw new IOException("cookie_size");byte[] cookie=new byte[20];b.get(cookie);int nonce=b.getInt();if(!java.security.MessageDigest.isEqual(cookie,s.cookie))throw new IOException("cookie_invalid");if(!s.accepted)s.retryTiming.observe(System.nanoTime()-s.challengeStarted);s.accepted=true;Session target=s;sendRaw(s,Wire.bytes(o->{o.writeInt(target.id);o.writeByte(18);o.writeInt(nonce+1);o.writeInt(0);}));return;}
         if(!s.accepted)return;if(type==16){remove(s,"client_close");return;}if(type==22||type==23)return;if(type!=0&&type!=1)return;Lane l=s.lanes[type];
-        while(b.hasRemaining()){if(b.remaining()<20)throw new IOException("reliable_header");int kind=b.get()&7;b.get();b.getShort();int time=b.getInt(),seq=b.getInt(),peerRx=b.getInt(),value=b.getInt();
+        while(b.hasRemaining()){if(b.remaining()<20)throw new IOException("reliable_header");int kind=b.get()&7;b.get();int peerWindow=Short.toUnsignedInt(b.getShort());int time=b.getInt(),seq=b.getInt(),peerRx=b.getInt(),value=b.getInt();
             long now=System.nanoTime();
+            if(type==1)s.chunkSend.peer(peerRx,peerWindow,l.tx);
             var pending=l.sent.entrySet().iterator();
             Sent cumulativeSample=null;
-            while(pending.hasNext()){
+            boolean cumulativeProgress=false;
+            while(l.tx-peerRx>=0&&pending.hasNext()){
                 var entry=pending.next();
                 int age=peerRx-entry.getKey();
-                if(Integer.compareUnsigned(age,1)<0||Integer.compareUnsigned(age,4096)>=0)continue;
+                if(age<=0||age>=4096)break;
                 if(entry.getValue().attempts==1)cumulativeSample=entry.getValue();
+                if(type==1)s.chunkSend.acknowledge(entry.getKey());
                 pending.remove();
+                cumulativeProgress=true;
             }
-            observeAck(s,cumulativeSample,now);
-            if(kind==2){if(value<0||value>WINDOW)throw new IOException("ack_range");for(int i=0;i<value;i++)observeAck(s,l.sent.remove(seq+i),now);continue;}
+            if(cumulativeProgress)l.lastAck=now;
+            observeAck(s,l,cumulativeSample,now);
+            if(kind==2){if(value<0||value>(type==1?ChunkSendWindow.MAX_WINDOW:WINDOW))throw new IOException("ack_range");for(int i=0;i<value;i++){int acknowledged=seq+i;Sent packet=l.sent.remove(acknowledged);if(type==1&&packet!=null)s.chunkSend.acknowledge(acknowledged);observeAck(s,l,packet,now);}continue;}
             if(kind!=1||value<0||value>b.remaining()||value>8192)throw new IOException("reliable_data");byte[] payload=new byte[value];b.get(payload);
-            int distance=seq-l.rx;if(Integer.compareUnsigned(distance,WINDOW)>=0){if(distance<0)reliable(s,type,2,seq,time,new byte[0]);continue;}
-            l.received.putIfAbsent(seq,payload);reliable(s,type,2,seq,time,new byte[0]);while(l.received.containsKey(l.rx)){byte[] part=l.received.remove(l.rx++);l.stream.append(part);if(!l.parsing){l.parsing=true;parseReady.addLast(new ParseTarget(s,type));}}
+            int distance=seq-l.rx;if(Integer.compareUnsigned(distance,WINDOW)>=0){if(distance<0)acknowledge(s,type,seq,time,now);continue;}
+            l.received.putIfAbsent(seq,payload);acknowledge(s,type,seq,time,now);while(l.received.containsKey(l.rx)){byte[] part=l.received.remove(l.rx++);l.stream.append(part);if(!l.parsing){l.parsing=true;parseReady.addLast(new ParseTarget(s,type));}}
         }
     }
     private static byte[] challengeBytes(Session s){return Wire.bytes(o->{o.writeInt(s.clientId);o.writeByte(21);o.writeByte(0);o.writeByte(1);o.writeInt(s.id);o.writeByte(20);o.write(s.cookie);});}
@@ -463,6 +605,23 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         }
         if(!parseReady.isEmpty())applicationBudgetYields++;
     }
+    private void voiceRequest(Session session,szserver.voice.VoicePackets.Request request) {
+        if(voiceTokens==null||session.voiceReply!=null)return;
+        long now=System.nanoTime();
+        if(session.lastVoiceRequest!=null&&session.lastVoiceRequest.action()==request.action()&&now-session.nextVoiceRequest<0)return;
+        session.lastVoiceRequest=request;
+        session.nextVoiceRequest=now+200_000_000L;
+        session.voiceReply=voiceTokens.request(request,session.grant.name()).exceptionally(failure->null);
+    }
+
+    private void advanceVoice(Session session) {
+        if(session.voiceReply==null||!session.voiceReply.isDone())return;
+        var pending=session.voiceReply;
+        session.voiceReply=null;
+        byte[] reply=pending.getNow(null);
+        if(reply!=null)enqueue(session,0,reply);
+    }
+
     private void application(Session s,int id,byte[] body)throws Exception{
         if(s.ready&&NpcEditorHooks.application(this,s,id,body))return;
         if(applicationCounts.containsKey(id)||applicationCounts.size()<512)applicationCounts.merge(id,1L,Long::sum);
@@ -473,8 +632,27 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         }
         if(!s.ready)return;
         if(id==1501)id=5; // Current native dynamic envelope (legacy peers use 5).
-        if(id==5){var dynamic=Wire.input(body);int registered=GameplayPacketAliases.registered(dynamic.readUTF());if(registered!=0){id=registered;body=dynamic.readAllBytes();}}
+        if(id==5){
+            var dynamic=Wire.input(body);String name=dynamic.readUTF();
+            if(szserver.voice.VoicePackets.REQUEST_CLASS.equals(name)){
+                var voice=szserver.voice.VoicePackets.read(dynamic.readAllBytes(),false);
+                if(voice!=null)voiceRequest(s,voice);return;
+            }
+            if(szserver.voice.VoicePackets.WORLD_RPC_CLASS.equals(name)){
+                var voice=szserver.voice.VoicePackets.read(dynamic.readAllBytes(),true);
+                if(voice!=null){voiceRequest(s,voice);return;}
+            }
+            int registered=GameplayPacketAliases.registered(name);if(registered!=0){id=registered;body=dynamic.readAllBytes();}
+        }
+        if(id==szserver.voice.VoicePackets.REQUEST_ID||id==szserver.voice.VoicePackets.WORLD_RPC_ID){
+            var voice=szserver.voice.VoicePackets.read(body,id==szserver.voice.VoicePackets.WORLD_RPC_ID);
+            if(voice!=null){voiceRequest(s,voice);return;}
+        }
         if(id==ScreenshotPackets.RESPONSE){screenshots.receive(s.incarnation,body);return;}
+        if(id==GameplayPacketAliases.STREAM_FIRE){
+            if(body.length!=0)throw new IOException("stream_fire_request_size");
+            fireStream(s);return;
+        }
         if(id==ScreenshotPackets.ENVELOPE){byte[] capture=ScreenshotPackets.envelope(body);if(capture!=null){screenshots.receive(s.incarnation,capture);return;}}
         if(id==1070){grenadeStart(s,GrenadePackets.start(body));return;}
         if(id==973){grenadeThrow(s,GrenadePackets.read(body));return;}
@@ -501,6 +679,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         if(id==1435){meleeHit(s,body);return;}
         if(id==SuicideCommand.PACKET_ID){if(body.length!=0)throw new IOException("suicide_request_size");suicide(s);return;}
         if(id==WorldItemPackets.DROP_ID){dropItem(s,WorldItemPackets.drop(body));return;}
+        if(id==WorldItemPackets.PICKUP_ID){pickupItem(s,WorldItemPackets.pickup(body));return;}
         if(id==InventoryPackets.DELETE_ID){inventoryDelete(s,body);return;}
         if(id==1842){var request=inventories.quickBindRequest(body);if(request.owner()!=0||request.source()!=null&&(request.source().aggregate()>1||!StorageLayout.validAddress(request.source())))throw new IOException("quick_binding_owner_or_address");queueQuick(s,new QuickIntent(request,null,request.source()==null?null:inventory(s).at(request.source())));return;}
         if(id==1628){queueQuick(s,new QuickIntent(null,inventories.quickUseRequest(body),null));return;}
@@ -523,6 +702,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
             if(id==366&&source==null&&selection>0&&!playerRules.entitled(character(s))){inventorySnapshot(s,0);enqueue(s,0,InventoryPackets.ack(owner,sequence));enqueue(s,0,GamePackets.chat("paint_editor_requires_admin"));return;}
             inventories.cosmetic(character(s),target,source,selection,slot,id==598,plan->inventoryChanged(s,plan,()->enqueue(s,0,InventoryPackets.ack(owner,sequence))),error->{inventorySnapshot(s,0);enqueue(s,0,InventoryPackets.ack(owner,sequence));enqueue(s,0,GamePackets.chat(error));});return;}
         if(id==UnderbarrelPackets.UNLOAD_ID){unloadLauncher(s,UnderbarrelPackets.unload(body));return;}
+        if(id==InventoryPackets.WEAPON_UNLOAD_ID){unloadWeapon(s,InventoryPackets.weaponUnload(body,s.inventoryScreen.page()));return;}
         if(id==GameplayPacketAliases.WEAPON_MODULE){
             var request=inventories.weaponModuleRequest(body);
             Inventory.Address target=request.target(),source=request.source();
@@ -536,20 +716,20 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         }
         if(id==1449){var in=Wire.input(body);int owner=in.readShort(),sequence=in.readShort();Inventory.Address target=nullableAddress(in),source=nullableAddress(in);int selection=in.readInt(),slot=in.readUnsignedByte();if(owner!=0||target==null||target.aggregate()==2||source!=null&&source.aggregate()==2||selection<0||slot>=18||in.available()!=0)throw new IOException("module_request");inventories.module(character(s),target,source,selection,slot,plan->inventoryChanged(s,plan,()->enqueue(s,0,InventoryPackets.ack(owner,sequence))),error->{inventorySnapshot(s,0);enqueue(s,0,InventoryPackets.ack(owner,sequence));enqueue(s,0,GamePackets.chat(error));});return;}
         if(id==1138){var request=inventories.itemSlotRequest(false,body);int owner=request.owner(),sequence=request.sequence(),slot=request.slot();Inventory.Address target=request.target(),source=request.source();if(owner!=0||target==null||!StorageLayout.validAddress(target)||source!=null&&!StorageLayout.validAddress(source))throw new IOException("artifact_socket_request");if(!validInventoryTransfer(s,new InventoryTransfer(id,new InventoryPackets.Request(owner,sequence,target,source==null?List.of():List.of(source),0,false,-1),s.inventoryScreen.page()))){inventorySnapshot(s,owner);enqueue(s,0,InventoryPackets.ack(owner,sequence));return;}inventories.socket(character(s),target,source,slot,plan->inventoryChanged(s,plan,()->enqueue(s,0,InventoryPackets.ack(owner,sequence))),error->{inventorySnapshot(s,0);enqueue(s,0,InventoryPackets.ack(owner,sequence));enqueue(s,0,GamePackets.chat(error));});return;}
+        if(nativeSocial(s,id,body))return;
         if(id==1060){receiveChat(s,body);return;}
         if(id==10203){enqueue(s,0,Wire.frame(10204,body));return;}
         if(id==1345||id==1978){if(s.respawning)return;ClientPackets.Input input=nativePackets.input(body,id==1978);if(input.tick()<s.clientTick)return;s.clientTick=input.tick();if(vehicles.driving(s)!=null){if(input.yaw()!=null){s.yaw=input.yaw();s.pitch=input.pitch();}if(vehicleActions.windowView(s,System.nanoTime())){s.animation.input(input.motion());inputButtons(s,input.buttons());}s.lastInput=System.nanoTime();inputs++;return;}if(!input.blockBatch().deltas().isEmpty())nativeBlockBatch(s,input.blockBatch());boolean acceptedPosition=false;if(input.position()!=null){double[] pos=input.position();if(Math.abs(pos[0])<=30_000_001&&Math.abs(pos[2])<=30_000_001&&Math.abs(pos[1])<=30_000_001){if(!s.scaleSaving&&s.scaleChange==null&&s.teleport==null&&s.teleportGuard.accept(point(pos),System.nanoTime())){s.pos=pos;acceptedPosition=true;requestPortal(s,false);}else staleTeleportInputs++;}}if(input.yaw()!=null){s.yaw=input.yaw();s.pitch=input.pitch();}s.motion.input(input,acceptedPosition);s.posture.input(input,s.motion.ground());if(input.mode()==5&&s.mode!=5&&s.hp>0)s.stamina=staminaRules.enterSprint(s.stamina);s.mode=input.mode();s.lastInput=System.nanoTime();if(input.stamina()!=null){s.reportedStamina=input.stamina();s.observedStamina=input.stamina();}s.speed=s.motion.speed();s.velocity=s.motion.velocity();s.ground=s.motion.ground();s.animation.input(input.motion());inputButtons(s,input.buttons());inputs++;return;}
         if(id==1356){for(var entry:ChunkManifestPackets.requests(body)){if(entry.release())releaseChunk(s,chunkKey(entry.x(),entry.z()));else demandChunk(s,entry);}return;}
         if(id==240){if(body.length==1&&body[0]>=1&&body[0]<=3)enqueue(s,0,Wire.dynamic("1619370828",body));return;}if(id==2059){
-            if(body.length==4||body.length==5)selectHand(s,HandPackets.readLegacySelection(body));
-            else selectHandOverride(s,HandPackets.readOverride(body));
+            selectAddressedHand(s,HandPackets.readOverride(body));
             return;
         }if(id==271){shot(s,body);return;}if(id==UnderbarrelPackets.ID){UnderbarrelPackets.read(body);launchUnderbarrel(s);return;}if(id==LauncherPackets.ID){LauncherPackets.read(body);launchPrimary(s);return;}
         if(id==WeaponJammingPackets.ID){WeaponJammingPackets.read(body);queueUnjam(s);return;}
         if(id==280){if(body.length!=0&&body.length!=5)throw new IOException("reload_request_size");int ammo=body.length==0?0:ByteBuffer.wrap(body).getInt();if(ammo<0||ammo>65535||body.length==5&&(body[4]<0||body[4]>1))throw new IOException("reload_request_ammunition");if(body.length==5&&body[4]==1){queueLauncherReload(s,ammo);return;}queueReload(s,ammo);return;}
         if(id==1013){changeMode(s,body);return;}
         if(id==1661){requestRespawn(s,body);return;}
-        if(id==5){var in=Wire.input(body);String cls=in.readUTF();if(cls.equals("szmods.bridge.WeaponActionReady")){if(in.available()!=0)throw new IOException("weapon_action_capability_size");s.weaponActionEvents=true;return;}if(cls.equals("szmods.bridge.BoltImpactReady")){if(in.available()!=0)throw new IOException("bolt_capability_size");s.boltImpactEffects=true;return;}if(cls.equals("szmods.bridge.FunnelImpactReady")){if(in.available()!=0)throw new IOException("funnel_capability_size");s.pointFunnelImpacts=true;return;}if(cls.equals(playerscale.ScaleProtocol.INPUT)){scaleHello(s,in.readAllBytes());}else if(cls.equals(EnvironmentWire.INPUT)){try{environmentAccess.request(s.environmentClient,in.readAllBytes(),playerRules.editor(character(s),worldEditors));}catch(Exception failure){environmentAccess.disconnect(s.environmentClient);JsonObject reply=EnvironmentWire.message("ack");reply.addProperty("ok",false);reply.addProperty("error",Objects.toString(failure.getMessage(),failure.getClass().getSimpleName()));enqueue(s,0,EnvironmentAccess.frame(reply));}}else if(cls.equals(WeaponJammingPackets.REQUEST)){WeaponJammingPackets.read(in.readAllBytes());queueUnjam(s);}else if(cls.equals(UnderbarrelPackets.UNLOAD_REQUEST)){unloadLauncher(s,UnderbarrelPackets.unload(in.readAllBytes()));}else if(cls.equals(UnderbarrelPackets.REQUEST)){UnderbarrelPackets.read(in.readAllBytes());launchUnderbarrel(s);}else if(cls.equals(LauncherPackets.REQUEST)){LauncherPackets.read(in.readAllBytes());launchPrimary(s);}else if(cls.equals(GrenadePackets.START)){grenadeStart(s,GrenadePackets.start(in.readAllBytes()));}else if(cls.equals(GrenadePackets.THROW)){grenadeThrow(s,GrenadePackets.read(in.readAllBytes()));}else if(szserver.client.HandPackets.selectionClass(cls)){selectHandOverride(s,HandPackets.readOverride(in.readAllBytes()));}else if(cls.equals(PhysicalReload.REQUEST)){physicalRequest(s,in.readAllBytes());}else if(cls.equals(CommandSupport.REQUEST)){completion(s,in.readAllBytes());}else if(cls.equals(Vehicles.INPUT)){vehicle(s,in.readAllBytes());}else if(FpvPackets.inputClass(cls)){fpv(s,in.readAllBytes());}else if(cls.equals("1618367864")){anomalyVelocityEcho(in.readAllBytes());}else if(cls.equals("804507492")){anomalyForceEcho(in.readAllBytes());}else if(cls.equals("1552498486")){anomalyStrengthSave(s,in.readAllBytes());}else if(cls.equals("1019975257")){anomalyConfigurationSave(s,in.readAllBytes());}else if(SceneConfigurationPackets.requestClass(cls)){sceneConfiguration(s,in.readAllBytes());}else if(SceneConfigurationPackets.saveClass(cls)){sceneConfigurationSave(s,in.readAllBytes(),false);}else if(SceneConfigurationPackets.settingsClass(cls)){sceneConfigurationSave(s,in.readAllBytes(),true);}else if(szserver.client.SceneEditPackets.kind(cls)!=null){sceneEdit(s,szserver.client.SceneEditPackets.kind(cls),in.readAllBytes());}else if(cls.equals("146340354")){nativeDestroy(s,in.readAllBytes());}else if(cls.equals("1056067431")){NativeBlockPackets.target(in.readAllBytes(),false);nativeBlockIntents++;}else if(szserver.client.PortalPackets.useClass(cls)){nativeBlockIntents++;szserver.client.PortalPackets.emptyHand(in.readAllBytes());}else if(szserver.client.TeleportPackets.mapClass(cls)){try{teleport(s,TeleportCommands.map(in.readAllBytes()),"Телепортация по карте выполнена.");}catch(IllegalArgumentException error){enqueue(s,0,GamePackets.chat(error.getMessage()));}}else if(szserver.client.PermissionPackets.modeClass(cls)){changeMode(s,in.readAllBytes());}else if(cls.equals("1102124358")){requestRespawn(s,in.readAllBytes());}else if(cls.equals("677917411")){receiveChat(s,in.readAllBytes());}return;}
+        if(id==5){var in=Wire.input(body);String cls=in.readUTF();if(cls.equals("szmods.bridge.ProfileEquipmentReady")){if(in.available()!=0)throw new IOException("profile_equipment_capability_size");s.profileEquipmentCapable=true;return;}if(cls.equals("szmods.bridge.NearbyPlayersReady")){if(in.available()!=0)throw new IOException("nearby_capability_size");s.nearbyCapable=true;return;}if(cls.equals("szmods.bridge.WeaponActionReady")){if(in.available()!=0)throw new IOException("weapon_action_capability_size");s.weaponActionEvents=true;return;}if(cls.equals("szmods.bridge.BoltImpactReady")){if(in.available()!=0)throw new IOException("bolt_capability_size");s.boltImpactEffects=true;return;}if(cls.equals("szmods.bridge.FunnelImpactReady")){if(in.available()!=0)throw new IOException("funnel_capability_size");s.pointFunnelImpacts=true;return;}if(cls.equals(playerscale.ScaleProtocol.INPUT)){scaleHello(s,in.readAllBytes());}else if(cls.equals(EnvironmentWire.INPUT)){try{environmentAccess.request(s.environmentClient,in.readAllBytes(),playerRules.editor(character(s),worldEditors));}catch(Exception failure){environmentAccess.disconnect(s.environmentClient);JsonObject reply=EnvironmentWire.message("ack");reply.addProperty("ok",false);reply.addProperty("error",Objects.toString(failure.getMessage(),failure.getClass().getSimpleName()));enqueue(s,0,EnvironmentAccess.frame(reply));}}else if(cls.equals(WeaponJammingPackets.REQUEST)){WeaponJammingPackets.read(in.readAllBytes());queueUnjam(s);}else if(cls.equals(UnderbarrelPackets.UNLOAD_REQUEST)){unloadLauncher(s,UnderbarrelPackets.unload(in.readAllBytes()));}else if(cls.equals(UnderbarrelPackets.REQUEST)){UnderbarrelPackets.read(in.readAllBytes());launchUnderbarrel(s);}else if(cls.equals(LauncherPackets.REQUEST)){LauncherPackets.read(in.readAllBytes());launchPrimary(s);}else if(cls.equals(GrenadePackets.START)){grenadeStart(s,GrenadePackets.start(in.readAllBytes()));}else if(cls.equals(GrenadePackets.THROW)){grenadeThrow(s,GrenadePackets.read(in.readAllBytes()));}else if(szserver.client.HandPackets.selectionClass(cls)){selectAddressedHand(s,HandPackets.readOverride(in.readAllBytes()));}else if(cls.equals(VrBoltIntent.REQUEST)){vrBolt(s,VrBoltIntent.read(in.readAllBytes()));}else if(cls.equals(PhysicalReload.REQUEST)){physicalRequest(s,in.readAllBytes());}else if(cls.equals(CommandSupport.REQUEST)){completion(s,in.readAllBytes());}else if(cls.equals(Vehicles.INPUT)){vehicle(s,in.readAllBytes());}else if(FpvPackets.inputClass(cls)){fpv(s,in.readAllBytes());}else if(cls.equals("1618367864")){anomalyVelocityEcho(in.readAllBytes());}else if(cls.equals("804507492")){anomalyForceEcho(in.readAllBytes());}else if(cls.equals("1552498486")){anomalyStrengthSave(s,in.readAllBytes());}else if(cls.equals("1019975257")){anomalyConfigurationSave(s,in.readAllBytes());}else if(SceneConfigurationPackets.requestClass(cls)){sceneConfiguration(s,in.readAllBytes());}else if(SceneConfigurationPackets.saveClass(cls)){sceneConfigurationSave(s,in.readAllBytes(),false);}else if(SceneConfigurationPackets.settingsClass(cls)){sceneConfigurationSave(s,in.readAllBytes(),true);}else if(szserver.client.SceneEditPackets.kind(cls)!=null){sceneEdit(s,szserver.client.SceneEditPackets.kind(cls),in.readAllBytes());}else if(cls.equals("146340354")){nativeDestroy(s,in.readAllBytes());}else if(cls.equals("1056067431")){NativeBlockPackets.target(in.readAllBytes(),false);nativeBlockIntents++;}else if(szserver.client.PortalPackets.useClass(cls)){nativeBlockIntents++;szserver.client.PortalPackets.emptyHand(in.readAllBytes());}else if(szserver.client.TeleportPackets.mapClass(cls)){try{teleport(s,TeleportCommands.map(in.readAllBytes()),"Телепортация по карте выполнена.");}catch(IllegalArgumentException error){enqueue(s,0,GamePackets.chat(error.getMessage()));}}else if(szserver.client.PermissionPackets.modeClass(cls)){changeMode(s,in.readAllBytes());}else if(cls.equals("1102124358")){requestRespawn(s,in.readAllBytes());}else if(cls.equals("677917411")){receiveChat(s,in.readAllBytes());}return;}
         if(unknown.containsKey(id)||unknown.size()<128)unknown.merge(id,1L,Long::sum);if(unknown.size()>256)unknown.clear();
     }
     private void repairNativeBlock(Session s,World.Block p){long key=szserver.world.BlockOverlays.key(Math.floorDiv(p.x(),16),Math.floorDiv(p.z(),16));if(!s.blockRepairs.containsKey(key)&&s.blockRepairs.size()>=9)return;BlockRepair repair=s.blockRepairs.computeIfAbsent(key,k->new BlockRepair());if(repair.points.size()<32)repair.points.add(p);}
@@ -565,7 +745,8 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
                 for(long key:new ArrayList<>(s.chunks)){releaseChunk(s,key);chunk(s,(int)(key>>32),(int)key);}
                 for(var car:vehicles.all())emitVehicleTo(s,car,VehicleWire.SNAPSHOT);if(s.vehicleContacts)for(var link:vehicleContacts.all())emitVehicleContactTo(s,link.owner(),link.state());if(s.vehicleInteractions)for(var action:vehicleActions.all())emitVehicleActionTo(s,action.owner(),vehicleActions.snapshot(action,now));}return;}
             if(!s.vehicleFleet&&(request.model!=0||vehicles.get(request.id)!=null&&vehicles.get(request.id).state.model!=0))throw new Vehicles.Rejected(2);
-            if(!s.vehicleCapable||s.hp<=0||s.respawning||s.teleport!=null)throw new Vehicles.Rejected(2);
+            boolean lifecycle=request.op==VehicleWire.SPAWN||request.op==VehicleWire.REMOVE||request.op==VehicleWire.EXIT;
+            if(!s.vehicleCapable||!lifecycle&&(s.hp<=0||s.respawning||s.teleport!=null))throw new Vehicles.Rejected(2);
             if(request.op==VehicleWire.SEAT_HEARTBEAT){if(!vehicles.seatSupport(s))throw new Vehicles.Rejected(2);vehicles.heartbeat(s,request,now);return;}
             if(request.op==VehicleWire.CONTACT){
                 if(!s.vehicleContacts||vehicles.driving(s)!=null&&!request.id.equals(VehicleWire.ZERO))throw new Vehicles.Rejected(2);
@@ -573,16 +754,18 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
                 if(contact!=null)emitVehicleContact(s,contact);return;
             }
             Vehicles.Car<Session> car;
-            if(request.op!=VehicleWire.STATE){if(now-s.vehicleCommandAt<150_000_000L)throw new Vehicles.Rejected(2);s.vehicleCommandAt=now;}
+            if(!lifecycle&&request.op!=VehicleWire.STATE){if(now-s.vehicleCommandAt<150_000_000L)throw new Vehicles.Rejected(2);s.vehicleCommandAt=now;}
             switch(request.op){
-                case VehicleWire.SPAWN -> {car=vehicles.spawn(s,request,s.pos,playerRules.entitled(character(s)),now);emitVehicle(car,VehicleWire.SNAPSHOT);}
+                case VehicleWire.SPAWN -> {car=vehicles.spawn(s,request,s.pos,now);emitVehicle(car,VehicleWire.SNAPSHOT);}
                 case VehicleWire.ENTER -> {
                     if(piloting(s))throw new Vehicles.Rejected(2);car=vehicles.get(request.id);double[] start=null;int seat=vehicles.seatSupport(s)&&request.sequence>0?request.sequence-1:0;if(car==null||!VehicleSeats.valid(car.state.model,seat))throw new Vehicles.Rejected(2);
-                    if(car!=null&&s.vehicleInteractions&&VehicleActionProfiles.ENABLED[car.state.model]){
-                        start=VehicleAction.local(car.state,s.pos);double[] door=VehicleSeats.DOOR[car.state.model][seat];
-                        if(Math.hypot(start[0]-door[0],start[2]-door[2])>2.4||car.state.speed>1.5)throw new Vehicles.Rejected(2);start[1]+=.82;
+                    if(s.vehicleInteractions&&VehicleActionProfiles.ENABLED[car.state.model]){
+                        if(car.state.speed>1.5)throw new Vehicles.Rejected(2);
+                        start=VehicleAction.local(car.state,s.pos);
+                        // Remote boarding still begins at the vehicle, at a plausible door height.
+                        start[1]=Math.max(0,Math.min(VehicleTypes.HEIGHT[car.state.model],start[1]+.82));
                     }
-                    car=vehicles.enter(s,request.id,seat,s.pos,now);detachVehicleContact(s);fpvPose(s);
+                    car=vehicles.enter(s,request.id,seat,now);detachVehicleContact(s);fpvPose(s);
                     if(start!=null){VehicleWire action=new VehicleWire();action.flags=VehicleAction.ENTER;emitVehicleAction(s,vehicleActions.begin(s,action,car,start,now));}
                     vehicleSeat(s,car.state);emitVehicle(car,VehicleWire.SNAPSHOT);
                 }
@@ -591,16 +774,49 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
                     car=vehicles.state(s,request,now);
                     if(car!=null){for(Session occupant:car.occupants())vehicleSeat(occupant,car.state);emitVehicle(car,VehicleWire.SNAPSHOT);vehicleImpact(s,before,car.state,(now-updated)/1e9,now);}
                 }
-                case VehicleWire.EXIT -> {if(vehicleActions.busy(s,now))throw new Vehicles.Rejected(2);car=vehicles.get(request.id);int seat=Vehicles.seat(car,s);if(seat<0)throw new Vehicles.Rejected(2);double[] resolvedExit=VehicleAction.exitFeet(car.state,request);request.x=resolvedExit[0];request.y=resolvedExit[1];request.z=resolvedExit[2];var playing=vehicleActions.get(s);if(playing!=null&&playing.state().flags==VehicleAction.EXIT){double[] end=VehicleAction.local(car.state,new double[]{request.x,request.y+.82,request.z});playing.state().vx=(float)end[0];playing.state().vy=(float)end[1];playing.state().vz=(float)end[2];emitVehicleAction(s,vehicleActions.snapshot(playing,now));}double[] velocity=VehicleAction.exitVelocity(car.state,seat);car=vehicles.exit(s,request);emitVehicleSeatClear(s);s.pos=new double[]{request.x,request.y,request.z};s.velocity=velocity;s.motion.reset();s.speed=Math.sqrt(velocity[0]*velocity[0]+velocity[1]*velocity[1]+velocity[2]*velocity[2]);s.ground=car.state.speed<1.5;s.posture.set(0,0);emitVehicle(car,VehicleWire.SNAPSHOT);clearVehicleAction(s);fpvPose(s);}
+                case VehicleWire.EXIT -> {
+                    car=vehicles.get(request.id);int seat=Vehicles.seat(car,s);if(seat<0)throw new Vehicles.Rejected(2);
+                    double[] feet=VehicleAction.exitFeet(car.state,request);
+                    double[] fallback=VehicleAction.fallbackExit(car.state,seat);
+                    if(Math.hypot(Math.hypot(feet[0]-fallback[0],feet[2]-fallback[2]),feet[1]-fallback[1])>4)feet=fallback;
+                    var playing=vehicleActions.get(s);
+                    if(playing!=null&&playing.state().flags==VehicleAction.EXIT){
+                        double[] end=VehicleAction.local(car.state,new double[]{feet[0],feet[1]+.82,feet[2]});
+                        playing.state().vx=(float)end[0];playing.state().vy=(float)end[1];playing.state().vz=(float)end[2];
+                        emitVehicleAction(s,vehicleActions.snapshot(playing,now));
+                    }
+                    vehicles.exit(car,s);
+                    releaseVehicleOccupant(s,car.state,seat,feet);
+                    emitVehicle(car,VehicleWire.SNAPSHOT);
+                }
                 case VehicleWire.ACTION -> {
                     if(Boolean.getBoolean("sz.vehicle.actions.audit"))System.out.println("Vehicle action request kind="+request.flags+" supported="+s.vehicleInteractions+" busy="+vehicleActions.busy(s,now)+" prior="+(vehicleActions.get(s)==null?0:vehicleActions.get(s).state().flags));
                     var drone=drones.owned(s);if(!s.vehicleInteractions||drone!=null&&drone.piloting()||request.flags==VehicleAction.ENTER)throw new Vehicles.Rejected(2);
                     car=vehicles.get(request.id);if(request.flags==0){if(Vehicles.seat(car,s)<0)throw new Vehicles.Rejected(2);emitVehicleAction(s,vehicleActions.cancelExit(s,now));}else emitVehicleAction(s,vehicleActions.begin(s,request,car,car==null?null:VehicleSeats.seat(car.state.model,Math.max(0,Vehicles.seat(car,s))),now));
                 }
-                case VehicleWire.REMOVE -> {car=vehicles.remove(s,request.id);emitVehicle(car,VehicleWire.DESPAWN);}
+                case VehicleWire.REMOVE -> {
+                    car=vehicles.remove(request.id);
+                    emitVehicle(car,VehicleWire.DESPAWN);
+                    for(Session owner:car.occupants()){
+                        int seat=Vehicles.seat(car,owner);
+                        releaseVehicleOccupant(owner,car.state,seat,VehicleAction.fallbackExit(car.state,seat));
+                    }
+                    for(var link:vehicleContacts.all())if(link.state().id.equals(car.state.id))detachVehicleContact(link.owner());
+                }
                 default -> throw new Vehicles.Rejected(2);
             }
         }catch(IllegalArgumentException error){VehicleWire denied=new VehicleWire();denied.op=VehicleWire.DENIED;denied.id=request==null?VehicleWire.ZERO:request.id;denied.sequence=error instanceof Vehicles.Rejected r?r.code:2;enqueueOrRetire(s,vehicleFrame(denied));}
+    }
+    private void releaseVehicleOccupant(Session owner,VehicleWire car,int seat,double[] feet){
+        if(owner.hp>0&&!owner.respawning&&owner.teleport==null){
+            owner.pos=feet;
+            owner.velocity=VehicleAction.exitVelocity(car,seat);
+            owner.motion.reset();
+            owner.speed=Math.hypot(Math.hypot(owner.velocity[0],owner.velocity[2]),owner.velocity[1]);
+            owner.ground=car.speed<1.5;
+        }
+        emitVehicleSeatClear(owner);
+        clearVehicleAction(owner);
     }
     private void vehicleImpact(Session driver,VehicleWire before,VehicleWire after,double seconds,long now){
         if(!VehicleImpacts.moving(before,after,seconds))return;
@@ -808,13 +1024,16 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         }
     }
     private boolean grenadeUserAllowed(Session s){return s.ready&&s.hp>0&&!s.respawning&&s.teleport==null&&!piloting(s)&&s.gameplayMode==PlayerRules.Mode.STALKER;}
-    private boolean grenadeUseValid(Session s,GrenadeUse.Held held){return grenadeUserAllowed(s)&&held.valid(inventories.inventory(character(s)).at(new Inventory.Address(0,held.mode()==0?held.hand():4,0)),s.life,s.handContainer,s.holstered);}
+    private ItemStack equippedThrowable(Session s,int hand){
+        return GrenadeUse.equipped(inventory(s).at(new Inventory.Address(0,hand,0)),hand,defaultBolt);
+    }
+    private boolean grenadeUseValid(Session s,GrenadeUse.Held held){return grenadeUserAllowed(s)&&held.valid(equippedThrowable(s,held.mode()==0?held.hand():HandPackets.GRENADE),s.life,s.handContainer,s.holstered);}
     private void grenadeStart(Session s,int mode){
         // OVERLAP_GRENADE is a native contextual override slot, not equipment4.
         if(mode==2||!grenadeUserAllowed(s)||inventories.busy(character(s))||grenadeBridge.busy(character(s))||thrownGrenades.size()>=szserver.world.Grenades.LIMIT||mode==0&&(s.handContainer!=4&&s.handContainer!=10||s.holstered)){grenadeDenied++;return;}
         int slot=mode==0?s.handContainer:4;
-        ItemStack item=inventories.inventory(character(s)).at(new Inventory.Address(0,slot,0));
-        GrenadeUse.Rules rules=item==null?null:(slot==10?boltRules:grenadeUseRules).get(item.id());
+        ItemStack item=equippedThrowable(s,slot);
+        GrenadeUse.Rules rules=item==null?null:(slot==HandPackets.BOLT?boltRules:grenadeUseRules).get(item.id());
         long now=System.nanoTime();
         if(rules==null||!rules.handUse()||s.handOverride!=null||!s.grenadeUse.start(item,rules,mode,s.life,s.handContainer,s.holstered,now)){grenadeDenied++;return;}
         if(mode!=0)visualHand(s,slot,now+Math.max(20,rules.prepareTicks())*50_000_000L);
@@ -830,15 +1049,34 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         if(held.mode()==0&&held.hand()==10){throwBolt(s,held.item(),request);return;}
         submitGrenade(s,held,request,elapsed,inHand);
     }
+    private void vrBolt(Session s,VrBoltIntent intent){
+        long now=System.nanoTime();
+        if(!grenadeUserAllowed(s)||now<s.nextVrBolt||s.handOverride!=null||s.grenadeUse.held()!=null||inventories.busy(character(s)))return;
+        var item=equippedThrowable(s,HandPackets.BOLT);
+        var rules=item==null?null:boltRules.get(item.id());
+        if(rules==null||!rules.handUse())return;
+        s.nextVrBolt=now+Math.max(7,rules.prepareTicks()+rules.throwTicks())*50_000_000L;
+        visualHand(s,HandPackets.BOLT,now+350_000_000L);
+        throwBolt(s,item,new GrenadePackets.Throw(1,-1,intent.yaw(),intent.pitch()),intent.strength());
+    }
+
     private void throwBolt(Session s,ItemStack item,GrenadePackets.Throw request){
+        throwBolt(s,item,request,1);
+    }
+
+    private void throwBolt(Session s,ItemStack item,GrenadePackets.Throw request,float strength){
         long life=s.life;
         var origin=GrenadePackets.origin(CharacterScale.eye(s.pos,s.posture.locomotion(),s.characterScale),request.yaw(),request.pitch());
         inventories.boltProjectile(item,s.velocity[0],s.velocity[2],request.yaw(),request.pitch(),profile->{
             if(sessions.get(s.address)!=s||s.life!=life)return;
-            if(!worldItems.throwBolt(character(s),s.incarnation,item,origin,profile.velocity(),request.prediction(),
+            var velocity=profile.velocity();
+            if(!worldItems.throwBolt(character(s),s.incarnation,item,origin,new World.Vec(velocity.x()*strength,velocity.y()*strength,velocity.z()*strength),request.prediction(),
                     System.currentTimeMillis(),profile))itemFailures++;
-            else if(s.handContainer==HandPackets.BOLT&&!s.holstered)
-                weaponVisualAction(s,item.id(),PlayerAnimationPackets.Action.THROW_FINISH);
+            else{
+                boltThrows++;
+                if((s.handContainer==HandPackets.BOLT&&!s.holstered)||s.visualHand==HandPackets.BOLT)
+                    weaponVisualAction(s,item.id(),PlayerAnimationPackets.Action.THROW_FINISH);
+            }
         },error->{itemFailures++;lastItemFailure=error;});
     }
     private void advanceGrenadeUses(long now){
@@ -917,7 +1155,11 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
                 double[] end={target.position()[0],target.position()[1]+.9,target.position()[2]};
                 combatBarriers.submit(event.id(),origin,end,contact->{double[] closest=grenadeAreaScenes.closestShieldPoint(contact,origin);closest[1]-=.9;return Math.max(.001,grenadeDamage(event.profile(),event.position(),closest,Map.of()));},
                     ()->grenadeTargetLive(target),()->{
-                        if(target.player()!=null){damage(grenadeAttacker(state),state.name,target.player(),amount,origin,null,new double[3],false);grenadeHits++;}
+                        if(target.player()!=null){
+                            Session attacker=grenadeAttacker(state);
+                            var owner=liveAreaOwner(state.character);
+                            if(damage(attacker,state.name,owner==null?state.context:owner,target.player(),amount,origin,null,new double[3],false))grenadeHits++;
+                        }
                         else if(target.cloneTarget()!=null){damageClone(grenadeAttacker(state),state.name,target.cloneTarget(),amount,origin,new double[3],false);grenadeHits++;}
                         else {damageBot(grenadeAttacker(state),target.bot(),amount,false);grenadeHits++;}
                     },contact->{});
@@ -972,7 +1214,12 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
             int owner=areaOwnerEntity(state.activation.character(),viewer);Integer sentOwner=state.recipients.get(recipient);if((sentOwner==null||state.scene.targeted()&&sentOwner!=owner)&&dx*dx+dz*dz<=256*256&&viewer.lanes[0].queued.size()<128){if(budget--==0)return;if(sentOwner!=null){enqueueOrRetire(viewer,GrenadeAreaPackets.remove(state.handle));areaSceneRemovals++;}state.recipients.put(recipient,owner);enqueueOrRetire(viewer,GrenadeAreaScenes.spawnFor(state.scene,owner));areaSceneSpawns++;}
         }
     }
-    private AreaRelations.Actor areaActor(Session s){return areaRelations.actor(character(s),s.faction);}
+    private AreaRelations.Actor areaActor(Session s){return areaRelations.actor(character(s),s.faction,squads.id(s.incarnation));}
+    private Map<Integer,byte[]> playerRelations(Session s){
+        var attributes=Factions.attributes(s.faction);
+        attributes.put(Factions.PARTY_ATTRIBUTE,Factions.partyAttribute(squads.id(s.incarnation)));
+        return attributes;
+    }
     private AreaRelations.Actor liveAreaOwner(UUID id){for(Session s:sessions.values())if(s.ready&&id.equals(character(s)))return areaActor(s);return null;}
     private int areaOwnerEntity(UUID id,Session viewer){for(Session s:sessions.values())if(s.ready&&id.equals(character(s)))return s==viewer?0:s.entity;return -1;}
     private boolean grenadeSelected(ThrownGrenade state,int item,Session target){var areas=enabledAreaProfiles.get(item);if(areas==null||areas.isEmpty())return true;var owner=liveAreaOwner(state.character);return areaRelations.selected(areas.get(0).target(),owner==null?state.context:owner,areaActor(target),AreaRelations.Mode.DEFAULT);}
@@ -1019,43 +1266,144 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
     private void beginPreparedWorldJoin(Session s,LocalAccounts.Grant grant,UUID protocol){
         if(sessions.get(s.address)!=s)return;
         if(!inventories.admissionAllowed(grant.characterId()))throw new IllegalArgumentException("character_deleted_or_deleting");
-        s.grant=grant;s.restoredState=locations.state(grant.characterId());if(s.restoredState!=null){s.yaw=s.restoredState.yaw();s.pitch=s.restoredState.pitch();s.handContainer=HandPackets.equipped(s.restoredState.hand())?s.restoredState.hand():HandPackets.PRIMARY;s.holstered=s.restoredState.holstered();s.damageWall=s.restoredState.damagedAt();if(s.damageWall>0)s.lastDamage=System.nanoTime()-Math.min(3_600_000L,Math.max(0,System.currentTimeMillis()-s.damageWall))*1_000_000L;}s.gameplayMode=playerRules.initial(grant.characterId());s.faction=inventories.faction(grant.characterId());s.entity=entityIds.actor();s.pos=spawn(s);beginPlacement(s,placementCandidates(s,true));s.firearm=UUID.randomUUID();s.magazines=new byte[31][];for(int n=0;n<=30;n++){s.magazines[n]=baseMagazines[n].clone();ByteBuffer state=ByteBuffer.wrap(s.magazines[n]);int offset=s.magazines[n].length-18;state.putLong(offset,s.firearm.getMostSignificantBits()).putLong(offset+8,s.firearm.getLeastSignificantBits());}
-            s.effects=CharacterEffects.read(inventories.gameplay(grant.characterId()),medicines,System.currentTimeMillis());inventories.prepare(grant.characterId(),new ItemStack(20004,1,0,s.magazines[30]),new ItemStack(12714,90,0,new byte[0]),()->refreshWeapon(s,()->{if(sessions.get(s.address)==s){s.inventoryReady=true;completeJoin(s);}}),error->{enqueue(s,0,GamePackets.chat(error));remove(s);});
+        s.grant=grant;s.restoredState=locations.state(grant.characterId());if(s.restoredState!=null){s.yaw=s.restoredState.yaw();s.pitch=s.restoredState.pitch();s.handContainer=HandPackets.equipped(s.restoredState.hand())?s.restoredState.hand():HandPackets.PRIMARY;s.holstered=s.restoredState.holstered();s.damageWall=s.restoredState.damagedAt();if(s.damageWall>0)s.lastDamage=System.nanoTime()-Math.min(3_600_000L,Math.max(0,System.currentTimeMillis()-s.damageWall))*1_000_000L;}s.gameplayMode=playerRules.initial(grant.characterId());s.faction=inventories.faction(grant.characterId());s.entity=entityIds.actor();s.pos=spawn(s);beginPlacement(s,placementCandidates(s,true));s.firearm=UUID.randomUUID();byte[] starter=starterMagazine.clone();ByteBuffer state=ByteBuffer.wrap(starter);int offset=starter.length-18;state.putLong(offset,s.firearm.getMostSignificantBits()).putLong(offset+8,s.firearm.getLeastSignificantBits());
+            s.effects=CharacterEffects.read(inventories.gameplay(grant.characterId()),medicines,System.currentTimeMillis());inventories.prepare(grant.characterId(),new ItemStack(20004,1,0,starter),new ItemStack(12714,90,0,new byte[0]),()->refreshWeapon(s,()->{if(sessions.get(s.address)==s){s.inventoryReady=true;completeJoin(s);}}),error->{enqueue(s,0,GamePackets.chat(error));remove(s);});
     }
     private void sceneConfiguration(Session s,byte[] body)throws IOException{
         LootboxPackets.Open opening=LootboxPackets.request(body);if(opening!=null){openLootboxes(s,opening);return;}
-        SceneConfigurationPackets.Request request=SceneConfigurationPackets.request(body);if(request==null)return;if(s.sceneReads.containsKey(request.sequence()))return;if(s.sceneReads.size()>=8){sceneDenied++;enqueue(s,0,GamePackets.chat("scene_configuration_busy"));return;}s.sceneReads.put(request.sequence(),sceneAccess.queuedConfiguration(s.sceneWriter,request,new ArrayList<>(s.chunks)));
+        SceneConfigurationPackets.Request request=SceneConfigurationPackets.request(body);if(request==null)return;if(s.sceneReads.containsKey(request.sequence()))return;if(s.sceneReads.size()>=8){sceneDenied++;enqueue(s,0,GamePackets.chat("scene_configuration_busy"));return;}s.sceneReads.put(request.sequence(),new SceneRead(request.identity(),sceneAccess.queuedConfiguration(s.sceneWriter,request,sceneScope(s))));
     }
+
+    private static List<Long> sceneScope(Session s){
+        // UUID lookup still uses the global catalog. Bound its nearby fallback
+        // independently from the client's streaming distance.
+        return s.chunks.around((int)Math.floor(s.pos[0]/16),(int)Math.floor(s.pos[2]/16),ChunkWindow.RADIUS);
+    }
+    private boolean canDropNow(Session s){return s.hp>0&&!s.respawning&&s.teleport==null;}
+    private void ackDrop(Session s,int sequence){enqueue(s,0,InventoryPackets.ack(0,sequence));}
+    private void rejectDrop(Session s,int sequence,String reason){
+        lastItemFailure=reason;
+        inventorySnapshot(s,0);
+        ackDrop(s,sequence);
+    }
+    private static final double ITEM_PICKUP_REACH=4;
+    private void pickupItem(Session player,int entity){
+        long monotonic=System.nanoTime();
+        if(player.hp<=0||player.respawning||player.teleport!=null
+                ||monotonic-player.lastItemPickup<100_000_000L)return;
+        player.lastItemPickup=monotonic;
+        var body=worldItems.byEntity(entity);
+        if(body==null||body.throwingSession!=null||body.claiming||body.expiring
+                ||!player.worldItemsSeen.containsKey(body.item.id())||!groundItemChunkVisible(player,body.position))return;
+        if(body.item.pickupOwner()!=null&&!body.item.pickupOwner().equals(player.grant.name()))return;
+        if(System.currentTimeMillis()>=body.item.expires()||inventories.busy(character(player)))return;
+        var at=body.position;
+        double[] eye=CharacterScale.eye(player.pos,player.posture.locomotion(),player.characterScale);
+        double x=at.x()-eye[0],y=at.y()-eye[1],z=at.z()-eye[2];
+        if(x*x+y*y+z*z>ITEM_PICKUP_REACH*ITEM_PICKUP_REACH)return;
+
+        body.claiming=true;
+        inventories.collectWorldItem(character(player),body.item.id(),itemWorld,plan->{
+            itemCollected++;
+            if(sessions.get(player.address)==player)inventoryChanged(player,plan,()->{});
+        },error->{
+            body.claiming=false;
+            itemFailures++;
+            lastItemFailure=error;
+        });
+    }
+
     private void dropItem(Session s,WorldItemPackets.Drop request){
-        itemRequests++;int sequence=request.sequence();Runnable ack=()->enqueue(s,0,InventoryPackets.ack(0,sequence));
-        if(sequence!=65535){if(s.dropSequence!=-1&&((sequence-s.dropSequence)&65535)>=32768||sequence==s.dropSequence){ack.run();return;}s.dropSequence=sequence;}
-        if(s.hp<=0||s.respawning||s.teleport!=null||System.nanoTime()-s.lastItemDrop<100_000_000L){lastItemFailure="drop_not_ready:"+s.hp+":"+s.respawning+":"+(s.teleport!=null);inventorySnapshot(s,0);ack.run();return;}
-        s.lastItemDrop=System.nanoTime();Inventory.Address address=request.address()==null?new Inventory.Address(0,s.handContainer,0):request.address();
-        if(address.aggregate()>1||address.aggregate()==1&&address.container()!=0){inventorySnapshot(s,0);ack.run();return;}
-        double[] position=CharacterScale.eye(s.pos,s.posture.locomotion(),s.characterScale);double eye=position[1]-s.pos[1];position[1]-=.3f;
-        var velocity=szserver.world.WorldItems.throwVelocity(s.yaw,s.pitch,eye,random);
-        inventories.dropWorldItem(character(s),address,itemWorld,position,new double[]{velocity.x(),velocity.y(),velocity.z()},plan->{itemDropped++;if(sessions.get(s.address)==s)inventoryChanged(s,plan,ack);},error->{lastItemFailure=error;itemFailures++;if(sessions.get(s.address)==s){inventorySnapshot(s,0);ack.run();enqueue(s,0,GamePackets.chat("Не удалось выбросить предмет: "+error));}});
+        itemRequests++;
+        int sequence=request.sequence();
+        Integer key=sequence==65535?null:sequence;
+        if(itemDrops.pending(s,key))return;
+        if(key!=null){
+            if(s.dropSequence!=-1&&((sequence-s.dropSequence)&65535)>=32768||sequence==s.dropSequence){
+                ackDrop(s,sequence);
+                return;
+            }
+            s.dropSequence=sequence;
+        }
+        if(!canDropNow(s)){rejectDrop(s,sequence,"drop_not_ready");return;}
+        Inventory.Address source=request.address()==null?new Inventory.Address(0,s.handContainer,0):request.address();
+        ItemStack expected=StorageLayout.validAddress(source)&&source.aggregate()<2?inventory(s).at(source):null;
+        if(expected==null){rejectDrop(s,sequence,"world_item_source");return;}
+        long now=System.nanoTime();
+        var requestState=new QueuedDrop(sequence,s.life,source,expected);
+        if(itemDrops.offer(s,requestState,key,Math.toIntExact(64+expected.residentBytes()),now)==InventoryTransferQueue.Admission.FULL){
+            rejectDrop(s,sequence,"world_item_queue_full");
+            return;
+        }
+        advanceItemDrops(s,now);
     }
+    private void advanceItemDrops(Session s,long now){
+        if(!itemDrops.hasWaiting(s))return;
+        if(!canDropNow(s)){
+            var waiting=itemDrops.cancelWaiting(s);
+            if(!waiting.isEmpty()){
+                inventorySnapshot(s,0);
+                for(var entry:waiting)ackDrop(s,entry.value().sequence());
+            }
+            return;
+        }
+        if(now-s.lastItemDrop<50_000_000L||inventories.busy(character(s)))return;
+        var batch=itemDrops.start(s,1);
+        if(batch.isEmpty())return;
+        var entry=batch.get(0);
+        QueuedDrop request=entry.value();
+        ItemStack current=inventory(s).at(request.source());
+        if(request.life()!=s.life||now-entry.at()>15_000_000_000L||current==null
+                ||current.count()!=request.expected().count()||!current.mergeable(request.expected())){
+            itemDrops.complete(s,batch);
+            rejectDrop(s,request.sequence(),"world_item_request_stale");
+            return;
+        }
+        s.lastItemDrop=now;
+        double[] position=CharacterScale.eye(s.pos,s.posture.locomotion(),s.characterScale);
+        double eye=position[1]-s.pos[1];
+        position[1]-=.3f;
+        var velocity=szserver.world.WorldItems.throwVelocity(s.yaw,s.pitch,eye,random);
+        inventories.dropWorldItem(character(s),request.source(),itemWorld,position,
+                new double[]{velocity.x(),velocity.y(),velocity.z()},plan->{
+                    itemDropped++;
+                    if(itemDrops.complete(s,batch)&&sessions.get(s.address)==s)
+                        inventoryChanged(s,plan,()->ackDrop(s,request.sequence()));
+                },error->{
+                    lastItemFailure=error;
+                    itemFailures++;
+                    if(itemDrops.complete(s,batch)&&sessions.get(s.address)==s){
+                        rejectDrop(s,request.sequence(),error);
+                        enqueue(s,0,GamePackets.chat("Не удалось выбросить предмет: "+error));
+                    }
+                });
+    }
+    private static boolean groundItemChunkVisible(Session player,World.Vec position){
+        if(player.teleport!=null||player.respawning||player.teleportGuard.awaitingArrival())return false;
+        long key=chunkKey((int)Math.floor(position.x()/16),(int)Math.floor(position.z()/16));
+        return player.window.inside(key)&&player.chunks.contains(key);
+    }
+    private static int worldItemLane(szserver.world.WorldItems.Body body){return body.throwingSession==null?1:0;}
     private void advanceWorldItems(){
-        worldItems.sync(inventories.worldItems());
+        long now=System.currentTimeMillis();
+        worldItems.sync(inventories.worldItems(),now);
         for(var gone:worldItems.removed()){
-            for(Session s:List.copyOf(sessions.values()))if(s.worldItemsSeen.remove(gone.item.id())){
+            for(Session s:List.copyOf(sessions.values()))if(s.worldItemsSeen.remove(gone.item.id())!=null){
                 if(gone.broken()&&s.boltImpactEffects){
                     boolean predicted=gone.prediction>=0&&s.incarnation.equals(gone.throwingSession);
                     enqueueOrRetire(s,GrenadePackets.boltImpact(gone.entity,gone.position,predicted));
                 }
-                enqueueOrRetire(s,WorldItemPackets.remove(gone.entity));
+                enqueueOrRetire(s,worldItemLane(gone),WorldItemPackets.remove(gone.entity));
             }
             entityIds.release(gone.entity);
         }
-        long now=System.currentTimeMillis();
         if(tick%20==0){int left=2;for(var saved:inventories.worldItems().values())if(!saved.world().equals(itemWorld)&&now>=saved.expires()&&remoteItemExpiry.add(saved.id())){
             inventories.expireWorldItem(saved.id(),now).whenComplete((v,error)->{try{adminTask(()->{remoteItemExpiry.remove(saved.id());if(error!=null)itemFailures++;});}catch(RejectedExecutionException stopped){}});if(--left==0)break;
         }}
         List<Session> players=sessions.values().stream().filter(s->s.ready&&!s.respawning&&s.hp>0&&s.teleport==null).toList();
         worldItems.step(players.stream().map(s->point(s.pos)).toList());
         var boltEvents=resolveBoltImpacts();
-        int settlements=2,expirations=2,pickups=4,pickupChecks=16;
+        int settlements=2,expirations=2;
         var bodies=new ArrayList<>(worldItems.all());
         for(int index=0;index<bodies.size();index++){var body=bodies.get((int)Math.floorMod((long)tick*17+index,bodies.size()));
             if(body.throwingSession!=null||body.claiming||body.expiring)continue;
@@ -1065,29 +1413,35 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
             if(body.ground&&body.velocity.x()==0&&body.velocity.y()==0&&body.velocity.z()==0&&!body.settledSaved&&!body.settlePending&&settlements-->0&&now>=body.retry){
                 body.settlePending=true;var p=body.position;inventories.settleWorldItem(body.item.id(),p.x(),p.y(),p.z()).whenComplete((v,error)->{try{adminTask(()->{body.settlePending=false;if(error==null)body.settledSaved=true;else{body.retry=System.currentTimeMillis()+1000;itemFailures++;}});}catch(RejectedExecutionException stopped){}});
             }
-            if(pickups<=0||pickupChecks<=0||now-body.item.created()<2000||now<body.retry)continue;
-            for(int pi=0;pi<players.size()&&pickupChecks>0;pi++){Session player=players.get((int)Math.floorMod((long)tick+pi,players.size()));
-                if(body.item.pickupOwner()!=null&&!body.item.pickupOwner().equals(player.grant.name()))continue;
-                double[] p=player.pos;var at=body.position;double radius=Math.max(.6,.6*player.characterScale);
-                if(Math.abs(at.x()-p[0])>radius||Math.abs(at.z()-p[2])>radius||at.y()<p[1]-.25||at.y()>p[1]+CharacterScale.height(player.posture.locomotion(),player.characterScale)+.25)continue;
-                pickupChecks--;if(!inventories.canCollect(character(player),body.item.stack()))continue;
-                body.claiming=true;pickups--;inventories.collectWorldItem(character(player),body.item.id(),itemWorld,plan->{itemCollected++;if(sessions.get(player.address)==player)inventoryChanged(player,plan,()->{});},error->{body.claiming=false;body.retry=System.currentTimeMillis()+500;itemFailures++;});break;
-            }
         }
         for(Session s:List.copyOf(sessions.values()))if(s.ready){
-            Set<UUID> visible=new HashSet<>();for(var body:bodies)if(!body.expiring&&Math.abs(body.position.x()-s.pos[0])<64&&Math.abs(body.position.z()-s.pos[2])<64&&Math.abs(body.position.y()-s.pos[1])<48)visible.add(body.item.id());
-            for(var it=s.worldItemsSeen.iterator();it.hasNext();){UUID id=it.next();if(!visible.contains(id)){for(var body:bodies)if(body.item.id().equals(id)){enqueueOrRetire(s,WorldItemPackets.remove(body.entity));break;}it.remove();}}
+            Set<UUID> visible=new HashSet<>();
+            for(var body:bodies){
+                if(body.expiring)continue;
+                var p=body.position;
+                boolean tracked=body.throwingSession==null?groundItemChunkVisible(s,p):
+                    Math.abs(p.x()-s.pos[0])<64&&Math.abs(p.z()-s.pos[2])<64&&Math.abs(p.y()-s.pos[1])<48;
+                if(tracked)visible.add(body.item.id());
+            }
+            for(var it=s.worldItemsSeen.keySet().iterator();it.hasNext();){UUID id=it.next();if(!visible.contains(id)){for(var body:bodies)if(body.item.id().equals(id)){enqueueOrRetire(s,worldItemLane(body),WorldItemPackets.remove(body.entity));break;}it.remove();}}
             int sent=0;for(int n=0;n<bodies.size()&&sent<32;n++){var body=bodies.get((int)Math.floorMod((long)tick*32+n,bodies.size()));if(!visible.contains(body.item.id()))continue;
-                if(s.worldItemsSeen.add(body.item.id())){
-                    if(body.throwingSession==null)enqueueOrRetire(s,WorldItemPackets.spawn(body.entity,body.position,body.item.stack()));
+                // Queue item traffic behind terrain and complete tile records on their reliable lane.
+                int lane=worldItemLane(body);
+                if(lane==1&&(s.completeTiles!=null||s.lanes[lane].queued.size()>=32))continue;
+                ItemMotion motion=new ItemMotion(body.position,body.velocity);
+                ItemMotion previous=s.worldItemsSeen.get(body.item.id());
+                if(previous==null){
+                    if(body.throwingSession==null)enqueueOrRetire(s,lane,WorldItemPackets.spawn(body.entity,body.position,body.item.stack()));
                     else {
                         enqueueOrRetire(s,GrenadePackets.bolt(body.entity,body.position,body.projectile));
                         if(s.incarnation.equals(body.throwingSession)&&body.prediction>=0)
                             enqueueOrRetire(s,GrenadePackets.prediction(body.entity,body.prediction));
                     }
-                    enqueueOrRetire(s,WorldItemPackets.update(body));sent++;
+                    enqueueOrRetire(s,lane,WorldItemPackets.update(body));s.worldItemsSeen.put(body.item.id(),motion);sent++;
                 }
-                else if(body.velocity.x()!=0||body.velocity.y()!=0||body.velocity.z()!=0||tick%20==Math.floorMod(body.entity,20)){enqueueOrRetire(s,WorldItemPackets.update(body));sent++;}
+                else if(body.velocity.x()!=0||body.velocity.y()!=0||body.velocity.z()!=0||!motion.equals(previous)){
+                    enqueueOrRetire(s,lane,WorldItemPackets.update(body));s.worldItemsSeen.put(body.item.id(),motion);sent++;
+                }
             }
         }
         for(var event:boltEvents)publishBoltImpact(event);
@@ -1159,9 +1513,22 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
             UUID id=body.item.id();
             if(!isBolt(body.item))continue;
             live.add(id);
-            if(boltTriggered.contains(id))continue;
+            boolean triggered=boltTriggered.contains(id);
             World.Vec from=body.previousPosition();
-            var impact=BoltAnomalies.funnelImpact(zones,from,body.position);
+            var impact=triggered?null:BoltAnomalies.funnelImpact(zones,from,body.position);
+            if(impact==null){
+                long contactTick=anomalyClock+1; // Actor contacts later in this same server tick.
+                var trampoline=BoltAnomalies.trampolineImpact(zones,from,body.position,body.velocity,
+                    zone->anomalies.trampolineReady(contactTick,zone));
+                if(trampoline!=null&&anomalies.activateTrampolineBolt(contactTick,trampoline.zone())){
+                    body.rebound(trampoline.point(),trampoline.rebound());
+                    boltTriggered.add(id);
+                    boltTriggers++;
+                    if(!trampoline.zone().disabledEffect())events.add(new BoltEvent(trampoline.zone(),body.entity,null));
+                    continue;
+                }
+            }
+            if(triggered)continue;
             var zone=impact==null?BoltAnomalies.containing(zones,from,body.position):impact.zone();
             if(zone==null||impact==null&&zone.kind().equals("funnel"))continue;
             if(impact!=null){
@@ -1198,28 +1565,65 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
     // The native controller echoes applied impulses/capture phases. Neither echo grants damage or movement authority.
     private void anomalyVelocityEcho(byte[] body)throws IOException{if(body.length!=25)throw new IOException("anomaly_velocity_echo_size");var in=ByteBuffer.wrap(body);for(int i=0;i<3;i++)if(!Double.isFinite(in.getDouble()))throw new IOException("anomaly_velocity_echo_value");if((in.get()&255)>1)throw new IOException("anomaly_velocity_echo_flag");anomalyVelocityEchoes++;}
     private void anomalyForceEcho(byte[] body)throws IOException{AnomalySettings.captureEcho(body);}
-    private void anomalyStrengthSave(Session s,byte[] body)throws IOException{if(!sceneWriteAllowed(s))return;sceneWrite(s,sceneAccess.queuedAnomalyStrength(s.sceneWriter,szserver.client.AnomalySettings.strength(body),new ArrayList<>(s.chunks)));}
+    private void anomalyStrengthSave(Session s,byte[] body)throws IOException{if(!sceneWriteAllowed(s))return;sceneWrite(s,sceneAccess.queuedAnomalyStrength(s.sceneWriter,szserver.client.AnomalySettings.strength(body),sceneScope(s)));}
     private void anomalyConfigurationSave(Session s,byte[] body)throws IOException{
-        if(!sceneWriteAllowed(s))return;var portal=szserver.client.PortalPackets.settings(body);sceneWrite(s,portal==null?sceneAccess.queuedAnomaly(s.sceneWriter,szserver.client.AnomalySettings.save(body),new ArrayList<>(s.chunks)):sceneAccess.queuedPortal(s.sceneWriter,portal,new ArrayList<>(s.chunks)));
+        if(!sceneWriteAllowed(s))return;var portal=szserver.client.PortalPackets.settings(body);sceneWrite(s,portal==null?sceneAccess.queuedAnomaly(s.sceneWriter,szserver.client.AnomalySettings.save(body),sceneScope(s)):sceneAccess.queuedPortal(s.sceneWriter,portal,sceneScope(s)));
     }
     private void sceneConfigurationSave(Session s,byte[] body,boolean compressed)throws IOException{
-        if(!sceneWriteAllowed(s))return;SceneConfigurationPackets.Save request=compressed?SceneConfigurationPackets.settings(body):SceneConfigurationPackets.save(body);sceneWrite(s,sceneAccess.queuedSave(s.sceneWriter,request,new ArrayList<>(s.chunks)));
+        if(!sceneWriteAllowed(s))return;SceneConfigurationPackets.Save request=compressed?SceneConfigurationPackets.settings(body):SceneConfigurationPackets.save(body);sceneWrite(s,sceneAccess.queuedSave(s.sceneWriter,request,sceneScope(s)));
     }
-    private void sceneEdit(Session s,String kind,byte[] body){if(!sceneWriteAllowed(s))return;sceneWrite(s,sceneAccess.queuedEdit(s.sceneWriter,kind,body,new ArrayList<>(s.chunks)));}
+    private void sceneEdit(Session s,String kind,byte[] body){if(!sceneWriteAllowed(s))return;sceneWrite(s,sceneAccess.queuedEdit(s.sceneWriter,kind,body,sceneScope(s)));}
     private void sceneWrite(Session s,CompletableFuture<JsonObject> future){
-        if(future.isCompletedExceptionally()){try{future.join();}catch(CompletionException error){if(error.getCause() instanceof RejectedExecutionException){sceneDenied++;enqueue(s,0,GamePackets.chat("scene_write_queue_full"));return;}}}s.sceneSaves.addLast(future);
+        if(future.isCompletedExceptionally()){try{future.join();}catch(CompletionException error){if(error.getCause() instanceof RejectedExecutionException){sceneDenied++;enqueue(s,0,GamePackets.chat("scene_write_queue_full"));return;}}}s.sceneSaves.addLast(new SceneSave(System.nanoTime(),future));
     }
     private void advanceSceneConfiguration(Session s){
-        for(var iterator=s.sceneReads.entrySet().iterator();iterator.hasNext();){var entry=iterator.next();if(!entry.getValue().isDone())continue;iterator.remove();try{enqueue(s,0,entry.getValue().join());}catch(CompletionException error){sceneFailed++;enqueue(s,0,GamePackets.chat("scene_configuration_read_failed"));}}
-        while(!s.sceneSaves.isEmpty()&&s.sceneSaves.peekFirst().isDone()){var completed=s.sceneSaves.removeFirst();try{JsonObject result=completed.join();if(result.get("status").getAsString().equals("committed"))enqueue(s,0,GamePackets.chat("Изменения объекта сохранены."));}catch(CompletionException error){sceneFailed++;enqueue(s,0,GamePackets.chat("scene_configuration_save_failed"));}}
+        for(var iterator=s.sceneReads.values().iterator();iterator.hasNext();){
+            var read=iterator.next();
+            if(!read.future().isDone())continue;
+            try{
+                byte[] reply=read.future().join();
+                if(s.lanes[0].queued.size()+(reply.length+FRAGMENT-1)/FRAGMENT>=MAX_QUEUE)continue;
+                enqueue(s,0,reply);
+            }catch(CompletionException error){
+                sceneFailed++;
+                sceneError(s,"read",read.object(),error.getCause());
+                enqueue(s,0,GamePackets.chat("Не удалось открыть настройки объекта."));
+            }
+            iterator.remove();
+        }
+        while(!s.sceneSaves.isEmpty()&&s.sceneSaves.peekFirst().future().isDone()){
+            var completed=s.sceneSaves.removeFirst();
+            sceneMaxWriteMs=Math.max(sceneMaxWriteMs,(System.nanoTime()-completed.started())/1e6);
+            try{
+                JsonObject result=completed.future().join();
+                if(result.has("sceneUnplaced")){
+                    var rows=result.getAsJsonArray("sceneUnplaced");
+                    sceneUnplaced+=rows.size();
+                    var first=rows.get(0).getAsJsonObject();
+                    sceneError(s,"place",null,new IllegalArgumentException(first.toString()));
+                    enqueue(s,0,GamePackets.chat("Не удалось создать объекты ("+rows.size()+"). Первый: "+first.get("asset").getAsString()));
+                }else if(result.get("status").getAsString().equals("committed"))enqueue(s,0,GamePackets.chat("Изменения объекта сохранены."));
+            }catch(CompletionException error){
+                sceneFailed++;
+                sceneError(s,"write",null,error.getCause());
+                enqueue(s,0,GamePackets.chat("Не удалось сохранить изменения объекта."));
+            }
+        }
+    }
+    private void sceneError(Session s,String operation,UUID object,Throwable error){
+        long now=System.nanoTime();
+        if(now<s.nextSceneErrorLog)return;
+        s.nextSceneErrorLog=now+1_000_000_000L;
+        String detail=String.valueOf(error).replace('\r',' ').replace('\n',' ');
+        System.err.printf("[scene-editor] %s object=%s chunks=%d error=%s%n",operation,object,s.chunks.size(),detail.substring(0,Math.min(768,detail.length())));
     }
     private void join(Session s,UUID protocol){
         if(sessions.get(s.address)!=s)return;
-        enqueue(s,0,Wire.concat(GamePackets.context(protocol),GamePackets.snapshot(),szserver.client.ChunkDistancePackets.frame(s.window.radius()),scaledReady(s),GamePackets.vitals(tick,0,s.hp,s.maxHp,s.animation.aiming())));
+        enqueue(s,0,Wire.concat(GamePackets.context(protocol,locationName.current(),voiceTokens!=null),GamePackets.snapshot(),szserver.client.ChunkDistancePackets.frame(s.window.radius()),scaledReady(s),GamePackets.vitals(tick,0,s.hp,s.maxHp,s.animation.aiming())));
         enqueue(s,0,GamePackets.attributes(tick,0,equipment(s)));inventorySnapshot(s,0);syncLoadoutHand(s);
         var initialEnvironment=environment.state();enqueue(s,0,EnvironmentPackets.clock(environment.clockAnchor(),System.currentTimeMillis()));
         enqueue(s,0,inventories.quickSlotsFrame(character(s)));sendEffects(s,List.of(),s.effects.active(System.currentTimeMillis()));sendPulseEffects(s,List.of(),s.pulses.effects(System.currentTimeMillis()));sendSickness(s,true);
-        sendPermissions(s,true);enqueue(s,0,GamePackets.attributes(++tick,0,Factions.attributes(s.faction)));enqueue(s,0,allianceState.frame());s.ready=true;sendPulseEffects(s,List.of(),s.pulses.effects(System.currentTimeMillis()));resetPoses(s);for(Session viewer:sessions.values())if(viewer!=s&&viewer.ready&&viewer.scaleCapable)sendScale(viewer,s);for(Session other:sessions.values())if(other!=s&&other.ready){enqueue(other,0,Wire.concat(GamePackets.spawn(s.entity,s.grant.name(),s.pos,s.yaw,s.pitch),GamePackets.attributes(tick,s.entity,equipment(s)),GamePackets.attributes(tick,s.entity,remoteHand(s)),GamePackets.attributes(tick,s.entity,Factions.attributes(s.faction)),GamePackets.vitals(tick,s.entity,s.hp,s.maxHp,s.animation.aiming())));enqueue(s,0,Wire.concat(GamePackets.spawn(other.entity,other.grant.name(),other.pos,other.yaw,other.pitch),GamePackets.attributes(tick,other.entity,equipment(other)),GamePackets.attributes(tick,other.entity,remoteHand(other)),GamePackets.attributes(tick,other.entity,Factions.attributes(other.faction)),GamePackets.vitals(tick,other.entity,visibleHealth(other),other.maxHp,other.animation.aiming())));}
+        sendPermissions(s,true);enqueue(s,0,GamePackets.attributes(++tick,0,playerRelations(s)));enqueue(s,0,allianceState.frame());s.ready=true;s.joinedNanos=System.nanoTime();sendPulseEffects(s,List.of(),s.pulses.effects(System.currentTimeMillis()));resetPoses(s);for(Session viewer:sessions.values())if(viewer!=s&&viewer.ready&&viewer.scaleCapable)sendScale(viewer,s);for(Session other:sessions.values())if(other!=s&&other.ready){enqueue(other,0,Wire.concat(GamePackets.spawn(s.entity,s.grant.name(),s.pos,s.yaw,s.pitch),GamePackets.attributes(tick,s.entity,equipment(s)),GamePackets.attributes(tick,s.entity,remoteHand(s)),GamePackets.attributes(tick,s.entity,playerRelations(s)),GamePackets.vitals(tick,s.entity,s.hp,s.maxHp,s.animation.aiming())));enqueue(s,0,Wire.concat(GamePackets.spawn(other.entity,other.grant.name(),other.pos,other.yaw,other.pitch),GamePackets.attributes(tick,other.entity,equipment(other)),GamePackets.attributes(tick,other.entity,remoteHand(other)),GamePackets.attributes(tick,other.entity,playerRelations(other)),GamePackets.vitals(tick,other.entity,visibleHealth(other),other.maxHp,other.animation.aiming())));}
             chunkWindow(s);System.out.println("Native joined: "+s.grant.name()+" entity="+s.entity);
     }
     private UUID character(Session s){return s.grant.characterId();}
@@ -1270,10 +1674,16 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
     }
     private void suicide(Session s){if(s.hp<=0||s.respawning||s.teleport!=null)return;damage(null,"Самоубийство",s,s.hp,s.pos,null,new double[3],false);}
     private void damage(Session attacker,Session victim,float amount){damage(attacker,victim,amount,attacker.pos,null,new double[3],false);}
-    private void damage(Session attacker,Session victim,float amount,double[] source,double[] impact,double[] impulse,boolean head){damage(attacker,attacker.grant.name(),victim,amount,source,impact,impulse,head);}
-    private void damage(Session attacker,String killerName,Session victim,float amount,double[] source,double[] impact,double[] impulse,boolean head){
-        if(attacker!=null&&attacker.gameplayMode!=PlayerRules.Mode.STALKER||victim.gameplayMode!=PlayerRules.Mode.STALKER||victim.hp<=0||!Float.isFinite(amount)||amount<=0)return;enqueueOrRetire(victim,GamePackets.receivedDamage(source));float applied=Math.min(victim.hp,amount);victim.hp=Math.max(0,victim.hp-amount);victim.lastDamage=System.nanoTime();victim.damageWall=System.currentTimeMillis();if(victim.hp==0)playerDeath(victim,attacker,killerName,impact,impulse);vitals(victim);
+    private boolean damage(Session attacker,Session victim,float amount,double[] source,double[] impact,double[] impulse,boolean head){return damage(attacker,attacker.grant.name(),victim,amount,source,impact,impulse,head);}
+    private boolean damage(Session attacker,String killerName,Session victim,float amount,double[] source,double[] impact,double[] impulse,boolean head){
+        return damage(attacker,killerName,attacker==null?null:areaActor(attacker),victim,amount,source,impact,impulse,head);
+    }
+    private boolean damage(Session attacker,String killerName,AreaRelations.Actor owner,Session victim,float amount,double[] source,double[] impact,double[] impulse,boolean head){
+        if(attacker!=null&&attacker.gameplayMode!=PlayerRules.Mode.STALKER||victim.gameplayMode!=PlayerRules.Mode.STALKER||victim.hp<=0||!Float.isFinite(amount)||amount<=0)return false;
+        if(owner!=null&&!areaRelations.allowsPlayerDamage(allianceState.friendlyFire(),owner,areaActor(victim)))return false;
+        enqueueOrRetire(victim,GamePackets.receivedDamage(source));float applied=Math.min(victim.hp,amount);victim.hp=Math.max(0,victim.hp-amount);victim.lastDamage=System.nanoTime();victim.damageWall=System.currentTimeMillis();if(victim.hp==0)playerDeath(victim,attacker,killerName,impact,impulse);vitals(victim);
         if(attacker!=null&&sessions.get(attacker.address)==attacker)enqueueOrRetire(attacker,Wire.dynamic("207064166",Wire.bytes(o->{o.writeBoolean(false);o.writeInt(head?4:3);o.writeBoolean(true);o.writeFloat(applied);o.writeFloat(0);o.writeBoolean(false);o.writeBoolean(false);o.writeBoolean(victim.hp==0);o.writeBoolean(false);o.writeBoolean(false);o.writeFloat(0);o.writeFloat(0);o.writeInt(5);o.writeBoolean(false);o.writeBoolean(false);})));
+        return true;
     }
     private boolean vitalsPending(UUID id){return medicineCommits.containsKey(id)||deathCommits.containsKey(id)||areaHealCommits.containsKey(id)||pulseCommits.containsKey(id)||reviveCommits.containsKey(id)||reviveChecks.containsKey(id);}
     private void publishVitals(VitalsTask task,VitalsReceipt receipt,CharacterLocations.PlayerState state){task.save=locations.commitVitals(task.id,receipt,state);locations.releaseVitals(task.id);task.held=false;}
@@ -1490,7 +1900,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
                 if(target.life!=check.life()||!Objects.equals(target.grenadeDeath,check.death())){reviveErrors++;completeVitals(task,reviveCommits);return;}
                 target.hp=expected.health();target.stamina=expected.stamina();target.damageWall=0;target.lastDamage=0;target.deadUntil=0;target.grenadeDeath=null;target.life++;target.velocity=new double[3];target.motion.reset();target.posture.reset();target.animation.reset();target.mode=0;target.speed=0;target.ground=true;target.reloadAt=0;target.swing=null;revives++;publishVitals(task,result.receipt(),expected);
                 corpseDespawn(corpses.retire(target.lastCorpse));target.lastCorpse=null;
-                if(!closed&&sessions.get(target.address)==target){enqueue(target,0,Wire.concat(packets.respawn(target.pos),packets.ready(target.pos,++tick,target.yaw,target.pitch,movementConfiguration(target)),GamePackets.velocityReset()));loadout(target);sendPermissions(target,true);enqueue(target,0,GamePackets.attributes(++tick,0,Factions.attributes(target.faction)));sendEffects(target,List.of(),target.effects.active(System.currentTimeMillis()));sendPulseEffects(target,List.of(),target.pulses.effects(System.currentTimeMillis()));sendSickness(target,true);resetPoses(target);vitals(target);}
+                if(!closed&&sessions.get(target.address)==target){enqueue(target,0,Wire.concat(packets.respawn(target.pos),packets.ready(target.pos,++tick,target.yaw,target.pitch,movementConfiguration(target)),GamePackets.velocityReset()));loadout(target);sendPermissions(target,true);enqueue(target,0,GamePackets.attributes(++tick,0,playerRelations(target)));sendEffects(target,List.of(),target.effects.active(System.currentTimeMillis()));sendPulseEffects(target,List.of(),target.pulses.effects(System.currentTimeMillis()));sendSickness(target,true);resetPoses(target);vitals(target);}
             },error->{reviveDenied++;target.reviveCheckAt=check.source().until();completeVitals(task,reviveCommits);});
         }
         if(reviveChecks.size()>=32)return;
@@ -1537,7 +1947,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         for(int id=1;id<65536;id++){
             if(id==29998||id==29999)continue; // Internal climb/parkour actions, not inventory factories.
             try{inventories.catalog().get(id);}catch(IllegalArgumentException absent){continue;}
-            if(!appearances.containsKey(id)&&!inventories.hasAppearanceCodec(id)){
+            if(!appearances.containsKey(id)&&inventories.hasItemFactory(id)&&!inventories.hasAppearanceCodec(id)){
                 int factory=id;appearances.put(id,Wire.bytes(out->{out.writeInt(factory);out.write(new byte[3]);}));
             }
         }
@@ -1553,7 +1963,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         enqueue(s,0,InventoryScreen.storage(root,plan,attributes));s.inventoryScreen.opened(plan);return true;
     }
     private void inventorySnapshot(Session s,int owner){if(owner==0)enqueue(s,0,InventoryPackets.snapshot(inventory(s),0,0,0));else enqueue(s,0,InventoryPackets.snapshot(inventory(s),-1,0,s.inventoryScreen.page()));enqueue(s,0,InventoryPackets.snapshot(inventory(s),owner,1,0));}
-    private void refreshWeapon(Session s,Runnable ready){if(sessions.get(s.address)!=s)return;cancelUnjam(s);long inventoryRevision=inventory(s).revision();cancelLauncherReload(s);inventories.weapon(character(s),s.handContainer,weapon->{if(sessions.get(s.address)!=s)return;if(s.ready&&inventory(s).revision()!=inventoryRevision)inventorySnapshot(s,0);refreshStats(s);s.weapon=weapon;s.rounds=weapon==null?0:weapon.rounds();s.firearm=weapon==null?inventories.identity(character(s),s.handContainer):weapon.identity();s.magazines=weapon==null?null:weapon.magazines();s.reloadAt=0;s.animation.cancel();s.physicalCycle=weapon==null?null:PhysicalReload.activeSaved(inventories.gameplay(character(s)),s.firearm);refreshReserve(s);ready.run();},error->{enqueue(s,0,GamePackets.chat(error));remove(s);});}
+    private void refreshWeapon(Session s,Runnable ready){if(sessions.get(s.address)!=s)return;cancelUnjam(s);long inventoryRevision=inventory(s).revision();cancelLauncherReload(s);inventories.weapon(character(s),s.handContainer,weapon->{if(sessions.get(s.address)!=s)return;if(s.ready&&inventory(s).revision()!=inventoryRevision)inventorySnapshot(s,0);refreshStats(s);s.weapon=weapon;s.rounds=weapon==null?0:weapon.rounds();s.firearm=weapon==null?inventories.identity(character(s),s.handContainer):weapon.identity();s.reloadAt=0;s.animation.cancel();s.physicalCycle=weapon==null?null:PhysicalReload.activeSaved(inventories.gameplay(character(s)),s.firearm);refreshReserve(s);ready.run();},error->{enqueue(s,0,GamePackets.chat(error));remove(s);});}
     private void refreshReserve(Session s){s.reserve=s.weapon==null?0:inventory(s).items().entrySet().stream().filter(e->e.getKey().aggregate()==1&&e.getValue().id()==s.weapon.ammo()).mapToInt(e->e.getValue().count()).sum();}
     private void syncHand(Session s){
         var attributes=hand(s);
@@ -1605,7 +2015,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
                 inventorySnapshot(s,0);
                 for(Session viewer:sessions.values())if(viewer!=s&&viewer.ready)enqueue(viewer,0,Wire.concat(
                         GamePackets.attributes(tick,s.entity,equipment(s)),
-                        GamePackets.attributes(tick,s.entity,Factions.attributes(s.faction))));
+                        GamePackets.attributes(tick,s.entity,playerRelations(s))));
                 syncLoadoutHand(s);
                 vitals(s);
                 done.run();
@@ -1651,7 +2061,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         if(batch.stream().anyMatch(entry->now-entry.at()>15_000_000_000L||!validInventoryTransfer(s,entry.value()))){rejected.run();return;}
         // Native bulk actions send several predicted requests in one frame. Publish one final journal revision.
         inventories.mutateAsync(character(s),before->{Inventory working=before;Map<Inventory.Address,ItemStack> changes=new LinkedHashMap<>();int moved=0;
-            for(var entry:batch){var step=transferPlan(working,entry.value());working=step.after();changes.putAll(step.changes());moved=Math.addExact(moved,step.moved());}
+            for(var entry:batch){var step=transferPlan(working,entry.value());inventories.validateEquipmentTransfer(step);working=step.after();changes.putAll(step.changes());moved=Math.addExact(moved,step.moved());}
             return before.replace(changes,moved);
         },plan->{
             if(closed||sessions.get(s.address)!=s){inventoryTransfers.discard(s);return;}
@@ -1700,7 +2110,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         if(s.respawnStateSave==null||!s.respawnStateSave.isDone())return;
         try{s.respawnStateSave.join();}catch(CompletionException failure){s.respawnStateSave=null;remove(s);return;}
         s.respawnStateSave=null;
-        s.respawning=false;s.deadUntil=0;s.velocity=new double[3];s.motion.reset();respawns++;s.chunks.clear();s.chunkRevisions.clear();s.cachedRequests.clear();s.deliveries.clear();s.faults.clear();s.manifestRetryAt=0;s.deltas=null;s.completeTiles=null;s.completeTileAt=0;s.pendingChunks.clear();s.chunkX=Integer.MIN_VALUE;s.window.reset();s.windowEpoch++;enqueue(s,0,packets.respawn(s.pos));enqueue(s,0,scaledReady(s));loadout(s);sendPermissions(s,true);enqueue(s,0,GamePackets.attributes(++tick,0,Factions.attributes(s.faction)));for(Session other:sessions.values())if(other!=s&&other.ready)enqueue(other,0,GamePackets.vitals(tick,s.entity,s.hp,s.maxHp,s.animation.aiming()));
+        s.respawning=false;s.deadUntil=0;s.velocity=new double[3];s.motion.reset();respawns++;s.worldItemsSeen.clear();s.lastMovementConfigurationSent=null;s.chunks.clear();s.chunkRevisions.clear();s.cachedRequests.clear();s.deliveries.clear();s.faults.clear();s.manifestRetryAt=0;s.deltas=null;s.completeTiles=null;s.completeTileAt=0;s.pendingChunks.clear();s.chunkX=Integer.MIN_VALUE;s.window.reset();s.windowEpoch++;enqueue(s,0,packets.respawn(s.pos));enqueue(s,0,scaledReady(s));loadout(s);sendPermissions(s,true);enqueue(s,0,GamePackets.attributes(++tick,0,playerRelations(s)));for(Session other:sessions.values())if(other!=s&&other.ready)enqueue(other,0,GamePackets.vitals(tick,s.entity,s.hp,s.maxHp,s.animation.aiming()));
     }
     private void advancePlacement(Session s,long now){
         if(s.candidates==null)return;
@@ -1746,7 +2156,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
             try{rows=s.manifest.join();}catch(CompletionException failure){manifestFailures++;s.window.retry(s.manifestKeys);s.manifestRetryAt=System.nanoTime()+1_000_000_000L;s.manifest=null;s.manifestKeys=List.of();return;}
             if(s.manifestEpoch!=s.windowEpoch){manifestStale++;s.window.retry(s.manifestKeys);s.manifest=null;s.manifestKeys=List.of();return;}
             List<ChunkManifestPackets.Entry> entries=new ArrayList<>();
-            for(var row:rows){if(row.error()!=null){manifestFailures++;s.faults.failed(row.key(),System.nanoTime());s.window.complete(row.key());continue;}s.faults.resolved(row.key());if(!row.present()||s.chunks.contains(row.key())){s.window.complete(row.key());continue;}
+            for(var row:rows){if(row.error()!=null){manifestFailures++;s.faults.failed(row.key(),System.nanoTime());s.window.complete(row.key());continue;}s.faults.resolved(row.key());if(!row.present()){s.pendingChunks.remove(row.key());s.cachedRequests.remove(row.key());s.window.complete(row.key());continue;}if(s.chunks.contains(row.key())){s.window.complete(row.key());continue;}
                 // A dirty overlay has another native revision. A null catalogue revision requests
                 // the authoritative projected body instead of comparing an obsolete base UUID.
                 UUID revision=terrainProjection.version((int)(row.key()>>32),(int)row.key())==0?row.revision():null;
@@ -1760,12 +2170,21 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
     private void streamChunks(Session s){
         if(s.teleport!=null)return; // Finish existing frames; never truncate an in-flight stream.
         if(!streamCompleteTiles(s))return;
-        if(!streamNativeRepair(s))return;chunkWindow(s);pruneChunkWindow(s);Lane lane=s.lanes[1];if(lane.queued.size()>32||lane.sent.size()>32)return;
+        if(!streamNativeRepair(s))return;chunkWindow(s);pruneChunkWindow(s);Lane lane=s.lanes[1];if(lane.queued.size()>=CHUNK_REFILL)return;
         // Changes in already visible chunks precede background map loading on the same lane.
-        streamBlockChanges(s);if(s.completeTiles!=null||lane.queued.size()>32||lane.sent.size()>32)return;
+        if(!streamBlockChanges(s)||s.completeTiles!=null||lane.queued.size()>=CHUNK_REFILL)return;
+        Lane gameplay=s.lanes[0];
+        if(gameplay.queued.size()>8||gameplay.sent.size()>=32){
+            if(!s.pendingChunks.isEmpty()||s.manifest!=null||s.window.deferred()>0)chunkBackgroundDeferred++;
+            return;
+        }
         streamManifest(s);int sent=0,requested=0;
         List<Long> deferred=new ArrayList<>();
-        for(var iterator=s.pendingChunks.iterator();iterator.hasNext()&&sent<2&&requested<16;){long key=iterator.next();int x=(int)(key>>32),z=(int)key;requested++;
+        // Small acknowledged chunks can fill one tick's budget without buying
+        // extra reliable fragments when the channel is already backlogged.
+        for(var iterator=s.pendingChunks.iterator();iterator.hasNext()&&sent<24&&requested<48;){
+            if(lane.queued.size()>=CHUNK_REFILL)break;
+            long key=iterator.next();int x=(int)(key>>32),z=(int)key;requested++;
             TerrainProjection.Prepared prepared=terrainProjection.prepared(x,z);if(prepared==null){iterator.remove();deferred.add(key);continue;}
             // Every initial/re-entry demand needs the current immutable projection. Older
             // snapshots cannot be repaired by deltas that a native commit already retired.
@@ -1782,31 +2201,34 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
     /** Complete NBT frames follow their atomic appearance chunk on the same reliable lane. */
     private boolean streamCompleteTiles(Session s){
         if(s.completeTiles==null)return true;Lane lane=s.lanes[1];int budget=2;
-        while(s.completeTileAt<s.completeTiles.completeFrameCount()&&budget-->0){byte[] frame=s.completeTiles.completeFrame(s.completeTileAt);int fragments=(frame.length+FRAGMENT-1)/FRAGMENT;if(lane.queued.size()>32||lane.sent.size()>32||lane.queued.size()+fragments>MAX_QUEUE)return false;enqueue(s,1,frame);s.completeTileAt++;}
+        while(s.completeTileAt<s.completeTiles.completeFrameCount()&&budget-->0){byte[] frame=s.completeTiles.completeFrame(s.completeTileAt);int fragments=(frame.length+FRAGMENT-1)/FRAGMENT;if(lane.queued.size()>=CHUNK_REFILL||lane.queued.size()+fragments>MAX_QUEUE)return false;enqueue(s,1,frame);s.completeTileAt++;}
         if(s.completeTileAt==s.completeTiles.completeFrameCount()){s.completeTiles=null;s.completeTileAt=0;return true;}return false;
     }
-    private void streamBlockChanges(Session s){
+    private boolean streamBlockChanges(Session s){
         if(s.deltas==null){for(int n=0,limit=Math.min(ChunkWindow.WORK_BUDGET,s.chunks.size());n<limit;n++){long key=s.chunks.scan(1);if(!s.window.inside(key))continue;int x=(int)(key>>32),z=(int)key;long sent=s.chunkRevisions.getOrDefault(key,0L);if(terrainProjection.version(x,z)<=sent)continue;
             TerrainProjection.Changes changes=terrainProjection.changes(x,z,sent);
             if(changes==null)continue;
             if(changes.usable(sent)){
                 byte[] frame=BlockDeltaPackets.frame(x,z,changes,sent);Lane output=s.lanes[1];int fragments=(frame.length+FRAGMENT-1)/FRAGMENT;
-                if(output.queued.size()>32||output.sent.size()>32||output.queued.size()+fragments>MAX_QUEUE)return;
-                if(frame.length>0)enqueue(s,1,frame);s.chunkRevisions.put(key,changes.revision());return;
+                if(output.queued.size()>32||output.sent.size()>32||output.queued.size()+fragments>MAX_QUEUE)return true;
+                if(frame.length>0)enqueue(s,1,frame);s.chunkRevisions.put(key,changes.revision());return true;
             }
             TerrainProjection.Prepared prepared=terrainProjection.prepared(x,z);if(prepared==null||prepared.revision()<=sent)continue;s.deltaChunk=key;s.deltas=prepared;s.deltaAt=prepared.after(sent);break;}}
-        if(s.deltas==null)return;Lane lane=s.lanes[1];
+        if(s.deltas==null)return true;Lane lane=s.lanes[1];
         if(s.deltas.refreshChunk(s.deltaAt,s.chunkRevisions.getOrDefault(s.deltaChunk,0L))){
             // Called once per gameplay tick. Queue/window backpressure bounds transport work;
             // a global 250ms delay made a hundred dirty chunks take over25 seconds to arrive.
             long now=System.nanoTime();
             TerrainProjection.Prepared latest=terrainProjection.prepared((int)(s.deltaChunk>>32),(int)s.deltaChunk);if(latest!=null&&latest.revision()>s.deltas.revision())s.deltas=latest;
-            byte[] frame=s.deltas.frame();if(lane.queued.size()>32||lane.sent.size()>32||lane.queued.size()+(frame.length+FRAGMENT-1)/FRAGMENT>CHUNK_QUEUE)return;
-            enqueue(s,1,frame);s.completeTiles=s.deltas.completeFrameCount()>0?s.deltas:null;s.completeTileAt=0;streamCompleteTiles(s);if(s.deltas.tileRefresh())tileRefreshes++;else bulkBlockRefreshes++;s.deliveries.record(s.deltaChunk,s.deltas.nativeRevision(),s.deltas.revision(),now);s.chunkRevisions.put(s.deltaChunk,s.deltas.revision());s.deltas=null;return;
+            // The same reliable lane already bounds in-flight packets. Requiring an
+            // almost empty window here starves visible edits during sustained streaming.
+            byte[] frame=s.deltas.frame();if(lane.queued.size()+(frame.length+FRAGMENT-1)/FRAGMENT>CHUNK_QUEUE)return false;
+            enqueue(s,1,frame);s.completeTiles=s.deltas.completeFrameCount()>0?s.deltas:null;s.completeTileAt=0;streamCompleteTiles(s);if(s.deltas.tileRefresh())tileRefreshes++;else bulkBlockRefreshes++;s.deliveries.record(s.deltaChunk,s.deltas.nativeRevision(),s.deltas.revision(),now);s.chunkRevisions.put(s.deltaChunk,s.deltas.revision());s.deltas=null;return true;
         }
         int budget=32;
         while(s.deltaAt<s.deltas.deltas().size()&&budget-->0&&lane.queued.size()<256){var delta=s.deltas.deltas().get(s.deltaAt++);int x=((int)(s.deltaChunk>>32))*16+(delta.cell()&15),z=((int)s.deltaChunk)*16+((delta.cell()>>>4)&15);enqueue(s,1,GamePackets.block(x,delta.cell()>>>8,z,delta.voxel().id(),delta.voxel().metadata()));}
         if(s.deltaAt==s.deltas.deltas().size()){s.chunkRevisions.put(s.deltaChunk,s.deltas.revision());s.deltas=null;}
+        return true;
     }
     private void advanceSpawn(Session s,long now){
         if(s.requestedSpawn==null)return;
@@ -1842,7 +2264,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         long now=System.nanoTime();if(!s.ready||s.hp<=0||s.respawning||s.teleport!=null||now<s.portalUntil)return;
         s.portalLookup.request(point(s.pos),true,s.life,ThreadLocalRandom.current().nextInt(1_000_000)/1_000_000d,objectId,now,this::queryPortal);
     }
-    private void sceneInteraction(Session s,UUID id){long now=System.nanoTime();if(!s.ready||s.hp<=0||s.respawning||s.teleport!=null||s.sceneInteraction!=null||now-s.sceneInteractionAt<100_000_000L)return;s.sceneInteractionAt=now;s.sceneInteraction=sceneAccess.interact(id,point(s.pos),new ArrayList<>(s.chunks));}
+    private void sceneInteraction(Session s,UUID id){long now=System.nanoTime();if(!s.ready||s.hp<=0||s.respawning||s.teleport!=null||s.sceneInteraction!=null||now-s.sceneInteractionAt<100_000_000L)return;s.sceneInteractionAt=now;s.sceneInteraction=sceneAccess.interact(id,point(s.pos),sceneScope(s));}
     private void advancePortal(Session s,long now){
         if(s.sceneInteraction!=null&&s.sceneInteraction.isDone()){try{s.sceneInteraction.join();}catch(RuntimeException failure){sceneFailed++;}s.sceneInteraction=null;}
         advancePortalStatuses(s);
@@ -1862,16 +2284,17 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
             if(op.phase==2){if(!streamCompleteTiles(s))return;if(!lane.queued.isEmpty()||!lane.sent.isEmpty()||inventories.busy(character(s)))return;op.save=locations.teleport(character(s),op.target);op.phase=3;return;}
             if(!op.save.isDone()||inventories.busy(character(s)))return;op.save.join();
             releaseAnomalies(s);s.pos=vector(op.target);s.life++;s.speed=0;s.posture.reset();s.mode=0;s.ground=true;s.handOverride=null;s.visualHand=-1;s.grenadeUse.cancel();s.animation.reset();syncLoadoutHand(s);s.teleportGuard.install(op.target,now);
+            s.worldItemsSeen.clear();s.lastMovementConfigurationSent=null;
             s.chunks.clear();s.chunkRevisions.clear();s.cachedRequests.clear();s.deliveries.clear();s.faults.clear();s.manifestRetryAt=0;s.deltas=null;s.completeTiles=null;s.completeTileAt=0;s.pendingChunks.clear();s.chunkX=Integer.MIN_VALUE;s.window.reset();s.windowEpoch++;
             long key=chunkKey((int)Math.floor(op.target.x()/16),(int)Math.floor(op.target.z()/16));s.chunks.add(key);s.chunkRevisions.put(key,op.center.revision());s.bots.clear();s.botHealth.clear();s.botMaximum.clear();s.botAppearances.clear();s.botReplication.reset();
-            s.velocity=new double[3];s.motion.reset();enqueue(s,0,Wire.concat(scaledReady(s),GamePackets.velocityReset()));loadout(s);sendPermissions(s,true);enqueue(s,0,GamePackets.attributes(++tick,0,Factions.attributes(s.faction)));enqueue(s,0,inventories.quickSlotsFrame(character(s)));sendEffects(s,List.of(),s.effects.active(System.currentTimeMillis()));sendPulseEffects(s,List.of(),s.pulses.effects(System.currentTimeMillis()));sendSickness(s,true);
-            for(Session other:sessions.values())if(other!=s&&other.ready){enqueue(other,0,GamePackets.teleportMovement(tick,s.entity,s.pos,s.yaw,s.pitch));enqueue(s,0,Wire.concat(Wire.frame(2028,Wire.bytes(out->out.writeInt(other.entity))),GamePackets.spawn(other.entity,other.grant.name(),other.pos,other.yaw,other.pitch),GamePackets.attributes(tick,other.entity,equipment(other)),GamePackets.attributes(tick,other.entity,remoteHand(other)),GamePackets.attributes(tick,other.entity,Factions.attributes(other.faction)),GamePackets.vitals(tick,other.entity,visibleHealth(other),other.maxHp,other.animation.aiming())));}
+            s.velocity=new double[3];s.motion.reset();enqueue(s,0,Wire.concat(scaledReady(s),GamePackets.velocityReset()));loadout(s);sendPermissions(s,true);enqueue(s,0,GamePackets.attributes(++tick,0,playerRelations(s)));enqueue(s,0,inventories.quickSlotsFrame(character(s)));sendEffects(s,List.of(),s.effects.active(System.currentTimeMillis()));sendPulseEffects(s,List.of(),s.pulses.effects(System.currentTimeMillis()));sendSickness(s,true);
+            for(Session other:sessions.values())if(other!=s&&other.ready){enqueue(other,0,GamePackets.teleportMovement(tick,s.entity,s.pos,s.yaw,s.pitch));enqueue(s,0,Wire.concat(Wire.frame(2028,Wire.bytes(out->out.writeInt(other.entity))),GamePackets.spawn(other.entity,other.grant.name(),other.pos,other.yaw,other.pitch),GamePackets.attributes(tick,other.entity,equipment(other)),GamePackets.attributes(tick,other.entity,remoteHand(other)),GamePackets.attributes(tick,other.entity,playerRelations(other)),GamePackets.vitals(tick,other.entity,visibleHealth(other),other.maxHp,other.animation.aiming())));}
             resetPoses(s);s.teleport=null;teleports++;chunkWindow(s);enqueue(s,0,GamePackets.chat(op.reply));if(op.respawnRequested&&s.hp<=0)beginRespawn(s);
         }catch(Exception error){s.teleport=null;teleportErrors++;enqueue(s,0,GamePackets.chat(Objects.toString(error.getMessage(),"teleport_failed")));if(op.respawnRequested&&s.hp<=0)beginRespawn(s);}
     }
     private void beginRespawn(Session s){releaseAnomalies(s);s.grenadeDeath=null;s.motion.reset();s.animation.reset();s.posture.reset();s.mode=0;s.speed=0;s.ground=true;s.portalLookup.clear();s.teleportGuard.clear();s.respawning=true;s.life++;beginPlacement(s,placementCandidates(s,false));}
     private boolean piloting(Session s){var drone=drones.owned(s);return vehicles.driving(s)!=null||drone!=null&&drone.piloting();}
-    private byte[] animation(Session s){boolean window=vehicleActions.windowView(s,System.nanoTime());return PlayerAnimationPackets.component(s.animation.snapshot(window?0:s.posture.locomotion(),window?0:s.posture.previous(),window?0:s.mode,window?0:CharacterScale.animationSpeed(s.speed,s.characterScale),s.ground,s.yaw,piloting(s)&&!window));}
+    private byte[] animation(Session s){boolean window=vehicleActions.windowView(s,System.nanoTime());return PlayerAnimationPackets.component(s.animation.snapshot(window?0:s.posture.locomotion(),window?0:s.posture.previous(),window?0:s.mode,window?0:CharacterScale.animationSpeed(s.speed,s.characterScale),s.ground,s.yaw,piloting(s)&&!window,s.characterScale));}
     private void fpvPose(Session s){s.motion.reset();s.velocity=new double[3];s.animation.reset();s.posture.set(piloting(s)?11:0,piloting(s)?11:0);s.mode=0;s.speed=0;for(Session viewer:new ArrayList<>(sessions.values()))if(viewer.ready)enqueueOrRetire(viewer,GamePackets.attributes(tick,viewer==s?0:s.entity,Map.of(201,new byte[]{0})));}
     private String effectivePose(Session s){var drone=drones.owned(s);return vehicles.driving(s)!=null?(vehicleActions.windowView(s,System.nanoTime())?null:"SIT"):drone!=null&&drone.piloting()?"pda_sit_idle":s.forcedAnimation;}
     private void pose(Session viewer,int entity,String name,boolean force){
@@ -1982,7 +2405,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         if(s.factionChanging){enqueueOrRetire(s,GamePackets.chat("Переход во фракцию ещё сохраняется"));return;}
         if(s.faction.equals(faction)){enqueueOrRetire(s,allianceState.frame());return;}
         s.factionChanging=true;
-        inventories.faction(character(s),faction,()->{s.factionChanging=false;if(sessions.get(s.address)!=s)return;s.faction=inventories.faction(character(s));int revision=++tick;enqueueOrRetire(s,GamePackets.attributes(revision,0,Factions.attributes(s.faction)));enqueueOrRetire(s,allianceState.frame());for(Session viewer:new ArrayList<>(sessions.values()))if(viewer!=s&&viewer.ready)enqueueOrRetire(viewer,GamePackets.attributes(revision,s.entity,Factions.attributes(s.faction)));enqueueOrRetire(s,GamePackets.chat("Фракция изменена: "+s.faction));},error->{s.factionChanging=false;if(sessions.get(s.address)==s)enqueueOrRetire(s,GamePackets.chat(error));});
+        inventories.faction(character(s),faction,()->{s.factionChanging=false;if(sessions.get(s.address)!=s)return;s.faction=inventories.faction(character(s));int revision=++tick;enqueueOrRetire(s,GamePackets.attributes(revision,0,playerRelations(s)));enqueueOrRetire(s,allianceState.frame());for(Session viewer:new ArrayList<>(sessions.values()))if(viewer!=s&&viewer.ready)enqueueOrRetire(viewer,GamePackets.attributes(revision,s.entity,playerRelations(s)));enqueueOrRetire(s,GamePackets.chat("Фракция изменена: "+s.faction));},error->{s.factionChanging=false;if(sessions.get(s.address)==s)enqueueOrRetire(s,GamePackets.chat(error));});
     }
     private void advanceAlliance(){
         long revision=allianceState.revision();if(revision!=allianceRevision){byte[] frame=allianceState.frame();for(Session viewer:new ArrayList<>(sessions.values()))if(viewer.ready)enqueueOrRetire(viewer,frame);allianceRevision=revision;}
@@ -1993,12 +2416,48 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
     }
     private void chat(Session s,String text){
         if(text.length()>16384)return;if(NpcEditorHooks.chat(this,s,text))return;if(NpcToolsHooks.chat(this,s,text))return;String verb=CommandSupport.verb(text);
+        if(verb.equals("/mapplayers")||verb.equals("/nearby")){
+            try{
+                if(verb.equals("/mapplayers"))mapPlayersCommand(s,CommandSupport.split(text));
+                else nearbyCommand(s,CommandSupport.split(text));
+            }catch(IllegalArgumentException error){enqueue(s,0,GamePackets.chat(error.getMessage()));}
+            return;
+        }
+        if(verb.equals("/location")){
+            try{
+                String title=AccountIdentity.strip(AccountIdentity.strip(text).substring(verb.length()));
+                if(title.isEmpty())enqueue(s,0,GamePackets.chat("Локация: "+locationName.current()));
+                else{
+                    if(!playerRules.entitled(character(s)))throw new IllegalArgumentException("Команда доступна администратору.");
+                    locationNameSave=locationName.change(title);locationNameRequester=s;
+                }
+            }catch(IllegalArgumentException error){enqueue(s,0,GamePackets.chat(error.getMessage()));}
+            return;
+        }
         if(verb.equals("/zombies")){
             try{if(!playerRules.entitled(character(s)))throw new IllegalArgumentException("zombies_requires_admin");var words=CommandSupport.split(text);if(words.size()>2)throw new IllegalArgumentException("/zombies start|stop|status");String operation=words.size()==1?"start":words.get(1).toLowerCase(Locale.ROOT);String reply=switch(operation){case "start"->zombies.start(character(s));case "stop"->zombies.stop();case "status"->zombies.status().toString();default->throw new IllegalArgumentException("/zombies start|stop|status");};enqueue(s,0,GamePackets.chat(reply));}catch(IllegalArgumentException error){enqueue(s,0,GamePackets.chat(error.getMessage()));}return;
         }
         if(commandRuntime(s,text))return;
+        if(verb.equals("/friendlyfire")){
+            try{
+                if(s.allianceChange!=null)throw new IllegalArgumentException("Предыдущая команда фракций ещё выполняется");
+                UUID character=character(s);
+                if(playerRules.configuredAdministrator(character))s.allianceChange=AllianceCommands.friendlyFire(allianceState,text);
+                else if(serverOwnerProfile!=null)s.allianceChange=accounts.launcherOwnsCharacter(character,serverOwnerProfile).thenCompose(owns->{
+                    if(!owns)throw new IllegalArgumentException("Команда доступна администратору");
+                    return AllianceCommands.friendlyFire(allianceState,text);
+                });
+                else throw new IllegalArgumentException("Команда доступна администратору");
+            }catch(IllegalArgumentException error){enqueueOrRetire(s,GamePackets.chat(error.getMessage()));}
+            return;
+        }
         if(verb.equals("/alliance")||verb.equals("/фракции")){
-            try{if(!playerRules.entitled(character(s)))throw new IllegalArgumentException("Команда доступна администратору");if(s.allianceChange!=null)throw new IllegalArgumentException("Предыдущая команда фракций ещё выполняется");s.allianceChange=AllianceCommands.execute(allianceState,text);}catch(IllegalArgumentException error){enqueueOrRetire(s,GamePackets.chat(error.getMessage()));}return;
+            try{
+                if(!playerRules.entitled(character(s)))throw new IllegalArgumentException("Команда доступна администратору");
+                if(s.allianceChange!=null)throw new IllegalArgumentException("Предыдущая команда фракций ещё выполняется");
+                s.allianceChange=AllianceCommands.execute(allianceState,text);
+            }catch(IllegalArgumentException error){enqueueOrRetire(s,GamePackets.chat(error.getMessage()));}
+            return;
         }
         if(verb.equals("/drone")){try{if(CommandSupport.split(text).size()!=1)throw new IllegalArgumentException("usage_drone");toggleFpv(s);}catch(IllegalArgumentException error){enqueueOrRetire(s,GamePackets.chat(error.getMessage()));}return;}
         if(ChunkDistanceCommands.matches(text)){try{int distance=ChunkDistanceCommands.parse(text),previous=s.window.radius();if(s.window.distance(distance)){s.windowEpoch++;pruneChunkWindow(s);}enqueue(s,0,szserver.client.ChunkDistancePackets.frame(distance));enqueue(s,0,GamePackets.chat("Дальность чанков: "+previous+" -> "+distance));}catch(IllegalArgumentException error){enqueue(s,0,GamePackets.chat(error.getMessage()));}return;}
@@ -2089,6 +2548,13 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
     private void selectHandOverride(Session s,Inventory.Address address){
         if(!s.weaponActions.handOverride(address,s.life,System.nanoTime()))return;
         advanceWeaponActions(s);
+    }
+    private void selectAddressedHand(Session s,Inventory.Address address){
+        // Native equipment selection and temporary held items share the address codec.
+        // The aggregate and slot identify the operation, even with both nullable markers.
+        var selection=HandPackets.equippedSelection(address);
+        if(selection!=null)selectHand(s,selection);
+        else selectHandOverride(s,address);
     }
     private void applyHandOverride(Session s,Inventory.Address address){
         if(address==null){
@@ -2198,6 +2664,132 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         return null;
     }
     private boolean primaryLauncher(Session s){return s.weapon!=null&&inventories.explosives().containsKey(s.weapon.ammo());}
+    private void fireStream(Session s){
+        var weapon=s.weapon;
+        long now=System.nanoTime();
+        if(weapon==null||weapon.stream()==null||weapon.jamming().jammed()||s.hp<=0||s.holstered||s.handOverride!=null
+                ||s.respawning||s.teleport!=null||s.physicalPending||s.unjamming!=null||s.unjammingPending
+                ||!s.weaponActions.isEmpty()||inventories.busy(character(s))||s.reloadAt!=0||s.launcherReload!=null
+                ||now<s.drawUntil||!ShotTiming.allowed(now,s.nextAttack,null,0,weapon.profile().rpm())
+                ||vehicles.driving(s)!=null&&!vehicleActions.windowFire(s,now)||drones.owned(s)!=null&&drones.owned(s).piloting())return;
+        boolean infinite=administrator(s);
+        if(!infinite&&s.rounds<=0){syncAmmoCounter(s);return;}
+        int hand=s.handContainer,remaining=infinite?s.rounds:s.rounds-1;
+        long life=s.life;
+        double[] origin=CharacterScale.eye(s.pos,s.posture.locomotion(),s.characterScale);
+        double yaw=Math.toRadians(s.yaw),pitch=Math.toRadians(s.pitch);
+        double[] direction={-Math.sin(yaw)*Math.cos(pitch),-Math.sin(pitch),Math.cos(yaw)*Math.cos(pitch)};
+        s.lastShot=now;
+        s.nextAttack=ShotTiming.next(now,s.nextAttack,null,weapon.profile().rpm());
+        Runnable fired=()->{
+            if(sessions.get(s.address)!=s||s.life!=life||s.hp<=0||s.holstered||s.handContainer!=hand||s.weapon!=weapon)return;
+            s.rounds=remaining;
+            syncAmmo(s);
+            shots++;
+            float interval=(float)(60/weapon.profile().rpm());
+            for(Session viewer:sessions.values())if(viewer.ready&&viewer!=s)
+                enqueue(viewer,0,Wire.dynamic("1176115659",Wire.bytes(out->{out.writeInt(s.entity);out.writeBoolean(false);out.writeFloat(interval);})));
+            streamDamage(s,weapon,life,now,origin,direction);
+        };
+        if(infinite){fired.run();return;}
+        Inventory.Address address=new Inventory.Address(0,hand,0);
+        ItemStack expected=inventory(s).at(address);
+        if(expected==null||expected.id()!=weapon.factory())return;
+        byte[] state=weapon.magazineState(remaining);
+        inventories.mutate(character(s),before->{
+            if(before.at(address)!=expected)throw new IllegalArgumentException("stream_weapon_changed");
+            return before.replace(Map.of(address,expected.state(state)),1);
+        },plan->fired.run(),error->{if(sessions.get(s.address)==s)syncAmmo(s);});
+    }
+
+    private record StreamTarget(ShotTarget target,double distance,double[] point){}
+    private void streamDamage(Session s,GameInventory.Weapon weapon,long life,long started,double[] origin,double[] direction){
+        var rules=weapon.stream();
+        double range=weapon.profile().range();
+        double spread=Math.tan(Math.toRadians(s.animation.aiming()?rules.aimedSpread():rules.hipSpread()));
+        List<StreamTarget> candidates=new ArrayList<>();
+        if(s.gameplayMode==PlayerRules.Mode.STALKER){
+            for(Session target:sessions.values())if(target!=s&&target.ready&&target.hp>0&&target.gameplayMode==PlayerRules.Mode.STALKER)
+                addStreamPlayer(candidates,new ShotTarget(target,target.life,null,null,target.entity),origin,direction,range,spread,
+                        target.pos,target.posture.locomotion(),target.characterScale);
+            for(var bot:world.snapshot().entities()){
+                Integer id=botEntities.get(botKey(bot));
+                if(id==null||bot.health()<=0||!s.bots.contains(botKey(bot)))continue;
+                StreamTarget closest=null;
+                for(var box:bot.collisionParts()){
+                    var candidate=streamTarget(new ShotTarget(null,0,null,bot,id),origin,direction,range,spread,
+                            new double[]{box.x(),box.y(),box.z()},new double[]{box.xx(),box.yy(),box.zz()});
+                    if(candidate!=null&&(closest==null||candidate.distance()<closest.distance()))closest=candidate;
+                }
+                if(closest!=null)candidates.add(closest);
+            }
+        }
+        for(var clone:clones.all())if(clone.health>0&&clone.recipients.contains(s))
+            addStreamPlayer(candidates,new ShotTarget(null,0,clone,null,clone.entity),origin,direction,range,spread,
+                    clone.state.position,clone.state.locomotion,clone.state.scale);
+        if(candidates.isEmpty()){lastShot=Map.of("stage","miss","authority","server-stream","origin",origin);return;}
+        candidates.sort(Comparator.comparingDouble(StreamTarget::distance));
+        if(candidates.size()>16)candidates.subList(16,candidates.size()).clear();
+        var rays=candidates.stream().map(c->new szserver.world.MapObstructionAccess.Ray(point(origin),point(c.point()))).toList();
+        fpvMap.nearestVisible(rays).whenComplete((result,error)->{
+            if(!combatCompleted.offer(()->{
+                if(sessions.get(s.address)!=s||s.life!=life||s.hp<=0||s.weapon!=weapon||s.holstered
+                        ||System.nanoTime()-started>1_000_000_000L)return;
+                if(error!=null){visibilityErrors++;return;}
+                try{result.authorization().checkCurrent();}catch(IllegalArgumentException stale){visibilityErrors++;return;}
+                if(result.index()<0){blockedHits++;return;}
+                applyStreamHit(s,weapon,life,started,origin,candidates.get(result.index()));
+            }))combatCompletionDrops.incrementAndGet();
+        });
+    }
+    private void addStreamPlayer(List<StreamTarget> candidates,ShotTarget target,double[] origin,double[] direction,
+                                 double range,double spread,double[] pos,int posture,float scale){
+        double r=CharacterScale.radius(scale),h=CharacterScale.height(posture,scale);
+        var candidate=streamTarget(target,origin,direction,range,spread,
+                new double[]{pos[0]-r,pos[1],pos[2]-r},new double[]{pos[0]+r,pos[1]+h,pos[2]+r});
+        if(candidate!=null)candidates.add(candidate);
+    }
+    private static StreamTarget streamTarget(ShotTarget target,double[] origin,double[] direction,double range,double spread,double[] lo,double[] hi){
+        double projection=0;
+        for(int i=0;i<3;i++)projection+=((lo[i]+hi[i])*.5-origin[i])*direction[i];
+        if(projection<=0||projection>range+2)return null;
+        double margin=Math.max(0,spread)*Math.min(range,projection);
+        double[] expandedLo=lo.clone(),expandedHi=hi.clone();
+        for(int i=0;i<3;i++){expandedLo[i]-=margin;expandedHi[i]+=margin;}
+        double distance=rayBox(origin,direction,expandedLo,expandedHi,range);
+        if(distance<0)return null;
+        double[] impact=new double[3];
+        for(int i=0;i<3;i++)impact[i]=Math.max(lo[i],Math.min(hi[i],origin[i]+direction[i]*distance));
+        double squared=0;
+        for(int i=0;i<3;i++){double delta=impact[i]-origin[i];squared+=delta*delta;}
+        return squared<=range*range?new StreamTarget(target,Math.sqrt(squared),impact):null;
+    }
+    private void applyStreamHit(Session s,GameInventory.Weapon weapon,long life,long started,double[] origin,StreamTarget contact){
+        var target=contact.target();
+        var rules=weapon.stream();
+        BotKey bot=target.bot()==null?null:botKey(target.bot());
+        java.util.function.BooleanSupplier valid=()->sessions.get(s.address)==s&&s.life==life&&s.hp>0&&s.weapon==weapon&&!s.holstered&&s.teleport==null
+                &&(target.player()!=null?sessions.get(target.player().address)==target.player()&&target.player().life==target.life()&&target.player().hp>0
+                    :target.copy()!=null?clones.live(target.copy())&&target.copy().health>0
+                    :world.snapshot().entities().stream().anyMatch(v->bot.equals(botKey(v))&&v.health()>0));
+        if(!valid.getAsBoolean())return;
+        UUID event=UUID.nameUUIDFromBytes((character(s)+":"+weapon.identity()+":"+started).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        combatBarriers.submit(event,origin,contact.point(),Math.max(.001f,rules.damage(weapon.profile(),contact.distance(),1,false,s.stats,Map.of())),valid,()->{
+            if(target.player()!=null&&!areaRelations.allowsPlayerDamage(allianceState.friendlyFire(),areaActor(s),areaActor(target.player())))return;
+            StreamHit previous=s.streamHit;
+            if(previous!=null&&started<=previous.at())return;
+            int count=previous!=null&&started-previous.at()<=rules.seriesResetNanos()&&weapon.identity().equals(previous.firearm())
+                    &&target.entity()==previous.target()&&target.life()==previous.targetLife()&&target.copy()==previous.copy()
+                    &&Objects.equals(bot,previous.bot())?Math.min(rules.seriesLimit(),previous.count()+1):1;
+            Map<String,Float> stats=target.player()!=null?target.player().stats:target.copy()!=null?target.copy().state.stats:target.bot().stats();
+            float damage=rules.damage(weapon.profile(),contact.distance(),count,bot!=null,s.stats,stats);
+            s.streamHit=new StreamHit(weapon.identity(),target.entity(),target.life(),target.copy(),bot,count,started);
+            if(target.player()!=null){if(damage(s,target.player(),damage,origin,contact.point(),new double[3],false))hits++;}
+            else if(target.copy()!=null){hits++;damageClone(s,target.copy(),damage,contact.point(),new double[3],false);}
+            else damageBot(s,target.bot(),damage,false,contact.point(),new double[3]);
+            lastShot=Map.of("stage","hit","authority","server-stream","target",target.entity(),"distance",contact.distance(),"series",count);
+        },shield->lastShot=Map.of("stage","shield","authority","server-stream","target",target.entity()));
+    }
     private void queueLauncherReload(Session s,int ammo){
         if(!s.weaponActions.launcherReload(ammo,s.life,System.nanoTime()))enqueue(s,0,GamePackets.chat("weapon_operation_queue_full"));
         advanceWeaponActions(s);
@@ -2225,6 +2817,23 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         s.launcherReload=null;
         inventories.reloadLauncher(character(s),pending.hand(),pending.expected(),pending.launcher(),pending.ammo(),administrator(s),plan->{underbarrelReloads++;if(sessions.get(s.address)==s){enqueue(s,0,UnderbarrelPackets.finished());inventoryChanged(s,plan,()->{});}},error->{underbarrelDenied++;if(sessions.get(s.address)==s){enqueue(s,0,UnderbarrelPackets.finished());syncAmmo(s);enqueue(s,0,GamePackets.chat(error));}});
     }
+    private void unloadWeapon(Session s,InventoryPackets.WeaponUnload request){
+        int owner=request.owner();
+        var address=request.address();
+        Runnable ack=()->enqueue(s,0,InventoryPackets.ack(owner,request.sequence()));
+        java.util.function.Consumer<String> reject=error->{inventorySnapshot(s,owner);ack.run();enqueue(s,0,GamePackets.chat(error));};
+        boolean storage=address.aggregate()==2;
+        boolean valid=owner==0?!storage:s.inventoryScreen.storageOpen()&&address.aggregate()!=0
+                &&(!storage||address.container()==s.inventoryScreen.page());
+        if(!valid){reject.accept("inventory_owner");return;}
+        if(!InventoryScreen.available(s.hp,s.respawning)||s.teleport!=null||s.reloadAt!=0
+                ||s.launcherReload!=null||s.unjamming!=null||s.unjammingPending||s.physicalPending||physicalActive(s)
+                ||!s.weaponActions.isEmpty()||grenadeBridge.busy(character(s))||s.grenadeUse.held()!=null){
+            reject.accept("Сейчас разрядить оружие нельзя.");
+            return;
+        }
+        inventories.unloadWeapon(character(s),address,plan->inventoryChanged(s,plan,ack),reject);
+    }
     private void unloadLauncher(Session s,UnderbarrelPackets.Unload request){
         int owner=request.owner();var address=request.address();Runnable ack=()->enqueue(s,0,InventoryPackets.ack(owner,request.sequence()));
         java.util.function.Consumer<String> reject=error->{inventorySnapshot(s,owner);ack.run();enqueue(s,0,GamePackets.chat(error));};
@@ -2240,7 +2849,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         Inventory.Address address=new Inventory.Address(0,s.handContainer,0);ItemStack expected=inventory(s).at(address);if(expected==null||expected.id()!=s.weapon.factory()||s.weapon.launcherMagazines()==null)return;
         var origin=GrenadePackets.origin(CharacterScale.eye(s.pos,s.posture.locomotion(),s.characterScale),s.yaw,s.pitch);var launchVelocity=LauncherPackets.velocity(profile,s.yaw,s.pitch);var operation=new ThrownGrenade(s,character(s),s.grant.name(),areaActor(s),-1,profile);long life=s.life;
         s.nextAttack=now+(long)(launcher.cooldown()*1e9);s.lastShot=now;
-        grenadeBridge.launchMagazine(character(s),s.grant.name(),address,expected,s.weapon.launcherMagazines()[s.rounds],ammo,profile.flight(),origin,launchVelocity,operation.context,id->{
+        grenadeBridge.launchMagazine(character(s),s.grant.name(),address,expected,s.weapon.launcherMagazines().state(s.rounds),ammo,profile.flight(),origin,launchVelocity,operation.context,id->{
             publishGrenadeLaunch(id,operation,ammo,origin,launchVelocity);underbarrelShots++;grenadeThrows++;shots++;
             if(sessions.get(s.address)==s){refreshWeapon(s,()->syncAmmo(s));if(s.life==life)for(Session viewer:sessions.values())if(viewer.ready&&viewer!=s)enqueue(viewer,0,LauncherPackets.fired(s.entity,60/Math.max(.001,launcher.cooldown())));}
         },error->{underbarrelDenied++;if(sessions.get(s.address)==s){refreshWeapon(s,()->syncAmmo(s));enqueue(s,0,GamePackets.chat(error));}});
@@ -2252,25 +2861,27 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         int ammo=s.weapon.ammo();var profile=grenadeProfiles.get(ammo);
         if(profile==null){primaryLauncherDenied++;syncAmmo(s);enqueue(s,0,GamePackets.chat("launcher_ammunition_unavailable:"+ammo));return;}
         Inventory.Address address=new Inventory.Address(0,s.handContainer,0);ItemStack expected=inventory(s).at(address);
-        if(expected==null||expected.id()!=s.weapon.factory()||s.magazines==null||s.rounds>=s.magazines.length)return;
+        if(expected==null||expected.id()!=s.weapon.factory())return;
         int remaining=s.rounds-1;long life=s.life;UUID firearm=s.firearm;double rpm=s.weapon.profile().rpm();
         var origin=GrenadePackets.origin(CharacterScale.eye(s.pos,s.posture.locomotion(),s.characterScale),s.yaw,s.pitch);var launchVelocity=LauncherPackets.velocity(profile,s.yaw,s.pitch);
         var operation=new ThrownGrenade(s,character(s),s.grant.name(),areaActor(s),-1,profile);
         s.nextAttack=now+(long)(60/rpm*1e9);s.lastShot=now;
-        grenadeBridge.launchMagazine(character(s),s.grant.name(),address,expected,s.magazines[remaining],ammo,profile.flight(),origin,launchVelocity,operation.context,id->{
+        grenadeBridge.launchMagazine(character(s),s.grant.name(),address,expected,s.weapon.magazines().state(remaining),ammo,profile.flight(),origin,launchVelocity,operation.context,id->{
             publishGrenadeLaunch(id,operation,ammo,origin,launchVelocity);primaryLauncherShots++;grenadeThrows++;shots++;
             if(sessions.get(s.address)==s){if(s.life==life&&s.handContainer==address.container()&&Objects.equals(s.firearm,firearm)){s.rounds=remaining;syncAmmo(s);}else refreshWeapon(s,()->syncAmmo(s));}
             if(sessions.get(s.address)==s&&s.life==life)for(Session viewer:sessions.values())if(viewer.ready&&viewer!=s)enqueue(viewer,0,LauncherPackets.fired(s.entity,rpm));
         },error->{primaryLauncherDenied++;if(sessions.get(s.address)==s){refreshWeapon(s,()->syncAmmo(s));enqueue(s,0,GamePackets.chat(error));}});
     }
     private void shot(Session shooter,byte[] raw)throws Exception{
-        if(primaryLauncher(shooter)||vehicles.driving(shooter)!=null&&!vehicleActions.windowFire(shooter,System.nanoTime()))return;
+        if(primaryLauncher(shooter)||shooter.weapon!=null&&shooter.weapon.stream()!=null
+                ||vehicles.driving(shooter)!=null&&!vehicleActions.windowFire(shooter,System.nanoTime()))return;
         var packet=ShotPackets.read(raw);
         if(!shooter.weaponActions.shot(packet,raw.length,shooter.life,System.nanoTime())){enqueue(shooter,0,GamePackets.chat("weapon_operation_queue_full"));return;}
         advanceWeaponActions(shooter);
     }
     private void performShot(Session shooter,ShotPackets.Shot packet){
-        if(primaryLauncher(shooter)||vehicles.driving(shooter)!=null&&!vehicleActions.windowFire(shooter,System.nanoTime()))return;
+        if(primaryLauncher(shooter)||shooter.weapon!=null&&shooter.weapon.stream()!=null
+                ||vehicles.driving(shooter)!=null&&!vehicleActions.windowFire(shooter,System.nanoTime()))return;
         var shotKey=new ShotKey(packet.seed(),packet.sequence());long now=System.nanoTime();
         shooter.seenShots.values().removeIf(t->now-t>=30_000_000_000L);
         if(shieldShots.size()>=32||shooter.seenShots.containsKey(shotKey)||shooter.hp<=0||shooter.holstered||shooter.handOverride!=null||shooter.weapon==null||shooter.weapon.jamming().jammed()||shooter.unjamming!=null||shooter.unjammingPending||shooter.physicalPending||physicalActive(shooter)&&!shooter.physicalCycle.canFire()||inventories.busy(character(shooter))||(!administrator(shooter)&&shooter.rounds==0)||shooter.reloadAt!=0||shooter.launcherReload!=null||now<shooter.drawUntil||!ShotTiming.allowed(now,shooter.nextAttack,shooter.lastShotClientTick,packet.serverTick(),shooter.weapon.profile().rpm()))return;
@@ -2279,7 +2890,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         shooter.sequence=packet.sequence();shooter.lastShot=now;shooter.nextAttack=ShotTiming.next(now,shooter.nextAttack,shooter.lastShotClientTick,shooter.weapon.profile().rpm());shooter.lastShotClientTick=packet.serverTick();
         if(administrator(shooter)){shots++;syncAmmo(shooter);finishShot(shooter,accepted);return;}
         PhysicalReload.Cycle cycle=physicalActive(shooter)?shooter.physicalCycle.shot(inventories.physicalMechanism(shooter.weapon.factory())):null;
-        JsonObject progress=PhysicalReload.progress(inventories.gameplay(character(shooter)),accepted.firearm(),cycle);int rounds=shooter.rounds-1;byte[] magazine=shooter.magazines[rounds];Inventory.Address address=new Inventory.Address(0,accepted.hand(),0);ItemStack expected=inventory(shooter).at(address);
+        JsonObject progress=PhysicalReload.progress(inventories.gameplay(character(shooter)),accepted.firearm(),cycle);int rounds=shooter.rounds-1;byte[] magazine=shooter.weapon.magazines().state(rounds);Inventory.Address address=new Inventory.Address(0,accepted.hand(),0);ItemStack expected=inventory(shooter).at(address);
         inventories.mutate(character(shooter),before->{if(!Objects.equals(before.at(address),expected))throw new IllegalArgumentException("shot_weapon_changed");return before.replace(Map.of(address,expected.state(magazine)),1);},progress,plan->{
             shots++;if(sessions.get(shooter.address)!=shooter)return;
             if(shooter.life!=accepted.life()||shooter.handContainer!=accepted.hand()||!Objects.equals(shooter.firearm,accepted.firearm())){refreshWeapon(shooter,()->syncAmmo(shooter));return;}
@@ -2300,7 +2911,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         }
         if(!hit)return;boolean head=report.group()==2;Map<String,Float> stats=target.player()!=null?target.player().stats:target.copy()!=null?target.copy().state.stats:world.snapshot().entities().stream().filter(b->botKey(b).equals(botKey(target.bot()))).map(World.View::stats).findFirst().orElse(Map.of());
         float amount=(float)profile.bulletDamage(range,head,accepted.stats(),stats,accepted.ammo());double[] impulse=GamePackets.bulletImpulse(dir,profile.damageAt(range));
-        if(target.player()!=null){hits++;damage(shooter,target.player(),amount,origin,impact,impulse,head);}
+        if(target.player()!=null){if(damage(shooter,target.player(),amount,origin,impact,impulse,head))hits++;}
         else if(target.copy()!=null){hits++;damageClone(shooter,target.copy(),amount,impact,impulse,head);}
         else damageBot(shooter,target.bot(),amount,head,impact,impulse);
     }
@@ -2322,10 +2933,10 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         int count=s.reloadCount;
         s.reloadCount=0;
         int ammo=s.weapon.ammo(),rounds=s.rounds+count,hand=s.handContainer;long life=s.life;UUID identity=s.firearm;
-        Inventory.Address weapon=new Inventory.Address(0,hand,0);ItemStack expected=inventory(s).at(weapon);byte[] magazine=s.magazines[rounds];s.reloadAt=0;
+        Inventory.Address weapon=new Inventory.Address(0,hand,0);ItemStack expected=inventory(s).at(weapon);byte[] magazine=s.weapon.magazines().state(rounds);s.reloadAt=0;
         inventories.mutate(character(s),before->{
             if(!Objects.equals(before.at(weapon),expected))throw new IllegalArgumentException("reload_weapon_changed");
-            Map<Inventory.Address,ItemStack> changes=new LinkedHashMap<>();int remaining=infinite?0:count;
+            Map<Inventory.Address,ItemStack> changes=new LinkedHashMap<>();int remaining=infinite?0:s.weapon.fullReload()?1:count;
             for(var e:before.items().entrySet())if(e.getKey().aggregate()==1&&e.getValue().id()==ammo&&remaining>0){int used=Math.min(remaining,e.getValue().count());changes.put(e.getKey(),e.getValue().count(e.getValue().count()-used));remaining-=used;}
             if(remaining!=0)throw new IllegalArgumentException("reload_ammunition_changed");changes.put(weapon,expected.state(magazine));return before.replace(changes,count);
         },plan->{
@@ -2339,11 +2950,11 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         lastReload=Map.of("name",s.grant.name(),"requested",requested,"rounds",s.rounds,"capacity",s.weapon==null?0:s.weapon.capacity(),"reserve",s.reserve,"holstered",s.holstered,"busy",inventories.busy(character(s)),"pending",s.reloadAt!=0);
         if(s.physicalPending||physicalActive(s)||s.weapon==null||s.hp<=0||s.holstered||s.handOverride!=null||inventories.busy(character(s))||s.rounds>=s.weapon.capacity()||s.reloadAt!=0||s.launcherReload!=null||s.unjamming!=null||s.unjammingPending)return;
         int selected=administrator(s)?(requested==0?(s.weapon.profile().ammunition().contains(s.weapon.ammo())?s.weapon.ammo():s.weapon.profile().ammunition().stream().sorted().findFirst().orElse(0)):requested):inventory(s).items().entrySet().stream().filter(e->e.getKey().aggregate()==1&&s.weapon.profile().ammunition().contains(e.getValue().id())&&(requested==0||e.getValue().id()==requested)&&(s.rounds==0||e.getValue().id()==s.weapon.ammo())).map(e->e.getValue().id()).findFirst().orElse(0);if(selected==0||!s.weapon.profile().ammunition().contains(selected)||s.rounds>0&&selected!=s.weapon.ammo())return;
-        if(selected!=s.weapon.ammo()){inventories.weapon(character(s),s.handContainer,selected,weapon->{if(sessions.get(s.address)!=s)return;s.weapon=weapon;s.magazines=weapon.magazines();s.firearm=weapon.identity();s.rounds=weapon.rounds();refreshReserve(s);startReload(s);},error->enqueue(s,0,GamePackets.chat(error)));}else{refreshReserve(s);startReload(s);}
+        if(selected!=s.weapon.ammo()){inventories.weapon(character(s),s.handContainer,selected,weapon->{if(sessions.get(s.address)!=s)return;s.weapon=weapon;s.firearm=weapon.identity();s.rounds=weapon.rounds();refreshReserve(s);startReload(s);},error->enqueue(s,0,GamePackets.chat(error)));}else{refreshReserve(s);startReload(s);}
     }
     private void startReload(Session s){
         int available=s.weapon.capacity()-s.rounds;
-        int count=administrator(s)?available:Math.min(available,s.reserve);
+        int count=administrator(s)?available:s.weapon.fullReload()?(s.reserve>0?available:0):Math.min(available,s.reserve);
         if(count<=0)return;
         var profile=s.weapon.profile();
         var timing=profile.reloadTiming(s.rounds,count);
@@ -2377,7 +2988,208 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         if(stack.length!=0)enqueue(s,0,stack);
         syncAmmoCounter(s);
     }
-    private void step(long now)throws Exception{tick++;advanceMedicines(now);advanceAlliance();advanceWorldItems();zombies.tick(sessions.values().stream().filter(s->s.ready).map(s->new ZombieHorde.Target(character(s),point(s.pos),Math.max(.3,CharacterScale.height(s.posture.locomotion(),s.characterScale)-.15),s.hp>0&&!s.respawning&&s.teleport==null)).toList());advanceHordeCombat(now);advanceVehicles(now);advanceGrenadeUses(now);pollGrenades();for(var change:drones.expire(now))emitFpv(change.drone(),change.event());for(var expired:corpses.expire(now))corpseDespawn(expired);environment.pollExpiry();var globalEnvironment=environment.state();if(environment.settingsRevision()!=environmentRevision||now>=nextEnvironmentClock){environmentRevision=environment.settingsRevision();nextEnvironmentClock=now+5_000_000_000L;byte[] clockFrame=EnvironmentPackets.clock(environment.clockAnchor(),System.currentTimeMillis());for(Session ready:sessions.values())if(ready.ready)enqueue(ready,0,clockFrame);}if(now>=nextLocationFlush){locations.flush();nextLocationFlush=now+1_000_000_000L;}simulationCorpses();for(Session s:new ArrayList<>(sessions.values())){if(sessions.get(s.address)!=s)continue;if(s.ready){String editorReply=s.editor.poll();if(editorReply!=null)enqueue(s,0,GamePackets.chat(editorReply));}if(s.environmentSave!=null&&s.environmentSave.isDone()){try{var saved=s.environmentSave.join();enqueue(s,0,GamePackets.chat(s.weatherCommand?"Глобальная погода изменена: "+saved.weather().wireName():"Глобальное время изменено: "+saved.dayTime()+" ticks."));}catch(CompletionException failure){enqueue(s,0,GamePackets.chat("environment_save_failed"));}s.environmentSave=null;}if(s.authentication!=null&&s.authentication.isDone()){
+    private record MapMarker(String name,int x,int z,short yaw,boolean teammate){}
+    private record PlayerMapSnapshot(int radius,int nearby,List<String> online,List<MapMarker> markers){}
+
+    private static PlayerSquads.Player squadPlayer(Session s){
+        return new PlayerSquads.Player(s.incarnation,s.grant.name());
+    }
+    private Session socialTarget(String name){
+        return sessions.values().stream().filter(p->p.ready&&p.grant.name().equalsIgnoreCase(name)).findFirst()
+            .orElseThrow(()->new IllegalArgumentException("Игрок не в сети."));
+    }
+    private boolean nativeSocial(Session s,int id,byte[] body)throws IOException{
+        if(id!=1464&&id!=718&&id!=1927&&id!=490&&id!=1384)return false;
+        var input=Wire.input(body);
+        if(id==1384){
+            String name=input.readUTF();
+            if(input.available()!=0||name.length()>96)throw new IOException("invalid_public_profile");
+            Session target=name.isEmpty()?s:sessions.values().stream()
+                .filter(p->p.ready&&p.grant.name().equalsIgnoreCase(name)).findFirst().orElse(null);
+            if(target==null){
+                enqueue(s,0,GamePackets.chat("Игрок уже вышел с сервера."));
+                return true;
+            }
+            String status=String.format(Locale.ROOT,"На сервере · %s\nЗдоровье %.0f / %.0f",
+                locationName.current(),target.hp,target.maxHp);
+            try{
+                long playedMillis=(System.nanoTime()-target.joinedNanos)/1_000_000L;
+                String requested=name.isEmpty()?s.grant.name():name;
+                byte[] profile=Wire.dynamic("306768345",nativePackets.playerProfile(requested,
+                    Factions.nativeName(target.faction),status,playedMillis,(int)target.deathGeneration));
+                if(s.profileEquipmentCapable)profile=Wire.concat(
+                    NativeSocialPackets.equipment(requested,profileEquipment(target)),profile);
+                enqueue(s,0,profile);
+            }catch(Exception failure){throw new IOException("native_public_profile",failure);}
+            return true;
+        }
+        try{
+            var player=squadPlayer(s);
+            switch(id){
+                case 1464->{
+                    String name=input.readUTF();
+                    if(input.available()!=0)throw new IOException("invalid_squad_invite");
+                    Session target=socialTarget(name);
+                    long squad=squads.invite(player,squadPlayer(target),System.nanoTime());
+                    enqueue(target,0,NativeSocialPackets.invitation(squad,player.name(),System.currentTimeMillis()));
+                }
+                case 718->{
+                    long squad=input.readLong();
+                    if(input.available()!=0)throw new IOException("invalid_squad_accept");
+                    squads.accept(player,squad,System.nanoTime());
+                }
+                case 1927->{if(input.available()!=0)throw new IOException("invalid_squad_leave");squads.leave(player);}
+                case 490->{
+                    String name=input.readUTF();
+                    if(input.available()!=0)throw new IOException("invalid_squad_remove");
+                    squads.kick(player,squadPlayer(name.equalsIgnoreCase(s.grant.name())?s:socialTarget(name)));
+                }
+            }
+        }catch(IllegalArgumentException error){
+            enqueue(s,0,GamePackets.chat(error.getMessage()));
+            if(squads.roster(squadPlayer(s),System.nanoTime())==null)enqueue(s,0,NativeSocialPackets.clear());
+        }
+        return true;
+    }
+    private List<String> profileEquipment(Session target){
+        var titles=new ArrayList<String>();
+        var equipped=inventory(target);
+        for(int slot:new int[]{1,2,3,HandPackets.PRIMARY,HandPackets.SECONDARY,HandPackets.MELEE}){
+            ItemStack item=equipped.at(new Inventory.Address(0,slot,0));
+            if(item==null)continue;
+            var properties=inventories.catalog().get(item.id()).properties();
+            String key=properties.has("name")&&properties.get("name").isJsonPrimitive()
+                ?properties.get("name").getAsString():"";
+            if(key.isBlank()&&properties.has("unlocalized_name")&&properties.get("unlocalized_name").isJsonPrimitive())
+                key="item."+properties.get("unlocalized_name").getAsString()+".name";
+            if(!key.isBlank()&&key.length()<=256)titles.add(key);
+        }
+        return titles;
+    }
+
+    private void advanceNativeSquad(Session s,long now){
+        var roster=squads.roster(squadPlayer(s),now);
+        if(!Objects.equals(s.nativeSquad,roster)){
+            Long previous=s.nativeSquad==null?null:s.nativeSquad.id();
+            Long current=roster==null?null:roster.id();
+            if(!Objects.equals(previous,current)){
+                int revision=++tick;
+                var attributes=Map.of(Factions.PARTY_ATTRIBUTE,Factions.partyAttribute(current));
+                for(Session viewer:new ArrayList<>(sessions.values()))if(viewer.ready)
+                    enqueueOrRetire(viewer,GamePackets.attributes(revision,viewer==s?0:s.entity,attributes));
+            }
+            if(roster==null)enqueue(s,0,NativeSocialPackets.clear());
+            else{
+                var members=new ArrayList<NativeSocialPackets.Member>();
+                for(var member:roster.members()){
+                    Session active=socialTarget(member.name());
+                    members.add(new NativeSocialPackets.Member(member.name(),character(active),members.size()));
+                }
+                enqueue(s,0,NativeSocialPackets.roster(roster.id(),roster.leader(),locationName.current(),members,roster.invited()));
+            }
+            s.nativeSquad=roster;
+            s.nativeSquadPositions=List.of();
+            s.nextNativeSquadPositions=0;
+        }
+        if(roster==null||now<s.nextNativeSquadPositions||s.lanes[0].queued.size()>32)return;
+        s.nextNativeSquadPositions=now+250_000_000L;
+        var positions=new ArrayList<NativeSocialPackets.Position>();
+        for(var member:roster.members())if(!member.session().equals(s.incarnation)){
+            Session active=socialTarget(member.name());
+            positions.add(new NativeSocialPackets.Position(member.name(),(float)active.pos[0],(float)active.pos[2],active.yaw,active.maxHp>0?active.hp/active.maxHp:0));
+        }
+        if(!positions.equals(s.nativeSquadPositions)){
+            enqueue(s,0,NativeSocialPackets.positions(positions));s.nativeSquadPositions=positions;
+        }
+    }
+    private void mapPlayersCommand(Session s,List<String> args){
+        if(args.size()>2)throw new IllegalArgumentException("/mapplayers [all | squad]");
+        if(args.size()==2)s.mapSquadOnly=switch(args.get(1).toLowerCase(Locale.ROOT)){
+            case "all"->false;
+            case "squad"->true;
+            default->throw new IllegalArgumentException("/mapplayers [all | squad]");
+        };
+        s.nextNearby=0;
+        enqueue(s,0,GamePackets.chat(s.mapSquadOnly?"На карте показывается только ваш отряд.":"На карте показываются все игроки."));
+    }
+    private void nearbyCommand(Session s,List<String> args){
+        String usage="/nearby <радиус от 1 до 512 м>";
+        if(args.size()>2)throw new IllegalArgumentException(usage);
+        if(args.size()==2){
+            int radius;
+            try{radius=Integer.parseInt(args.get(1));}catch(NumberFormatException invalid){throw new IllegalArgumentException(usage);}
+            if(radius<1||radius>512)throw new IllegalArgumentException(usage);
+            s.nearbyRadius=radius;s.nextNearby=0;
+        }
+        enqueue(s,0,GamePackets.chat("Игроков рядом: "+countNearby(s)+" · "+s.nearbyRadius+" м"));
+    }
+    private int countNearby(Session s){
+        int count=1; // The radar includes the local player.
+        double radiusSquared=(double)s.nearbyRadius*s.nearbyRadius;
+        for(Session other:sessions.values())if(other!=s&&other.ready){
+            double x=other.pos[0]-s.pos[0],y=other.pos[1]-s.pos[1],z=other.pos[2]-s.pos[2];
+            if(x*x+y*y+z*z<=radiusSquared)count++;
+        }
+        return count;
+    }
+    private void advanceNearby(Session s,long now){
+        if(now<s.nextNearby||s.lanes[0].queued.size()>32)return;
+        s.nextNearby=now+250_000_000L;
+        int nearby=countNearby(s);
+        if(s.radarPlayers!=nearby||now>=s.nextRadarRefresh){
+            enqueue(s,0,NativeSocialPackets.radarPlayers(nearby));
+            s.radarPlayers=nearby;
+            // The stock radar clears the cell after 100 client ticks without a packet.
+            s.nextRadarRefresh=now+2_000_000_000L;
+        }
+        if(!s.nearbyCapable)return;
+        var team=squads.members(squadPlayer(s));
+        String faction=Factions.nativeName(s.faction);
+        var online=new ArrayList<String>();
+        var markers=new ArrayList<MapMarker>();
+        for(Session other:sessions.values())if(other.ready){
+            online.add(other.grant.name());
+            if(other==s)continue;
+            boolean teammate=team.contains(other.incarnation);
+            if(!s.mapSquadOnly||teammate)markers.add(new MapMarker(other.grant.name(),
+                (int)Math.round(other.pos[0]),(int)Math.round(other.pos[2]),(short)Math.round(other.yaw),
+                teammate||areaRelations.friendly(faction,Factions.nativeName(other.faction))));
+        }
+        online.sort(String.CASE_INSENSITIVE_ORDER);
+        markers.sort(Comparator.comparing(MapMarker::name));
+        // Version 1 carries small lists and an old byte-sized count for older clients.
+        var snapshot=new PlayerMapSnapshot(s.nearbyRadius,Math.min(32,nearby),
+            List.copyOf(online.subList(0,Math.min(32,online.size()))),
+            List.copyOf(markers.subList(0,Math.min(32,markers.size()))));
+        if(snapshot.equals(s.mapSnapshot))return;
+        enqueue(s,0,Wire.dynamic("szmods.bridge.NearbyPlayers",Wire.bytes(out->{
+            out.writeByte(1);out.writeShort(snapshot.radius());out.writeByte(snapshot.nearby());
+            out.writeByte(snapshot.online().size());for(String player:snapshot.online())out.writeUTF(player);
+            out.writeByte(snapshot.markers().size());for(var marker:snapshot.markers()){
+                out.writeUTF(marker.name());out.writeInt(marker.x());out.writeInt(marker.z());
+                out.writeShort(marker.yaw());out.writeBoolean(marker.teammate());
+            }
+        })));
+        s.mapSnapshot=snapshot;
+    }
+    private void advanceLocationName(){
+        if(locationNameSave==null||!locationNameSave.isDone())return;
+        Session requester=locationNameRequester;locationNameRequester=null;
+        boolean saved=locationName.publish();
+        boolean failed=locationNameSave.isCompletedExceptionally();locationNameSave=null;
+        if(saved)for(Session other:new ArrayList<>(sessions.values()))if(other.ready)
+            enqueueOrRetire(other,GamePackets.context(other.loginProtocol,locationName.current(),voiceTokens!=null));
+        if(sessions.get(requester.address)==requester)
+            enqueue(requester,0,GamePackets.chat(failed?"Не удалось сохранить название локации.":"Локация: "+locationName.current()));
+    }
+    private void publishMovementTick(Session session){
+        byte[] current=movementConfiguration(session);
+        boolean changed=!Arrays.equals(current,session.lastMovementConfigurationSent);
+        enqueue(session,0,packets.tick(tick,session.clientTick,changed?current:null));
+        if(changed){session.lastMovementConfigurationSent=current;fullMovementTicks++;}
+        else shortMovementTicks++;
+    }
+    private void step(long now)throws Exception{tick++;advanceLocationName();advanceMedicines(now);advanceAlliance();advanceWorldItems();zombies.tick(sessions.values().stream().filter(s->s.ready).map(s->new ZombieHorde.Target(character(s),point(s.pos),Math.max(.3,CharacterScale.height(s.posture.locomotion(),s.characterScale)-.15),s.hp>0&&!s.respawning&&s.teleport==null)).toList());advanceHordeCombat(now);advanceVehicles(now);advanceGrenadeUses(now);pollGrenades();for(var change:drones.expire(now))emitFpv(change.drone(),change.event());for(var expired:corpses.expire(now))corpseDespawn(expired);environment.pollExpiry();var globalEnvironment=environment.state();if(environment.settingsRevision()!=environmentRevision||now>=nextEnvironmentClock){environmentRevision=environment.settingsRevision();nextEnvironmentClock=now+5_000_000_000L;byte[] clockFrame=EnvironmentPackets.clock(environment.clockAnchor(),System.currentTimeMillis());for(Session ready:sessions.values())if(ready.ready)enqueue(ready,0,clockFrame);}if(now>=nextLocationFlush){locations.flush();nextLocationFlush=now+1_000_000_000L;}simulationCorpses();for(Session s:new ArrayList<>(sessions.values())){if(sessions.get(s.address)!=s)continue;if(s.ready){advanceNativeSquad(s,now);advanceNearby(s,now);String editorReply=s.editor.poll();if(editorReply!=null)enqueue(s,0,GamePackets.chat(editorReply));}if(s.environmentSave!=null&&s.environmentSave.isDone()){try{var saved=s.environmentSave.join();enqueue(s,0,GamePackets.chat(s.weatherCommand?"Глобальная погода изменена: "+saved.weather().wireName():"Глобальное время изменено: "+saved.dayTime()+" ticks."));}catch(CompletionException failure){enqueue(s,0,GamePackets.chat("environment_save_failed"));}s.environmentSave=null;}if(s.authentication!=null&&s.authentication.isDone()){
             try{LocalAccounts.Grant grant=s.authentication.join();s.authentication=null;beginWorldJoin(s,grant,s.loginProtocol);}catch(Exception error){rejected++;sessionError(s,"join_preparation_failed",error);continue;}
         }if(sessions.get(s.address)!=s)continue;if(s.accountPreparation!=null&&s.accountPreparation.isDone()){
             try{if(!s.accountPreparation.join())throw new IllegalArgumentException("character_deleted_or_deleting");s.accountPreparation=null;beginInventoryWorldJoin(s);}catch(Exception error){rejected++;sessionError(s,"join_preparation_failed",error);continue;}
@@ -2391,7 +3203,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         }
         if(s.warpSave!=null&&s.warpSave.isDone()){try{s.warpSave.join();enqueue(s,0,GamePackets.chat(s.warpReply));}catch(Exception error){enqueue(s,0,GamePackets.chat("warp_save_failed"));}s.warpSave=null;}if(s.spawnSave!=null&&s.spawnSave.isDone()){try{s.spawnSave.join();enqueue(s,0,GamePackets.chat("Точка спавна сохранена."));}catch(Exception failed){enqueue(s,0,GamePackets.chat("Не удалось сохранить точку спавна."));}s.spawnSave=null;}
         if(now-s.last>(s.ready?30_000_000_000L:15_000_000_000L)){remove(s,s.ready?"transport_timeout":"handshake_timeout");continue;}try{
-            if(s.ready){advanceInventoryTransfers(s,now);advanceNativeGrants(s);advanceWeaponActions(s);advanceVisualHand(s,now);if(s.hp<=0&&s.deadUntil!=0&&now-s.deadUntil>=0&&!s.respawning&&!inventories.busy(character(s))&&!vitalsPending(character(s))){if(s.teleport!=null)s.teleport.respawnRequested=true;else beginRespawn(s);}streamChunks(s);bots(s);cloneInterest(s);playerPoses(s);if(!s.respawning){effectTick(s,now);staminaTick(s,now);}advanceUnjam(s,now);if(s.reloadAt!=0&&now>=s.reloadAt&&!inventories.busy(character(s)))finishReload(s);advanceLauncherReload(s,now);enqueue(s,0,packets.tick(tick,s.clientTick,movementConfiguration(s)));}if(s.ready&&!s.respawning&&locations.healthy())observePlayer(s);
+            if(s.ready){advanceItemDrops(s,now);advanceInventoryTransfers(s,now);advanceNativeGrants(s);advanceWeaponActions(s);advanceVisualHand(s,now);if(s.hp<=0&&s.deadUntil!=0&&now-s.deadUntil>=0&&!s.respawning&&!inventories.busy(character(s))&&!vitalsPending(character(s))){if(s.teleport!=null)s.teleport.respawnRequested=true;else beginRespawn(s);}streamChunks(s);bots(s);cloneInterest(s);playerPoses(s);if(!s.respawning){effectTick(s,now);staminaTick(s,now);}advanceUnjam(s,now);if(s.reloadAt!=0&&now>=s.reloadAt&&!inventories.busy(character(s)))finishReload(s);advanceLauncherReload(s,now);publishMovementTick(s);}if(s.ready&&!s.respawning&&locations.healthy())observePlayer(s);
         }catch(IllegalStateException e){sessionError(s,"session_update_failed",e);}}
         anomaliesTick();
         // Complete session mutations before capturing each player visual state once.
@@ -2402,6 +3214,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
             if(sessions.get(s.address)!=s)continue;
             try{
                 if(s.ready){
+                    advanceVoice(s);
                     Lane output=s.lanes[0];
                     if(output.queued.size()>32||output.sent.size()>=WINDOW){replicationDeferred++;}
                     else{
@@ -2420,7 +3233,25 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
             if(sessions.get(s.address)!=s)continue;
             try{flush(s,now);}catch(IOException failure){sessionError(s,"transport_flush_failed",failure);}
         }
-        Set<BotKey> aliveBots=new HashSet<>();world.snapshot().entities().forEach(bot->aliveBots.add(botKey(bot)));botEntities.entrySet().removeIf(entry->{if(aliveBots.contains(entry.getKey())||retainedDonor(entry.getValue()))return false;entityIds.release(entry.getValue());return true;});advancePlayerStates();pruneCharacterSessions(Long.MAX_VALUE);var m=new LinkedHashMap<String,Object>();m.put("worldItems",Map.of("simulation",worldItems.metrics(),"dropped",itemDropped,"collected",itemCollected,"failures",itemFailures,"requests",itemRequests,"boltTriggers",boltTriggers,"lastError",lastItemFailure));m.put("characterSessions",characterSessions.metrics());m.put("replicatedBots",botEntities.size());m.put("anomalies",Map.of("simulation",anomalies.metrics(),"queryErrors",anomalyErrors,"queryPending",anomalyQuery!=null,"velocityAcknowledgements",anomalyVelocityEchoes));m.put("mines",Map.of("explosions",mineExplosions,"hits",mineHits,"pollErrors",minePollErrors));m.put("playerReplication",Map.of("frames",replicationFrames,"records",replicationRecords,"bytes",replicationBytes,"deferred",replicationDeferred,"baselines",sessions.values().stream().mapToInt(s->s.replication.retained()).sum(),"maxRecordsPerFrame",64));m.put("physicalReload",Map.of("accepted",physicalAccepted,"denied",physicalDenied,"duplicates",physicalDuplicates,"queued",sessions.values().stream().mapToLong(s->s.weaponActions.physicalCount()).sum(),"active",sessions.values().stream().filter(this::physicalActive).count()));m.put("weaponActions",Map.of("queued",sessions.values().stream().mapToInt(s->s.weaponActions.size()).sum(),"rejected",sessions.values().stream().mapToLong(s->s.weaponActions.rejected()).sum(),"expired",sessions.values().stream().mapToLong(s->s.weaponActions.expired()).sum()));m.put("commandRuntime",Map.of("completionRequests",completionRequests,"poseRevision",poseRevision,"clones",clones.metrics(),"cloneHits",cloneHits,"cloneKills",cloneKills));m.put("fpv",Map.of("lifecycle",drones.metrics(),"denied",fpvDenied,"explosions",fpvExplosions,"capable",sessions.values().stream().filter(s->s.fpvCapable).count(),"observers",droneObservers.size(),"placed",fpvPlaced,"pendingPlacements",fpvPlacements.size(),"geometry",fpvMap.metrics(),"receipts",fpvReceipts.metrics()));m.put("grenades",Map.of("bridge",grenadeBridge.metrics(),"profiles",grenadeProfiles.size(),"unavailable",Map.copyOf(grenadeUnavailable),"active",thrownGrenades.size(),"throws",grenadeThrows,"denied",grenadeDenied,"explosions",grenadeExplosions,"hits",grenadeHits,"pollErrors",grenadePollErrors,"outbox",grenadeOutbox.metrics()));m.put("grenadeAreaPreparation",Map.of("items",grenadeAreaProfiles.size(),"profiles",grenadeAreaProfiles.values().stream().mapToInt(List::size).sum(),"gameplayIntegrated",true,"backendIntegrated",true));m.put("grenadeAreaScenes",Map.of("service",grenadeAreaScenes.metrics(),"enabledSmokeItems",enabledAreaProfiles.keySet().stream().filter(item->grenadeUseRules.get(item).handUse()&&GrenadeAreaScenes.smoke(enabledAreaProfiles.get(item))).count(),"enabledGasItems",enabledAreaProfiles.keySet().stream().filter(item->grenadeUseRules.get(item).handUse()&&GrenadeAreaScenes.gas(enabledAreaProfiles.get(item))).count(),"active",areaScenes.size(),"spawns",areaSceneSpawns,"removals",areaSceneRemovals,"enabledStatusItems",enabledAreaProfiles.keySet().stream().filter(item->grenadeUseRules.get(item).handUse()&&GrenadeAreaScenes.status(enabledAreaProfiles.get(item))).count(),"enabledContinuousItems",enabledAreaProfiles.keySet().stream().filter(item->grenadeUseRules.get(item).handUse()&&GrenadeAreaScenes.continuous(enabledAreaProfiles.get(item))).count(),"scope","continuous-healing-shields-and-durable-pulses","renderedVerified",false));m.put("grenadeAreaStore",grenadeAreas.metrics());m.put("grenadeShields",Map.of("durability",grenadeAreas.shieldMetrics(),"blocked",shieldBlocked,"errors",shieldErrors,"pending",shieldShots.size(),"items",enabledAreaProfiles.keySet().stream().filter(item->grenadeUseRules.get(item).handUse()&&GrenadeAreaScenes.shield(enabledAreaProfiles.get(item))).count()));m.put("sickness",Map.of("profiles",sicknessRules.profiles().size(),"ticks",sicknessTicks,"hits",sicknessHits,"updates",sicknessUpdates,"players",sessions.values().stream().filter(p->p.ready).map(p->Map.of("name",p.grant.name(),"states",p.sickness.json(),"exposure",p.sicknessExposure)).toList(),"nativeTickOracle",false));m.put("underbarrels",Map.of("shots",underbarrelShots,"denied",underbarrelDenied,"reloads",underbarrelReloads,"canceledReloads",underbarrelReloadCanceled,"pendingReloads",sessions.values().stream().filter(s->s.launcherReload!=null).count(),"players",sessions.values().stream().filter(s->s.ready&&s.weapon!=null&&s.weapon.launcher()!=null).map(s->Map.of("name",s.grant.name(),"factory",s.weapon.launcher().factory(),"ammo",s.weapon.launcher().ammo(),"rounds",s.weapon.launcher().rounds(),"remembered",s.weapon.launcher().remembered())).toList()));m.put("jamming",Map.of("started",unjammingStarted,"completed",unjammingCompleted,"canceled",unjammingCanceled,"denied",unjammingDenied,"pending",sessions.values().stream().filter(s->s.unjamming!=null||s.unjammingPending).count(),"players",sessions.values().stream().filter(s->s.ready&&s.weapon!=null).map(s->Map.of("name",s.grant.name(),"jammed",s.weapon.jamming().jammed(),"duration",s.weapon.jamming().duration(),"pending",s.unjamming!=null||s.unjammingPending)).toList()));m.put("primaryLaunchers",Map.of("shots",primaryLauncherShots,"denied",primaryLauncherDenied));m.put("grenadeHealing",Map.of("applied",areaHealApplied,"denied",areaHealDenied,"pending",areaHealCommits.size(),"items",enabledAreaProfiles.keySet().stream().filter(item->grenadeUseRules.get(item).handUse()&&GrenadeAreaScenes.healing(enabledAreaProfiles.get(item))).count(),"players",sessions.values().stream().filter(s->s.ready).map(s->Map.of("name",s.grant.name(),"applications",inventories.areaApplicationCount(character(s)))).toList()));m.put("grenadePulses",Map.of("applied",pulseApplied,"denied",pulseDenied,"pending",pulseCommits.size(),"items",enabledAreaProfiles.keySet().stream().filter(item->grenadeUseRules.get(item).handUse()&&GrenadeAreaScenes.pulse(enabledAreaProfiles.get(item))).count(),"players",sessions.values().stream().filter(s->s.ready).map(s->Map.of("name",s.grant.name(),"entries",s.pulses.active(System.currentTimeMillis()).stream().map(e->Map.of("id",e.id(),"source",e.source(),"item",e.item(),"until",e.until(),"stats",e.definition().stats())).toList())).toList()));m.put("grenadeRevives",Map.of("applied",revives,"denied",reviveDenied,"errors",reviveErrors,"checks",reviveChecks.size(),"pending",reviveCommits.size(),"items",enabledAreaProfiles.values().stream().filter(GrenadeAreaScenes::supportUltimate).count()));m.put("grenadeRecovery",Map.of("restored",grenadeRecovered));m.put("grenadeUse",Map.of("held",sessions.values().stream().filter(s->s.grenadeUse.held()!=null).count(),"handExplosions",grenadeHeldExplosions,"canceled",grenadeUseCanceled,"prepareDenied",grenadePrepareDenied,"cookingProfiles",grenadeUseRules.values().stream().filter(GrenadeUse.Rules::ignites).count()));m.put("combatVisibility",Map.of("blocked",blockedHits,"errors",visibilityErrors));m.put("botCombat",Map.of("hits",botHits,"deaths",botDeaths,"errors",botDamageErrors,"completionDrops",combatCompletionDrops.get(),"queued",combatCompleted.size()));m.put("worldEdit",Map.of("allowedCharacters",worldEditors.size(),"pending",sessions.values().stream().filter(s->s.editor.busy()).count()));m.put("applicationDrain",Map.of("pendingLanes",parseReady.size(),"messageBudget",64,"timeBudgetMs",2,"yields",applicationBudgetYields));m.put("running",running);m.put("backend",accounts.metrics());m.put("playerRules",Map.of("entitled",sessions.values().stream().filter(s->s.ready&&playerRules.entitled(character(s))).count(),"administratorMode",sessions.values().stream().filter(s->s.ready&&administrator(s)).count()));m.put("characterPreferences",sessions.values().stream().filter(s->s.ready).map(s->Map.of("name",s.grant.name(),"character",character(s),"faction",s.faction,"mode",s.gameplayMode.name(),"entitled",playerRules.entitled(character(s)))).toList());m.put("sceneConfiguration",Map.of("access",sceneAccess.metrics(),"denied",sceneDenied,"failed",sceneFailed,"pendingReads",sessions.values().stream().mapToInt(s->s.sceneReads.size()).sum(),"pendingWrites",sessions.values().stream().mapToInt(s->s.sceneSaves.size()).sum()));m.put("locations",locations.metrics());m.put("locationResidency",locations.residencyMetrics());m.put("stateSaves",locations.stateWriteMetrics());m.put("playerState",sessions.values().stream().filter(s->s.ready).map(s->Map.of("name",s.grant.name(),"yaw",s.yaw,"pitch",s.pitch,"health",s.hp,"hand",s.handContainer,"holstered",s.holstered,"damagedAt",s.damageWall)).toList());m.put("warps",warps.metrics());m.put("environment",environment.metrics());m.put("weatherConfigurations",environmentAccess.configurations.metrics());m.put("portals",Map.of("sceneStale",sessions.values().stream().mapToLong(s->s.portalLookup.sceneStale()).sum(),"sceneEpoch",world.portalEpoch(),"queries",portalQueries,"activations",portalActivations,"errors",portalErrors,"pending",sessions.values().stream().filter(s->s.portalLookup.busy()).count(),"coldRetries",sessions.values().stream().mapToLong(s->s.portalLookup.retries()).sum(),"stale",sessions.values().stream().mapToLong(s->s.portalLookup.stale()).sum(),"timeouts",sessions.values().stream().mapToLong(s->s.portalLookup.timeouts()).sum()));m.put("teleports",Map.of("completed",teleports,"errors",teleportErrors,"staleInputs",staleTeleportInputs,"pending",sessions.values().stream().filter(s->s.teleport!=null).count()));m.put("nativeBlocks",Map.of("access",nativeBlocks.metrics(),"denied",nativeBlockDenied,"failed",nativeBlockFailed,"intents",nativeBlockIntents,"repairs",nativeBlockRepairs,"pendingWrites",sessions.values().stream().mapToInt(s->s.blockSaves.size()).sum(),"pendingRepairs",sessions.values().stream().mapToInt(s->s.blockRepairs.size()).sum()));m.put("terrainProjection",terrainProjection.metrics());m.put("chunkManifests",Map.of("service",chunkManifests.metrics(),"sent",manifestsSent,"entries",manifestEntries,"stale",manifestStale,"failures",manifestFailures,"outstanding",sessions.values().stream().mapToInt(s->s.window.outstanding()).sum(),"known",sessions.values().stream().mapToLong(s->s.window.known()).sum(),"radius",chunkSettings.distance(),"batchSize",chunkSettings.batchSize(),"sessions",sessions.values().stream().filter(s->s.ready).map(s->Map.of("name",s.grant.name(),"radius",s.window.radius(),"loaded",s.chunks.size(),"coverageRows",s.window.coverageRows(),"outstandingLimit",s.window.limit())).toList()));m.put("chunkDelivery",Map.of("cacheHits",chunkCacheHits,"fullResponses",chunkFullResponses,"duplicateDemands",chunkDuplicateDemands,"deferredDemands",chunkDeferredDemands,"released",chunkReleased,"receipts",sessions.values().stream().mapToInt(s->s.deliveries.size()).sum(),"pending",sessions.values().stream().mapToInt(s->s.pendingChunks.size()).sum(),"deferred",sessions.values().stream().mapToInt(s->s.window.deferred()).sum()));m.put("chunkFaults",Map.of("coordinates",sessions.values().stream().mapToLong(s->s.faults.size()).sum(),"rows",sessions.values().stream().mapToInt(s->s.faults.rows()).sum(),"queued",sessions.values().stream().mapToInt(s->s.window.faultPending()).sum()));m.put("tileRefreshes",tileRefreshes);m.put("bulkBlockRefreshes",bulkBlockRefreshes);m.put("inventory",inventories.metrics());m.put("inventoryTransfers",inventoryTransfers.metrics());m.put("vitalsCommits",Map.of("pendingMedicine",medicineCommits.size(),"pendingDeath",deathCommits.size(),"pendingAreaHeal",areaHealCommits.size(),"completed",vitalsCommits,"failures",vitalsCommitFailures));m.put("characterDeletion",characterDeletions.metrics());m.put("nativeAdmin",Map.of("accepted",nativeAdminAccepted,"denied",nativeAdminDenied,"validatedEchoes",nativeAdminEchoes,"queued",sessions.values().stream().mapToInt(s->s.nativeGrants.size()).sum(),"queuedBytes",sessions.values().stream().mapToInt(s->s.nativeGrantBytes).sum(),"pending",sessions.values().stream().filter(s->s.nativeGrantPending).count()));m.put("tick",tick);m.put("maxTickMs",maxTickNanos/1e6);m.put("tickTiming",Map.of("maxGapMs",maxTickGapNanos/1e6,"maxLateMs",maxTickLateNanos/1e6,"maxSocketWaitMs",maxSocketWaitNanos/1e6,"maxReceiveMs",maxReceiveNanos/1e6,"maxCompletionMs",maxCompletionNanos/1e6,"lateTicks",List.copyOf(lateTicks),"maxApplicationMs",maxApplicationNanos/1e6,"slowPackets",List.copyOf(slowPackets)));m.put("handshakeTiming",Map.of("maxCookieMs",maxHelloCookieNanos/1e6,"maxSessionMs",maxHelloSessionNanos/1e6,"maxChallengeMs",maxHelloChallengeNanos/1e6));m.put("skippedSlots",skipped);m.put("inputs",inputs);m.put("shots",shots);m.put("hits",hits);m.put("deaths",deaths);m.put("corpses",corpses.metrics());m.put("entityIds",entityIds.metrics());m.put("respawnTiming",Map.of("cooldownRejected",respawnCooldowns,"retries",respawnRetries,"delaySeconds",5));m.put("respawns",respawns);m.put("lastShot",lastShot);m.put("lastReload",lastReload);m.put("lastMelee",lastMelee);m.put("applicationCounts",Map.copyOf(applicationCounts));m.put("rejected",rejected);m.put("retries",retries);m.put("retired",retired);m.put("connectionDiagnosticsVersion",1);m.put("disconnectReasons",Map.copyOf(disconnectReasons));m.put("recentDisconnects",List.copyOf(recentDisconnects));m.put("unknownPackets",Map.copyOf(unknown));m.put("datagrams",Map.copyOf(datagrams));m.put("connectionMismatch",connectionMismatch);m.put("transportSessions",sessions.values().stream().map(s->Map.of("accepted",s.accepted,"ready",s.ready,"rx0",s.lanes[0].rx,"rx1",s.lanes[1].rx,"held",s.lanes[0].received.size(),"retryTimeoutMs",s.retryTiming.timeout(1)/1_000_000)).toList());m.put("stamina",sessions.values().stream().filter(s->s.ready).map(s->Map.of("name",s.grant.name(),"value",s.stamina,"maximum",s.maxStamina,"reported",s.observedStamina,"mode",s.mode)).toList());m.put("equipmentStats",sessions.values().stream().filter(s->s.ready).map(s->Map.of("name",s.grant.name(),"maximumHealth",s.maxHp,"stats",s.stats,"effects",s.effects.active(System.currentTimeMillis()))).toList());m.put("players",sessions.values().stream().filter(s->s.ready).map(s->Map.of("name",s.grant.name(),"entity",s.entity,"position",s.pos.clone(),"health",s.hp,"rounds",s.rounds,"reserve",s.reserve,"capacity",s.weapon==null?0:s.weapon.capacity(),"ammo",s.weapon==null?0:s.weapon.ammo(),"unacked",s.lanes[0].sent.size()+s.lanes[1].sent.size(),"queued",s.lanes[0].queued.size()+s.lanes[1].queued.size())).toList());m.put("playerResources",sessions.values().stream().filter(s->s.ready).map(s->Map.of("entity",s.entity,"stamina",s.stamina,"maxStamina",s.maxStamina,"maxHealth",s.maxHp,"effects",s.effects.active(System.currentTimeMillis()).stream().map(CharacterEffects.Effect::id).toList())).toList());m.put("playerPostures",sessions.values().stream().filter(s->s.ready).map(s->Map.of("entity",s.entity,"locomotion",s.posture.locomotion(),"previous",s.posture.previous(),"bodyHeight",CharacterScale.height(s.posture.locomotion(),s.characterScale),"velocity",s.velocity.clone(),"speed",s.speed,"ground",s.ground)).toList());m.put("characterScale",Map.of("lastError",lastScaleError,"players",sessions.values().stream().filter(p->p.ready).map(p->Map.of("entity",p.entity,"name",p.grant.name(),"scale",p.characterScale,"capable",p.scaleCapable,"ground",p.ground,"speed",p.speed,"pending",p.scaleChange!=null||p.scaleSaving)).toList()));m.put("combatBarriers",combatBarriers.metrics());m.put("hordeCombat",hordeCombat.metrics());m.put("zombies",zombies.status());metrics=Collections.unmodifiableMap(m);
+        Set<BotKey> aliveBots=new HashSet<>();world.snapshot().entities().forEach(bot->aliveBots.add(botKey(bot)));botEntities.entrySet().removeIf(entry->{if(aliveBots.contains(entry.getKey())||retainedDonor(entry.getValue()))return false;entityIds.release(entry.getValue());return true;});advancePlayerStates();pruneCharacterSessions(Long.MAX_VALUE);var m=new LinkedHashMap<String,Object>();m.put("worldItems",Map.of("simulation",worldItems.metrics(),"dropped",itemDropped,"collected",itemCollected,"failures",itemFailures,"requests",itemRequests,"boltThrows",boltThrows,"boltTriggers",boltTriggers,"lastError",lastItemFailure,"dropQueue",itemDrops.metrics()));m.put("characterSessions",characterSessions.metrics());m.put("replicatedBots",botEntities.size());m.put("anomalies",Map.of("simulation",anomalies.metrics(),"queryErrors",anomalyErrors,"queryPending",anomalyQuery!=null,"velocityAcknowledgements",anomalyVelocityEchoes));m.put("mines",Map.of("explosions",mineExplosions,"hits",mineHits,"pollErrors",minePollErrors));m.put("playerReplication",Map.of("frames",replicationFrames,"records",replicationRecords,"bytes",replicationBytes,"deferred",replicationDeferred,"baselines",sessions.values().stream().mapToInt(s->s.replication.retained()).sum(),"maxRecordsPerFrame",64));m.put("physicalReload",Map.of("accepted",physicalAccepted,"denied",physicalDenied,"duplicates",physicalDuplicates,"queued",sessions.values().stream().mapToLong(s->s.weaponActions.physicalCount()).sum(),"active",sessions.values().stream().filter(this::physicalActive).count()));m.put("weaponActions",Map.of("queued",sessions.values().stream().mapToInt(s->s.weaponActions.size()).sum(),"rejected",sessions.values().stream().mapToLong(s->s.weaponActions.rejected()).sum(),"expired",sessions.values().stream().mapToLong(s->s.weaponActions.expired()).sum()));m.put("commandRuntime",Map.of("completionRequests",completionRequests,"poseRevision",poseRevision,"clones",clones.metrics(),"cloneHits",cloneHits,"cloneKills",cloneKills));m.put("fpv",Map.of("lifecycle",drones.metrics(),"denied",fpvDenied,"explosions",fpvExplosions,"capable",sessions.values().stream().filter(s->s.fpvCapable).count(),"observers",droneObservers.size(),"placed",fpvPlaced,"pendingPlacements",fpvPlacements.size(),"geometry",fpvMap.metrics(),"receipts",fpvReceipts.metrics()));m.put("grenades",Map.of("bridge",grenadeBridge.metrics(),"profiles",grenadeProfiles.size(),"unavailable",Map.copyOf(grenadeUnavailable),"active",thrownGrenades.size(),"throws",grenadeThrows,"denied",grenadeDenied,"explosions",grenadeExplosions,"hits",grenadeHits,"pollErrors",grenadePollErrors,"outbox",grenadeOutbox.metrics()));m.put("grenadeAreaPreparation",Map.of("items",grenadeAreaProfiles.size(),"profiles",grenadeAreaProfiles.values().stream().mapToInt(List::size).sum(),"gameplayIntegrated",true,"backendIntegrated",true));m.put("grenadeAreaScenes",Map.of("service",grenadeAreaScenes.metrics(),"enabledSmokeItems",enabledAreaProfiles.keySet().stream().filter(item->grenadeUseRules.get(item).handUse()&&GrenadeAreaScenes.smoke(enabledAreaProfiles.get(item))).count(),"enabledGasItems",enabledAreaProfiles.keySet().stream().filter(item->grenadeUseRules.get(item).handUse()&&GrenadeAreaScenes.gas(enabledAreaProfiles.get(item))).count(),"active",areaScenes.size(),"spawns",areaSceneSpawns,"removals",areaSceneRemovals,"enabledStatusItems",enabledAreaProfiles.keySet().stream().filter(item->grenadeUseRules.get(item).handUse()&&GrenadeAreaScenes.status(enabledAreaProfiles.get(item))).count(),"enabledContinuousItems",enabledAreaProfiles.keySet().stream().filter(item->grenadeUseRules.get(item).handUse()&&GrenadeAreaScenes.continuous(enabledAreaProfiles.get(item))).count(),"scope","continuous-healing-shields-and-durable-pulses","renderedVerified",false));m.put("grenadeAreaStore",grenadeAreas.metrics());m.put("grenadeShields",Map.of("durability",grenadeAreas.shieldMetrics(),"blocked",shieldBlocked,"errors",shieldErrors,"pending",shieldShots.size(),"items",enabledAreaProfiles.keySet().stream().filter(item->grenadeUseRules.get(item).handUse()&&GrenadeAreaScenes.shield(enabledAreaProfiles.get(item))).count()));m.put("sickness",Map.of("profiles",sicknessRules.profiles().size(),"ticks",sicknessTicks,"hits",sicknessHits,"updates",sicknessUpdates,"players",sessions.values().stream().filter(p->p.ready).map(p->Map.of("name",p.grant.name(),"states",p.sickness.json(),"exposure",p.sicknessExposure)).toList(),"nativeTickOracle",false));m.put("underbarrels",Map.of("shots",underbarrelShots,"denied",underbarrelDenied,"reloads",underbarrelReloads,"canceledReloads",underbarrelReloadCanceled,"pendingReloads",sessions.values().stream().filter(s->s.launcherReload!=null).count(),"players",sessions.values().stream().filter(s->s.ready&&s.weapon!=null&&s.weapon.launcher()!=null).map(s->Map.of("name",s.grant.name(),"factory",s.weapon.launcher().factory(),"ammo",s.weapon.launcher().ammo(),"rounds",s.weapon.launcher().rounds(),"remembered",s.weapon.launcher().remembered())).toList()));m.put("jamming",Map.of("started",unjammingStarted,"completed",unjammingCompleted,"canceled",unjammingCanceled,"denied",unjammingDenied,"pending",sessions.values().stream().filter(s->s.unjamming!=null||s.unjammingPending).count(),"players",sessions.values().stream().filter(s->s.ready&&s.weapon!=null).map(s->Map.of("name",s.grant.name(),"jammed",s.weapon.jamming().jammed(),"duration",s.weapon.jamming().duration(),"pending",s.unjamming!=null||s.unjammingPending)).toList()));m.put("primaryLaunchers",Map.of("shots",primaryLauncherShots,"denied",primaryLauncherDenied));m.put("grenadeHealing",Map.of("applied",areaHealApplied,"denied",areaHealDenied,"pending",areaHealCommits.size(),"items",enabledAreaProfiles.keySet().stream().filter(item->grenadeUseRules.get(item).handUse()&&GrenadeAreaScenes.healing(enabledAreaProfiles.get(item))).count(),"players",sessions.values().stream().filter(s->s.ready).map(s->Map.of("name",s.grant.name(),"applications",inventories.areaApplicationCount(character(s)))).toList()));m.put("grenadePulses",Map.of("applied",pulseApplied,"denied",pulseDenied,"pending",pulseCommits.size(),"items",enabledAreaProfiles.keySet().stream().filter(item->grenadeUseRules.get(item).handUse()&&GrenadeAreaScenes.pulse(enabledAreaProfiles.get(item))).count(),"players",sessions.values().stream().filter(s->s.ready).map(s->Map.of("name",s.grant.name(),"entries",s.pulses.active(System.currentTimeMillis()).stream().map(e->Map.of("id",e.id(),"source",e.source(),"item",e.item(),"until",e.until(),"stats",e.definition().stats())).toList())).toList()));m.put("grenadeRevives",Map.of("applied",revives,"denied",reviveDenied,"errors",reviveErrors,"checks",reviveChecks.size(),"pending",reviveCommits.size(),"items",enabledAreaProfiles.values().stream().filter(GrenadeAreaScenes::supportUltimate).count()));m.put("grenadeRecovery",Map.of("restored",grenadeRecovered));m.put("grenadeUse",Map.of("held",sessions.values().stream().filter(s->s.grenadeUse.held()!=null).count(),"handExplosions",grenadeHeldExplosions,"canceled",grenadeUseCanceled,"prepareDenied",grenadePrepareDenied,"cookingProfiles",grenadeUseRules.values().stream().filter(GrenadeUse.Rules::ignites).count()));m.put("combatVisibility",Map.of("blocked",blockedHits,"errors",visibilityErrors));m.put("botCombat",Map.of("hits",botHits,"deaths",botDeaths,"errors",botDamageErrors,"completionDrops",combatCompletionDrops.get(),"queued",combatCompleted.size()));m.put("worldEdit",Map.of("allowedCharacters",worldEditors.size(),"pending",sessions.values().stream().filter(s->s.editor.busy()).count()));m.put("applicationDrain",Map.of("pendingLanes",parseReady.size(),"messageBudget",64,"timeBudgetMs",2,"yields",applicationBudgetYields));m.put("running",running);m.put("backend",accounts.metrics());m.put("playerRules",Map.of("entitled",sessions.values().stream().filter(s->s.ready&&playerRules.entitled(character(s))).count(),"administratorMode",sessions.values().stream().filter(s->s.ready&&administrator(s)).count()));m.put("characterPreferences",sessions.values().stream().filter(s->s.ready).map(s->Map.of("name",s.grant.name(),"character",character(s),"faction",s.faction,"mode",s.gameplayMode.name(),"entitled",playerRules.entitled(character(s)))).toList());m.put("sceneConfiguration",Map.of("access",sceneAccess.metrics(),"denied",sceneDenied,"failed",sceneFailed,"unplaced",sceneUnplaced,"maxWriteMs",sceneMaxWriteMs,"pendingReads",sessions.values().stream().mapToInt(s->s.sceneReads.size()).sum(),"pendingWrites",sessions.values().stream().mapToInt(s->s.sceneSaves.size()).sum()));m.put("locations",locations.metrics());m.put("locationResidency",locations.residencyMetrics());m.put("stateSaves",locations.stateWriteMetrics());m.put("playerState",sessions.values().stream().filter(s->s.ready).map(s->Map.of("name",s.grant.name(),"yaw",s.yaw,"pitch",s.pitch,"health",s.hp,"hand",s.handContainer,"holstered",s.holstered,"damagedAt",s.damageWall)).toList());m.put("warps",warps.metrics());m.put("environment",environment.metrics());m.put("weatherConfigurations",environmentAccess.configurations.metrics());m.put("portals",Map.of("sceneStale",sessions.values().stream().mapToLong(s->s.portalLookup.sceneStale()).sum(),"sceneEpoch",world.portalEpoch(),"queries",portalQueries,"activations",portalActivations,"errors",portalErrors,"pending",sessions.values().stream().filter(s->s.portalLookup.busy()).count(),"coldRetries",sessions.values().stream().mapToLong(s->s.portalLookup.retries()).sum(),"stale",sessions.values().stream().mapToLong(s->s.portalLookup.stale()).sum(),"timeouts",sessions.values().stream().mapToLong(s->s.portalLookup.timeouts()).sum()));m.put("teleports",Map.of("completed",teleports,"errors",teleportErrors,"staleInputs",staleTeleportInputs,"pending",sessions.values().stream().filter(s->s.teleport!=null).count()));m.put("nativeBlocks",Map.of("access",nativeBlocks.metrics(),"denied",nativeBlockDenied,"failed",nativeBlockFailed,"intents",nativeBlockIntents,"repairs",nativeBlockRepairs,"pendingWrites",sessions.values().stream().mapToInt(s->s.blockSaves.size()).sum(),"pendingRepairs",sessions.values().stream().mapToInt(s->s.blockRepairs.size()).sum()));m.put("terrainProjection",terrainProjection.metrics());m.put("chunkManifests",Map.of("service",chunkManifests.metrics(),"sent",manifestsSent,"entries",manifestEntries,"stale",manifestStale,"failures",manifestFailures,"outstanding",sessions.values().stream().mapToInt(s->s.window.outstanding()).sum(),"known",sessions.values().stream().mapToLong(s->s.window.known()).sum(),"radius",chunkSettings.distance(),"batchSize",chunkSettings.batchSize(),"sessions",sessions.values().stream().filter(s->s.ready).map(s->Map.of("name",s.grant.name(),"radius",s.window.radius(),"loaded",s.chunks.size(),"coverageRows",s.window.coverageRows(),"outstandingLimit",s.window.limit())).toList()));m.put("chunkDelivery",Map.of("cacheHits",chunkCacheHits,"fullResponses",chunkFullResponses,"duplicateDemands",chunkDuplicateDemands,"deferredDemands",chunkDeferredDemands,"released",chunkReleased,"receipts",sessions.values().stream().mapToInt(s->s.deliveries.size()).sum(),"pending",sessions.values().stream().mapToInt(s->s.pendingChunks.size()).sum(),"deferred",sessions.values().stream().mapToInt(s->s.window.deferred()).sum()));m.put("chunkFaults",Map.of("coordinates",sessions.values().stream().mapToLong(s->s.faults.size()).sum(),"rows",sessions.values().stream().mapToInt(s->s.faults.rows()).sum(),"queued",sessions.values().stream().mapToInt(s->s.window.faultPending()).sum()));m.put("tileRefreshes",tileRefreshes);m.put("bulkBlockRefreshes",bulkBlockRefreshes);m.put("inventory",inventories.metrics());m.put("inventoryTransfers",inventoryTransfers.metrics());m.put("vitalsCommits",Map.of("pendingMedicine",medicineCommits.size(),"pendingDeath",deathCommits.size(),"pendingAreaHeal",areaHealCommits.size(),"completed",vitalsCommits,"failures",vitalsCommitFailures));m.put("characterDeletion",characterDeletions.metrics());m.put("nativeAdmin",Map.of("accepted",nativeAdminAccepted,"denied",nativeAdminDenied,"validatedEchoes",nativeAdminEchoes,"queued",sessions.values().stream().mapToInt(s->s.nativeGrants.size()).sum(),"queuedBytes",sessions.values().stream().mapToInt(s->s.nativeGrantBytes).sum(),"pending",sessions.values().stream().filter(s->s.nativeGrantPending).count()));m.put("tick",tick);m.put("maxTickMs",maxTickNanos/1e6);m.put("tickTiming",Map.of("maxGapMs",maxTickGapNanos/1e6,"maxLateMs",maxTickLateNanos/1e6,"maxSocketWaitMs",maxSocketWaitNanos/1e6,"maxReceiveMs",maxReceiveNanos/1e6,"maxCompletionMs",maxCompletionNanos/1e6,"lateTicks",List.copyOf(lateTicks),"maxApplicationMs",maxApplicationNanos/1e6,"slowPackets",List.copyOf(slowPackets)));m.put("handshakeTiming",Map.of("maxCookieMs",maxHelloCookieNanos/1e6,"maxSessionMs",maxHelloSessionNanos/1e6,"maxChallengeMs",maxHelloChallengeNanos/1e6));m.put("skippedSlots",skipped);m.put("inputs",inputs);m.put("shots",shots);m.put("hits",hits);m.put("deaths",deaths);m.put("corpses",corpses.metrics());m.put("entityIds",entityIds.metrics());m.put("respawnTiming",Map.of("cooldownRejected",respawnCooldowns,"retries",respawnRetries,"delaySeconds",5));m.put("respawns",respawns);m.put("lastShot",lastShot);m.put("lastReload",lastReload);m.put("lastMelee",lastMelee);m.put("applicationCounts",Map.copyOf(applicationCounts));m.put("rejected",rejected);m.put("retries",retries);m.put("reliableTransport",reliableTransportMetrics());m.put("retired",retired);m.put("connectionDiagnosticsVersion",1);m.put("disconnectReasons",Map.copyOf(disconnectReasons));m.put("recentDisconnects",List.copyOf(recentDisconnects));m.put("unknownPackets",Map.copyOf(unknown));m.put("datagrams",Map.copyOf(datagrams));m.put("connectionMismatch",connectionMismatch);m.put("transportSessions",sessions.values().stream().map(s->Map.of("accepted",s.accepted,"ready",s.ready,"rx0",s.lanes[0].rx,"rx1",s.lanes[1].rx,"held",s.lanes[0].received.size(),"retryTimeoutMs",s.retryTiming.timeout(1)/1_000_000)).toList());m.put("stamina",sessions.values().stream().filter(s->s.ready).map(s->Map.of("name",s.grant.name(),"value",s.stamina,"maximum",s.maxStamina,"reported",s.observedStamina,"mode",s.mode)).toList());m.put("equipmentStats",sessions.values().stream().filter(s->s.ready).map(s->Map.of("name",s.grant.name(),"maximumHealth",s.maxHp,"stats",s.stats,"effects",s.effects.active(System.currentTimeMillis()))).toList());m.put("players",sessions.values().stream().filter(s->s.ready).map(s->Map.of("name",s.grant.name(),"entity",s.entity,"position",s.pos.clone(),"health",s.hp,"rounds",s.rounds,"reserve",s.reserve,"capacity",s.weapon==null?0:s.weapon.capacity(),"ammo",s.weapon==null?0:s.weapon.ammo(),"unacked",s.lanes[0].sent.size()+s.lanes[1].sent.size(),"queued",s.lanes[0].queued.size()+s.lanes[1].queued.size())).toList());m.put("playerResources",sessions.values().stream().filter(s->s.ready).map(s->Map.of("entity",s.entity,"stamina",s.stamina,"maxStamina",s.maxStamina,"maxHealth",s.maxHp,"effects",s.effects.active(System.currentTimeMillis()).stream().map(CharacterEffects.Effect::id).toList())).toList());m.put("playerPostures",sessions.values().stream().filter(s->s.ready).map(s->Map.of("entity",s.entity,"locomotion",s.posture.locomotion(),"previous",s.posture.previous(),"bodyHeight",CharacterScale.height(s.posture.locomotion(),s.characterScale),"velocity",s.velocity.clone(),"speed",s.speed,"ground",s.ground)).toList());m.put("characterScale",Map.of("lastError",lastScaleError,"players",sessions.values().stream().filter(p->p.ready).map(p->Map.of("entity",p.entity,"name",p.grant.name(),"scale",p.characterScale,"capable",p.scaleCapable,"ground",p.ground,"speed",p.speed,"pending",p.scaleChange!=null||p.scaleSaving)).toList()));m.put("combatBarriers",combatBarriers.metrics());m.put("hordeCombat",hordeCombat.metrics());m.put("zombies",zombies.status());metrics=Collections.unmodifiableMap(m);
+    }
+    private Map<String,Long> reliableTransportMetrics(){
+        return Map.ofEntries(
+            Map.entry("newDatagrams",outboundReliableDatagrams),
+            Map.entry("retransmittedDatagrams",retries),
+            Map.entry("queuedGame",sessions.values().stream().mapToLong(s->s.lanes[0].queued.size()).sum()),
+            Map.entry("queuedTerrain",sessions.values().stream().mapToLong(s->s.lanes[1].queued.size()).sum()),
+            Map.entry("udpDatagrams",reliableUdpDatagrams),
+            Map.entry("udpBytes",reliableUdpBytes),
+            Map.entry("chunkPayloadBytes",chunkPayloadBytes),
+            Map.entry("chunkPeakInFlight",chunkPeakInFlight),
+            Map.entry("chunkGapRetries",chunkGapRetries),
+            Map.entry("ackOnlyDatagrams",ackOnlyDatagrams),
+            Map.entry("mixedAckDatagrams",mixedAckDatagrams),
+            Map.entry("acknowledgedSegments",acknowledgedSegments),
+            Map.entry("shortMovementTicks",shortMovementTicks),
+            Map.entry("fullMovementTicks",fullMovementTicks),
+            Map.entry("chunkBackgroundDeferred",chunkBackgroundDeferred));
     }
     private void bots(Session s){
         World.Snapshot snapshot=world.snapshot();List<World.View> nearby=snapshot.entities().stream().filter(view->view.health()>0&&Math.hypot(view.x()-s.pos[0],view.z()-s.pos[2])<=96).sorted(Comparator.comparingDouble(view->Math.hypot(view.x()-s.pos[0],view.z()-s.pos[2]))).limit(64).toList();
@@ -2447,7 +3278,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
     private void observePlayer(Session s){var state=playerState(s);if(s.teleport!=null&&locations.position(character(s))!=null)locations.observeState(character(s),state);else locations.observe(character(s),point(s.pos),state);}
     private void sessionError(Session s,String reason,Throwable failure){if(sessions.get(s.address)!=s)return;System.err.println("[native-session] "+reason+" ready="+s.ready+" peer="+s.address);failure.printStackTrace(System.err);remove(s,reason);}
     private void remove(Session s){remove(s,"session_closed");}
-    private void remove(Session s,String reason){if(s.grant!=null&&s.ready&&sessions.get(s.address)==s)releaseAnomalies(s);inventoryTransfers.discard(s);environmentAccess.disconnect(s.environmentClient);if(!sessions.remove(s.address,s))return;disconnectReasons.merge(reason,1L,Long::sum);Map<String,Object> event=Map.of("reason",reason,"tick",tick,"ready",s.ready,"peer",s.address.toString(),"character",s.grant==null?"":s.grant.characterId().toString(),"clientId",s.clientId,"lastReceiveMs",Math.max(0,(System.nanoTime()-s.last)/1_000_000),"queued",s.lanes[0].queued.size()+s.lanes[1].queued.size(),"unacked",s.lanes[0].sent.size()+s.lanes[1].sent.size());if(recentDisconnects.size()==8)recentDisconnects.removeFirst();recentDisconnects.addLast(event);System.err.println("[native-session] disconnected "+event);screenshots.disconnected(s.incarnation);if(s.grant!=null)characterSessions.retire(character(s),s);for(AreaScene area:areaScenes.values())area.recipients.remove(new Recipient(s.address,s.incarnation));s.grenadeUse.cancel();parseReady.removeIf(target->target.session()==s);for(Lane lane:s.lanes)lane.parsing=false;clones.forget(s);s.poses.clear();detachVehicleContact(s);vehicleContacts.forget(s);clearVehicleAction(s);for(var car:vehicles.forget(s))emitVehicle(car,VehicleWire.DESPAWN);recallFpv(s);for(Set<Session> observers:droneObservers.values())observers.remove(s);s.fpvWorldSent.clear();entityIds.release(s.entity);if(s.ready&&!s.respawning&&locations.healthy())try{observePlayer(s);savePlayerState(s);}catch(IllegalArgumentException ignored){}locations.flush();if(s.locationLease!=null){s.locationLease.close();s.locationLease=null;}if(s.inventoryPinned){inventories.deactivate(character(s));s.inventoryPinned=false;}retired++;for(Session other:new ArrayList<>(sessions.values()))if(other.ready&&s.ready){other.poses.remove(s.entity);other.replication.forget(s.entity);if(other.scaleCapable)enqueueOrRetire(other,CharacterScale.remove(s.entity,++scaleRevision));enqueueOrRetire(other,Wire.frame(2028,Wire.bytes(o->o.writeInt(s.entity))));}}
+    private void remove(Session s,String reason){if(s.grant!=null&&s.ready&&sessions.get(s.address)==s)releaseAnomalies(s);inventoryTransfers.discard(s);itemDrops.discard(s);environmentAccess.disconnect(s.environmentClient);if(!sessions.remove(s.address,s))return;if(s.ready)squads.leave(squadPlayer(s));disconnectReasons.merge(reason,1L,Long::sum);Map<String,Object> event=Map.of("reason",reason,"tick",tick,"ready",s.ready,"peer",s.address.toString(),"character",s.grant==null?"":s.grant.characterId().toString(),"clientId",s.clientId,"lastReceiveMs",Math.max(0,(System.nanoTime()-s.last)/1_000_000),"queued",s.lanes[0].queued.size()+s.lanes[1].queued.size(),"unacked",s.lanes[0].sent.size()+s.lanes[1].sent.size());if(recentDisconnects.size()==8)recentDisconnects.removeFirst();recentDisconnects.addLast(event);System.err.println("[native-session] disconnected "+event);screenshots.disconnected(s.incarnation);if(s.grant!=null)characterSessions.retire(character(s),s);for(AreaScene area:areaScenes.values())area.recipients.remove(new Recipient(s.address,s.incarnation));s.grenadeUse.cancel();parseReady.removeIf(target->target.session()==s);for(Lane lane:s.lanes)lane.parsing=false;clones.forget(s);s.poses.clear();detachVehicleContact(s);vehicleContacts.forget(s);clearVehicleAction(s);for(var car:vehicles.forget(s))emitVehicle(car,VehicleWire.DESPAWN);recallFpv(s);for(Set<Session> observers:droneObservers.values())observers.remove(s);s.fpvWorldSent.clear();entityIds.release(s.entity);if(s.ready&&!s.respawning&&locations.healthy())try{observePlayer(s);savePlayerState(s);}catch(IllegalArgumentException ignored){}locations.flush();if(s.locationLease!=null){s.locationLease.close();s.locationLease=null;}if(s.inventoryPinned){inventories.deactivate(character(s));s.inventoryPinned=false;}retired++;for(Session other:new ArrayList<>(sessions.values()))if(other.ready&&s.ready){other.poses.remove(s.entity);other.replication.forget(s.entity);if(other.scaleCapable)enqueueOrRetire(other,CharacterScale.remove(s.entity,++scaleRevision));enqueueOrRetire(other,Wire.frame(2028,Wire.bytes(o->o.writeInt(s.entity))));}}
     @Override public void close()throws Exception{
         NpcEditorHooks.close(this);
         synchronized(this){if(closed)return;closed=true;}commands.unbindPlayerInventories(adminInventories);
@@ -2455,7 +3286,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         running=false;for(AutoCloseable socket:List.of(gateway,udp))try{socket.close();}catch(Exception error){if(failure==null)failure=error;else failure.addSuppressed(error);}
         try{transport.join(2000);acceptor.join(2000);}catch(InterruptedException error){Thread.currentThread().interrupt();if(failure==null)failure=error;else failure.addSuppressed(error);}
         if(transport.isAlive()||acceptor.isAlive()){IllegalStateException timeout=new IllegalStateException("game_shutdown_timeout");if(failure!=null)timeout.addSuppressed(failure);throw timeout;}
-        for(Session session:sessions.values())inventoryTransfers.discard(session);
+        for(Session session:sessions.values()){inventoryTransfers.discard(session);itemDrops.discard(session);}
         screenshots.close();
         try{Workers.stop(logins);}catch(Exception error){if(failure==null)failure=error;else failure.addSuppressed(error);}
         try{
@@ -2471,7 +3302,7 @@ public final class GameServer implements AutoCloseable,CreativeGiveHooks.Host {
         for(AutoCloseable resource:List.of(characterDeletions,accounts,inventories))try{resource.close();}catch(Exception error){if(failure==null)failure=error;else failure.addSuppressed(error);}
         try{long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(10);while(!medicineCommits.isEmpty()||!deathCommits.isEmpty()||!areaHealCommits.isEmpty()||!pulseCommits.isEmpty()||!reviveCommits.isEmpty()){advanceVitals();if(System.nanoTime()>deadline)throw new IllegalStateException("vitals_shutdown_timeout");Thread.sleep(2);}}catch(Exception error){if(failure==null)failure=error;else failure.addSuppressed(error);}
         for(Session s:sessions.values())if(s.ready&&!s.respawning&&locations.healthy())try{observePlayer(s);savePlayerState(s);}catch(Exception error){if(failure==null)failure=error;else failure.addSuppressed(error);}
-        for(AutoCloseable resource:List.of(locations,warps,allianceState,sceneAccess,environmentAccess,nativeBlocks,chunkManifests,terrainProjection,nativePackets,worldItems,fpvMap,fpvReceipts,grenadeOutbox,grenadeAreas,grenadeAreaScenes))try{resource.close();}catch(Exception error){if(failure==null)failure=error;else failure.addSuppressed(error);}
+        for(AutoCloseable resource:List.of(locations,locationName,warps,allianceState,sceneAccess,environmentAccess,nativeBlocks,chunkManifests,terrainProjection,nativePackets,worldItems,fpvMap,fpvReceipts,grenadeOutbox,grenadeAreas,grenadeAreaScenes))try{resource.close();}catch(Exception error){if(failure==null)failure=error;else failure.addSuppressed(error);}
         if(failure!=null)throw failure;
     }
 }

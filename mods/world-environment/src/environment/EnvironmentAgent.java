@@ -10,7 +10,7 @@ public final class EnvironmentAgent implements Opcodes {
         if(Boolean.getBoolean("sz.environment.agent.installed"))return;
         instrumentation.addTransformer(new ClassFileTransformer(){
             public byte[] transform(ClassLoader loader,String name,Class<?> redefined,ProtectionDomain domain,byte[] bytes){
-                if(name==null||!java.util.Set.of("StandardJvmBootstrap","1049587979","1461113355","1442200882","1747837509","1730472284","szmods/runtime/FpvPackets").contains(name))return null;
+                if(name==null||!java.util.Set.of("StandardJvmBootstrap","1049587979","1461113355","1442200882","1747837509","1730472284","179919962","szmods/runtime/FpvPackets").contains(name))return null;
                 try {
                     ClassReader reader=new ClassReader(bytes);ClassWriter writer=new ClassWriter(reader,ClassWriter.COMPUTE_MAXS);boolean[] changed={false};
                     reader.accept(new ClassVisitor(ASM8,writer){
@@ -27,10 +27,13 @@ public final class EnvironmentAgent implements Opcodes {
                             final boolean controls=name.equals("1730472284")&&method.equals("goto")&&descriptor.equals("()V");
                             final boolean cloud=name.equals("1730472284")&&method.equals("private")&&descriptor.equals("()V");
                             final boolean fallback=name.equals("1049587979")&&method.equals("byte")&&descriptor.equals("(L1987590071;L929635122;)L648055939;");
-                            if(guard==null&&!codec&&!weights&&!opened&&!controls&&!cloud&&!fallback)return next;
+                            final boolean regions=name.equals("179919962")&&method.equals("new")&&descriptor.equals("()V");
+                            final boolean map=name.equals("179919962")&&method.equals("public")&&descriptor.equals("(L1743927504;II)V");
+                            if(guard==null&&!codec&&!weights&&!opened&&!controls&&!cloud&&!fallback&&!regions&&!map)return next;
                             changed[0]=true;
                             return new MethodVisitor(ASM8,next){
                                 public void visitCode(){super.visitCode();
+                                    if(regions)super.visitMethodInsn(INVOKESTATIC,"environment/WeatherChunkOverlay","controls","()V",false);
                                     if(guard!=null||codec){super.visitVarInsn(ALOAD,0);super.visitMethodInsn(INVOKESTATIC,"environment/EnvironmentBridge",codec?"packet":guard,"(Ljava/lang/Object;)Z",false);Label original=new Label();super.visitJumpInsn(IFEQ,original);if(codec)super.visitInsn(ICONST_1);super.visitInsn(codec?IRETURN:RETURN);super.visitLabel(original);super.visitFrame(F_SAME,0,null,0,null);}
                                 }
                                 public void visitInsn(int op){
@@ -41,6 +44,17 @@ public final class EnvironmentAgent implements Opcodes {
                                 public void visitMethodInsn(int opcode,String owner,String called,String desc,boolean itf){
                                     if(cloud&&opcode==INVOKESTATIC&&owner.equals("220710426")&&called.equals("final")&&desc.equals("()Z"))super.visitMethodInsn(INVOKESTATIC,"environment/EnvironmentBridge","cloudBakeAllowed","()Z",false);
                                     else super.visitMethodInsn(opcode,owner,called,desc,itf);
+                                    if(map&&opcode==INVOKESTATIC&&owner.equals("imgui/ImGui")&&called.equals("endGroup")&&desc.equals("()V")){
+                                        // Match the native mouse projection using its map centre, scale and viewport.
+                                        super.visitVarInsn(ALOAD,1);super.visitFieldInsn(GETFIELD,"1743927504","return","L921590923;");
+                                        super.visitFieldInsn(GETFIELD,"921590923","import","F");
+                                        super.visitVarInsn(ALOAD,1);super.visitFieldInsn(GETFIELD,"1743927504","return","L921590923;");
+                                        super.visitFieldInsn(GETFIELD,"921590923","try","F");
+                                        super.visitVarInsn(ALOAD,1);super.visitMethodInsn(INVOKEVIRTUAL,"1743927504","try","()F",false);
+                                        super.visitVarInsn(ILOAD,2);super.visitVarInsn(ILOAD,3);
+                                        super.visitVarInsn(FLOAD,5);super.visitVarInsn(FLOAD,6);
+                                        super.visitMethodInsn(INVOKESTATIC,"environment/WeatherChunkOverlay","draw","(FFFIIFF)V",false);
+                                    }
                                 }
                                 public void visitFieldInsn(int opcode,String owner,String field,String desc){
                                     super.visitFieldInsn(opcode,owner,field,desc);

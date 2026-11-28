@@ -9,6 +9,9 @@ import static jdk.internal.org.objectweb.asm.Opcodes.*;
 
 /** Exact-version native adapters. Original class files on disk remain intact. */
 public final class ScaleAgent {
+    private static final String CAMERA = "1389510037";
+    // PerspectivePolicyTransformer runs first. Only its verified F5 output is also accepted.
+    private static final String F5_CAMERA_HASH = "501110d0c9d0a2ce39e7f4b3d1686fc87cc15841dd0adaadf5057ead9aff29b7";
     public static volatile boolean installed,healthy;
     public static final Set<String> transformed=Collections.synchronizedSet(new HashSet<>());
     public static void premain(String ignored,Instrumentation instrumentation)throws Exception {
@@ -22,7 +25,9 @@ public final class ScaleAgent {
         healthy=true;instrumentation.addTransformer(new ClassFileTransformer(){
             public byte[] transform(ClassLoader loader,String name,Class<?> type,ProtectionDomain domain,byte[] raw){
                 if(!hashes.containsKey(name)&&!name.equals("szmods/runtime/ModLoader"))return null;
-                try{String digest=HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(raw));if(hashes.containsKey(name)&&!digest.equals(hashes.getProperty(name)))throw new IOException("character_scale_transform_chain:"+name);
+                try{String digest=HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(raw));boolean f5Camera = CAMERA.equals(name) && F5_CAMERA_HASH.equals(digest);
+                    if(hashes.containsKey(name)&&!digest.equals(hashes.getProperty(name))&&!f5Camera)
+                        throw new IOException("character_scale_transform_chain:"+name);
                     byte[] result=patch(name,raw);transformed.add(name);return result;
                 }catch(Throwable failure){healthy=false;System.err.println("[CharacterScale] adapter disabled: "+failure);return null;}
             }
@@ -47,8 +52,16 @@ public final class ScaleAgent {
                     }
                     public void visitFieldInsn(int opcode,String owner,String field,String fieldDesc){
                         super.visitFieldInsn(opcode,owner,field,fieldDesc);
-                        if(name.equals("1389510037")&&method.equals("szmods$flight$enum")&&opcode==GETFIELD&&owner.equals("1987590071")&&Set.of("assert","byte","catch").contains(field)&&fieldDesc.equals("F")){
+                        if(name.equals(CAMERA)&&method.equals("szmods$flight$enum")&&opcode==GETFIELD&&owner.equals("1987590071")&&Set.of("assert","byte","catch").contains(field)&&fieldDesc.equals("F")){
                             visitVarInsn(ALOAD,0);visitMethodInsn(INVOKESTATIC,"playerscale/ScaleRuntime","camera","(FLjava/lang/Object;)F",false);changes[0]++;
+                        }
+                        if(name.equals("576005245")&&method.equals("do")&&desc.equals("(L1502780592;J)V")&&opcode==PUTFIELD&&owner.equals("153304200")&&field.equals("void")&&fieldDesc.equals("D")){
+                            visitVarInsn(ALOAD,8);visitVarInsn(ALOAD,3);visitVarInsn(FLOAD,7);
+                            super.visitMethodInsn(INVOKESTATIC,"playerscale/ScaleRuntime","shotOrigin","(Ljava/lang/Object;Ljava/lang/Object;F)V",false);changes[0]++;
+                        }
+                        if(name.equals("1775200393")&&opcode==GETSTATIC&&owner.equals("89824967")&&fieldDesc.equals("D")&&(field.equals("long")||field.equals("boolean"))){
+                            visitVarInsn(ALOAD,0);super.visitFieldInsn(GETFIELD,name,"byte","L1943200621;");
+                            super.visitMethodInsn(INVOKESTATIC,"playerscale/ScaleRuntime","jumpImpulse","(DLjava/lang/Object;)D",false);changes[0]++;
                         }
                     }
                     public void visitLdcInsn(Object value){
@@ -58,13 +71,19 @@ public final class ScaleAgent {
                         }
                     }
                     public void visitMethodInsn(int opcode,String owner,String target,String targetDesc,boolean itf){
-                        if(name.equals("873944585")&&method.equals("szmods$animation$transient")&&desc.equals("(L351062380;)L578131936;")&&owner.equals("578131936")&&targetDesc.equals("(F)V")&&(target.equals("finally")||target.equals("float"))){
-                            visitVarInsn(ALOAD,1);super.visitMethodInsn(INVOKESTATIC,"playerscale/ScaleRuntime",target.equals("finally")?"animationSpeed":"animationCoefficient","(FLjava/lang/Object;)F",false);changes[0]++;
+                        boolean animation=name.equals("873944585")&&method.equals("szmods$animation$transient")&&desc.equals("(L351062380;)L578131936;");
+                        if(animation&&owner.equals("578131936")&&target.equals("float")&&targetDesc.equals("(F)V")){
+                            visitVarInsn(ALOAD,1);super.visitMethodInsn(INVOKESTATIC,"playerscale/ScaleRuntime","animationCoefficient","(FLjava/lang/Object;)F",false);changes[0]++;
                         }
                         if(name.equals("803707421")&&method.equals("assert")&&desc.equals("(L200241649;)L771745706;")&&owner.equals("1363883020")&&target.equals("super")&&targetDesc.equals("(L153304200;FF)V")){
                             visitVarInsn(ALOAD,1);super.visitMethodInsn(INVOKESTATIC,"playerscale/ScaleRuntime","hit","(Ljava/lang/Object;Ljava/lang/Object;FFLjava/lang/Object;)V",false);changes[0]++;return;
                         }
                         super.visitMethodInsn(opcode,owner,target,targetDesc,itf);
+                        if(animation&&owner.equals("1943200621")&&target.equals("this")&&targetDesc.equals("()F")){
+                            visitVarInsn(ALOAD,1);visitVarInsn(ALOAD,0);super.visitFieldInsn(GETFIELD,name,"class","L578131936;");
+                            super.visitMethodInsn(INVOKEVIRTUAL,"578131936","this","()Z",false);
+                            super.visitMethodInsn(INVOKESTATIC,"playerscale/ScaleRuntime","animationSpeed","(FLjava/lang/Object;Z)F",false);changes[0]++;
+                        }
                         if(name.equals("656386660")&&method.equals("goto")&&desc.equals("(Z)Z")&&owner.equals("1597325473")&&target.equals("transient")&&targetDesc.equals("(L1217489680;F)V")){
                             // The native outer push/finally owns this matrix. Scale after
                             // world-to-foot placement, before local body offsets and pivots.
@@ -75,7 +94,7 @@ public final class ScaleAgent {
             }
             public void visitEnd(){if(name.equals("175605189"))renderWrapper(cv);super.visitEnd();}
         },0);
-        int expected=switch(name){case "175605189","803707421","981501872","656386660","szmods/runtime/ModLoader"->1;case "873944585"->2;case "1943200621","1389510037"->3;default->throw new IllegalArgumentException(name);};
+        int expected=switch(name){case "175605189","803707421","981501872","656386660","576005245","szmods/runtime/ModLoader"->1;case "873944585"->2;case "1943200621","1775200393",CAMERA->3;default->throw new IllegalArgumentException(name);};
         if(changes[0]!=expected)throw new IllegalStateException("character_scale_hook_count:"+name+":"+changes[0]);return writer.toByteArray();
     }
     private static void renderWrapper(ClassVisitor visitor){

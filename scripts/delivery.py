@@ -24,7 +24,7 @@ def file_inventory(root):
         if not p.is_file():continue
         rel=p.relative_to(root).as_posix();safe_path(rel)
         if rel.split('/')[0]not in ('server','client','mods'):raise ValueError('Unexpected component')
-        if p.suffix.lower()not in ('.jar','.properties'):raise ValueError('Unexpected payload type')
+        if p.suffix.lower()not in ('.jar','.properties') and rel!='client/compat/bscp-game.exe':raise ValueError('Unexpected payload type')
         if p.stat().st_size>99*1024*1024:raise ValueError('Payload exceeds ordinary Git limit')
         target=('client/mods/'+rel.split('/')[1]+'.jar') if rel.startswith('mods/') and len(rel.split('/'))==3 and rel.endswith('.jar') else rel
         rows.append({'path':rel,'target':target,'size':p.stat().st_size,'sha256':digest(p)})
@@ -69,6 +69,47 @@ def commit_index(destination,message,env):
     commit=run(*args,env=env,capture_output=True,text=True).stdout.strip()
     run('git','-C',destination,'update-ref','HEAD',commit,env=env,capture_output=True)
     return commit
+def build_vr_mod(tools,source,classpath,runtime):
+    classes=tools.compile_java('catalogue-stalcraft-vr',(source/'src').rglob('*.java'),classpath)
+    generators=tools.compile_java('vr-adapters',(source/'tools').glob('*.java'),classpath)
+    generator_cp=os.pathsep.join(map(str,[generators,*classpath]))
+    for generator in ('GenerateFpAdapter','GenerateSceneCopy'):
+        run(tools.tool('java'),'-cp',generator_cp,generator,classes)
+
+    files=[(source/'stalcraft-mod.properties','stalcraft-mod.properties')]
+    for path in sorted((source/'resources').iterdir()):
+        files.append((path,path.name))
+    jar=tools.jar('catalogue-stalcraft-vr',classes,files)
+    test_cp=[jar,runtime/'bootstrap.jar',*classpath]
+    tests=tools.compile_java('vr-mod-tests',(source/'tests').glob('*.java'),test_cp)
+    for name in ('VrTest','NativeContracts','VrReloadProtocolProbe','MasterMechanicsProbe','PhysicalActionsProbe','OpticGeometryProbe'):
+        run(tools.tool('java'),'-cp',os.pathsep.join(map(str,[tests,*test_cp])),'vr.'+name,cwd=tests)
+    return jar
+
+
+def build_vehicle_mod(tools, source, classpath, game_jar, resources):
+    protocol = ROOT / 'server/src/main/java/scvehicles/protocol'
+    classes = tools.compile_java('catalogue-sc-vehicles', [
+        *(source / 'src').rglob('*.java'), *protocol.glob('*.java'),
+    ], classpath)
+    asm_tree = ROOT / '.local/delivery-inputs' / LOCK['asmTree']['file']
+    generators = tools.compile_java('vehicle-adapters', (source / 'tools').glob('*.java'), [asm_tree, *classpath])
+    cp = os.pathsep.join(map(str, [generators, asm_tree, *classpath]))
+    run(tools.tool('java'), '-cp', cp, 'BuildVehicleCollider', classes)
+    with tempfile.TemporaryDirectory(prefix='vehicle-abi-') as tmp, zipfile.ZipFile(game_jar) as game:
+        for entry in ('251809992.class', '242639986.class', '1943200621.class'):
+            game.extract(entry, tmp)
+        for generator in ('BuildVehicleRampSolver', 'BuildPlayerCoordinates'):
+            run(tools.tool('java'), '-cp', cp, generator, tmp, classes)
+    files = [(path, path.relative_to(resources).as_posix()) for path in sorted(resources.rglob('*')) if path.is_file()]
+    files.append((source / 'stalcraft-mod.properties', 'stalcraft-mod.properties'))
+    jar = tools.jar('catalogue-sc-vehicles', classes, files)
+    test_cp = [jar, *classpath]
+    tests = tools.compile_java('vehicle-package-test', (source / 'tests').glob('*.java'), test_cp)
+    run(tools.tool('java'), '-cp', os.pathsep.join(map(str, [tests, *test_cp])), 'scvehicles.PackageTest')
+    return jar
+
+
 def prepare():
     tools=source_tool();(ROOT/'build').mkdir(exist_ok=True)
     spec=importlib.util.spec_from_file_location('player_build',ROOT/'scripts/build_player.py');module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
@@ -78,10 +119,13 @@ def prepare():
     files={
         'server/server.jar':player/'Server/server.jar',
         'server/server.template.properties':player/'Server/server.template.properties',
-        **{'client/compat/'+name:player/'Client/compat'/name for name in ('startup-guard.jar','character-scale.jar','game-resource-compat.jar','weapon-events.jar')},
+        **{'client/compat/'+name:player/'Client/compat'/name for name in ('startup-guard.jar','character-scale.jar','game-resource-compat.jar','weapon-events.jar','world-environment.jar','bscp-game.exe')},
         'mods/command-completion/command-completion.jar':player/'Client/mods/command-completion.jar'}
     OUT.mkdir(parents=True,exist_ok=False)
     for name,src in files.items():dst=OUT/name;dst.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(src,dst)
+    if os.environ.get('GITHUB_REF_NAME') in ('main', 'test'):
+        with (OUT/'server/server.template.properties').open('a', encoding='utf8') as config:
+            config.write('\nvoice.brokerUrl=https://tomke.myddns.me:29732/v1/host-token\n')
     # Optional mods are compiled from ordinary Git sources and published separately.
     api=ROOT/'build/mod-api.jar'
     runtime=player/'Bootstrap/runtime'
@@ -89,8 +133,13 @@ def prepare():
     for item in json.loads((ROOT/'delivery/mods.json').read_text('utf8')):
         if item['required']:continue
         source=ROOT/item['source'];ident=item['id']
-        classes=tools.compile_java('catalogue-'+ident,(source/'src').rglob('*.java'),classpath)
-        jar=tools.jar('catalogue-'+ident,classes,[(source/'stalcraft-mod.properties','stalcraft-mod.properties')])
+        if ident=='stalcraft-vr':
+            jar=build_vr_mod(tools,source,classpath,runtime)
+        elif ident=='sc-vehicles':
+            jar=build_vehicle_mod(tools,source,classpath,runtime/'game.jar',player.parent/'inputs/mod-resources/sc-vehicles')
+        else:
+            classes=tools.compile_java('catalogue-'+ident,(source/'src').rglob('*.java'),classpath)
+            jar=tools.jar('catalogue-'+ident,classes,[(source/'stalcraft-mod.properties','stalcraft-mod.properties')])
         dst=OUT/f'mods/{ident}/{ident}.jar';dst.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(jar,dst)
     rows=file_inventory(OUT)
     (ROOT/'build/delivery-verification.json').write_text(json.dumps({'files':rows,'bytes':sum(r['size']for r in rows),'foundation':foundation},indent=2),'utf8')
@@ -117,10 +166,16 @@ def source_is_current(channel,source):
     latest,separator,reported_ref=output.strip().partition('\t')
     if not separator or reported_ref!=ref or not re.fullmatch('[0-9a-f]{40}',latest):
         raise ValueError(f'Invalid remote response for {ref}')
-    if latest!=source:
-        print(f'Skipping publication for {channel}: {source[:12]} was superseded by {latest[:12]}')
-        return False
-    return True
+    if latest==source:
+        return True
+    # Pushes that only change Markdown do not start their own build.
+    run('git','fetch','--no-tags','--depth=1','--filter=blob:none','origin',latest,capture_output=True)
+    changed=run('git','diff','--name-only','--no-renames',source,latest,'--','.',
+                ':(exclude,glob)**/*.md',capture_output=True).stdout
+    if not changed:
+        return True
+    print(f'Skipping publication for {channel}: {source[:12]} was superseded by {latest[:12]}')
+    return False
 
 def publish():
     channel,source=publication_source()

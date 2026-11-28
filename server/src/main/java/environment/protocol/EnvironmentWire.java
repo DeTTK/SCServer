@@ -8,6 +8,7 @@ import java.nio.charset.StandardCharsets;
 public final class EnvironmentWire {
     public static final String INPUT="szmods.bridge.EnvironmentInput",SNAPSHOT="szmods.bridge.EnvironmentSnapshot";
     public static final int VERSION=1,MAX_MESSAGE=24576,PAGE_BYTES=12288,MAX_CONFIG=4*1024*1024;
+    public static final int MAX_COVERAGE_REGIONS=16384,COVERAGE_REGION_BYTES=136;
     private EnvironmentWire(){}
     /** Missing inherited fields have the same native meaning as {isLocked:true}.
      * Keep root fields intact: only child styles have an inheritance target. */

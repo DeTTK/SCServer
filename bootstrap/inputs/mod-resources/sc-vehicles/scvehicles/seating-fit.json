@@ -1,0 +1,225 @@
+{
+  "sourceVersion": "0.9.12-preview2",
+  "nativeVertices": 8546,
+  "scope": "Parked pose; actual retained SC Legion armor, Arkit head and native hands; exterior height/width envelope, not proof against every interior triangle",
+  "minimumHeadClearance": 0.08,
+  "minimumSideClearance": 0.055,
+  "models": [
+    {
+      "model": 0,
+      "seat": [
+        0.519979,
+        0.781188,
+        -0.13
+      ],
+      "previousSeat": [
+        0.6,
+        0.84,
+        -0.13
+      ],
+      "inward": 0.08002146959304818,
+      "additionalDrop": 0.05881206512451158,
+      "measuredHeadClearance": 0.021187934875488423,
+      "measuredSideClearance": -0.025021469593048185,
+      "seatRecline": 0.0
+    },
+    {
+      "model": 1,
+      "seat": [
+        0.468369,
+        0.553561,
+        0.34
+      ],
+      "previousSeat": [
+        0.52,
+        0.67,
+        0.34
+      ],
+      "inward": 0.05163062810897829,
+      "additionalDrop": 0.19643855094909662,
+      "measuredHeadClearance": -0.11643855094909661,
+      "measuredSideClearance": 0.0033693718910217108,
+      "seatRecline": 15.0
+    },
+    {
+      "model": 2,
+      "seat": [
+        0.383757,
+        0.568699,
+        0.14
+      ],
+      "previousSeat": [
+        0.51,
+        0.69,
+        0.14
+      ],
+      "inward": 0.12624305725097656,
+      "additionalDrop": 0.20130135536193844,
+      "measuredHeadClearance": -0.12130135536193842,
+      "measuredSideClearance": -0.07124305725097657,
+      "seatRecline": 15.0
+    },
+    {
+      "model": 3,
+      "seat": [
+        0.383911,
+        0.576745,
+        0.14
+      ],
+      "previousSeat": [
+        0.51,
+        0.69,
+        0.14
+      ],
+      "inward": 0.1260893964767456,
+      "additionalDrop": 0.203254599571228,
+      "measuredHeadClearance": -0.12325459957122797,
+      "measuredSideClearance": -0.07108939647674561,
+      "seatRecline": 15.0
+    },
+    {
+      "model": 4,
+      "seat": [
+        0.440609,
+        0.478404,
+        0.04
+      ],
+      "previousSeat": [
+        0.51,
+        0.61,
+        0.04
+      ],
+      "inward": 0.06939143180847168,
+      "additionalDrop": 0.17159587383270253,
+      "measuredHeadClearance": -0.09159587383270251,
+      "measuredSideClearance": -0.014391431808471689,
+      "seatRecline": 5.0
+    },
+    {
+      "model": 5,
+      "seat": [
+        0.51757,
+        1.037543,
+        -0.02
+      ],
+      "previousSeat": [
+        0.56,
+        1.12,
+        -0.02
+      ],
+      "inward": 0.04242961645126348,
+      "additionalDrop": 0.08245654106140148,
+      "measuredHeadClearance": -0.0024565410614014738,
+      "measuredSideClearance": 0.012570383548736519,
+      "seatRecline": 0.0
+    },
+    {
+      "model": 6,
+      "seat": [
+        0.59,
+        1.155223,
+        1.3
+      ],
+      "previousSeat": [
+        0.59,
+        1.23,
+        1.3
+      ],
+      "inward": 0,
+      "additionalDrop": 0.07477718353271483,
+      "measuredHeadClearance": 0.005222816467285174,
+      "measuredSideClearance": 0.15752014875412002,
+      "seatRecline": 0.0
+    },
+    {
+      "model": 7,
+      "seat": [
+        0.69,
+        1.558708,
+        1.3
+      ],
+      "previousSeat": [
+        0.69,
+        1.65,
+        1.3
+      ],
+      "inward": 0,
+      "additionalDrop": 0.09129200458526603,
+      "measuredHeadClearance": -0.011292004585266024,
+      "measuredSideClearance": 0.1954259848594666,
+      "seatRecline": 0.0
+    },
+    {
+      "model": 8,
+      "seat": [
+        0.69,
+        1.559685,
+        1.3
+      ],
+      "previousSeat": [
+        0.69,
+        1.66,
+        1.3
+      ],
+      "inward": 0,
+      "additionalDrop": 0.10031520366668716,
+      "measuredHeadClearance": -0.020315203666687154,
+      "measuredSideClearance": 0.22719144582748418,
+      "seatRecline": 0.0
+    },
+    {
+      "model": 9,
+      "seat": [
+        0.69,
+        1.66,
+        1.46
+      ],
+      "previousSeat": [
+        0.69,
+        1.66,
+        1.46
+      ],
+      "inward": 0,
+      "additionalDrop": 0,
+      "measuredHeadClearance": 0.6813661718368529,
+      "measuredSideClearance": 0.2273054695129395,
+      "seatRecline": 0.0
+    },
+    {
+      "model": 10,
+      "seat": [
+        0.65,
+        1.73,
+        2.82
+      ],
+      "previousSeat": [
+        0.65,
+        1.73,
+        2.82
+      ],
+      "inward": 0,
+      "additionalDrop": 0,
+      "measuredHeadClearance": 0.17922415256500246,
+      "measuredSideClearance": 0.25759235620498666,
+      "seatRecline": 0.0
+    },
+    {
+      "model": 25,
+      "seat": [
+        0.436131,
+        0.515128,
+        0.29
+      ],
+      "previousSeat": [
+        0.49,
+        0.64,
+        0.29
+      ],
+      "inward": 0.053868813514709464,
+      "additionalDrop": 0.18487176418304457,
+      "measuredHeadClearance": -0.10487176418304456,
+      "measuredSideClearance": 0.0011311864852905362,
+      "seatRecline": 10.0
+    }
+  ]
+}

@@ -38,12 +38,15 @@ public final class PlayerReplication {
             Integer lastAbsolute=absoluteTicks.get(state.entity);
             boolean keyframe=previous==null||lastAbsolute==null||Integer.compareUnsigned(tick-lastAbsolute,20)>=0;
             boolean moved=keyframe||positionChanged(state,previous),turned=keyframe||angle(state.yaw)!=angle(previous.yaw)||angle(state.pitch)!=angle(previous.pitch);
-            byte[] animation=previous==null||moved||turned||!Arrays.equals(previous.animation,state.animation)?state.animation:new byte[0];
-            records.add(GamePackets.movementRecord(state.entity,moved?state.position:null,keyframe?null:previous.position,turned?state.yaw:null,turned?state.pitch:null,animation));
+            boolean animationChanged=keyframe||!Arrays.equals(previous.animation,state.animation);
+            if(!moved&&!turned&&!animationChanged)continue;
+            records.add(GamePackets.movementRecord(state.entity,moved?state.position:null,keyframe?null:previous.position,turned?state.yaw:null,turned?state.pitch:null,state.animation));
             if(keyframe)absolute.add(state.entity);
             updates.add(state);
         }
-        long expected=epoch;int next=(begin+count)%visible.size();
+        int next=(begin+count)%visible.size();
+        if(records.isEmpty()){cursor=next;return null;}
+        long expected=epoch;
         return new Delivery(GamePackets.movements(tick,records),count,()->{
             if(epoch!=expected)throw new IllegalStateException("replication_delivery_expired");
             for(State state:updates)delivered.put(state.entity,state);for(int entity:absolute)absoluteTicks.put(entity,tick);cursor=next;epoch++;

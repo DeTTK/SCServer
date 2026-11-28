@@ -8,6 +8,7 @@ import szserver.net.InventoryPackets;
  * permissions, inventory admission and durable acknowledgements. */
 public final class GameplayPacketAliases {
     public static final int WEAPON_MODULE=1221;
+    public static final int STREAM_FIRE=1635;
     private static final Map<String,Integer> IDS=Map.ofEntries(
         Map.entry(AlliancePackets.JOIN,AlliancePackets.JOIN_ID),
         Map.entry(NativeAdminPackets.GIVE_CLASS,NativeAdminPackets.GIVE_ID),
@@ -15,7 +16,9 @@ public final class GameplayPacketAliases {
         Map.entry(NativeAdminPackets.ADDRESS_CLASS,NativeAdminPackets.ADDRESS_ID),
         Map.entry(NativeAdminPackets.ECHO_CLASS,NativeAdminPackets.ECHO_ID),
         Map.entry(WorldItemPackets.DROP,WorldItemPackets.DROP_ID),
+        Map.entry(WorldItemPackets.PICKUP,WorldItemPackets.PICKUP_ID),
         Map.entry(InventoryPackets.DELETE_REQUEST,InventoryPackets.DELETE_ID),
+        Map.entry(InventoryPackets.WEAPON_UNLOAD_REQUEST,InventoryPackets.WEAPON_UNLOAD_ID),
         Map.entry(PortalPackets.INTERACT_CLASS,PortalPackets.INTERACT_ID),
         Map.entry(PortalPackets.STATUS_CLASS,PortalPackets.STATUS_ID),
         Map.entry(szserver.net.SuicideCommand.REQUEST,szserver.net.SuicideCommand.PACKET_ID),
@@ -23,9 +26,11 @@ public final class GameplayPacketAliases {
         Map.entry("23110596",212),Map.entry("1932940545",1527),
         Map.entry("1859052360",1449),Map.entry("309659025",WEAPON_MODULE),Map.entry("953021737",366),
         Map.entry("446599111",598),Map.entry("1950979903",1138),
-        Map.entry("1995052022",271),Map.entry("1732415882",280),
+        Map.entry("1995052022",271),Map.entry("738572698",STREAM_FIRE),Map.entry("1732415882",280),
         Map.entry("1603754623",928),Map.entry("1619370828",240),
         Map.entry("1308160046",1022),Map.entry("365897350",1435),
+        Map.entry("1689493828",1464),Map.entry("1960490407",718),
+        Map.entry("548323788",1927),Map.entry("1996782385",490),Map.entry("1005083822",1384),
         Map.entry("1166767938",693),Map.entry("1980213750",1741),Map.entry("1615909539",695),Map.entry("1048773550",466),
         Map.entry("1879366252",2060),Map.entry("1945580517",562),Map.entry("1174074903",ScreenshotPackets.RESPONSE));
     public static int registered(String name){return IDS.getOrDefault(name,0);}

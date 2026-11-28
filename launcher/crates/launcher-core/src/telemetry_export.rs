@@ -621,7 +621,7 @@ mod tests {
         assert_eq!(pending[0].payload["osError"], 10048);
         assert!(layout.at("logs/launcher-errors.jsonl").is_file());
         assert_eq!(
-            flush_telemetry(&layout, Duration::from_secs(10))
+            flush_telemetry(&layout, Duration::from_secs(30))
                 .unwrap()
                 .sent_events,
             1

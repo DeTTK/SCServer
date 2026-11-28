@@ -33,16 +33,17 @@ final class NativeSceneEditor {
         List<SceneEditPackets.Edit> decoded=SceneEditPackets.read(kind,SceneEditPackets.parts(request));
         if(kind.equals("transform"))event.addProperty("nativeUpdate",true);
         JsonElement scopeValue=request.get("visibleChunks");
-        if(scopeValue==null||!scopeValue.isJsonArray()||scopeValue.getAsJsonArray().isEmpty()||scopeValue.getAsJsonArray().size()>289)throw new IllegalArgumentException("scene_editor_visible_chunks");
+        if(scopeValue==null||!scopeValue.isJsonArray()||scopeValue.getAsJsonArray().size()>289)throw new IllegalArgumentException("scene_editor_visible_chunks");
         List<Long> scope=new ArrayList<>();for(JsonElement value:scopeValue.getAsJsonArray()){long key=value.getAsLong();int x=(int)(key>>32),z=(int)key;if(Math.abs((long)x)>szserver.world.MapBounds.CHUNK||Math.abs((long)z)>szserver.world.MapBounds.CHUNK)throw new IllegalArgumentException("scene_editor_chunk_bounds");scope.add(key);}scope=List.copyOf(new LinkedHashSet<>(scope));
         List<PendingEdit> pending=ordered(decoded);
-        Set<UUID> ids=new HashSet<>();Set<String> assets=new HashSet<>();
+        Set<UUID> ids=new HashSet<>();
         // Anonymous creations have no source to find; don't scan cold chunks
         // for the UUIDs assigned by this command.
         for(var edit:decoded)if(edit.identity()!=null)ids.add(edit.identity());
-        for(var plan:pending)if(plan.seedAsset()!=null)assets.add(plan.seedAsset());
-        World.SceneEditLookup lookup=lookup(ids,assets,scope);
-        Set<UUID> metadataLive=world.submit(w->{Set<UUID> result=new HashSet<>();for(UUID id:ids)if(w.metadataSceneExists(id))result.add(id);return Set.copyOf(result);}).get(5,TimeUnit.SECONDS);
+        World.SceneEditLookup lookup=lookup(ids,Set.of(),scope);
+        Set<UUID> metadataLive=lookup.objects().values().stream().anyMatch(location->location.entry()==null)
+            ?world.submit(w->{Set<UUID> result=new HashSet<>();for(UUID id:ids)if(w.metadataSceneExists(id))result.add(id);return Set.copyOf(result);}).get(5,TimeUnit.SECONDS):Set.of();
+        Map<String,Optional<ScenePayload.Entry>> fallbackSeeds=new HashMap<>();
         var behaviors=ScenePlacementPlan.behaviours(world);
         List<SceneEditorStates.Change> statePlans=new ArrayList<>();List<SceneEdits.Change> changes=new ArrayList<>();JsonArray identities=new JsonArray();
         for(var plan:pending){
@@ -66,11 +67,37 @@ final class NativeSceneEditor {
                 String asset=edit.asset()!=null?edit.asset():pendingState.get("asset").getAsString();
                 String reason=pendingState==null?"scene_editor_template_not_found":pendingState.get("reason").getAsString();
                 String seedAsset=plan.seedAsset()==null?asset:plan.seedAsset();
-                SceneDeletedStates.Removed retained=deleted.current(id);if(retained!=null){template=retained.entry();}else template=lookup.templates().get(seedAsset);
+                SceneDeletedStates.Removed retained=deleted.current(id);
+                if(retained!=null)template=retained.entry();
                 // The second list has no asset creation intent; retain its complete Inspector state.
-                if(template==null&&edit.asset()!=null)try{if(seeds==null)throw new IllegalArgumentException("scene_editor_template_not_found");template=seeds.create(seedAsset);}catch(IllegalArgumentException failure){if(!SceneEditorStates.constructionFailure(failure))throw failure;reason=failure.getMessage();}
+                if(template==null&&creation){
+                    // A new object takes its defaults from the native factory.
+                    // An authored donor can carry another object's culling links and settings.
+                    if(seeds!=null)try{template=seeds.create(seedAsset);}catch(IllegalArgumentException failure){if(!SceneEditorStates.constructionFailure(failure))throw failure;reason=failure.getMessage();}
+                    if(template==null){
+                        Optional<ScenePayload.Entry> fallback=fallbackSeeds.get(seedAsset);
+                        if(fallback==null){
+                            fallback=Optional.ofNullable(lookup(Set.of(),Set.of(seedAsset),scope).templates().get(seedAsset));
+                            fallbackSeeds.put(seedAsset,fallback);
+                        }
+                        if(fallback.isPresent()){
+                            var entry=fallback.get();
+                            var object=entry.object();
+                            if((SceneObject.prefix(object.record()).flags()&4)!=0)
+                                object=SceneCulling.apply(object,behaviors.apply(object.asset()),true,null,null);
+                            template=new ScenePayload.Entry(entry.container(),object);
+                        }
+                    }
+                }
                 if(template==null){
                     if(reason.length()>512)reason=reason.substring(0,512);states.plan(statePlans,id,SceneEditorStates.nativeState(pendingState,asset,edit,reason,!kind.equals("batch")));
+                    if(creation){
+                        if(!event.has("sceneUnplaced"))event.add("sceneUnplaced",new JsonArray());
+                        JsonObject unavailable=new JsonObject();
+                        unavailable.addProperty("asset",asset);
+                        unavailable.addProperty("reason",reason);
+                        event.getAsJsonArray("sceneUnplaced").add(unavailable);
+                    }
                     relationships.remember(event,kind,id,edit);identities.add(id.toString());continue;
                 }
             }
@@ -89,6 +116,7 @@ final class NativeSceneEditor {
         states.finish(event,statePlans);event.add("objectIds",identities);relationships.validate(event);if(changes.isEmpty()&&!event.has("sceneRelationships")&&!event.has("editorStateChanges"))event.addProperty("status","unchanged");return List.copyOf(changes);
     }
     private World.SceneEditLookup lookup(Set<UUID> ids,Set<String> assets,List<Long> scope)throws Exception{
+        if(ids.isEmpty()&&assets.isEmpty())return new World.SceneEditLookup(Map.of(),Map.of(),false,Set.of());
         long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(5);Map<UUID,World.SceneLocation> objects=new HashMap<>();Map<String,ScenePayload.Entry> templates=new HashMap<>();Set<Long> examined=new HashSet<>();
         while(true){
             long remaining=deadline-System.nanoTime();if(remaining<=0)throw new IllegalArgumentException("scene_editor_load_timeout");List<Long> pending=scope.stream().filter(key->!examined.contains(key)).toList();

@@ -1158,6 +1158,8 @@ public final class StandardJvmBootstrap {
                 + owner.getClass().getName() + "." + name);
     }
 
+    private static boolean graphicsAdapterLogged;
+
     /** Called once per real game frame by the normalized client. */
     public static void headlessControlTick(Object game) {
         // Compatibility initialization is required by both visible and hidden
@@ -1172,6 +1174,13 @@ public final class StandardJvmBootstrap {
         ensureCoreEcsListeners();
         restoreCurrentFrontendAfterDisconnect(game);
         long window = org.lwjgl.glfw.GLFW.glfwGetCurrentContext();
+        if (!graphicsAdapterLogged && window != 0L) {
+            graphicsAdapterLogged = true;
+            System.out.println("[graphics] renderer="
+                    + org.lwjgl.opengl.GL11.glGetString(org.lwjgl.opengl.GL11.GL_RENDERER)
+                    + " vendor=" + org.lwjgl.opengl.GL11.glGetString(org.lwjgl.opengl.GL11.GL_VENDOR)
+                    + " version=" + org.lwjgl.opengl.GL11.glGetString(org.lwjgl.opengl.GL11.GL_VERSION));
+        }
         restoreWorldMouseCapture(game, window);
         if (!Boolean.getBoolean("standard.jvm.headless.control")) return;
         if (window != 0L) {
@@ -1257,15 +1266,36 @@ public final class StandardJvmBootstrap {
         return encodedSpeed < 0.0f ? 0.0f : encodedSpeed;
     }
 
+    // Matches the wall-clock companion in EnvironmentPackets.clock.
+    private static final float WALL_CLOCK_MARKER = -.25f;
+    private static long pairedGameplayMillis;
+    private static long pairedGameplayNanos;
+
     /** Lighting may be paused; weapon and action deadlines must keep advancing. */
     public static void prepareEnvironmentClockPacket(Object packet) {
         try {
             java.lang.reflect.Field epoch = packet.getClass().getField("catch");
             java.lang.reflect.Field speed = packet.getClass().getField("switch");
-            environmentEpochMillis = epoch.getLong(packet);
-            environmentClockSpeed = compatibilityWeatherSpeed(speed.getFloat(packet));
-            environmentReceivedNanos = System.nanoTime();
-            epoch.setLong(packet, System.currentTimeMillis());
+            long received = System.nanoTime();
+            long millis = epoch.getLong(packet);
+            float rate = speed.getFloat(packet);
+            if (rate == WALL_CLOCK_MARKER) {
+                pairedGameplayMillis = millis;
+                pairedGameplayNanos = received;
+                speed.setFloat(packet, 1.0f);
+                return;
+            }
+            environmentEpochMillis = millis;
+            environmentClockSpeed = compatibilityWeatherSpeed(rate);
+            environmentReceivedNanos = received;
+            long age = received - pairedGameplayNanos;
+            // Older servers send only the solar clock. A companion is valid only for its immediate pair.
+            if (pairedGameplayNanos != 0 && age >= 0 && age < 1_000_000_000L) {
+                epoch.setLong(packet, pairedGameplayMillis + age / 1_000_000L);
+            } else {
+                epoch.setLong(packet, System.currentTimeMillis());
+            }
+            pairedGameplayNanos = 0;
             speed.setFloat(packet, 1.0f);
         } catch (ReflectiveOperationException failure) {
             throw new IllegalStateException("environment_clock_packet", failure);

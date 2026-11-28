@@ -24,6 +24,11 @@ export component Configuration inherits VerticalLayout {
     in-out property <string> server-memory-setting;
     in-out property <string> port;
     in-out property <bool> relay-enabled;
+    in-out property <bool> public-listing;
+    in property <image> server-icon;
+    in property <bool> has-server-icon;
+    in property <string> directory-status;
+    callback edit-server-icon(bool);
     in-out property <string> feed-url;
     in-out property <string> game-branch;
     in property <[string]> branches;
@@ -64,9 +69,6 @@ export component Configuration inherits VerticalLayout {
                 Field { label: "Папка установленной игры"; value <=> root.game-path; folder: true; hint: "Укажите папку игры из Steam или обычного лаунчера."; enabled: !root.busy; error: root.error-field == "game" ? root.error : ""; browse => { root.browse("game"); } }
                 Field { label: "Папка данных и миров"; value <=> root.data-path; folder: true; hint: "Здесь сохраняются миры, настройки и журналы."; enabled: !root.busy; error: root.error-field == "data" ? root.error : ""; browse => { root.browse("data"); } }
                 Field { label: "Ник в игре"; value <=> root.nickname; enabled: !root.busy; error: root.error-field == "nick" ? root.error : ""; }
-                Label { text: "Ветка игры"; }
-                ComboBox { model: root.branches; current-value: root.game-branch; selected(value) => { root.game-branch = value; } enabled: !root.busy && root.branches.length > 0; height: 38px; }
-                Hint { text: "Выберите опубликованную ветку и сохраните настройки. Затем обновите игру на вкладке «Обновления»."; wrap: word-wrap; overflow: clip; }
             }
             if root.wizard && root.step == 1: VerticalLayout {
                 spacing: 18px;
@@ -104,9 +106,24 @@ export component Configuration inherits VerticalLayout {
                 Field { label: "Папка клиентского комплекта"; value <=> root.client-path; folder: true; enabled: !root.busy; error: root.error-field == "client" ? root.error : ""; browse => { root.browse("client"); } }
             }
             if !root.wizard && root.tab == "server": VerticalLayout {
-                CheckBox { text: "Поднимать сервер через ретранслятор"; checked <=> root.relay-enabled; enabled: !root.busy; }
-                Hint { text: "При следующем запуске появится приглашение для друзей. Проброс портов не нужен. Локальное подключение остаётся доступным."; wrap: word-wrap; }
                 spacing: 18px;
+                VerticalLayout {
+                    spacing: 8px;
+                    CheckBox { text: "Поднимать сервер через ретранслятор"; checked <=> root.relay-enabled; enabled: !root.busy; }
+                    CheckBox { text: "Отображать в списке открытых серверов"; checked <=> root.public-listing; enabled: !root.busy && root.relay-enabled; }
+                    Hint { text: "При следующем запуске появится приглашение для друзей. Проброс портов не нужен. Локальное подключение остаётся доступным."; wrap: word-wrap; }
+                    if root.relay-enabled && root.directory-status != "": Hint { text: root.directory-status; wrap: word-wrap; }
+                }
+                Rule {}
+                HorizontalLayout {
+                    spacing: 10px; alignment: start;
+                    if root.has-server-icon: Rectangle {
+                        width: 38px; height: 38px; border-radius: 5px; clip: true;
+                        Image { source: root.server-icon; image-fit: contain; }
+                    }
+                    Action { label: root.has-server-icon ? "Сменить иконку" : "Выбрать иконку"; enabled: !root.busy; activated => { root.edit-server-icon(false); } }
+                    if root.has-server-icon: Action { label: "Убрать"; kind: "plain"; enabled: !root.busy; activated => { root.edit-server-icon(true); } }
+                }
                 HorizontalLayout {
                     spacing: 14px;
                     Field { label: "Начальный игровой порт"; value <=> root.port; enabled: !root.busy; error: root.error-field == "port" ? root.error : ""; }

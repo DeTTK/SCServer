@@ -9,11 +9,22 @@ public final class ResourceCompatibilityAgent {
   if(AttributeWireIds.baseSize()!=469)throw new IllegalStateException("wire table unavailable");
   agent.addTransformer(new ResourceSchemaTransformer());
   agent.addTransformer(new OptionalResourceTransformer());
+  agent.addTransformer(new ContainerMotifIconTransformer());
   agent.addTransformer(new UiStabilityTransformer());
+  agent.addTransformer(new WorldMapTransformer());
+  agent.addTransformer(new PlayerRelationsTransformer());
+  agent.addTransformer(new ArtifactSlotTransformer());
   agent.addTransformer(new UdpPolicyTransformer());
   agent.addTransformer(new PerspectivePolicyTransformer());
   agent.addTransformer(new EquipmentBindingsTransformer());
   agent.addTransformer(new SceneHashTransformer());
+  agent.addTransformer(new SceneSelectionTransformer());
+  agent.addTransformer(new SceneVariantTransformer());
+  agent.addTransformer(new SceneSafeTransformer());
+  agent.addTransformer(new SceneDamageModelTransformer());
+  agent.addTransformer(new AmdAlphaTestTransformer());
+  agent.addTransformer(new VoiceLogTransformer());
+  agent.addTransformer(new FlamethrowerEffectTransformer());
   agent.addTransformer(new ClassFileTransformer(){public byte[] transform(ClassLoader loader,String name,Class<?> redefined,ProtectionDomain domain,byte[] original){
    if(!"1993742576".equals(name))return null;
    try{String sha=java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(original));if(!sha.equals(AttributeWireIds.expectedBase()))throw new IllegalStateException("native attribute base changed");var node=new ClassNode();new ClassReader(original).accept(node,0);int edits=0;

@@ -48,6 +48,36 @@ fn main() -> anyhow::Result<()> {
             },
         ])));
     }
+    if view == "directory" {
+        ui.set_page("home".into());
+        ui.set_server_tab("public".into());
+        ui.set_selected_world_title("Основной мир".into());
+        ui.set_public_servers(slint::ModelRc::new(slint::VecModel::from(vec![
+            PublicServerRow {
+                title: "Кордон — свободная игра".into(),
+                address: "bscp://visual-fixture-a".into(),
+                players: "Игроков: 3".into(),
+                ping: "28 мс".into(),
+                online: true,
+                has_icon: true,
+                icon: slint::Image::load_from_path(
+                    &std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("ui/assets/brand-logo.png"),
+                )?,
+            },
+            PublicServerRow {
+                title: "Учебный полигон".into(),
+                address: "bscp://visual-fixture-b".into(),
+                players: "Игроков: 0".into(),
+                ping: "Нет ответа".into(),
+                ..Default::default()
+            },
+        ])));
+    }
+    if view == "directory-settings" {
+        ui.set_relay_enabled(true);
+        ui.set_public_listing(true);
+        ui.set_directory_status("Сервер опубликован".into());
+    }
     if view == "mods" || view == "mods-installed" || view == "mods-empty" {
         ui.set_page("mods".into());
         if view != "mods-empty" {

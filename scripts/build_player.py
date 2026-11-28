@@ -84,9 +84,25 @@ def build(output):
     copy(ROOT/'config/server.template.properties',player/'Server/server.template.properties')
     for dep in tools.dependencies():copy(dep,player/'Server/lib'/dep.name)
     copy(ROOT/'build/command-completion.jar',player/'Client/mods/command-completion.jar')
+    game_exe=player/'Client/compat/bscp-game.exe'
+    game_exe.parent.mkdir(parents=True,exist_ok=True)
+    subprocess.run(['x86_64-w64-mingw32-gcc','-std=c11','-Os','-s',
+                    '-Wl,--no-insert-timestamp',str(ROOT/'client/windows/game-launcher.c'),
+                    '-o',str(game_exe)],check=True)
     lock=json.loads((ROOT/'bootstrap/base.lock.json').read_text('utf8'))
     asm,tree,kotlin=[pinned_input(lock[name]) for name in ('asm','asmTree','kotlin')]
-    libraries=[runtime/'game.jar',runtime/'libraries.jar',*sorted((runtime/'dependencies').glob('*.jar'))]
+    imgui={}
+    for dependency in (runtime/'dependencies').glob('imgui-java-*-1.82.2.jar'):
+        with zipfile.ZipFile(dependency) as z:
+            for name in z.namelist():
+                if name.startswith('imgui/') and name.endswith('.class'):imgui[name]=z.read(name)
+    if not imgui:raise ValueError('Missing pinned ImGui ABI')
+    jar(runtime/'imgui-compat.jar',imgui)
+    dependencies=sorted((runtime/'dependencies').glob('*.jar'))
+    # Match the launcher: choose the pinned ImGui binding ahead of the game's fork.
+    libraries=[runtime/'game.jar',runtime/'imgui-compat.jar',
+               *(p for p in dependencies if not p.name.startswith('imgui-java-binding-')),
+               runtime/'libraries.jar']
     boot=tools.compile_java('player-bootstrap',[*(ROOT/'client/bootstrap').glob('*.java'),*(ROOT/'client/bootstrap-compat').rglob('*.java'),*(ROOT/'client/mod-runtime/src').rglob('*.java')],libraries)
     generators=tools.compile_java('player-bootstrap-generators',(ROOT/'client/bootstrap-tools').glob('*.java'),[asm])
     for generator in ('GenerateLegacyAdapter','GenerateCommandPackets','InstallFpvPackets','InstallVehiclePackets','InstallFunnelImpact'):
@@ -97,6 +113,10 @@ def build(output):
         if asset.is_file():
             bootstrap['assets/'+asset.relative_to(inputs/'client-assets').as_posix()] = asset.read_bytes()
     jar(runtime/'bootstrap.jar',bootstrap)
+    code=subprocess.check_output([tools.tool('javap'),'-c','-classpath',
+                                  str(runtime/'bootstrap.jar'),'StandardJvmBootstrap'],text=True)
+    if 'imgui/ImGui.getFontSize:()I' not in code:
+        raise ValueError('Bootstrap must call the packaged ImGui font size ABI')
     verify=tools.compile_java('player-bootstrap-verify',[ROOT/'client/bootstrap-tools/tests/BootstrapAbiTest.java'],[runtime/'bootstrap.jar',*libraries])
     subprocess.run([tools.tool('java'),'-cp',os.pathsep.join(map(str,[verify,runtime/'bootstrap.jar',*libraries])),'BootstrapAbiTest'],check=True)
     item_checks=('NativeBoltFactoryChecks','NativeMedicineResourceChecks','NativeArtifactResourceChecks','NativeConfigSourceChecks')
@@ -110,18 +130,11 @@ def build(output):
                         'szserver.client.'+name,str(player/'Server'),str(runtime)],check=True)
     subprocess.run([tools.tool('java'),'-Xmx512m','-cp',item_test_cp,
                     'szserver.client.NativeCosmeticTests',str(runtime),str(player/'Server')],check=True)
-    imgui={}
-    for dependency in (runtime/'dependencies').glob('imgui-java-*-1.82.2.jar'):
-        with zipfile.ZipFile(dependency) as z:
-            for name in z.namelist():
-                if name.startswith('imgui/') and name.endswith('.class'):imgui[name]=z.read(name)
-    if not imgui:raise ValueError('Missing pinned ImGui ABI')
-    jar(runtime/'imgui-compat.jar',imgui)
     subprocess.run([sys.executable,str(ROOT/'client/startup/build.py'),'--asm',str(asm)],check=True)
     subprocess.run([sys.executable,str(ROOT/'client-compat/character-scale/build.py')],check=True)
     for name in ('startup-guard','character-scale'):copy(ROOT/'build'/(name+'.jar'),player/'Client/compat'/(name+'.jar'))
     spec=importlib.util.spec_from_file_location('compat',ROOT/'client/resource-compat/build.py');compat=importlib.util.module_from_spec(spec);spec.loader.exec_module(compat)
-    classes=tools.compile_java('player-resource-compat',(ROOT/'client/resource-compat/src').rglob('*.java'),[asm,tree,kotlin,*libraries,*tools.dependencies()])
+    classes=tools.compile_java('player-resource-compat',[*(ROOT/'client/resource-compat/src').rglob('*.java'),*(ROOT/'shared/voice/src').rglob('*.java')],[asm,tree,kotlin,*libraries,*tools.dependencies()])
     cp=os.pathsep.join(map(str,[classes,inputs/'agent-resources',asm,tree,*libraries]))
     subprocess.run([tools.tool('java'),'-cp',cp,'gamecompat.ResourceSchemaTransformer',str(classes/'gamecompat/MultisetArtefact.class')],check=True)
     values={n:compat.shade(body) for n,body in entries(classes).items()}
@@ -133,11 +146,38 @@ def build(output):
                 if n.startswith('org/objectweb/asm/') and n.endswith('.class'):values[n.replace('org/objectweb/asm','gamecompat/shaded/asm')]=compat.shade(z.read(n))
     values['META-INF/MANIFEST.MF']=b'Manifest-Version: 1.0\nPremain-Class: gamecompat.ResourceCompatibilityAgent\n\n'
     values['META-INF/LICENSE-ASM.txt']=(ROOT/'client/resource-compat/ASM-LICENSE.txt').read_bytes()
-    jar(player/'Client/compat/game-resource-compat.jar',values)
+    resource_compat=player/'Client/compat/game-resource-compat.jar'
+    scale_agent=player/'Client/compat/character-scale.jar'
+    jar(resource_compat,values)
+    relations_check=tools.compile_java('player-relations',
+        [ROOT/'client/resource-compat/tests/PlayerRelationsProbe.java'])
+    subprocess.run([tools.tool('java'),'-Xverify:all',f'-javaagent:{resource_compat}',
+                    '-cp',os.pathsep.join(map(str,[relations_check,*libraries])),
+                    'PlayerRelationsProbe'],check=True)
+    camera_check=tools.compile_java('player-camera-chain',
+        [ROOT/'client-compat/character-scale/tools/CameraAgentChainCheck.java'],[scale_agent])
+    subprocess.run([tools.tool('java'),EXPORT,'-Xverify:all',
+                    f'-javaagent:{resource_compat}',f'-javaagent:{scale_agent}',
+                    '-cp',os.pathsep.join(map(str,[camera_check,runtime/'bootstrap.jar',*libraries])),
+                    'playerscale.CameraAgentChainCheck'],check=True)
     weapon=compile_internal('player-weapon-events',(ROOT/'client/weapon-events/src').glob('*.java'),output);values=entries(weapon)
     values['META-INF/MANIFEST.MF']=b'Manifest-Version: 1.0\nPremain-Class: ReloadEventAgent\nAgent-Class: MeleeBodyAgent\nCan-Retransform-Classes: true\n\n'
     weapon_agent=player/'Client/compat/weapon-events.jar'
     jar(weapon_agent,values)
+    environment=ROOT/'mods/world-environment'
+    environment_classes=output/'environment-classes';environment_classes.mkdir()
+    environment_sources=[*(environment/'src').rglob('*.java'),*(environment/'shared').rglob('*.java')]
+    subprocess.run([tools.tool('javac'),'-source','17','-target','17',EXPORT,'-proc:none','-encoding','UTF-8',
+                    '-cp',os.pathsep.join(map(str,[runtime/'bootstrap.jar',*libraries,*tools.dependencies()])),
+                    '-d',str(environment_classes),*map(str,sorted(environment_sources))],check=True)
+    environment_tools=tools.compile_java('player-environment-tools',
+        (environment/'tools').glob('*.java'),[asm])
+    subprocess.run([tools.tool('java'),'-cp',os.pathsep.join(map(str,[environment_tools,asm])),
+                    'BuildEnvironmentPackets',str(environment_classes)],check=True)
+    weather={name:body for name,body in entries(environment_classes).items()
+             if name not in ('environment/EnvironmentMod.class','environment/EnvironmentQa.class')}
+    weather['META-INF/MANIFEST.MF']=b'Manifest-Version: 1.0\nPremain-Class: environment.EnvironmentAgent\n\n'
+    jar(player/'Client/compat/world-environment.jar',weather)
     probe=compile_internal('player-melee-test',[ROOT/'client/weapon-events/tests/MeleeInventoryProbe.java'],output)
     probe_entries=entries(probe)
     probe_entries['META-INF/MANIFEST.MF']=b'Manifest-Version: 1.0\nPremain-Class: MeleeInventoryProbe\n\n'

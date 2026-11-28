@@ -8,10 +8,40 @@ class DeliveryTests(unittest.TestCase):
         source='a'*40
         latest='b'*40
         remote=subprocess.CompletedProcess([],0,stdout=f'{latest}\trefs/heads/test\n')
+        fetched=subprocess.CompletedProcess([],0,stdout=b'')
+        changes=subprocess.CompletedProcess([],0,stdout=b'server/changed.java\n')
         with patch.dict(os.environ,{'GITHUB_REF_NAME':'test','GITHUB_SHA':source}), \
-             patch.object(d,'run',return_value=remote), patch.object(d,'file_inventory') as inventory:
+             patch.object(d,'run',side_effect=[remote,fetched,changes]), patch.object(d,'file_inventory') as inventory:
             self.assertFalse(d.publish())
             inventory.assert_not_called()
+
+    def test_markdown_only_branch_update_keeps_the_checked_source_publishable(self):
+        with tempfile.TemporaryDirectory() as directory:
+            remote=Path(directory)/'remote'
+            checkout=Path(directory)/'checkout'
+            def git(*args,cwd=None):
+                return subprocess.run(['git',*map(str,args)],cwd=cwd,check=True,
+                                      capture_output=True,text=True).stdout.strip()
+            git('init','-b','test',remote)
+            git('config','user.name','Test',cwd=remote)
+            git('config','user.email','test@example.invalid',cwd=remote)
+            git('config','uploadpack.allowFilter','true',cwd=remote)
+            (remote/'game.txt').write_text('game',encoding='utf8')
+            git('add','.',cwd=remote)
+            git('commit','-m','source',cwd=remote)
+            source=git('rev-parse','HEAD',cwd=remote)
+            git('clone','--depth=1',remote.as_uri(),checkout)
+            (remote/'README.md').write_text('docs',encoding='utf8')
+            (remote/'docs').mkdir()
+            (remote/'docs'/'manual.md').write_text('more docs',encoding='utf8')
+            git('add','.',cwd=remote)
+            git('commit','-m','docs only',cwd=remote)
+            run=d.run
+            with patch.object(d,'run',side_effect=lambda *args,**kw:run(*args,cwd=checkout,**kw)):
+                self.assertTrue(d.source_is_current('test',source))
+                git('mv','game.txt','game.md',cwd=remote)
+                git('commit','-m','remove game input',cwd=remote)
+                self.assertFalse(d.source_is_current('test',source))
 
     def test_remote_lookup_failure_still_fails_publication(self):
         failure=subprocess.CalledProcessError(128,['git','ls-remote'])

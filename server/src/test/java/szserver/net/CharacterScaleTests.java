@@ -41,6 +41,11 @@ public final class CharacterScaleTests {
         try{
             byte[] template=new byte[220];ByteBuffer.wrap(template).putInt(8,162);Path file=directory.resolve("ready.b64");Files.writeString(file,Base64.getEncoder().encodeToString(template));
             GamePackets packets=new GamePackets(file);double[] pos={10,64,-15};byte[] config=new byte[32];
+            byte[] fullTick=packets.tick(42,39,config), shortTick=packets.tick(43,40,null);
+            check(fullTick.length-shortTick.length==32,"idle tick omits only native movement configuration");
+            ByteBuffer shortBody=ByteBuffer.wrap(shortTick);
+            Wire.varint(shortBody);Wire.varint(shortBody);int tickClass=shortBody.getShort()&65535;shortBody.position(shortBody.position()+tickClass);
+            check(shortBody.getInt()==43&&shortBody.getInt()==40&&shortBody.get()==1&&!shortBody.hasRemaining(),"short tick preserves acknowledgment and uses native absent flag");
             byte[] normal=packets.ready(pos,17,30,10,config);check(Arrays.equals(normal,packets.ready(pos,17,30,10,config,1)),"normal native ready is byte-identical");
             for(float scale:new float[]{.25f,.5f,2,4}){
                 byte[] frame=packets.ready(pos,17,30,10,config,scale);ByteBuffer b=ByteBuffer.wrap(frame);Wire.varint(b);Wire.varint(b);int name=b.getShort()&65535;b.position(b.position()+name);int base=b.position();

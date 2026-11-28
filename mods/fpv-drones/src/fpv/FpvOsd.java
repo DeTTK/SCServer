@@ -12,8 +12,8 @@ final class FpvOsd {
   String[] glyphs={"0E11131519110E","040C040404040E","0E11010204081F","1E01010E01011E","02060A121F0202","1F10101E01011E","0610101E11110E","1F010204080808","0E11110E11110E","0E11110F01020C","0E11111F111111","1E11111E11111E","0E11101010110E","1E11111111111E","1F10101E10101F","1F10101E101010","0E11101711110F","1111111F111111","0E04040404040E","0702020212120C","11121418141211","1010101010101F","111B1515111111","11191513111111","0E11111111110E","1E11111E101010","0E11111115120D","1E11111E141211","0F10100E01011E","1F040404040404","1111111111110E","11111111110A04","11111115151B11","11110A040A1111","11110A04040404","1F01020408101F","0000001F000000","0004041F040400","00000000000C0C","000C0C000C0C00","01010204081010","19190204081313","02040810080402","08040201020408","0E110102040004"};
   for(int i=0;i<chars.length();i++)FONT.put(chars.charAt(i),glyphs[i]);
  }
- private boolean showSticks,showHints;private double yawInput,rollInput,pitchInput,throttleInput;
- void guides(boolean sticks,boolean hints,double yaw,double roll,double pitch,double throttle){showSticks=sticks;showHints=hints;yawInput=yaw;rollInput=roll;pitchInput=pitch;throttleInput=throttle;}
+ private boolean showSticks,showHints,gamepad,mouse;private double yawInput,rollInput,pitchInput,throttleInput;
+ void guides(boolean sticks,boolean hints,boolean gamepad,boolean mouse,double yaw,double roll,double pitch,double throttle){showSticks=sticks;showHints=hints;this.gamepad=gamepad;this.mouse=mouse;yawInput=yaw;rollInput=roll;pitchInput=pitch;throttleInput=throttle;}
  private int texture,program,vao;private long updated;private final ByteBuffer pixels=ByteBuffer.allocateDirect(W*H*4);
  static void text(Graphics2D g,String text,int x,int y){
   for(int pass=0;pass<2;pass++){
@@ -65,7 +65,11 @@ final class FpvOsd {
    glBindTexture(GL_TEXTURE_2D,texture);
    long now=System.nanoTime();if(now-updated>50_000_000L){updated=now;BufferedImage image=raster(t);
     if(showHints||showSticks){Graphics2D g=image.createGraphics();
-     if(showHints){center(g,"R ARM  X EXIT",184);center(g,"SPACE/CTRL THROTTLE",195);}
+     if(showHints){
+      center(g,gamepad?"START ARM  X KEY EXIT":"R ARM  X EXIT",184);
+      center(g,gamepad?"A MODE  B CHARGE":mouse?"W/S THROTTLE  A/D YAW":"SPACE/CTRL THROTTLE",195);
+      if(mouse)center(g,"LMB CENTER  RMB MODE  MMB CHARGE",206);
+     }
      if(showSticks){stick(g,50,161,yawInput,throttleInput*2-1);stick(g,430,161,rollInput,pitchInput);}
      g.dispose();
     }

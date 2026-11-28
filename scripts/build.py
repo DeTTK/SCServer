@@ -76,8 +76,8 @@ def jar(name,classes,extra=(),embedded_classes=None):
     return target
 
 def server(private_resources=False):
-    deps=dependencies();classes=compile_java('server',[*(ROOT/'server/src/main/java').rglob('*.java'),*(ROOT/'shared/player-scale/src').rglob('*.java')],deps)
-    extra=[]
+    deps=dependencies();classes=compile_java('server',[*(ROOT/'server/src/main/java').rglob('*.java'),*(ROOT/'shared/player-scale/src').rglob('*.java'),*(ROOT/'shared/voice/src').rglob('*.java')],deps)
+    extra=[(ROOT/'launcher/crates/launcher-host/assets/tomke-relay-ca.txt','szserver/voice/broker-ca.txt')]
     if private_resources:
         for name,digest in json.loads((ROOT/'config/private-resources.lock.json').read_text('utf8')).items():
             path=ROOT/'.local/server-resources'/name
@@ -107,7 +107,13 @@ def tests():
     classes,deps=server();completion()
     test_classes=compile_java('tests',(ROOT/'server/src/test/java').rglob('*.java'),[classes]+deps)
     cp=os.pathsep.join(map(str,[test_classes,classes]+deps));results=[]
+    subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.voice.VoiceTests'],check=True)
+    subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.net.VehicleLifecycleTests'],check=True)
+    fpv=ROOT/'mods/fpv-drones'
+    mouse_test=compile_java('fpv-mouse-test',[fpv/'src/fpv/MouseStick.java',fpv/'tests/MouseStickTest.java'])
+    subprocess.run([tool('java'),'-Xmx128m','-cp',str(mouse_test),'fpv.MouseStickTest'],check=True)
     subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.net.ReliableRetryTimingTests'],check=True)
+    subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.client.HandPacketTests'],check=True)
     subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.EquipmentPlacementTests'],check=True)
     with tempfile.TemporaryDirectory(prefix='inventory-sort-',dir=B/'scratch' if (B/'scratch').exists() else B) as directory:
         subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.inventory.InventorySortTests',directory],check=True)
@@ -172,7 +178,7 @@ def tests():
     results.append('72 full HTTP/gateway/world cycles, Unicode identities, concurrent protocols and cold one-shot recovery')
     with tempfile.TemporaryDirectory(prefix='alliances-',dir=scratch) as directory:
         subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.net.AllianceStateTests',directory],check=True)
-    for case in ['PortalInteractionTests','PortalLookupTests','SceneInteractionTests','CloneDonorTests','CorpseHeadingPortableTests','commands.SceneWritePressureTests']:
+    for case in ['PortalInteractionTests','PortalLookupTests','SceneInteractionTests','CloneDonorTests','CorpseHeadingPortableTests','ProneAnimationTests','commands.SceneWritePressureTests']:
         subprocess.run([tool('java'),'-Xmx128m','-cp',cp,'szserver.'+case],check=True)
     subprocess.run([tool('java'),'-ea','-Xmx128m','-cp',cp,'szserver.client.SceneLightMigrationTests'],check=True)
     results.append('aimed portal UUID/lifecycle, native object states and locks, state-specific door collision, clone donor ID lifetime, editor read/write ordering')

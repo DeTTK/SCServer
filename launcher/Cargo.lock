@@ -676,12 +676,13 @@ dependencies = [
 
 [[package]]
 name = "bscp-launcher-app"
-version = "0.5.8"
+version = "0.5.15"
 dependencies = [
  "anyhow",
  "bscp-launcher-core",
  "bscp-launcher-host",
  "hex",
+ "image",
  "rfd",
  "serde_json",
  "sha2 0.10.9",
@@ -693,7 +694,7 @@ dependencies = [
 
 [[package]]
 name = "bscp-launcher-core"
-version = "0.5.8"
+version = "0.5.15"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -719,7 +720,7 @@ dependencies = [
 
 [[package]]
 name = "bscp-launcher-host"
-version = "0.5.8"
+version = "0.5.15"
 dependencies = [
  "anyhow",
  "base64 0.22.1",

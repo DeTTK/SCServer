@@ -19,16 +19,26 @@ public final class WorldItems implements AutoCloseable {
         private World.Vec previousPosition;
         public World.Vec previousPosition(){return previousPosition;}public boolean ground,claiming,expiring,settlePending,settledSaved;public long retry;
         int quiet;
+        public void rebound(World.Vec point,World.Vec newVelocity){
+            position=point;velocity=newVelocity;ground=false;broken=false;quiet=0;
+        }
         Body(WorldItem item,int entity,UUID throwingSession,int prediction,BoltProjectile projectile){this.projectile=projectile;this.item=item;this.entity=entity;this.throwingSession=throwingSession;this.prediction=prediction;position=new World.Vec(item.x(),item.y(),item.z());previousPosition=position;velocity=new World.Vec(item.vx(),item.vy(),item.vz());ground=item.vx()==0&&item.vy()==0&&item.vz()==0;settledSaved=ground;}
     }
     private record Key(int x,int y,int z) {static Key at(World.Vec p){return new Key((int)Math.floor(p.x()/8),(int)Math.floor(p.y()/8),(int)Math.floor(p.z()/8));}World.Vec center(){return new World.Vec(x*8+4,y*8+4,z*8+4);}}
     private static final class Local {ItemCollisionScene scene;CompletableFuture<ItemCollisionScene> pending;long retry;}
     private final ProjectileMaps maps;private final String world;private final IntSupplier ids;
-    private final Map<UUID,Body> bodies=new LinkedHashMap<>();private final ArrayDeque<Body> removed=new ArrayDeque<>();
+    private final Map<UUID,Body> bodies=new LinkedHashMap<>();
+    private final Map<Integer,Body> entities=new HashMap<>();
+    private final ArrayDeque<Body> removed=new ArrayDeque<>();
     private final LinkedHashMap<Key,Local> scenes=new LinkedHashMap<>(32,.75f,true);
     private long tick,waits,budgetDeferrals;private int preparations;private String lastError="";
     public WorldItems(ProjectileMaps maps,String world,IntSupplier ids){this.maps=Objects.requireNonNull(maps);this.world=Objects.requireNonNull(world);this.ids=Objects.requireNonNull(ids);}
     public Collection<Body> all(){return Collections.unmodifiableCollection(bodies.values());}
+    public Body byEntity(int entity){return entities.get(entity);}
+    private void add(Body body){
+        bodies.put(body.item.id(),body);
+        entities.put(body.entity,body);
+    }
     public List<Body> removed(){List<Body> result=List.copyOf(removed);removed.clear();return result;}
     public boolean throwBolt(UUID creator,UUID session,ItemStack stack,World.Vec start,World.Vec velocity,
                              int prediction,long now,BoltProjectile projectile){
@@ -36,20 +46,19 @@ public final class WorldItems implements AutoCloseable {
         if(bodies.size()>=2048)return false;
         WorldItem item=new WorldItem(UUID.randomUUID(),creator,world,stack.count(1),start.x(),start.y(),start.z(),
                 velocity.x(),velocity.y(),velocity.z(),now,now+lifetime,null);
-        bodies.put(item.id(),new Body(item,ids.getAsInt(),session,prediction,projectile));
+        add(new Body(item,ids.getAsInt(),session,prediction,projectile));
         return true;
     }
-    public void sync(Map<UUID,WorldItem> saved){
-        long now=System.currentTimeMillis();
+    public void sync(Map<UUID,WorldItem> saved,long now){
         for(var it=bodies.entrySet().iterator();it.hasNext();){
             var entry=it.next();
             var body=entry.getValue();
             if(body.throwingSession==null?!saved.containsKey(entry.getKey()):now>=body.item.expires()||body.broken){
-                removed.add(body);it.remove();
+                removed.add(body);entities.remove(body.entity);it.remove();
             }
         }
         for(var item:saved.values())if(item.world().equals(world)&&!bodies.containsKey(item.id()))
-            bodies.put(item.id(),new Body(item,ids.getAsInt(),null,-1,null));
+            add(new Body(item,ids.getAsInt(),null,-1,null));
     }
     private static void close(Local l){if(l.scene!=null)l.scene.close();if(l.pending!=null)l.pending.thenAccept(ItemCollisionScene::close);}
     private ItemCollisionScene scene(World.Vec p){

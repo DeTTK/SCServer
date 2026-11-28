@@ -1,7 +1,7 @@
 {
   "sc-vehicles": {
-    "status": "source-only; not in independent CI",
-    "assetsIncluded": false
+    "status": "source-built optional signed catalogue",
+    "assetsIncluded": true
   },
   "fpv-drones": {
     "status": "source-built optional signed catalogue",
@@ -20,7 +20,7 @@
     "assetsIncluded": false
   },
   "world-environment": {
-    "status": "source-only; not in independent CI",
+    "status": "source-built client compatibility agent",
     "assetsIncluded": false
   },
   "better-third-face": {

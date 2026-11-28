@@ -109,6 +109,35 @@ public final class RegionTerrain implements Terrain {
     }
     @Override public boolean ready(int x,int z) { return chunk(Math.floorDiv(x,16),Math.floorDiv(z,16))!=null; }
     public String identity(){return worldIdentity;}
+    private java.util.function.Supplier<Set<ResidentChunks.Key>> savedChunks=Set::of;
+    public void savedChunks(java.util.function.Supplier<Set<ResidentChunks.Key>> source){savedChunks=Objects.requireNonNull(source);}
+
+    /** Region tables contain real chunk presence, independent of the streaming cache. */
+    public Map<Long,BitSet> storedChunkMasks()throws IOException{
+        Map<Long,BitSet> masks=new TreeMap<>();
+        try(var files=Files.newDirectoryStream(root,"r.*.*.szr")){
+            for(Path path:files){
+                String[] name=path.getFileName().toString().split("\\.");
+                if(name.length!=4||!name[1].matches("-?[0-9]+")||!name[2].matches("-?[0-9]+"))continue;
+                int x=Integer.parseInt(name[1]),z=Integer.parseInt(name[2]);
+                try(var file=FileChannel.open(path,StandardOpenOption.READ)){
+                    regionHeader(file,x,z);
+                    var table=read(file,16,16384);
+                    var mask=new BitSet(1024);
+                    for(int i=0;i<1024;i++)if(table.getInt(i*16+8)>0)mask.set(i);
+                    if(!mask.isEmpty())masks.put(BlockOverlays.key(x,z),mask);
+                }
+            }
+        }
+        for(long key:liveCommits().revisions().keySet())setStoredChunk(masks,(int)(key>>32),(int)key);
+        for(var key:savedChunks.get())setStoredChunk(masks,key.x(),key.z());
+        return masks;
+    }
+
+    private static void setStoredChunk(Map<Long,BitSet> masks,int x,int z){
+        long region=BlockOverlays.key(Math.floorDiv(x,32),Math.floorDiv(z,32));
+        masks.computeIfAbsent(region,key->new BitSet(1024)).set(Math.floorMod(z,32)*32+Math.floorMod(x,32));
+    }
     NativeMapArchive.Source archiveSource(){return new NativeMapArchive.Source(root,scenes==null?null:scenes.fork(),flatFallback,archiveCommits);}
     /** Original content is hashed at startup; saves verify source file identities without re-reading the map. */
     public String nativeCommitBinding(){return scenes==null?null:checkpointBase;}

@@ -28,6 +28,7 @@ pub struct Settings {
     #[serde(alias = "base_port", alias = "basePort")]
     pub base_port: u16,
     pub relay_enabled: bool,
+    pub public_listing: bool,
     pub relay_url: String,
     #[serde(alias = "client_memory_mb", alias = "clientMemoryMb")]
     pub client_memory_mb: u32,
@@ -71,6 +72,7 @@ impl Default for Settings {
             selected_world: String::new(),
             base_port: 29545,
             relay_enabled: false,
+            public_listing: false,
             relay_url: String::new(),
             client_memory_mb: 4096,
             server_memory_mb: 2048,
@@ -280,7 +282,8 @@ pub fn write_json<T: Serialize>(path: &Path, value: &T) -> Result<()> {
 }
 pub fn atomic_write(path: &Path, bytes: &[u8]) -> Result<()> {
     no_links(path)?;
-    fs::create_dir_all(path.parent().context("missing parent")?)?;
+    let parent = path.parent().context("missing parent")?;
+    fs::create_dir_all(parent).with_context(|| format!("FILE_WRITE: создание папки {}", parent.display()))?;
     let temp = path.with_extension(format!("{}.tmp", Uuid::new_v4().simple()));
     let result = (|| {
         let mut f = OpenOptions::new()
@@ -295,8 +298,31 @@ pub fn atomic_write(path: &Path, bytes: &[u8]) -> Result<()> {
     if temp.exists() {
         let _ = fs::remove_file(temp);
     }
-    result
+    result.with_context(|| format!("FILE_WRITE: сохранение {}", path.display()))
 }
+
+#[cfg(all(test, windows))]
+#[test]
+fn atomic_write_waits_for_a_temporary_windows_file_lock() {
+    use std::os::windows::fs::OpenOptionsExt;
+    let folder = tempfile::tempdir().unwrap();
+    let path = folder.path().join("settings.json");
+    atomic_write(&path, b"original").unwrap();
+    let locked = OpenOptions::new().read(true).share_mode(1).open(&path).unwrap();
+    let (begin, release) = std::sync::mpsc::channel();
+    let reader = std::thread::spawn(move || {
+        release.recv().unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(90));
+        drop(locked);
+    });
+    begin.send(()).unwrap();
+    let result = atomic_write(&path, b"updated");
+    reader.join().unwrap();
+    result.unwrap();
+    assert_eq!(fs::read(path).unwrap(), b"updated");
+    assert_eq!(fs::read(folder.path().join("settings.json.bak")).unwrap(), b"original");
+}
+
 fn replace_file(temp: &Path, path: &Path) -> Result<()> {
     #[cfg(windows)]
     {
@@ -313,8 +339,9 @@ fn replace_file(temp: &Path, path: &Path) -> Result<()> {
         let t = wide(temp);
         let p = wide(path);
         let bak = wide(&PathBuf::from(format!("{}.bak", path.display())));
-        let ok = unsafe {
-            if path.exists() {
+        for delay_ms in [20, 50, 100, 200, 0] {
+            let exists = path.try_exists()?;
+            let ok = unsafe { if exists {
                 ReplaceFileW(
                     p.as_ptr(),
                     t.as_ptr(),
@@ -325,10 +352,14 @@ fn replace_file(temp: &Path, path: &Path) -> Result<()> {
                 )
             } else {
                 MoveFileExW(t.as_ptr(), p.as_ptr(), MOVEFILE_WRITE_THROUGH)
+            }};
+            if ok != 0 { break; }
+            let error = std::io::Error::last_os_error();
+            // A short-lived lock can delay the replacement. Preserve the source and its ACL.
+            if delay_ms == 0 || !matches!(error.raw_os_error(), Some(5 | 32 | 33)) {
+                return Err(error.into());
             }
-        };
-        if ok == 0 {
-            return Err(std::io::Error::last_os_error().into());
+            std::thread::sleep(std::time::Duration::from_millis(delay_ms));
         }
     }
     #[cfg(not(windows))]
@@ -360,7 +391,60 @@ pub fn no_links(path: &Path) -> Result<()> {
     }
     Ok(())
 }
-/// Protects identity files using the Windows owner SID, without invoking a shell.
+#[cfg(windows)]
+pub fn current_user_sid() -> Result<String> {
+    process_user_sid(unsafe { windows_sys::Win32::System::Threading::GetCurrentProcess() })
+}
+#[cfg(windows)]
+pub fn process_user_sid(process: windows_sys::Win32::Foundation::HANDLE) -> Result<String> {
+    use windows_sys::Win32::{
+        Foundation::{CloseHandle, LocalFree},
+        Security::{
+            Authorization::ConvertSidToStringSidW, GetTokenInformation, TOKEN_QUERY, TOKEN_USER,
+            TokenUser,
+        },
+        System::Threading::OpenProcessToken,
+    };
+    unsafe {
+        let mut token = std::ptr::null_mut();
+        if OpenProcessToken(process, TOKEN_QUERY, &mut token) == 0 {
+            return Err(std::io::Error::last_os_error().into());
+        }
+        let mut needed = 0;
+        GetTokenInformation(token, TokenUser, std::ptr::null_mut(), 0, &mut needed);
+        // usize storage guarantees alignment for TOKEN_USER and its embedded SID.
+        let mut info = vec![0usize; (needed as usize).div_ceil(std::mem::size_of::<usize>())];
+        if GetTokenInformation(
+            token,
+            TokenUser,
+            info.as_mut_ptr().cast(),
+            needed,
+            &mut needed,
+        ) == 0
+        {
+            let error = std::io::Error::last_os_error();
+            CloseHandle(token);
+            return Err(error.into());
+        }
+        let user = &*(info.as_ptr() as *const TOKEN_USER);
+        let mut raw = std::ptr::null_mut();
+        if ConvertSidToStringSidW(user.User.Sid, &mut raw) == 0 {
+            let error = std::io::Error::last_os_error();
+            CloseHandle(token);
+            return Err(error.into());
+        }
+        let mut len = 0;
+        while *raw.add(len) != 0 {
+            len += 1
+        }
+        let result = String::from_utf16(std::slice::from_raw_parts(raw, len));
+        LocalFree(raw.cast());
+        CloseHandle(token);
+        Ok(result?)
+    }
+}
+
+/// Limits access to the current account, even when Windows assigns ownership to Administrators.
 pub fn owner_only(path: &Path, directory: bool) -> Result<()> {
     no_links(path)?;
     #[cfg(windows)]
@@ -373,11 +457,9 @@ pub fn owner_only(path: &Path, directory: bool) -> Result<()> {
                 DACL_SECURITY_INFORMATION, PROTECTED_DACL_SECURITY_INFORMATION, SetFileSecurityW,
             },
         };
-        let sddl = if directory {
-            "D:P(A;OICI;FA;;;OW)"
-        } else {
-            "D:P(A;;FA;;;OW)"
-        };
+        let user = current_user_sid()?;
+        let inheritance = if directory { "OICI" } else { "" };
+        let sddl = format!("D:P(A;{inheritance};FA;;;{user})");
         let wide = sddl.encode_utf16().chain(Some(0)).collect::<Vec<_>>();
         let name = path
             .as_os_str()
@@ -580,6 +662,7 @@ impl HostResponse {
 pub struct ProcessView {
     pub relay_invite: String,
     pub relay_status: String,
+    pub directory_status: String,
     #[serde(alias = "state")]
     pub state: String,
     #[serde(alias = "pid")]

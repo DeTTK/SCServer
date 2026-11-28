@@ -43,6 +43,11 @@ public final class NativeMedicineResourceChecks {
             verifySuppression(items,runtime,configs);
             var profiles = items.medicines();
             check(profiles.keySet().equals(declared), "native medicine IDs differ from configs.xeon");
+            var stomping = profiles.get(26049);
+            var config = rows.getAsJsonObject("26049");
+            check(stomping.duration() == config.get("duration").getAsInt() / 20d
+                    && stomping.cooldown() == config.get("cooldown").getAsInt() / 20d,
+                    "Stomping duration and cooldown match the native resource");
             check(profiles.values().stream().anyMatch(m -> m.rules().stages().activeMillis() > 0),
                     "animated medicine lost its native phases");
             var morphine = profiles.get(26017);

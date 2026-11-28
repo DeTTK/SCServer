@@ -32,12 +32,13 @@ public final class GrenadeAreaStore implements AutoCloseable {
         private static Map<UUID,UUID> reviveTargets(JsonObject root){if(!root.has("reviveTargets"))return null;JsonObject rows=root.getAsJsonObject("reviveTargets");if(rows.size()>32)throw new IllegalArgumentException("grenade_revive_targets_limit");Map<UUID,UUID> out=new HashMap<>();for(var row:rows.entrySet())if(out.put(UUID.fromString(row.getKey()),UUID.fromString(row.getValue().getAsString()))!=null)throw new IllegalArgumentException("grenade_revive_target_duplicate");return Map.copyOf(out);}
         private boolean sameUse(Activation r){return projectile.equals(r.projectile)&&character.equals(r.character)&&owner.equals(r.owner)&&item==r.item&&position.equals(r.position)&&profiles.equals(r.profiles)&&Objects.equals(ownerContext,r.ownerContext)&&Objects.equals(pulseTargets,r.pulseTargets)&&Objects.equals(reviveTargets,r.reviveTargets);}
     }
-    private final Journal journal;private final CommandHistory index;private final ThreadPoolExecutor worker=Workers.pool("grenade-areas",1,32);
+    private final Journal journal;private final CommandHistory index;private final SessionReceipts session;private final ThreadPoolExecutor worker=Workers.pool("grenade-areas",1,32);
     private final Map<UUID,Activation> active=new LinkedHashMap<>();private final Map<UUID,Integer> reserved=new HashMap<>();private final Map<UUID,Float> shields=new HashMap<>();private volatile Map<UUID,Float> shieldView=Map.of();private volatile long shieldHits,shieldDestroyed;
     private volatile List<Activation> view=List.of();private volatile Throwable failure;private volatile boolean closed,workerStarted;
     private volatile int slots,reservations;private volatile long activated,expired;
     private static void offOwner(){if(Set.of("native-game-owner","world-tick").contains(Thread.currentThread().getName()))throw new IllegalStateException("grenade_area_io_on_owner");}
     public GrenadeAreaStore(Path data,String worldIdentity)throws Exception{
+        session=null;
         offOwner();if(worldIdentity==null||worldIdentity.isBlank()||worldIdentity.length()>4096)throw new IllegalArgumentException("grenade_area_world_identity");
         journal=Journal.streaming(data.resolve("grenade-areas.sjournal"));CommandHistory opened=null;boolean[] bound={false};
         try{opened=new CommandHistory(journal,1024*1024);index=opened;journal.replayLocated((ref,event)->{
@@ -51,6 +52,16 @@ public final class GrenadeAreaStore implements AutoCloseable {
             }publish();
         }).get();if(!bound[0]){JsonObject r=new JsonObject();r.addProperty("type","grenade_area_world");r.addProperty("identity",worldIdentity);journal.append(r).get();}publish();}catch(Exception|Error error){worker.shutdownNow();if(opened!=null)opened.close();journal.close();throw error;}
     }
+    private GrenadeAreaStore(){journal=null;index=null;session=new SessionReceipts();}
+    public static GrenadeAreaStore inMemory(){return new GrenadeAreaStore();}
+    private JsonObject findEvent(String id){return session==null?index.raw(id):session.find(id);}
+    private void recordEvent(JsonObject event)throws Exception{
+        if(session!=null)session.record(event);
+        else index.register(journal.appendLocated(event).get(),event,false);
+    }
+    private Map<String,Object> journalMetrics(){return session==null?journal.metrics():Map.of("storage","memory");}
+    private Map<String,Object> indexMetrics(){return session==null?index.metrics():session.metrics();}
+    private boolean storageHealthy(){return session!=null||journal.healthy()&&index.healthy();}
     private static String key(UUID id,boolean terminal){return (terminal?"ax:":"a:")+id;}
     private static Activation activation(JsonObject event){Activation r=Activation.read(event.getAsJsonObject("activation"));if(!key(r.projectile(),false).equals(event.get("commandId").getAsString()))throw new IllegalArgumentException("grenade_area_activation_key");return r;}
     private static UUID terminal(JsonObject event){UUID id=UUID.fromString(event.get("id").getAsString());if(!key(id,true).equals(event.get("commandId").getAsString()))throw new IllegalArgumentException("grenade_area_terminal_key");return id;}
@@ -67,8 +78,8 @@ public final class GrenadeAreaStore implements AutoCloseable {
     /** The scene's shared durability is committed before publication; duplicate shot keys never pay twice. */
     public CompletableFuture<ShieldHit> hitShield(UUID id,UUID request,float damage,long now){
         if(id==null||request==null||!Float.isFinite(damage)||damage<=0||damage>100000||now<0)return CompletableFuture.failedFuture(new IllegalArgumentException("grenade_shield_hit_request"));
-        return submit(()->{String key=shieldKey(id,request);JsonObject previous=index.raw(key);if(previous!=null){if(previous.get("damage").getAsFloat()!=damage)throw new IllegalArgumentException("grenade_shield_hit_conflict");return readShieldHit(previous,false);}Activation source=active.get(id);float before=shields.getOrDefault(id,shieldMaximum(source));if(source==null||now>=source.until()||before<=0)return new ShieldHit(id,0,0,false,false);
-            JsonObject event=new JsonObject();event.addProperty("type","grenade_shield_hit");event.addProperty("commandId",key);event.addProperty("projectile",id.toString());event.addProperty("request",request.toString());event.addProperty("damage",damage);event.addProperty("before",before);event.addProperty("after",Math.max(0,before-damage));var ref=journal.appendLocated(event).get();index.register(ref,event,false);var result=readShieldHit(event,true);publish();return new ShieldHit(id,result.before(),result.after(),true,true);
+        return submit(()->{String key=shieldKey(id,request);JsonObject previous=findEvent(key);if(previous!=null){if(previous.get("damage").getAsFloat()!=damage)throw new IllegalArgumentException("grenade_shield_hit_conflict");return readShieldHit(previous,false);}Activation source=active.get(id);float before=shields.getOrDefault(id,shieldMaximum(source));if(source==null||now>=source.until()||before<=0)return new ShieldHit(id,0,0,false,false);
+            JsonObject event=new JsonObject();event.addProperty("type","grenade_shield_hit");event.addProperty("commandId",key);event.addProperty("projectile",id.toString());event.addProperty("request",request.toString());event.addProperty("damage",damage);event.addProperty("before",before);event.addProperty("after",Math.max(0,before-damage));recordEvent(event);var result=readShieldHit(event,true);publish();return new ShieldHit(id,result.before(),result.after(),true,true);
         });
     }
     public Map<String,Object> shieldMetrics(){return Map.of("hits",shieldHits,"destroyed",shieldDestroyed,"damaged",shieldView.size());}
@@ -77,27 +88,27 @@ public final class GrenadeAreaStore implements AutoCloseable {
     /** Bootstrap only: a durable debit owns its slots until completion, even after a crash. */
     public void restoreReservation(UUID id,int count)throws Exception{
         offOwner();if(closed||failure!=null||workerStarted||id==null||count<1||count>16)throw new IllegalStateException("grenade_area_restore_reservation");
-        if(index.raw(key(id,false))!=null)return;
+        if(findEvent(key(id,false))!=null)return;
         Integer previous=reserved.get(id);if(previous!=null){if(previous!=count)throw new IllegalArgumentException("grenade_area_reservation_conflict");return;}
         if(slots+count>LIMIT)throw new IllegalArgumentException("grenade_area_recovery_capacity");reserved.put(id,count);publish();
     }
     /** Returns false at capacity before an item is spent; duplicate reservation is idempotent. */
-    public CompletableFuture<Boolean> reserve(UUID id,int count){if(id==null||count<1||count>16)return CompletableFuture.failedFuture(new IllegalArgumentException("grenade_area_reservation"));return submit(()->{Integer before=reserved.get(id);if(before!=null){if(before!=count)throw new IllegalArgumentException("grenade_area_reservation_conflict");return true;}if(index.raw(key(id,false))!=null)return false;if(slots+count>LIMIT)return false;reserved.put(id,count);publish();return true;});}
+    public CompletableFuture<Boolean> reserve(UUID id,int count){if(id==null||count<1||count>16)return CompletableFuture.failedFuture(new IllegalArgumentException("grenade_area_reservation"));return submit(()->{Integer before=reserved.get(id);if(before!=null){if(before!=count)throw new IllegalArgumentException("grenade_area_reservation_conflict");return true;}if(findEvent(key(id,false))!=null)return false;if(slots+count>LIMIT)return false;reserved.put(id,count);publish();return true;});}
     public CompletableFuture<Void> cancel(UUID id){return submit(()->{reserved.remove(id);publish();return null;});}
     private Optional<Activation> record(Activation request,boolean repair)throws Exception{
-        offOwner();JsonObject existing=index.raw(key(request.projectile(),false));
+        offOwner();JsonObject existing=findEvent(key(request.projectile(),false));
         if(existing!=null){Activation previous=activation(existing);if(!previous.sameUse(request))throw new IllegalArgumentException("grenade_area_use_conflict");reserved.remove(request.projectile());publish();return Optional.ofNullable(active.get(request.projectile()));}
         Integer count=reserved.get(request.projectile());if(count==null){if(!repair)throw new IllegalArgumentException("grenade_area_unreserved");if(slots+request.profiles().size()>LIMIT)throw new IllegalArgumentException("grenade_area_repair_capacity");}else if(count!=request.profiles().size())throw new IllegalArgumentException("grenade_area_reserved_count");
-        JsonObject event=new JsonObject();event.addProperty("type","grenade_area_activation");event.addProperty("commandId",key(request.projectile(),false));event.add("activation",request.json());var ref=journal.appendLocated(event).get();index.register(ref,event,false);reserved.remove(request.projectile());active.put(request.projectile(),request);activated++;publish();return Optional.of(request);
+        JsonObject event=new JsonObject();event.addProperty("type","grenade_area_activation");event.addProperty("commandId",key(request.projectile(),false));event.add("activation",request.json());recordEvent(event);reserved.remove(request.projectile());active.put(request.projectile(),request);activated++;publish();return Optional.of(request);
     }
     /** Retry retains the first durable clock. An already-terminal zone is never restarted. */
     public CompletableFuture<Optional<Activation>> activate(Activation request){return submit(()->record(request,false));}
     /** Bootstrap only: an inventory/projectile completion proves the item was already spent. */
     public void repair(Activation request)throws Exception{offOwner();if(closed||failure!=null||workerStarted)throw new IllegalStateException("grenade_area_repair_after_start");record(request,true);}
     /** Expiry advances while the server is offline; callers await this before publishing startup zones. */
-    public CompletableFuture<List<Activation>> expire(long now){if(now<0)return CompletableFuture.failedFuture(new IllegalArgumentException("grenade_area_clock"));return submit(()->{for(Activation r:new ArrayList<>(active.values()))if(now>=r.until()){JsonObject event=new JsonObject();event.addProperty("type","grenade_area_terminal");event.addProperty("commandId",key(r.projectile(),true));event.addProperty("id",r.projectile().toString());var ref=journal.appendLocated(event).get();index.register(ref,event,false);active.remove(r.projectile());expired++;publish();}return view;});}
+    public CompletableFuture<List<Activation>> expire(long now){if(now<0)return CompletableFuture.failedFuture(new IllegalArgumentException("grenade_area_clock"));return submit(()->{for(Activation r:new ArrayList<>(active.values()))if(now>=r.until()){JsonObject event=new JsonObject();event.addProperty("type","grenade_area_terminal");event.addProperty("commandId",key(r.projectile(),true));event.addProperty("id",r.projectile().toString());recordEvent(event);active.remove(r.projectile());expired++;publish();}return view;});}
     public List<Activation> states(){return view;}
-    public boolean healthy(){return !closed&&failure==null&&journal.healthy()&&index.healthy();}
-    public Map<String,Object> metrics(){return Map.of("healthy",healthy(),"active",view.size(),"slots",slots,"reservations",reservations,"queued",worker.getQueue().size(),"activated",activated,"expired",expired,"journal",journal.metrics(),"index",index.metrics());}
-    @Override public void close()throws Exception{try{Workers.stop(worker);}finally{closed=true;try{journal.close();}finally{index.close();}}}
+    public boolean healthy(){return !closed&&failure==null&&storageHealthy();}
+    public Map<String,Object> metrics(){return Map.of("healthy",healthy(),"active",view.size(),"slots",slots,"reservations",reservations,"queued",worker.getQueue().size(),"activated",activated,"expired",expired,"journal",journalMetrics(),"index",indexMetrics());}
+    @Override public void close()throws Exception{try{Workers.stop(worker);}finally{closed=true;if(session==null)try{journal.close();}finally{index.close();}}}
 }

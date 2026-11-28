@@ -1,5 +1,7 @@
 package szserver;
 
+import szserver.client.GameplayPacketAliases;
+import szserver.client.WorldItemPackets;
 import szserver.inventory.*;import szserver.world.*;import com.google.gson.*;import java.nio.file.*;import java.util.*;import java.util.concurrent.*;
 
 public final class WorldItemTests {
@@ -7,9 +9,43 @@ public final class WorldItemTests {
  static Inventory.Address bag(int n){return new Inventory.Address(1,0,n);}
  static void rejected(CompletableFuture<?> operation)throws Exception{try{operation.get();throw new AssertionError("operation should fail");}catch(ExecutionException e){check(e.getCause() instanceof IllegalArgumentException,"bounded rejection");}}
  static WorldItem item(UUID owner,ItemStack stack){long now=System.currentTimeMillis();return new WorldItem(UUID.randomUUID(),owner,"test-map",stack,1,5,2,0,2,6,now,now+300000,null);}
+ static void replayPickupAcrossCatalogs(Path root)throws Exception {
+  Path writerDefs=root.resolve("pickup-original.json"), readerDefs=root.resolve("pickup-current.json");
+  Files.writeString(writerDefs,"{\"1\":{\"type\":\"misc\",\"slot_size\":\"2x1\"},\"2\":{\"type\":\"misc\"}}");
+  Files.writeString(readerDefs,"{\"1\":{\"type\":\"misc\",\"slot_size\":\"1x1\"},\"2\":{\"type\":\"misc\"}}");
+  ItemCatalog writer=new ItemCatalog(writerDefs),reader=new ItemCatalog(readerDefs);
+  UUID owner=UUID.randomUUID(),recipient=UUID.randomUUID();
+  ItemStack blocker=new ItemStack(1,1,0,new byte[0]), picked=new ItemStack(2,1,7,new byte[]{9,1});
+  WorldItem dropped=item(owner,picked);
+  Path file=root.resolve("pickup-catalog-change.sjournal");
+  try(var journal=new InventoryJournal(file,writer)){
+   journal.commit(recipient,new Inventory(writer).give(blocker)).get();
+   journal.commit(owner,new Inventory(writer).give(picked)).get();
+   journal.commitWorldItem(owner,journal.load(owner).remove(0,1),dropped,null).get();
+   journal.commitWorldItem(recipient,journal.load(recipient).give(picked),null,dropped.id()).get();
+   check(journal.load(recipient).at(bag(2)).json().equals(picked.json()),"pick up after two occupied cells");
+  }
+  try(var journal=new InventoryJournal(file,reader)){
+   check(journal.load(recipient).at(bag(1))==null&&journal.load(recipient).at(bag(2)).json().equals(picked.json()),
+           "replay keeps the committed address when the catalogue would choose another");
+   check(journal.physicalItems().isEmpty()&&journal.load(owner).items().isEmpty(),"replay debits and credits exactly once");
+   journal.compact().get();
+  }
+  try(var journal=new InventoryJournal(file,reader)){
+   check(journal.load(recipient).at(bag(2)).json().equals(picked.json())&&journal.physicalItems().isEmpty(),
+           "checkpoint preserves the recovered pickup");
+  }
+ }
  public static void main(String[] args)throws Exception {
+  check(GameplayPacketAliases.registered(WorldItemPackets.PICKUP)==WorldItemPackets.PICKUP_ID,"stock F pickup alias");
+  check(WorldItemPackets.pickup(java.nio.ByteBuffer.allocate(4).putInt(52).array())==52,"pickup reads the actor ID");
+  for(int length:new int[]{0,3,5,16}){
+   try{WorldItemPackets.pickup(new byte[length]);throw new AssertionError("accepted invalid pickup payload");}
+   catch(java.io.IOException expected){check(expected.getMessage().equals("world_item_pickup_size"),"bounded pickup packet");}
+  }
   Path root=Files.createTempDirectory("physical-items-");
   try {
+   replayPickupAcrossCatalogs(root);
    Path defs=root.resolve("items.json");Files.writeString(defs,"{\"1\":{\"type\":\"misc\",\"stack_size\":100},\"2\":{\"type\":\"misc\",\"stack_size\":1}}");ItemCatalog catalog=new ItemCatalog(defs);Path file=root.resolve("inventory.sjournal");UUID a=UUID.randomUUID(),b=UUID.randomUUID(),c=UUID.randomUUID();ItemStack stack=new ItemStack(1,10,7,new byte[0],new byte[]{0});WorldItem drop=item(a,stack.count(3));
    try(var journal=new InventoryJournal(file,catalog)){
     journal.commit(a,new Inventory(catalog).give(stack)).get();journal.commit(b,new Inventory(catalog).replace(Map.of(),0)).get();journal.commit(c,new Inventory(catalog).replace(Map.of(),0)).get();

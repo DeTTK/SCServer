@@ -55,7 +55,41 @@ public final class MeleeInventoryProbe implements Opcodes {
     public static void main(String[] args) throws Exception {
         verifyCancelledStrike();
         verifyDamageLabels();
+        verifyMeleeStyleCast();
+        verifyReloadClipFallback();
+        Class.forName("833813734", false, MeleeInventoryProbe.class.getClassLoader()).getDeclaredMethods();
         System.out.println("Melee cancellation and localized item stats: PASS");
+    }
+
+    private static void verifyReloadClipFallback() throws Exception {
+        ClassLoader loader = MeleeInventoryProbe.class.getClassLoader();
+        Class<?> agent = Class.forName("ReloadClipAgent");
+        try (var resource = loader.getResourceAsStream("1149187425.class")) {
+            if (resource == null) throw new AssertionError("Native weapon reload controller missing");
+            var patch = agent.getDeclaredMethod("patch", byte[].class);
+            patch.setAccessible(true);
+            patch.invoke(null, resource.readAllBytes());
+        }
+        Class.forName("1149187425", false, loader).getDeclaredMethods();
+        System.out.println("First-person reload clip fallback: PASS");
+    }
+
+    private static void verifyMeleeStyleCast() throws Exception {
+        String controller = "sz.animation.fp.N1706111695";
+        Class<?> agent = Class.forName("MeleeStyleAgent");
+        try (var resource = MeleeInventoryProbe.class.getClassLoader()
+                .getResourceAsStream(controller.replace('.', '/') + ".class")) {
+            if (resource == null) throw new AssertionError("Native melee style controller missing");
+            var patch = agent.getDeclaredMethod("patch", byte[].class);
+            patch.setAccessible(true);
+            patch.invoke(null, resource.readAllBytes());
+        }
+        Class.forName(controller, false, MeleeInventoryProbe.class.getClassLoader()).getDeclaredMethods();
+        var inherit = agent.getMethod("inheritCast", Object.class, Object.class);
+        var explicit = new Object();
+        if (inherit.invoke(null, explicit, null) != explicit || inherit.invoke(null, null, null) != null) {
+            throw new AssertionError("Explicit melee style cast must take precedence");
+        }
     }
 
     private static void verifyCancelledStrike() throws Exception {

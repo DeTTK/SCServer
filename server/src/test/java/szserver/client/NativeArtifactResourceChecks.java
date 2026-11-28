@@ -32,6 +32,7 @@ public final class NativeArtifactResourceChecks {
         try(var items=new GameItems(runtime,registry)){
             items.warmGameplay(definitions,settings);
             var ordinary=items.createStack(CRYSTAL,1,0,new JsonObject());
+            verifyDropBinding(items,ordinary);
             var empty=items.createStack(KZS1,1,0,new JsonObject());
             denied(()->items.socket(empty,0,ordinary),"artifact_not_researched");
             var crystal=researched(items,CRYSTAL);
@@ -134,6 +135,30 @@ public final class NativeArtifactResourceChecks {
         row.addProperty("extends_item",parent);
         row.addProperty("unlocalized_name",name);
         return row;
+    }
+
+    private static void verifyDropBinding(GameItems items,ItemStack ordinary)throws Exception{
+        check(!items.dropPolicy(ordinary).allowed(),"resource defaults still block an untagged artifact");
+        var tags=new JsonObject();
+        tags.add("non_personal",JsonParser.parseString("""
+                {"type":"boolean","value":false}
+                """));
+        check(!items.dropPolicy(items.createStack(CRYSTAL,1,0,tags)).allowed(),"false non_personal does not override the resource");
+        tags.getAsJsonObject("non_personal").addProperty("value",true);
+        var unbound=items.createStack(CRYSTAL,1,0,tags);
+        byte[] wire=szserver.net.InventoryPackets.stack(unbound);
+        var edited=items.readEditedStack(Arrays.copyOfRange(wire,1,wire.length));
+        check(items.dropPolicy(items.copyForGrant(edited)).allowed(),"editor grant retains native non_personal and permits a drop");
+        tags.add("no_drop",JsonParser.parseString("""
+                {"type":"boolean","value":true}
+                """));
+        check(!items.dropPolicy(items.createStack(CRYSTAL,1,0,tags)).allowed(),"native no_drop wins over non_personal");
+        tags.remove("no_drop");
+        tags.add("owner",JsonParser.parseString("""
+                {"type":"string","value":"QaOwner"}
+                """));
+        var owned=items.dropPolicy(items.createStack(CRYSTAL,1,0,tags));
+        check(!owned.allowed()&&"QaOwner".equals(owned.pickupOwner()),"owner binding remains in force");
     }
 
     private static ItemStack researched(GameItems items,int id,String... bonuses)throws Exception{
