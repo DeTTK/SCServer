@@ -16,8 +16,9 @@ public final class ChatPackets {
     public static String request(byte[] body)throws IOException{
         var in=Wire.input(body);String text=in.readUTF();byte[] tail=in.readAllBytes();
         if(!(tail.length==0||tail.length==1&&(tail[0]==0||tail[0]==1)||tail.length==2&&tail[0]==0&&tail[1]==0))throw new IOException("invalid_chat_message_tail");
-        int limit=text.toLowerCase(Locale.ROOT).startsWith("/gif ")||AccountIdentity.strip(text).startsWith("/{\"")?COMMAND_BYTES:MESSAGE_BYTES;
-        if(text.isEmpty()||utf8(text)>limit)throw new IllegalArgumentException("invalid_chat_message_length");
+        int bytes=utf8(text);
+        if(text.isEmpty()||bytes>COMMAND_BYTES)throw new IllegalArgumentException("invalid_chat_message_length");
+        if(bytes>MESSAGE_BYTES&&!GiveCommand.matches(text))throw new IllegalArgumentException("invalid_chat_message_length");
         if(text.codePoints().anyMatch(c->c<32&&c!='\t'))throw new IllegalArgumentException("invalid_chat_message_characters");
         return text;
     }

@@ -17,6 +17,7 @@ public final class ResourceCompatibilityAgent {
   agent.addTransformer(new UdpPolicyTransformer());
   agent.addTransformer(new PerspectivePolicyTransformer());
   agent.addTransformer(new EquipmentBindingsTransformer());
+  agent.addTransformer(new ChatInputTransformer());
   agent.addTransformer(new SceneHashTransformer());
   agent.addTransformer(new SceneSelectionTransformer());
   agent.addTransformer(new SceneVariantTransformer());
