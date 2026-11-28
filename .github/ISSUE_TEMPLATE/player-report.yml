@@ -17,6 +17,8 @@ body:
       options:
         - label: Я обращался на [форум](https://t.me/stalzone_local) за поддержкой и не получил ответа.
           required: true
+        - label: Я подтверждаю, что выбрал нужную категорию issue.
+          required: true
   - type: textarea
     id: diagnostics
     attributes:
